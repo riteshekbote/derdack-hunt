@@ -136,3 +136,69 @@ testability: PASSIVE
 ## STEP 7 — RISK
 
 [RISK] derdack: 38 (low-moderate). Primary target (signl4.derdack.com) is SaaS with likely API auth but zero endpoints confirmed live. Dev subdomain may expose internals. Program scope is broad but attack surface remains unvalidated after multiple cycles. Blocker is live probing — all hypotheses are stalled until HTTP status/tech is confirmed on at least 2-3 hosts.
+===== ANALYST bigpickle 2026-09-03 21:36:55 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m✱ [0mGlob "**/*"[90m in . · 49 matches[0m
+[0m
+[0m$ [0mls -la
+total 124
+drwxr-xr-x 12 runner runner  4096 Sep  3 21:31 .
+drwxr-xr-x  3 runner runner  4096 Sep  3 21:31 ..
+drwxr-xr-x  7 runner runner  4096 Sep  3 21:31 .git
+drwxr-xr-x  3 runner runner  4096 Sep  3 21:31 .github
+-rw-r--r--  1 runner runner  1831 Sep  3 21:31 README.md
+-rw-r--r--  1 runner runner    84 Sep  3 21:32 analyst-out.txt
+-rw-r--r--  1 runner runner 16963 Sep  3 21:31 analyst-prompt.txt
+-rw-r--r--  1 runner runner 13084 Sep  3 21:31 ctx.txt
+drwxr-xr-x  2 runner runner  4096 Sep  3 21:31 inventory
+drwxr-xr-x  2 runner runner  4096 Sep  3 21:31 knowledge
+drwxr-xr-x  2 runner runner  4096 Sep  3 21:31 leads
+-rw-r--r--  1 runner runner  1834 Sep  3 21:31 probe-results.md
+drwxr-xr-x  2 runner runner  4096 Sep  3 21:31 recon-notes
+drwxr-xr-x  2 runner runner  4096 Sep  3 21:31 reports
+drwxr-xr-x  2 runner runner  4096 Sep  3 21:31 reposcan-raw
+-rw-r--r--  1 runner runner  3292 Sep  3 21:31 scope.yml
+drwxr-xr-x  2 runner runner  4096 Sep  3 21:31 scripts
+-rw-r--r--  1 runner runner    40 Sep  3 21:31 state_bigpickle.json
+-rw-r--r--  1 runner runner    40 Sep  3 21:31 state_laguna.json
+-rw-r--r--  1 runner runner    40 Sep  3 21:31 state_ling3.json
+-rw-r--r--  1 runner runner    40 Sep  3 21:31 state_longcat.json
+-rw-r--r--  1 runner runner    33 Sep  3 21:31 state_mimo.json
+-rw-r--r--  1 runner runner    40 Sep  3 21:31 state_nemotron3.json
+drwxr-xr-x  2 runner runner  4096 Sep  3 21:31 triage
+[0m
+[0m→ [0mRead probe-results.md
+[0m→ [0mRead reports/hypotheses-bigpickle.txt
+[0m→ [0mRead leads/lead-nemotron3.md
+Let me look at the probe results and key state files to understand current findings.
+[0m→ [0mRead knowledge/index.md
+[0m→ [0mRead scope.yml
+[0m→ [0mRead leads/lead-longcat.md
+[0m→ [0mRead leads/lead-laguna.md
+Let me check the knowledge index, scope, and any other analyst leads to cross-reference before probing.
+[0m→ [0mRead leads/lead-ling3.md
+[0m→ [0mRead leads/lead-mimo.md
+[0m→ [0mRead reports/hypotheses.md
+[0m→ [0mRead triage/run-2026-09-03-21-19.md
+Now let me check the other analyst leads (ling3, mimo) and the triage/final reports for the latest aggregate findings.
+[93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
+[0m✗ [0msleep 1; curl -s --max-time 15 "https://dev.derdack.com/.well-known/openid-configuration" -D - -o /tmp/od.txt; echo "---BODY---"; cat /tmp/od.txt failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.
+Now I have a comprehensive picture. Let me run a few passive probes to confirm/deepen current findings. Key facts:
+
+- **dev.derdack.com**: Apache mod_negotiation/MultiViews 300 with sensitive path suggestions (/.ssh/, /.bash_history/, /.viminfo/). Direct access returned 403. This is the top lead (nemotron3 conf 75).
+- **www.derdack.com**: WordPress wp-json, user list `200 len=?`, CF7. Draft posts/pages → 400 (good, not vulnerable).
+- **signl4.derdack.com**: AWS, connection timeout (unreachable).
+- **signals.derdack.com**: NXDOMAIN.
+- de.derdack.com parked (sedoparking).
+
+Let me confirm the immediate pending probes: dev.derdack.com hidden-file paths (nemotron3 got 403 on .ssh/id_rsa etc). I want to deepen the dev.derdack.com mod_negotiation finding — that's the strongest live lead. Let me probe a few Apache MultiViews / negotiated resources that might actually return 200, and confirm the 300 behavior more precisely.
+
+Let me run a few targeted probes against dev.derdack.com.
+[0m
+[0m$ [0msleep 1; curl -s -o /dev/null -w "dev /.well-known/ -> %{http_code} ct=%{content_type}\n" --max-time 15 "https://dev.derdack.com/.well-known/"; sleep 1; curl -s -o /dev/null -w "dev /index.html -> %{http_code}\n" --max-time 15 "https://dev.derdack.com/index.html"
+dev /.well-known/ -> 300 ct=text/html; charset=iso-8859-1
+dev /index.html -> 404
+[0m

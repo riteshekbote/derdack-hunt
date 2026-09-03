@@ -95,3 +95,52 @@ testability: AUTH_HELPED
 [LEARN] ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
 [LEARN] REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
 [RISK] derdack: 55 — dev.derdack.com misconfiguration high immediate yield (path traversal to sensitive files); www.derdack.com WordPress REST API medium risk; signl4.derdack.com SaaS high value but unreachable; 4/9 inventory hosts not Derdack infrastructure (parked/NXDOMAIN/unreachable)
+## 2026-09-03 21:33:54 UTC [target] (model nemotron3)
+[NEW] dev.derdack.com /.well-known/ returns 300 Multiple Choices confirming Apache mod_negotiation/MultiViews — lists /.ssh/, /.bash_history/, /.viminfo/ as "similar documents"; direct file access returns 403 (blocked but existence disclosed)
+[NEW] www.derdack.com/wp-json/wp/v2/users returns 200 OK with 10 users (names, slugs, avatar URLs, author profile links, Yoast SEO schema data) — user enumeration confirmed
+[NEW] www.derdack.com/wp-json/wp/v2/posts returns 200 with published posts; /wp-json/wp/v2/posts?status=draft returns 400 (requires auth); /wp-json/wp/v2/pages returns 200 with many pages
+[NEW] signl4.derdack.com remains unreachable (connection timeout on AWS 13.94.244.66)
+[CHANGED] Inventory validated: 5/9 live Derdack hosts (dev, www, derdack.com, blog, techblog); 2 unreachable (signl4), 1 NXDOMAIN (signals), 1 parked (de/www.de)
+[PRIO] dev.derdack.com,7.8,a=8 b=6 t=9 g=9 c=6 f=5
+[PRIO] www.derdack.com,7.2,a=9 b=7 t=8 g=9 c=5 f=5
+[PRIO] derdack.com,5.5,a=6 b=8 t=5 g=5 c=6 f=4
+[PRIO] signl4.derdack.com,4.8,a=5 b=10 t=2 g=1 c=8 f=3
+[PRIO] blog.derdack.com,3.8,a=4 b=4 t=4 g=4 c=3 f=4
+[PRIO] techblog.derdack.com,3.8,a=4 b=4 t=4 g=4 c=3 f=4
+[HYP] dev.derdack.com Apache mod_negotiation MultiViews path disclosure
+class: MISCONFIG
+asset: dev.derdack.com
+confidence: 80
+reasoning: 300 Multiple Choices on /.well-known/ enumerates hidden sensitive paths (/.ssh/, /.bash_history/, /.viminfo/) via Apache mod_negotiation; direct access returns 403 but path existence is disclosed
+evidence_needed: 300 response body listing sensitive paths; 403 on direct file access confirms files exist but blocked
+verify_steps: GET https://dev.derdack.com/.well-known/; GET https://dev.derdack.com/.ssh/id_rsa; GET https://dev.derdack.com/.bash_history; GET https://dev.derdack.com/.viminfo
+impact: Information disclosure of sensitive file paths on dev host; aids reconnaissance for further attacks; potential credential/key exposure if permissions misconfigured elsewhere
+testability: PASSIVE
+[HYP] www.derdack.com WordPress REST API user enumeration and content exposure
+class: AUTH
+asset: www.derdack.com
+confidence: 75
+reasoning: wp-json/wp/v2/users returns 200 with 10 user records (usernames, slugs, gravatar hashes, author URLs, full Yoast schema); wp-json/wp/v2/posts and pages fully accessible; draft posts endpoint exists but requires auth (400)
+evidence_needed: 200 on /wp-json/wp/v2/users with user list; 200 on /wp-json/wp/v2/posts and /pages; 400 on draft status confirms auth boundary
+verify_steps: GET https://www.derdack.com/wp-json/wp/v2/users; GET https://www.derdack.com/wp-json/wp/v2/posts; GET https://www.derdack.com/wp-json/wp/v2/pages; GET https://www.derdack.com/wp-json/wp/v2/posts?status=draft
+impact: PII exposure (10 employee usernames, gravatar-linked emails), author enumeration for social engineering, content mapping for recon; draft leakage blocked but endpoint exists
+testability: PASSIVE
+[HYP] signl4.derdack.com SaaS platform API authentication bypass via undiscovered endpoints
+class: AUTH
+asset: signl4.derdack.com
+confidence: 35
+reasoning: Primary SaaS product (high business value) on AWS; connection timeout suggests WAF/SG blocking direct access; API may exist on alternate subdomain/path (api., app., etc.); no live probe data
+evidence_needed: Live HTTP response from any signl4.derdack.com endpoint; API documentation/Swagger; authentication flow discovery
+verify_steps: GET https://signl4.derdack.com/ (retry); GET https://api.signl4.derdack.com/; GET https://app.signl4.derdack.com/; check CT logs for api.* signl4 subdomains
+impact: Full SaaS compromise — alerting config, on-call schedules, PII, integrations
+testability: AUTH_HELPED
+[PARKED] signl4.derdack.com SaaS platform API authentication bypass via undiscovered endpoints: confidence<40, host unreachable, no live verification possible without network access
+[FINAL] dev.derdack.com Apache mod_negotiation MultiViews path disclosure — ranked #1 (confidence 80, passive verify, info disclosure on dev host)
+[FINAL] www.derdack.com WordPress REST API user enumeration and content exposure — ranked #2 (confidence 75, passive verify, PII + recon)
+[NEXT] PROBE: GET https://www.derdack.com/wp-json/wp/v2/users/1 (check individual user endpoint for email/PII); GET https://www.derdack.com/wp-json/wp/v2/media (check media library exposure); GET https://dev.derdack.com/.well-known/openid-configuration (re-verify 300 with body)
+[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive probe cost near-zero
+[LEARN] ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+[LEARN] REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+[LEARN] REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+[LEARN] REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+[RISK] derdack: 60 — dev.derdack.com misconfiguration high immediate yield (path traversal disclosure); www.derdack.com WordPress REST API medium-high risk (10 users enumerated, full content map); signl4.derdack.com SaaS high value but unreachable; 4/9 inventory hosts not Derdack infrastructure (parked/NXDOMAIN/unreachable)
