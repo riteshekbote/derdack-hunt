@@ -1,1 +1,100 @@
-## 2026-09-03 21:33:17 UTC [target] (model bigpickle)
+## 2026-09-03 23:32:36 UTC [target] (model bigpickle)
+class: MISCONFIG
+asset: signals.derdack.com
+confidence: 20
+reasoning: "signals" subdomain may point to external service (SNS, third-party) but not properly configured; subdomain takeover common on cloud providers
+evidence_needed: DNS CNAME records, HTTP response, cloud provider identification
+verify_steps: dig signals.derdack.com CNAME; GET https://signals.derdack.com/; check if points to AWS/GCP/Azure with dangling CNAME
+impact: Takeover of subdomain for phishing/cookie theft; severity MEDIUM
+testability: PASSIVE
+[PARKED] SIGNL4 API authentication bypass: confidence 30 < 40; no live probing done yet; need to confirm API endpoints exist
+[PARKED] Dev server exposed: confidence 25 < 40; no HTTP status/tech confirmed; speculative
+[PARKED] SIGNL4 subdomain takeover: confidence 20 < 40; no DNS/HTTP evidence; pure speculation
+[FINAL] No hypotheses meet confidence threshold. All require passive probing to validate.
+[NEXT] PROBE: Passive HTTP probing of all 9 inventory hosts to confirm live status, identify technologies, and discover API endpoints. Start with signl4.derdack.com (highest business value) → dev.derdack.com (highest tech exposure) → signals.derdack.com (subdomain takeover check). Exact requests:
+[LEARN] ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+[LEARN] REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+[RISK] derdack: 35 (moderate risk). Limited attack surface confirmed; most hosts unresolved. Primary target (SIGNL4) is SaaS with likely API auth; dev/staging subdomains may expose internal tools. Program scope is broad ("all company-owned infrastructure") but discovery is early. Recommend passive probing before any depth testing.
+[NEW] nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+[CHANGED] Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+[PRIO] signl4.derdack.com,8,9,8,5,7,6
+[PRIO] dev.derdack.com,7,6,8,6,5,5
+[PRIO] signals.derdack.com,5,5,4,7,6,4
+[HYP] SIGNL4 OIDC/JWKS discovery and token endpoint enumeration
+class: AUTH
+asset: signl4.derdack.com
+confidence: 35
+reasoning: SaaS platform with mobile alerting likely uses OAuth2/OIDC for API auth; OIDC discovery endpoint reveals JWKS URI, token endpoint, supported flows; JWKS may expose alg/kid for JWT confusion testing
+evidence_needed: OIDC discovery response (200 vs 404), JWKS URI response, token endpoint existence
+verify_steps: GET https://signl4.derdack.com/.well-known/openid-configuration; GET https://signl4.derdack.com/.well-known/jwks.json; GET https://signl4.derdack.com/oauth/token (HEAD)
+impact: Reveals auth architecture, JWT signing keys/algorithms, enables targeted alg confusion or token forgery; severity HIGH
+testability: PASSIVE
+[HYP] Dev server Spring Boot actuator and Swagger exposure
+class: MISCONFIG
+asset: dev.derdack.com
+confidence: 30
+reasoning: Dev subdomain likely runs Spring Boot (enterprise Java SaaS pattern); actuator endpoints expose env/heapdump/configprops including secrets; swagger-ui exposes full API surface
+evidence_needed: HTTP 200 on actuator or swagger paths, response content-type, specific actuator beans
+verify_steps: GET https://dev.derdack.com/actuator; GET https://dev.derdack.com/actuator/env; GET https://dev.derdack.com/swagger-ui.html; GET https://dev.derdack.com/api/docs
+impact: Credential/config leakage via actuator, full API mapping via swagger; severity HIGH
+testability: PASSIVE
+[HYP] signals.derdack.com dangling CNAME subdomain takeover
+class: MISCONFIG
+asset: signals.derdack.com
+confidence: 25
+reasoning: "signals" suggests external service integration (AWS SNS, third-party alerting); if CNAME points to decommissioned cloud resource without claimed domain, takeover possible
+evidence_needed: CNAME record pointing to cloud provider, HTTP response confirming unclaimed resource
+verify_steps: dig signals.derdack.com CNAME; GET https://signals.derdack.com/; if CNAME exists, check cloud provider ownership status
+impact: Subdomain takeover for phishing/cookie theft/session fixation; severity MEDIUM
+testability: PASSIVE
+[PARKED] SIGNL4 OIDC discovery: confidence 35 < 40; OIDC may not be exposed if using proprietary auth; need GET response to validate
+[PARKED] Dev Spring Boot actuator: confidence 30 < 40; tech stack is inference not confirmed; nemotron3 already targeting same asset
+[PARKED] signals.derdack.com CNAME takeover: confidence 25 < 40; pure DNS speculation, no records checked yet
+[FINAL] No survivors above 40 — all blocked by zero live probing. The nemotron3 JWT alg hypothesis (55) for signl4 is strongest but also needs endpoint confirmation.
+[NEXT] PROBE: Passive HTTP fingerprinting of signl4.derdack.com and signals.derdack.com (nemotron3 covers dev.derdack.com). Exact requests:
+[LEARN] ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+[LEARN] REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+[LEARN] REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+[RISK] derdack: 38 (low-moderate). Primary target (signl4.derdack.com) is SaaS with likely API auth but zero endpoints confirmed live. Dev subdomain may expose internals. Program scope is broad but attack surface remains unvalidated after multiple cycles. Blocker is live probing — all hypotheses are stalled until HTTP status/tech is confirmed on at least 2-3 hosts.
+[HYP] SIGNL4 API reachable via alternate host-header / legacy TLS port
+class: OTHER
+asset: signl4.derdack.com
+confidence: 40
+reasoning: AWS 13.94.244.66 times out on 80/443 for 5+ cycles; subdomain resolves to AWS EC2. SaaS API may only accept traffic via specific Host header (multi-tenant reverse proxy) or on non-standard port; direct-IP probing times out at TCP layer suggesting WAF/firewall filtered by Host-independent rules, but worth one Host-header variant.
+evidence_needed: non-timeout HTTP response on any Host/port variant
+verify_steps: GET https://13.94.244.66/ -H "Host: signl4.derdack.com" (no SNI); GET http://13.94.244.66:8080/ and :8443/
+impact: restores access to primary API target for AUTH testing; severity HIGH (enabling)
+testability: PASSIVE
+[HYP] WordPress Gutenberg blocks/revisions leaking draft or sensitive post content
+class: IDOR
+asset: www.derdack.com
+confidence: 25
+reasoning: WP REST routes include /wp/v2/blocks/{id}/revisions, /posts/{id}/revisions, global-styles; revisions sometimes expose draft/preview content unauthenticated if per-post capabilities misconfigured. Authentication gates so far returned 401, lowering confidence.
+evidence_needed: 200 on a protected revision/autosave endpoint
+verify_steps: GET https://www.derdack.com/wp-json/wp/v2/posts/5945/revisions ; GET /wp-json/wp/v2/posts/5945/autosaves
+impact: leak of unpublished/draft content; severity LOW-MEDIUM
+testability: PASSIVE
+[NEXT] PROBE: single low-cost TCP reachability check on signl4 alternative front doors — GET http://13.94.244.66:8080/ and GET http://signl4.derdack.com:8443/ and Host-header variant "GET https://13.94.244.66/ -H 'Host: signl4.derdack.com' -k" (all passive, 1 rps) to determine if signl4 API is merely Host-filtered rather than fully dead.
+[LEARN] REJECTED MISCONFIG @ dev.derdack.com: MultiViews path disclosure is a static dot-prefix basename echo — identical output for fabricated paths proves no real sensitive files; only doc-root namespace is surfaced, impact minimal.
+[LEARN] ACCEPTED AUTH @ www.derdack.com: WP REST API correctly enforces auth on settings/users/me/oembed-proxy/drafts (401/400); user enumeration confirmed but low-value public-blog exposure only.
+[LEARN] REJECTED SSRF @ www.derdack.com: oEmbed proxy returns 401 for proxied requests — SSRF vector blocked.
+[RISK] derdack: 30 (low-moderate). Most attack surface now validated as well-hardened: WP API auth gates intact, dev MultiViews is benign static-listing, oEmbed/SSRF blocked. Primary target (signl4) unreachable across 5+ probes. Only meaningful residual is low-value WP user enumeration and the unprobed signl4 API reachability. Real logic-flaw hunt is blocked until signl4 API surface is reachable; recommend alternate-port/Host parity check before further effort.
+[HYP] SIGNL4 API reachable via alternate host-header / legacy TLS port
+class: OTHER
+asset: signl4.derdack.com
+confidence: 40
+reasoning: AWS 13.94.244.66 times out on 80/443 every cycle; may be Host-filtered multi-tenant reverse proxy or serve on non-standard port rather than fully dead
+evidence_needed: any non-timeout HTTP response on a Host/port variant
+verify_steps: curl -k -H "Host: signl4.derdack.com" https://13.94.244.66/ ; curl http://13.94.244.66:8080/ ; curl http://signl4.derdack.com:8443/
+impact: restores access to primary API target for AUTH depth testing; severity HIGH (enabling)
+testability: PASSIVE
+[HYP] WP revisions/autosaves leaking draft or sensitive post content
+class: IDOR
+asset: www.derdack.com
+confidence: 25
+reasoning: routes expose blocks/posts revisions+autosaves; but every prior WP protected endpoint returned 401 cleanly, capping likelihood
+evidence_needed: 200 on a protected revision endpoint
+verify_steps: GET /wp-json/wp/v2/posts/5945/revisions ; GET /wp-json/wp/v2/posts/5945/autosaves
+impact: leak of unpublished content; severity LOW
+testability: PASSIVE

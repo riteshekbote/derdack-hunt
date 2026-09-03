@@ -202,3 +202,928 @@ Let me run a few targeted probes against dev.derdack.com.
 dev /.well-known/ -> 300 ct=text/html; charset=iso-8859-1
 dev /index.html -> 404
 [0m
+===== ANALYST bigpickle 2026-09-03 23:32:47 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && cat scope.yml 2>/dev/null; echo "---"; ls inventory/ 2>/dev/null; echo "---"; ls art/ 2>/dev/null
+total 124
+drwxr-xr-x 12 runner runner  4096 Sep  3 23:30 .
+drwxr-xr-x  3 runner runner  4096 Sep  3 23:30 ..
+drwxr-xr-x  7 runner runner  4096 Sep  3 23:30 .git
+drwxr-xr-x  3 runner runner  4096 Sep  3 23:30 .github
+-rw-r--r--  1 runner runner  1831 Sep  3 23:30 README.md
+-rw-r--r--  1 runner runner    32 Sep  3 23:30 analyst-out.txt
+-rw-r--r--  1 runner runner 18673 Sep  3 23:30 analyst-prompt.txt
+-rw-r--r--  1 runner runner 14794 Sep  3 23:30 ctx.txt
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 inventory
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 knowledge
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 leads
+-rw-r--r--  1 runner runner  2594 Sep  3 23:30 probe-results.md
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 recon-notes
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 reports
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 reposcan-raw
+-rw-r--r--  1 runner runner  3292 Sep  3 23:30 scope.yml
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 scripts
+-rw-r--r--  1 runner runner    33 Sep  3 23:30 state_bigpickle.json
+-rw-r--r--  1 runner runner    33 Sep  3 23:30 state_laguna.json
+-rw-r--r--  1 runner runner    33 Sep  3 23:30 state_ling3.json
+-rw-r--r--  1 runner runner    33 Sep  3 23:30 state_longcat.json
+-rw-r--r--  1 runner runner    33 Sep  3 23:30 state_mimo.json
+-rw-r--r--  1 runner runner    33 Sep  3 23:30 state_nemotron3.json
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 triage
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+  passive_first: false          # deep-hunt agent: active probes allowed when scoped
+  max_requests_per_second: 1    # never hammer live infra
+  no_doom: true                 # no DoS/DDoS, no account-lockout attacks
+  account_creation: restricted  # only on test/sandbox assets, never live customer data
+  no_data_modification: true    # no writes/deletes on live customer data
+  no_pre_disclosure: true       # never disclose before program response
+  poc_required: true            # scanner output alone is REJECTED
+  redact_secrets_in_commits: true
+
+models:
+  - { id: opencode/big-pickle, name: bigpickle }
+  - { id: opencode/nemotron-3-ultra-free, name: nemotron3 }
+  - { id: opencode/longcat-2.0-free, name: longcat }
+  - { id: opencode/ling-3.0-flash-free, name: ling3 }
+  - { id: opencode/laguna-s-2.1-free, name: laguna }
+---
+derdack.md
+---
+[0m
+I'm the bigpickle analyst model. Let me review the current state and context before running the analysis.
+[0m$ [0mcat state_bigpickle.json; echo "==="; cat analyst-out.txt; echo "==="; cat probe-results.md; echo "=== CTX ==="; cat ctx.txt
+{"phase": "POC", "target": "api"}===
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && cat scope.yml 2>/dev/null; echo "---"; ls inventory/ 2>/dev/null; echo "---"; ls art/ 2>/dev/null
+total 124
+drwxr-xr-x 12 runner runner  4096 Sep  3 23:30 .
+drwxr-xr-x  3 runner runner  4096 Sep  3 23:30 ..
+drwxr-xr-x  7 runner runner  4096 Sep  3 23:30 .git
+drwxr-xr-x  3 runner runner  4096 Sep  3 23:30 .github
+-rw-r--r--  1 runner runner  1831 Sep  3 23:30 README.md
+-rw-r--r--  1 runner runner    32 Sep  3 23:30 analyst-out.txt
+-rw-r--r--  1 runner runner 18673 Sep  3 23:30 analyst-prompt.txt
+-rw-r--r--  1 runner runner 14794 Sep  3 23:30 ctx.txt
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 inventory
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 knowledge
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 leads
+-rw-r--r--  1 runner runner  2594 Sep  3 23:30 probe-results.md
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 recon-notes
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 reports
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 reposcan-raw
+-rw-r--r--  1 runner runner  3292 Sep  3 23:30 scope.yml
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 scripts
+-rw-r--r--  1 runner runner    33 Sep  3 23:30 state_bigpickle.json
+-rw-r--r--  1 runner runner    33 Sep  3 23:30 state_laguna.json
+-rw-r--r--  1 runner runner    33 Sep  3 23:30 state_ling3.json
+-rw-r--r--  1 runner runner    33 Sep  3 23:30 state_longcat.json
+-rw-r--r--  1 runner runner    33 Sep  3 23:30 state_mimo.json
+-rw-r--r--  1 runner runner    33 Sep  3 23:30 state_nemotron3.json
+drwxr-xr-x  2 runner runner  4096 Sep  3 23:30 triage
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+  passive_first: false          # deep-hunt agent: active probes allowed when scoped
+  max_requests_per_second: 1    # never hammer live infra
+  no_doom: true                 # no DoS/DDoS, no account-lockout attacks
+  account_creation: restricted  # only on test/sandbox assets, never live customer data
+  no_data_modification: true    # no writes/deletes on live customer data
+  no_pre_disclosure: true       # never disclose before program response
+  poc_required: true            # scanner output alone is REJECTED
+  redact_secrets_in_commits: true
+
+models:
+  - { id: opencode/big-pickle, name: bigpickle }
+  - { id: opencode/nemotron-3-ultra-free, name: nemotron3 }
+  - { id: opencode/longcat-2.0-free, name: longcat }
+  - { id: opencode/ling-3.0-flash-free, name: ling3 }
+  - { id: opencode/laguna-s-2.1-free, name: laguna }
+---
+derdack.md
+---
+[0m
+I'm the bigpickle analyst model. Let me review the current state and context before running the analysis.
+===
+
+## 2026-09-02 21:30:25 UTC
+
+
+## 2026-09-02 23:34:06 UTC
+
+
+## 2026-09-03 01:27:36 UTC
+
+
+## 2026-09-03 06:47:03 UTC
+
+
+## 2026-09-03 11:44:06 UTC
+
+
+## 2026-09-03 15:39:54 UTC
+https://signl4.derdack.com/.well-known/jwks.json -> ERR <urlopen error timed out>
+https://signl4.derdack.com/api/v1/user -> ERR <urlopen error timed out>
+https://signl4.derdack.com/api/auth/login -> ERR <urlopen error timed out>
+https://signals.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://signals.derdack.com/api/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://signals.derdack.com/webhook -> ERR <urlopen error [Errno -2] Name or service not know
+https://dev.derdack.com/actuator -> HTTP 404
+https://dev.derdack.com/swagger-ui.html -> HTTP 404
+https://dev.derdack.com/api/docs -> HTTP 404
+https://dev.derdack.com/graphql -> HTTP 404
+https://dev.derdack.com/.well-known/openid-configuration -> HTTP 300
+https://signl4.derdack.com/api/v1/health -> ERR <urlopen error timed out>
+
+## 2026-09-03 19:05:58 UTC
+https://dev.derdack.com/.ssh/id_rsa -> HTTP 403
+https://dev.derdack.com/.bash_history -> HTTP 403
+https://dev.derdack.com/.viminfo -> HTTP 403
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://www.derdack.com/wp-json/wp/v2/users -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/posts?status=draft -> HTTP 400
+https://www.derdack.com/wp-json/wp/v2/pages?status=draft -> HTTP 400
+https://signl4.derdack.com/ -> ERR <urlopen error timed out>
+https://api.signl4.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://app.signl4.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://signl4.derdack.com/.well-known/openid-configuration -> ERR <urlopen error timed out>
+https://signl4.derdack.com/.well-known/jwks.json -> ERR <urlopen error timed out>
+
+## 2026-09-03 21:37:31 UTC
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://dev.derdack.com/.ssh/id_rsa -> HTTP 403
+https://dev.derdack.com/.bash_history -> HTTP 403
+https://dev.derdack.com/.viminfo -> HTTP 403
+https://www.derdack.com/wp-json/wp/v2/users -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/posts -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/pages -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/posts?status=draft -> HTTP 400
+https://signl4.derdack.com/ -> ERR <urlopen error timed out>
+https://api.signl4.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://app.signl4.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://www.derdack.com/wp-json/wp/v2/users/1 -> 200 len=?
+=== CTX ===
+=== KNOWLEDGE BASE ===
+# Knowledge Base (seed)
+- 2026-09-03 REJECTED none this cycle — all hypotheses target in-scope HIGH-VALUE classes with concrete verify steps
+- 2026-09-03 ACCEPTED MISCONFIG @ dev.derdack.com: dev environments frequently expose debug interfaces; passive probe cost near-zero
+- 2026-09-03 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+- 2026-09-03 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+- 2026-09-03 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+- 2026-09-03 ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+- 2026-09-03 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+- 2026-09-03 REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- 2026-09-03 ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive probe cost near-zero
+- 2026-09-03 REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+- 2026-09-03 REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+- 2026-09-03 ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+- 2026-09-03 REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+=== MY STATE ===
+{"phase": "POC", "target": "api"}=== MY LAST LEADS (tail) ===
+class: MISCONFIG
+asset: signals.derdack.com
+confidence: 20
+reasoning: "signals" subdomain may point to external service (SNS, third-party) but not properly configured; subdomain takeover common on cloud providers
+evidence_needed: DNS CNAME records, HTTP response, cloud provider identification
+verify_steps: dig signals.derdack.com CNAME; GET https://signals.derdack.com/; check if points to AWS/GCP/Azure with dangling CNAME
+impact: Takeover of subdomain for phishing/cookie theft; severity MEDIUM
+testability: PASSIVE
+[PARKED] SIGNL4 API authentication bypass: confidence 30 < 40; no live probing done yet; need to confirm API endpoints exist
+[PARKED] Dev server exposed: confidence 25 < 40; no HTTP status/tech confirmed; speculative
+[PARKED] SIGNL4 subdomain takeover: confidence 20 < 40; no DNS/HTTP evidence; pure speculation
+[FINAL] No hypotheses meet confidence threshold. All require passive probing to validate.
+[NEXT] PROBE: Passive HTTP probing of all 9 inventory hosts to confirm live status, identify technologies, and discover API endpoints. Start with signl4.derdack.com (highest business value) → dev.derdack.com (highest tech exposure) → signals.derdack.com (subdomain takeover check). Exact requests:
+[LEARN] ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+[LEARN] REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+[RISK] derdack: 35 (moderate risk). Limited attack surface confirmed; most hosts unresolved. Primary target (SIGNL4) is SaaS with likely API auth; dev/staging subdomains may expose internal tools. Program scope is broad ("all company-owned infrastructure") but discovery is early. Recommend passive probing before any depth testing.
+## 2026-09-03 18:52:03 UTC [target] (model bigpickle)
+[NEW] nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+[CHANGED] Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+[PRIO] signl4.derdack.com,8,9,8,5,7,6
+[PRIO] dev.derdack.com,7,6,8,6,5,5
+[PRIO] signals.derdack.com,5,5,4,7,6,4
+[HYP] SIGNL4 OIDC/JWKS discovery and token endpoint enumeration
+class: AUTH
+asset: signl4.derdack.com
+confidence: 35
+reasoning: SaaS platform with mobile alerting likely uses OAuth2/OIDC for API auth; OIDC discovery endpoint reveals JWKS URI, token endpoint, supported flows; JWKS may expose alg/kid for JWT confusion testing
+evidence_needed: OIDC discovery response (200 vs 404), JWKS URI response, token endpoint existence
+verify_steps: GET https://signl4.derdack.com/.well-known/openid-configuration; GET https://signl4.derdack.com/.well-known/jwks.json; GET https://signl4.derdack.com/oauth/token (HEAD)
+impact: Reveals auth architecture, JWT signing keys/algorithms, enables targeted alg confusion or token forgery; severity HIGH
+testability: PASSIVE
+[HYP] Dev server Spring Boot actuator and Swagger exposure
+class: MISCONFIG
+asset: dev.derdack.com
+confidence: 30
+reasoning: Dev subdomain likely runs Spring Boot (enterprise Java SaaS pattern); actuator endpoints expose env/heapdump/configprops including secrets; swagger-ui exposes full API surface
+evidence_needed: HTTP 200 on actuator or swagger paths, response content-type, specific actuator beans
+verify_steps: GET https://dev.derdack.com/actuator; GET https://dev.derdack.com/actuator/env; GET https://dev.derdack.com/swagger-ui.html; GET https://dev.derdack.com/api/docs
+impact: Credential/config leakage via actuator, full API mapping via swagger; severity HIGH
+testability: PASSIVE
+[HYP] signals.derdack.com dangling CNAME subdomain takeover
+class: MISCONFIG
+asset: signals.derdack.com
+confidence: 25
+reasoning: "signals" suggests external service integration (AWS SNS, third-party alerting); if CNAME points to decommissioned cloud resource without claimed domain, takeover possible
+evidence_needed: CNAME record pointing to cloud provider, HTTP response confirming unclaimed resource
+verify_steps: dig signals.derdack.com CNAME; GET https://signals.derdack.com/; if CNAME exists, check cloud provider ownership status
+impact: Subdomain takeover for phishing/cookie theft/session fixation; severity MEDIUM
+testability: PASSIVE
+[PARKED] SIGNL4 OIDC discovery: confidence 35 < 40; OIDC may not be exposed if using proprietary auth; need GET response to validate
+[PARKED] Dev Spring Boot actuator: confidence 30 < 40; tech stack is inference not confirmed; nemotron3 already targeting same asset
+[PARKED] signals.derdack.com CNAME takeover: confidence 25 < 40; pure DNS speculation, no records checked yet
+[FINAL] No survivors above 40 — all blocked by zero live probing. The nemotron3 JWT alg hypothesis (55) for signl4 is strongest but also needs endpoint confirmation.
+[NEXT] PROBE: Passive HTTP fingerprinting of signl4.derdack.com and signals.derdack.com (nemotron3 covers dev.derdack.com). Exact requests:
+[LEARN] ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+[LEARN] REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+[LEARN] REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+[RISK] derdack: 38 (low-moderate). Primary target (signl4.derdack.com) is SaaS with likely API auth but zero endpoints confirmed live. Dev subdomain may expose internals. Program scope is broad but attack surface remains unvalidated after multiple cycles. Blocker is live probing — all hypotheses are stalled until HTTP status/tech is confirmed on at least 2-3 hosts.
+## 2026-09-03 21:33:17 UTC [target] (model bigpickle)
+=== AGGREGATED HYPOTHESES (tail) ===
+
+## RANKED HYPOTHESES 2026-09-03 01:27:36 UTC
+
+## RANKED HYPOTHESES 2026-09-03 06:47:03 UTC
+
+## RANKED HYPOTHESES 2026-09-03 11:44:06 UTC
+
+## RANKED HYPOTHESES 2026-09-03 15:38:51 UTC
+- [55] signl4.derdack.com: SIGNL4 API JWT alg confusion on token validation (from art/lead_nemotron3.txt)
+- [30] signl4.derdack.com: SIGNL4 API authentication bypass (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://dev.derdack.com/actuator && GET https://dev.derdack.com/swagger-ui.html && GET https://dev.derdack.com/api/docs && GET https://dev.derdack.co
+- NEXT(hypotheses-bigpickle.txt): PROBE: Passive HTTP probing of all 9 inventory hosts to confirm live status, identify technologies, and discover API endpoints. Start with signl4.derdack.com (h
+- LEARN: REJECTED none this cycle — all hypotheses target in-scope HIGH-VALUE classes with concrete verify steps
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: dev environments frequently expose debug interfaces; passive probe cost near-zero
+- LEARN: ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+- LEARN: REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+
+## RANKED HYPOTHESES 2026-09-03 19:05:04 UTC
+- [75] dev.derdack.com: dev.derdack.com openid-configuration path traversal via 300 Multiple Choices (from art/lead_nemotron3.txt)
+- [35] signl4.derdack.com: SIGNL4 OIDC/JWKS discovery and token endpoint enumeration (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: Passive HTTP fingerprinting of signl4.derdack.com and signals.derdack.com (nemotron3 covers dev.derdack.com). Exact requests:
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://dev.derdack.com/.ssh/id_rsa && GET https://dev.derdack.com/.bash_history && GET https://dev.derdack.com/.viminfo && GET https://dev.derdack.c
+- LEARN: ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+- LEARN: REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+- LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive 
+- LEARN: REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+- LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+
+## RANKED HYPOTHESES 2026-09-03 21:36:55 UTC
+- [80] dev.derdack.com: dev.derdack.com Apache mod_negotiation MultiViews path disclosure (from art/lead_nemotron3.txt)
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://www.derdack.com/wp-json/wp/v2/users/1 (check individual user endpoint for email/PII); GET https://www.derdack.com/wp-json/wp/v2/media (check 
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive 
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+- LEARN: REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+- LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+=== INVENTORY derdack ===
+# Derdack GmbH / Derdack Group inventory (discovery seed 2026-09-02)
+# NOTE: hosts below are discovery candidates from passive DNS/CT; confirm in-scope vs program scope before active testing.
+blog.derdack.com
+de.derdack.com
+derdack.com
+dev.derdack.com
+signals.derdack.com
+signl4.derdack.com
+techblog.derdack.com
+www.de.derdack.com
+www.derdack.com
+
+## PASSIVE RECON 2026-09-02 (read-only, non-intrusive)
+
+> Recon observations only. These are NOT confirmed vulnerabilities; ownership/in-scope of each host must be confirmed against the program scope before any active testing. Hosts resolve + serve HTTP — investigation requires scoped authorization.
+
+**Probed:** 9 hosts | **Live HTTP:** 0
+
+| Host | Status | Server/Tech |
+|---|---|---|
+
+## 2026-09-02 21:30:24 UTC
+
+## 2026-09-02 23:34:05 UTC
+
+## 2026-09-03 01:27:36 UTC
+
+## 2026-09-03 06:47:03 UTC
+
+## 2026-09-03 11:44:06 UTC
+
+## 2026-09-03 15:38:51 UTC
+- NEW 9 hosts discovered via passive DNS/CT, 0 probed for live HTTP — initial surface unvalidated
+- NEW No GitHub org configured for reposcan — code-level recon gap
+- NEW Knowledge base empty — no prior tech fingerprint, endpoint map, or auth flow data
+
+## 2026-09-03 19:05:04 UTC
+- NEW nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+- CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+- NEW dev.derdack.com /.well-known/openid-configuration returns 300 Multiple Choices with directory traversal suggestions (/.ssh/, /.bash_history/, /.viminfo/) — misconfiguration confirmed
+- NEW signl4.derdack.com (AWS 13.94.244.66) connection timeout on HTTP/HTTPS — SaaS platform unreachable, likely firewall/WAF
+- NEW signals.derdack.com NXDOMAIN — subdomain does not exist, hypothesis invalid
+- NEW blog.derdack.com & techblog.derdack.com redirect via HTTP (not HTTPS) to www.derdack.com — mixed content / downgrade risk
+- NEW de.derdack.com / www.de.derdack.com return 403 with sedoparking.com iframe — parked domain, not Derdack infrastructure
+- CHANGED Inventory validation: only 5/9 hosts are live Derdack infrastructure; 2 unreachable, 1 non-existent, 1 parked
+
+## 2026-09-03 21:36:55 UTC
+- NEW dev.derdack.com /.well-known/ returns 300 Multiple Choices confirming Apache mod_negotiation/MultiViews — lists /.ssh/, /.bash_history/, /.viminfo/ as "similar documents"; direct file access returns 4
+- NEW www.derdack.com/wp-json/wp/v2/users returns 200 OK with 10 users (names, slugs, avatar URLs, author profile links, Yoast SEO schema data) — user enumeration confirmed
+- NEW www.derdack.com/wp-json/wp/v2/posts returns 200 with published posts; /wp-json/wp/v2/posts?status=draft returns 400 (requires auth); /wp-json/wp/v2/pages returns 200 with many pages
+- NEW signl4.derdack.com remains unreachable (connection timeout on AWS 13.94.244.66)
+- CHANGED Inventory validated: 5/9 live Derdack hosts (dev, www, derdack.com, blog, techblog); 2 unreachable (signl4), 1 NXDOMAIN (signals), 1 parked (de/www.de)
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && ls recon-notes/ leads/ reports/ triage/ knowledge/ 2>/dev/null
+knowledge/:
+index.md
+
+leads/:
+lead-bigpickle.md
+lead-laguna.md
+lead-ling3.md
+lead-longcat.md
+lead-mimo.md
+lead-nemotron3.md
+reposcan-derdack.md
+
+recon-notes/:
+DEDICATED-DEEP.md
+
+reports/:
+analyst-bigpickle.log
+analyst-laguna.log
+analyst-ling3.log
+analyst-longcat.log
+analyst-nemotron3.log
+hypotheses-bigpickle.txt
+hypotheses-laguna.txt
+hypotheses-ling3.txt
+hypotheses-longcat.txt
+hypotheses-nemotron3.txt
+hypotheses.md
+valid-bugs.md
+
+triage/:
+run-2026-09-02-21-25.md
+run-2026-09-02-23-31.md
+run-2026-09-03-01-23.md
+run-2026-09-03-06-25.md
+run-2026-09-03-11-39.md
+run-2026-09-03-15-10.md
+run-2026-09-03-18-39.md
+run-2026-09-03-21-19.md
+run-2026-09-03-23-20.md
+[0m
+I have the full context now. Let me analyze the current state and identify the strongest leads. The key confirmed findings so far:
+
+1. **www.derdack.com** — WordPress REST API exposed with user enumeration (200 OK, 10 users). This is confirmed in-scope. Nemotron3 is probing `/wp-json/wp/v2/users/1` and media.
+2. **dev.derdack.com** — Apache mod_negotiation/MultiViews path disclosure (300). Direct file access returns 403 (not 404) — interesting.
+3. **signl4.derdack.com** — unreachable (AWS 13.94.244.66 timeouts).
+
+My role (bigpickle) is the analyst for the API target. Let me think about what's most attack-worthy.
+
+The most valuable confirmed lead is the WordPress REST API. WP REST API can expose more than user enumeration. Let me check for higher-value vectors on www.derdack.com — the WP REST API exposes routes that might include IDOR-able endpoints. Let me probe the WP REST API route index which is a passive GET.
+
+Let me do targeted passive probes on the WordPress API to enumerate routes and look for sensitive exposure — this is a PASSIVE first step, 1 rps.
+
+Let me check what's been probed and find the highest-value unprobed WordPress REST endpoints.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && cat recon-notes/DEDICATED-DEEP.md; echo "==== MY HYPOTHESES ===="; cat reports/hypotheses-bigpickle.txt; echo "==== VALID BUGS ===="; cat reports/valid-bugs.md
+# Dedicated deep surface (wildcard-filtered) 2026-09-03
+
+**Target:** `derdack`
+**Root zones:** `derdack.com`
+
+## Wildcard analysis
+
+- Total resolving hostnames in zone: 0
+- After shared/wildcard IP filtering: **0 genuinely dedicated hosts**
+- Reason: all resolving hostnames use shared/CDN/wildcard IP signatures
+
+## Honest conclusion
+
+This target's subdomain space is wildcard-dominated. No genuinely dedicated
+subdomain surface was recovered from passive brute + subfinder enumeration.
+The surface either (a) uses wildcard DNS records, (b) all CNAME records
+point to shared CDN/Cloudflare/CloudFront/AWS IPs, or (c) has no
+subdomain program at all. This is the honest exhaustive result.
+
+---
+_Honest framing: passive DNS enumeration + shared-IP wildcard filtering. No finding claimed. No active testing performed._
+==== MY HYPOTHESES ====
+## 2026-09-03 21:33:17 UTC [target] (model bigpickle)
+==== VALID BUGS ====
+# Validated findings (running count 0)
+
+- 2 lead(s) marked VALID at 2026-09-03 23:20:09 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+[0m
+Let me focus my analysis. The strongest confirmed attack surface is the WordPress REST API on www.derdack.com. WP REST API route enumeration is a passive GET that can reveal high-value endpoints. Let me probe the route index which reveals all available wp-json routes — a cat-and-mouse but legitimate passive discovery.
+
+Let me run a passive probe of the WP REST API route index to find higher-value endpoints (custom routes, plugins) beyond just users/posts/pages.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && timeout 60 curl -s -o /tmp/wp_routes.json -w "HTTP %{http_code}\n" "https://www.derdack.com/wp-json/wp/v2/" && python3 -c "
+import json
+d=json.load(open('/tmp/wp_routes.json'))
+routes=sorted(d.get('routes',{}).keys())
+for r in routes:
+    print(r)
+" 2>/dev/null | head -200
+HTTP 200
+/wp/v2
+/wp/v2/block-directory/search
+/wp/v2/block-patterns/categories
+/wp/v2/block-patterns/patterns
+/wp/v2/block-renderer/(?P<name>[a-z0-9-]+/[a-z0-9-]+)
+/wp/v2/block-types
+/wp/v2/block-types/(?P<namespace>[a-zA-Z0-9_-]+)
+/wp/v2/block-types/(?P<namespace>[a-zA-Z0-9_-]+)/(?P<name>[a-zA-Z0-9_-]+)
+/wp/v2/blocks
+/wp/v2/blocks/(?P<id>[\d]+)
+/wp/v2/blocks/(?P<id>[\d]+)/autosaves
+/wp/v2/blocks/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+/wp/v2/blocks/(?P<parent>[\d]+)/revisions
+/wp/v2/blocks/(?P<parent>[\d]+)/revisions/(?P<id>[\d]+)
+/wp/v2/categories
+/wp/v2/categories/(?P<id>[\d]+)
+/wp/v2/comments
+/wp/v2/comments/(?P<id>[\d]+)
+/wp/v2/global-styles/(?P<id>[\/\w-]+)
+/wp/v2/global-styles/themes/(?P<stylesheet>[\/\s%\w\.\(\)\[\]\@_\-]+)/variations
+/wp/v2/global-styles/themes/(?P<stylesheet>[^\/:<>\*\?"\|]+(?:\/[^\/:<>\*\?"\|]+)?)
+/wp/v2/media
+/wp/v2/media/(?P<id>[\d]+)
+/wp/v2/media/(?P<id>[\d]+)/edit
+/wp/v2/media/(?P<id>[\d]+)/post-process
+/wp/v2/menu-items
+/wp/v2/menu-items/(?P<id>[\d]+)
+/wp/v2/menu-items/(?P<id>[\d]+)/autosaves
+/wp/v2/menu-items/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+/wp/v2/menu-locations
+/wp/v2/menu-locations/(?P<location>[\w-]+)
+/wp/v2/menus
+/wp/v2/menus/(?P<id>[\d]+)
+/wp/v2/navigation
+/wp/v2/navigation/(?P<id>[\d]+)
+/wp/v2/navigation/(?P<id>[\d]+)/autosaves
+/wp/v2/navigation/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+/wp/v2/navigation/(?P<parent>[\d]+)/revisions
+/wp/v2/navigation/(?P<parent>[\d]+)/revisions/(?P<id>[\d]+)
+/wp/v2/pages
+/wp/v2/pages/(?P<id>[\d]+)
+/wp/v2/pages/(?P<id>[\d]+)/autosaves
+/wp/v2/pages/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+/wp/v2/pages/(?P<parent>[\d]+)/revisions
+/wp/v2/pages/(?P<parent>[\d]+)/revisions/(?P<id>[\d]+)
+/wp/v2/pattern-directory/patterns
+/wp/v2/plugins
+/wp/v2/plugins/(?P<plugin>[^.\/]+(?:\/[^.\/]+)?)
+/wp/v2/posts
+/wp/v2/posts/(?P<id>[\d]+)
+/wp/v2/posts/(?P<id>[\d]+)/autosaves
+/wp/v2/posts/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+/wp/v2/posts/(?P<parent>[\d]+)/revisions
+/wp/v2/posts/(?P<parent>[\d]+)/revisions/(?P<id>[\d]+)
+/wp/v2/search
+/wp/v2/settings
+/wp/v2/sidebars
+/wp/v2/sidebars/(?P<id>[\w-]+)
+/wp/v2/statuses
+/wp/v2/statuses/(?P<status>[\w-]+)
+/wp/v2/tags
+/wp/v2/tags/(?P<id>[\d]+)
+/wp/v2/taxonomies
+/wp/v2/taxonomies/(?P<taxonomy>[\w-]+)
+/wp/v2/template-parts
+/wp/v2/template-parts/(?P<id>([^\/:<>\*\?"\|]+(?:\/[^\/:<>\*\?"\|]+)?)[\/\w-]+)
+/wp/v2/template-parts/(?P<id>[\d]+)/autosaves
+/wp/v2/template-parts/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+/wp/v2/template-parts/(?P<parent>[\d]+)/revisions
+/wp/v2/template-parts/(?P<parent>[\d]+)/revisions/(?P<id>[\d]+)
+/wp/v2/templates
+/wp/v2/templates/(?P<id>([^\/:<>\*\?"\|]+(?:\/[^\/:<>\*\?"\|]+)?)[\/\w-]+)
+/wp/v2/templates/(?P<id>[\d]+)/autosaves
+/wp/v2/templates/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+/wp/v2/templates/(?P<parent>[\d]+)/revisions
+/wp/v2/templates/(?P<parent>[\d]+)/revisions/(?P<id>[\d]+)
+/wp/v2/themes
+/wp/v2/themes/(?P<stylesheet>[^\/:<>\*\?"\|]+(?:\/[^\/:<>\*\?"\|]+)?)
+/wp/v2/types
+/wp/v2/types/(?P<type>[\w-]+)
+/wp/v2/users
+/wp/v2/users/(?P<id>[\d]+)
+/wp/v2/users/(?P<user_id>(?:[\d]+|me))/application-passwords
+/wp/v2/users/(?P<user_id>(?:[\d]+|me))/application-passwords/(?P<uuid>[\w\-]+)
+/wp/v2/users/(?P<user_id>(?:[\d]+|me))/application-passwords/introspect
+/wp/v2/users/me
+/wp/v2/widget-types
+/wp/v2/widget-types/(?P<id>[a-zA-Z0-9_-]+)
+/wp/v2/widget-types/(?P<id>[a-zA-Z0-9_-]+)/encode
+/wp/v2/widget-types/(?P<id>[a-zA-Z0-9_-]+)/render
+/wp/v2/widgets
+/wp/v2/widgets/(?P<id>[\w\-]+)
+[0m
+The route index confirms standard WP REST API plus Contact Form 7 routes are present. Let me get the full routes including the non-v2 root routes (which reveal plugins like contact-form-7), and importantly check the `/wp/v2/settings`, `/wp/v2/users/me`, and whether there's any `/wp-json/oembed` exposure. Let me capture the whole routes list.
+
+The key high-value endpoints to test passively:
+- `/wp/v2/settings` — often exposes site settings (could contain PII/config). Usually requires auth for settings.
+- `/wp/v2/user/{id}` — user enumeration with author profile.
+- Contact Form 7 endpoints.
+
+Let me get the full route list including root-version routes.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && python3 -c "
+import json
+d=json.load(open('/tmp/wp_routes.json'))
+routes=sorted(d.get('routes',{}).keys())
+for r in routes:
+    if r.startswith('/wp/v2')==False:
+        print(r)
+print('---namespace---')
+print(json.dumps(d.get('namespace','')))
+" 2>/dev/null | head -100
+---namespace---
+"wp/v2"
+[0m
+Only the `/wp/v2` namespace routes are returned by the route index — no custom plugin routes are registered in the anonymous route index (Contact Form 7 typically registers under its own namespace, but it's not exposed here, likely hidden behind permission). 
+
+The highest-value passive anomaly to check now: `/wp/v2/users/me` (usually requires auth) and `/wp/v2/settings`. Neither should return data anonymously, but worth a single check for misconfiguration. Also the `users/me` endpoint is a classic auth-bypass indicator. Let me probe these passively at 1 rps.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && for p in "users/me" "settings" "users/1"; do sleep 1; echo "=== /wp/v2/$p ==="; timeout 40 curl -s -o /tmp/r_$$.txt -w "HTTP %{http_code}\n" "https://www.derdack.com/wp-json/wp/v2/$p"; head -c 500 /tmp/r_$$.txt; echo; echo "---"; done
+=== /wp/v2/users/me ===
+HTTP 401
+{"code":"rest_not_logged_in","message":"You are not currently logged in.","data":{"status":401}}
+---
+=== /wp/v2/settings ===
+HTTP 401
+{"code":"rest_forbidden","message":"Sorry, you are not allowed to do that.","data":{"status":401}}
+---
+=== /wp/v2/users/1 ===
+HTTP 200
+{"id":1,"name":"Christian","url":"","description":"","link":"https:\/\/www.derdack.com\/author\/christian\/","slug":"christian","avatar_urls":{"24":"https:\/\/secure.gravatar.com\/avatar\/276147d21216f012356779ef633cedfe?s=24&d=mm&r=g","48":"https:\/\/secure.gravatar.com\/avatar\/276147d21216f012356779ef633cedfe?s=48&d=mm&r=g","96":"https:\/\/secure.gravatar.com\/avatar\/276147d21216f012356779ef633cedfe?s=96&d=mm&r=g"},"meta":[],"yoast_head":"<!-- This site is optimized with the Yoast SEO plugin
+---
+[0m
+Confirmed: WordPress REST API auth is correctly enforced on `settings` and `users/me` (401). `users/1` returns 200 with author profile + gravatar MD5 hash — the gravatar hash is a concern but user enumeration on a public blog is low-value/rejected-class territory.
+
+So the WAF/auth gate is intact on WordPress. The user enumeration via `/wp/v2/users` is technically confirmed but low value (usernames on a public blog).
+
+Let me pivot to the most valuable angle. The confirmed high-value anomaly in the inventory is **dev.derdack.com** returning HTTP 300 (Multiple Choices) with mod_negotiation path disclosure. The concerning detail from the recon: direct file access to `/.ssh/id_rsa`, `/.bash_history`, `/.viminfo` returns **403** (not 404). A 403 on nonexistent files vs 404 on the root suggests the mod_negotiation "similar documents" listing is interacting with these paths in a way that could disclose file existence. But mod_negotiation only lists files that exist in the directory.
+
+Wait — the critical insight: `/.well-known/` returned 300 listing `/.ssh/`, `/.bash_history/`, `/.viminfo/` as "similar documents". This means Apache is treating these as **existing negotiable documents** in a directory. That would be a major finding if true. But the 403 on direct access could just be the `.htaccess` deny. Let me verify what dev.derdack.com actually serves — check headers to confirm it's genuinely Apache and check the 300 response body.
+
+Let me probe dev.derdack.com more carefully.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && echo "=== dev root ==="; timeout 40 curl -s -D - -o /tmp/dev_root.txt -w "HTTP %{http_code}\n" "https://dev.derdack.com/"; head -c 800 /tmp/dev_root.txt; echo; echo "=== dev /.well-known/ headers+body ==="; sleep 1; timeout 40 curl -s -D - -o /tmp/dev_wk.txt -w "HTTP %{http_code}\n" "https://dev.derdack.com/.well-known/"; echo "--- BODY ---"; head -c 2000 /tmp/dev_wk.txt
+=== dev root ===
+HTTP/2 403 
+content-type: text/html
+content-length: 1271
+x-ws-origin: available
+x-ws-ratelimit-limit: 1000
+x-ws-ratelimit-remaining: 999
+date: Thu, 03 Sep 2026 23:31:05 GMT
+server: Apache
+x-frame-options: deny
+
+HTTP 403
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <style type="text/css">
+   html, body, #partner, iframe {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+                border:0;
+                outline:0;
+                font-size:100%;
+                vertical-align:baseline;
+                background:transparent;
+            }
+            body {
+                overflow:hidden;
+            }
+  </style>
+  <meta content="NOW" name="expires">
+  <meta content="index, follow, all" name="GOOGLEBOT">
+  <meta content="index, follow, all" name="robots">
+  <!-- Following Meta-Tag fixes scaling-issues on mobile devices -->
+  <meta content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" name="view
+=== dev /.well-known/ headers+body ===
+HTTP/2 300 
+content-type: text/html; charset=iso-8859-1
+content-length: 664
+x-ws-origin: available
+x-ws-ratelimit-limit: 1000
+x-ws-ratelimit-remaining: 999
+date: Thu, 03 Sep 2026 23:31:07 GMT
+server: Apache
+
+HTTP 300
+--- BODY ---
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<title>300 Multiple Choices</title>
+</head><body>
+<h1>Multiple Choices</h1>
+The document name you requested (<code>/.well-known/</code>) could not be found on this server.
+However, we found documents with names similar to the one you requested.<p>Available documents:
+<ul>
+<li><a href="/./">/./</a> (common basename)
+<li><a href="/../">/../</a> (common basename)
+<li><a href="/.ssh/">/.ssh/</a> (common basename)
+<li><a href="/.bash_history/">/.bash_history/</a> (common basename)
+<li><a href="/.viminfo/">/.viminfo/</a> (common basename)
+</ul>
+</body></html>
+[0m
+This is a critical finding to analyze carefully. The dev.derdack.com server is **Apache with MultiViews** at the document root. The `x-ws-origin`, `x-ws-ratelimit-limit`, `x-ws-ratelimit-remaining` headers are unusual — these look like a **WebSocket/proxy layer** (possibly an Apache JServ or reverse proxy).
+
+The critical detail: `/.well-known/` returns 300 listing `/.ssh/`, `/.bash_history/`, `/.viminfo/` as "available documents". This is Apache MultiViews behavior: when Apache can't find `/.well-known/`, it does a **directory listing / filename matching** against the filesystem and finds basenames that share the prefix. This is the classic MultiViews disclosure — it reveals **files that exist in the document root**.
+
+`/.ssh/`, `/.bash_history/`, `/.viminfo/` being listed means these directories/files likely **exist** in the document root (or Apache's MultiViews matching is matching the trailing-slash documents). If `/.ssh/` actually exists with an `id_rsa` key file, that's a credential disclosure — HIGH severity.
+
+But wait — the recon showed direct access to `/.ssh/id_rsa` returned **403**, not 200. That's ambiguous: 403 could mean the file exists but Apache denies serving it, OR mod_negotiation is matching a non-existent dir. However, MultiViews' "available documents" listing is generated from **actual filesystem matches**. The fact that these basenames appear strongly implies the directories exist.
+
+The real test: does `/.bash_history` or `/.ssh/` resolve as actual readable files? The fact `.bash_history/` and `.viminfo/` appear with trailing slashes in the listing is Apache's basename-matching quirk. Note the listing says "common basename" for all of them, including `/./` and `/../` — the last two are clearly NOT real docs (they're directory traversal tokens that always match). This suggests the MultiViews listing is purely matching the **leading-dot pattern** generically, not proving file existence.
+
+Actually, looking closer — `/./` and `/../` as "available documents" proves this listing is **generic path-prefix matching**, NOT evidence of real files. MultiViews here is matching any path whose basename starts with the same first characters. Since the request was `/.well-known/`, it matched anything starting with `.` — so `/.ssh/`, `/.bash_history/`, `/.viminfo/`, `/.` `/.` are all false positives of the same generic matcher.
+
+So this is **NOT** evidence of `.ssh`/`.bash_history` existing. The 403 on direct access is consistent with the root-403 deny-all behavior, not file disclosure. This hypothesis is weaker than nemotron3 rated it (80).
+
+However — the MultiViews disclosure IS real and confirmed (300 with path enumeration). But it's the listing that's the vuln, and it's largely benign (it just echoes back dot-files matching, all 403 on access). This is a low-value finding.
+
+Let me step back and look for genuinely HIGH-VALUE targets. The dev server has been thoroughly mined by nemotron3. signl4 is unreachable. Let me reconsider the WordPress estate more aggressively — checking for contact-form-7 endpoints and any `/?rest_route=` custom endpoints, plus the `block-renderer` SSRF-ish vector.
+
+Actually, the highest-value lead I should pursue is the **dev.derdack.com Apache MultiViews path disclosure being able to leak the actual contents of the doc root** via the negotiable files. But more valuable: the `x-ws-ratelimit` headers suggest a WebSocket proxy. Let me not go too deep where nemotron3 already is.
+
+Let me think about what's uniquely mine: **API target**. signl4 is unreachable. The WordPress REST API is the main API surface. Let me probe the `block-renderer` endpoint which is a known server-side rendering vector, and check for the `/oembed` endpoint which can leak. Actually, let me check the `search` endpoint and the `block-renderer` for potential stored content.
+
+The most concrete high-value angle on WordPress API: **media endpoint enumeration** (IDOR on media), and **post revisions** which can leak draft content / sensitive info. Let me probe `/wp/v2/media` and post revisions passively.
+
+Let me probe the media and search endpoints.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && sleep 1; echo "=== media ==="; timeout 40 curl -s -o /tmp/media.txt -w "HTTP %{http_code} len=%{size_download}\n" "https://www.derdack.com/wp-json/wp/v2/media" ; head -c 400 /tmp/media.txt; echo; echo "=== search ==="; sleep 1; timeout 40 curl -s -o /tmp/search.txt -w "HTTP %{http_code} len=%{size_download}\n" "https://www.derdack.com/wp-json/wp/v2/search?search=password"; head -c 400 /tmp/search.txt
+=== media ===
+HTTP 200 len=64127
+[{"id":23348,"date":"2026-05-29T10:55:32","date_gmt":"2026-05-29T08:55:32","guid":{"rendered":"https:\/\/www.derdack.com\/wp-content\/uploads\/sites\/2\/2018\/12\/iStock-1401144442.jpg"},"modified":"2026-05-29T10:55:32","modified_gmt":"2026-05-29T08:55:32","slug":"man-working-with-mobile-phone-showing-cloud-computing-diagram-in-hand-cloud-technology-data-storage-network-and-internet-service-concep
+=== search ===
+HTTP 200 len=4447
+[{"id":5945,"title":"Adapt the Password Complexity Policy in Enterprise Alert","url":"https:\/\/www.derdack.com\/password-complexity-policy\/","type":"post","subtype":"post","_links":{"self":[{"embeddable":true,"href":"https:\/\/www.derdack.com\/wp-json\/wp\/v2\/posts\/5945"}],"about":[{"href":"https:\/\/www.derdack.com\/wp-json\/wp\/v2\/types\/post"}],"collection":[{"href":"https:\/\/www.derdack.
+[0m
+The WordPress REST API is functioning normally with auth gates intact. Media enumeration returns published media only. No PII/auth bypass exposed; the WordPress estate is well-configured at the API level. User enumeration via `/wp/v2/users` is the main confirmed issue but it's low-value (public blog usernames).
+
+Let me consolidate my analysis. My unique angle is the **API** target. The strongest NEW observation I have that isn't well covered:
+
+1. **dev.derdack.com** — the MultiViews listing shows `/.ssh/`, `/.bash_history/`, `/.viminfo/` but my analysis shows these are generic dot-prefix matches (since `/.` and `/../` are also "available docs"), NOT proof of real files. Direct access = 403 (deny-all root). This **downgrades** nemotron3's confidence-80 path-traversal hypothesis — it's actually the generic-prefix matcher, not confirmed disclosure. Important self-critique contribution.
+
+2. The `x-ws-origin`, `x-ws-ratelimit-*` headers on dev.derdack.com reveal a **UptimeRobot / NGINX-style WebSocket reverse proxy** layer (these headers are characteristic of some monitoring/proxy stacks) — but headers-only is a rejected class.
+
+3. The MultiViews on dev.derdack.com can be used to **enumerate the document root contents** by requesting paths and observing which return 300-vs-404 — a genuine information disclosure of the dev filesystem namespace. This is a real, provable finding: requesting `/.well-known/foo` variations. But is it in-scope/in-scope impact? It's a misconfig on dev infra.
+
+The key question for highest value: **can the MultiViews disclosure leak actual file contents?** Since direct file access returns 403 (root deny), but the MultiViews listing confirms filesystem namespace, the practical impact is limited. However, there's a subtle escalation: Apache MultiViews + 403 on `id_rsa` — if the server allows **server-parsed / negotiation** to render a file through a different extension, contents might leak. Let me not over-engineer; nemotron3 owns dev.
+
+Let me finalize my analysis with my genuinely unique contribution: I've confirmed the WordPress API auth is intact (so user enum is the ceiling there, low value) and I've de-risked the dev MultiViews claim as likely generic-prefix (not real file disclosure). The signl4 API remains unreachable.
+
+My strongest actionable hypothesis for the API target: the WordPress REST API is the only live API surface. Since auth gates are intact, the remaining high-value vector on WordPress is **Contact Form 7 / custom routes** hidden behind the route namespace, and **oEmbed/embedded media** for SSRF. But CF7 wasn't in the route index.
+
+Let me check the oembed/embedding vector which is the SSRF angle on WordPress REST (the `_embed` param and the `/oembed/1.0/proxy` endpoint).
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && sleep 1; echo "=== oembed proxy (SSRF probe, benign localhost) ==="; timeout 40 curl -s -o /tmp/oembed.txt -w "HTTP %{http_code}\n" "https://www.derdack.com/wp-json/oembed/1.0/proxy?url=http%3A%2F%2F127.0.0.1%2F"; head -c 500 /tmp/oembed.txt; echo; echo "=== oembed discover ==="; sleep 1; timeout 40 curl -s -o /tmp/od.txt -w "HTTP %{http_code}\n" "https://www.derdack.com/wp-json/oembed/1.0/embed?url=https://www.derdack.com/"; head -c 500 /tmp/od.txt
+=== oembed proxy (SSRF probe, benign localhost) ===
+HTTP 401
+{"code":"rest_forbidden","message":"Sorry, you are not allowed to make proxied oEmbed requests.","data":{"status":401}}
+=== oembed discover ===
+HTTP 200
+{"version":"1.0","provider_name":"Derdack","provider_url":"https:\/\/www.derdack.com","author_name":"Christian","author_url":"https:\/\/www.derdack.com\/author\/christian\/","title":"Enterprise Alert Notification Software - EnterpriseAlert\u00ae","type":"rich","width":600,"height":338,"html":"<blockquote class=\"wp-embedded-content\" data-secret=\"ZgBttrnAD6\"><a href=\"https:\/\/www.derdack.com\/\">Home<\/a><\/blockquote><iframe sandbox=\"allow-scripts\" security=\"restricted\" src=\"https:\/\/
+[0m
+Confirmed: the WordPress oEmbed proxy that could be an SSRF vector returns **401** (properly locked down), and oembed discovery works normally but at 200 only against the same-site origin. The WordPress estate auth is well-enforced across settings, users/me, oembed proxy, and draft endpoints.
+
+My analysis is complete. Let me consolidate into the structured output.
+
+**Findings summary:**
+- **WordPress API auth gates are intact** (settings=401, users/me=401, oembed proxy=401, draft pages=400). The confirmed user enumeration remains low-value (public blog usernames). My probes confirm no high-value API auth bypass exists on www.
+- **dev.derdack.com MultiViews is generic-prefix disclosure, not real file disclosure** — the 300 listing includes `/./` and `/../` as "available documents", proving it's a path-prefix matcher. This **downgrades** the confidence-80 hypothesis. Direct access returns 403 deny-all. Real finding: filesystem-namespace enumeration only.
+- **signl4 unreachable** — API target has no live surface; all API hypotheses blocked.
+
+This is the honest delta: I verified and largely *de-risked* the two highest-confirmed leads (WP API bypass, dev path disclosure), leaving signl4 API as the only remaining high-value but unreachable target.
+
+Let me write the structured output.
+
+STEP 1 — DELTA:
+- [NEW] Confirmed www.derdack.com WordPress REST API auth gates intact: /wp/v2/settings=401, /users/me=401, oembed proxy=401, draft=400 — no API auth bypass; user enumeration is the ceiling (low value, public blog).
+- [NEW] dev.derdack.com 300 MultiViews listing includes generic `/./` and `/../` basenames — proving it's a dot-prefix path matcher, NOT evidence that `/.ssh/`, `/.bash_history/`, `/.viminfo/` files exist (direct access all 403 deny-at-root).
+- [CHANGED] Downgrading dev.derdack.com path-disclosure hypothesis: real impact is doc-root namespace enumeration, not credential disclosure as nemotron3's 80-confidence implied.
+
+STEP 2 — PRIORITIZE:
+- signl4.derdack.com: a=8,b=9,t=8,g=5,c=7,f=4 → 0.25*8+0.25*9+0.15*8+0.15*5+0.10*7+0.10*4 = 2+2.25+1.2+0.75+0.7+0.4 = 7.3
+- www.derdack.com (WP API): a=7,b=6,t=5,g=5,c=5,f=7 → 1.75+1.5+0.75+0.75+0.5+0.7 = 5.95
+- dev.derdack.com: a=6,b=6,t=6,g=5,c=6,f=5 → 1.5+1.5+0.9+0.75+0.6+0.5 = 5.75
+
+STEP 3 — HYPOTHESES: I'll pick the signl4 API (highest value) and the WP API mass-assignment/IDOR on blogs gutenberg content. But signl4 is unreachable — hypothesis needs routing. Let me make it concrete: the AWS IP 13.94.244.66 times out on 80/443 but might respond on alternate http ports / host-header. Worth one passive check of host-header routing. Actually keep it as the API unreachable issue.
+
+Let me produce concise structured output.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && sleep 1 && echo "=== dev: multiviws namespace enumeration (does listing reveal more real dirs?) ===" && timeout 40 curl -s -o /tmp/d2.txt -w "HTTP %{http_code}\n" "https://dev.derdack.com/.well-known/anything"; head -c 900 /tmp/d2.txt
+=== dev: multiviws namespace enumeration (does listing reveal more real dirs?) ===
+HTTP 300
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<title>300 Multiple Choices</title>
+</head><body>
+<h1>Multiple Choices</h1>
+The document name you requested (<code>/.well-known/anything</code>) could not be found on this server.
+However, we found documents with names similar to the one you requested.<p>Available documents:
+<ul>
+<li><a href="/./anything">/./anything</a> (common basename)
+<li><a href="/../anything">/../anything</a> (common basename)
+<li><a href="/.ssh/anything">/.ssh/anything</a> (common basename)
+<li><a href="/.bash_history/anything">/.bash_history/anything</a> (common basename)
+<li><a href="/.viminfo/anything">/.viminfo/anything</a> (common basename)
+</ul>
+</body></html>
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && cat > state_bigpickle.json <<'EOF'
+{"phase": "POC", "target": "api", "note": "Cycle de-risked dev MultiViews (static listing proven) and confirmed WP API auth intact; signl4 remains only deep target but unreachable"}
+EOF
+echo done
+done
+[0m
+Confirmed decisively: requesting `/.well-known/anything` (a completely nonexistent path) returns the **identical** 300 listing of `/.ssh/`, `/.bash_history/`, `/.viminfo/`, `/./`, `/../`. This proves the MultiViews listing is a **static dot-prefix match and reveals zero real filesystem information** — the SAME output regardless of the requested suffix. nemotron3's confidence-80 "path disclosure of sensitive files" hypothesis is **false**: it's just Apache echoing the shared dot-prefix basenames, and no sensitive file actually exists or is disclosed.
+
+This is my key de-risking contribution this cycle. I'm confident in the structure now.
+
+STEP 1 — DELTA:
+- [NEW] www.derdack.com WordPress REST API auth gates verified intact (settings/users/me/oembed-proxy all 401, drafts 400): only confirmed issue is low-value public-blog user enumeration.
+- [NEW] dev.derdack.com MultiViews 300 listing is proven **static** — identical output (`/.ssh/`, `/.bash_history/`, `/.viminfo/`, `/./`, `/../`) is returned for a completely fabricated path `/.well-known/anything`.
+- [CHANGED] Downgrade dev.derdack.com path-disclosure from 80 → ~15: it's a generic dot-prefix basename echo, discloses no real filesystem content; the "sensitive file" names are pure artifacts.
+
+STEP 2 — PRIORITIZE:
+- [PRIO] signl4.derdack.com,7.3 (highest value, but unreachable — only remaining deep target)
+- [PRIO] www.derdack.com,6.0 (WP API auth intact, low residual)
+- [PRIO] dev.derdack.com,5.8 (mostly de-risked this cycle)
+
+STEP 3 — HYPOTHESES:
+
+[HYP] SIGNL4 API reachable via alternate host-header / legacy TLS port
+class: OTHER
+asset: signl4.derdack.com
+confidence: 40
+reasoning: AWS 13.94.244.66 times out on 80/443 for 5+ cycles; subdomain resolves to AWS EC2. SaaS API may only accept traffic via specific Host header (multi-tenant reverse proxy) or on non-standard port; direct-IP probing times out at TCP layer suggesting WAF/firewall filtered by Host-independent rules, but worth one Host-header variant.
+evidence_needed: non-timeout HTTP response on any Host/port variant
+verify_steps: GET https://13.94.244.66/ -H "Host: signl4.derdack.com" (no SNI); GET http://13.94.244.66:8080/ and :8443/
+impact: restores access to primary API target for AUTH testing; severity HIGH (enabling)
+testability: PASSIVE
+
+[HYP] WordPress Gutenberg blocks/revisions leaking draft or sensitive post content
+class: IDOR
+asset: www.derdack.com
+confidence: 25
+reasoning: WP REST routes include /wp/v2/blocks/{id}/revisions, /posts/{id}/revisions, global-styles; revisions sometimes expose draft/preview content unauthenticated if per-post capabilities misconfigured. Authentication gates so far returned 401, lowering confidence.
+evidence_needed: 200 on a protected revision/autosave endpoint
+verify_steps: GET https://www.derdack.com/wp-json/wp/v2/posts/5945/revisions ; GET /wp-json/wp/v2/posts/5945/autosaves
+impact: leak of unpublished/draft content; severity LOW-MEDIUM
+testability: PASSIVE
+
+STEP 4 — SELF-CRITIQUE:
+- [PARKED] SIGNL4 host-header/alt-port reachability: conf 40; direct TCP timeout for many cycles suggests firewall drop independent of Host, low likelihood of variant success; signl4 remains the only deep target though.
+- [PARKED] WP revisions/autosaves IDOR: conf 25 < 40; all WP auth gates returned 401 cleanly, so unprotected revisions unlikely; low ceiling.
+- [FINAL] No survivor above 40. My cycle de-risked two over-rated leads (dev MultiViews static-listing proven; WP API auth confirmed intact) and re-confirmed signl4 as the only high-value but blocked target.
+
+STEP 5 — NEXT ACTION:
+[NEXT] PROBE: single low-cost TCP reachability check on signl4 alternative front doors — GET http://13.94.244.66:8080/ and GET http://signl4.derdack.com:8443/ and Host-header variant "GET https://13.94.244.66/ -H 'Host: signl4.derdack.com' -k" (all passive, 1 rps) to determine if signl4 API is merely Host-filtered rather than fully dead.
+
+STEP 6 — LEARNING:
+[LEARN] REJECTED MISCONFIG @ dev.derdack.com: MultiViews path disclosure is a static dot-prefix basename echo — identical output for fabricated paths proves no real sensitive files; only doc-root namespace is surfaced, impact minimal.
+[LEARN] ACCEPTED AUTH @ www.derdack.com: WP REST API correctly enforces auth on settings/users/me/oembed-proxy/drafts (401/400); user enumeration confirmed but low-value public-blog exposure only.
+[LEARN] REJECTED SSRF @ www.derdack.com: oEmbed proxy returns 401 for proxied requests — SSRF vector blocked.
+
+STEP 7 — RISK:
+[RISK] derdack: 30 (low-moderate). Most attack surface now validated as well-hardened: WP API auth gates intact, dev MultiViews is benign static-listing, oEmbed/SSRF blocked. Primary target (signl4) unreachable across 5+ probes. Only meaningful residual is low-value WP user enumeration and the unprobed signl4 API reachability. Real logic-flaw hunt is blocked until signl4 API surface is reachable; recommend alternate-port/Host parity check before further effort.
+
+Let me update my state file.
+## Analysis — bigpickle (API target), cycle 2026-09-03 23:31 UTC
+
+STEP 1 — DELTA
+- [NEW] www.derdack.com WP REST API auth gates verified intact: `/wp/v2/settings`=401, `/users/me`=401, oembed proxy=401, drafts=400 — only confirmed issue is low-value public-blog user enumeration
+- [NEW] dev.derdack.com MultiViews 300 listing proven **static**: identical output (`.ssh/`, `.bash_history/`, `.viminfo/`, `./`, `../`) returned for the fabricated path `/.well-known/anything`
+- [CHANGED] Downgrade dev.derdack.com "sensitive path disclosure" from nemotron3's 80 → ~15: it's a generic dot-prefix basename echo, reveals no real file contents; dot-name artifacts only
+
+STEP 2 — PRIORITIZE
+- [PRIO] signl4.derdack.com,7.3 (only remaining deep/high-value target — but unreachable)
+- [PRIO] www.derdack.com,6.0 (WP API auth intact, residual low)
+- [PRIO] dev.derdack.com,5.8 (largely de-risked this cycle)
+
+STEP 3 — HYPOTHESES
+
+[HYP] SIGNL4 API reachable via alternate host-header / legacy TLS port
+class: OTHER
+asset: signl4.derdack.com
+confidence: 40
+reasoning: AWS 13.94.244.66 times out on 80/443 every cycle; may be Host-filtered multi-tenant reverse proxy or serve on non-standard port rather than fully dead
+evidence_needed: any non-timeout HTTP response on a Host/port variant
+verify_steps: curl -k -H "Host: signl4.derdack.com" https://13.94.244.66/ ; curl http://13.94.244.66:8080/ ; curl http://signl4.derdack.com:8443/
+impact: restores access to primary API target for AUTH depth testing; severity HIGH (enabling)
+testability: PASSIVE
+
+[HYP] WP revisions/autosaves leaking draft or sensitive post content
+class: IDOR
+asset: www.derdack.com
+confidence: 25
+reasoning: routes expose blocks/posts revisions+autosaves; but every prior WP protected endpoint returned 401 cleanly, capping likelihood
+evidence_needed: 200 on a protected revision endpoint
+verify_steps: GET /wp-json/wp/v2/posts/5945/revisions ; GET /wp-json/wp/v2/posts/5945/autosaves
+impact: leak of unpublished content; severity LOW
+testability: PASSIVE
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] SIGNL4 alt-port/Host reachability: conf 40; TCP timeout across many cycles suggests firewall drop invariant to Host; low success odds but signl4 is the only deep target left
+- [PARKED] WP revisions/autosaves IDOR: conf 25 < 40; WP auth consistently enforced, unprotected revisions unlikely
+- [FINAL] No survivor ≥ 40. This cycle's value is negative-space: de-risked two over-rated leads (dev MultiViews static-listing proven benign; WP API auth confirmed intact; oEmbed/SSRF blocked) and isolated signl4 reachability as the sole remaining gate.
+
+STEP 5 — NEXT ACTION
+- [NEXT] PROBE: GET http://signl4.derdack.com:8443/ ; GET http://13.94.244.66:8080/ ; curl -k -H "Host: signl4.derdack.com" https://13.94.244.66/ — test if the API is Host/port-filtered rather than dead (all passive, 1 rps)
+
+STEP 6 — LEARNING
+- [LEARN] REJECTED MISCONFIG @ dev.derdack.com: MultiViews listing is a static dot-prefix basename echo (identical for fabricated paths) — no real sensitive files disclosed
+- [LEARN] ACCEPTED AUTH @ www.derdack.com: WP REST API enforces auth correctly on settings/users/me/oembed-proxy/drafts; only low-value public user enumeration confirmed
+- [LEARN] REJECTED SSRF @ www.derdack.com: oEmbed proxy returns 401 for proxied requests — SSRF vector blocked
+
+STEP 7 — RISK
+- [RISK] derdack: 30 (low-moderate). Surface validated as well-hardened: WP API auth intact, dev MultiViews benign static listing, oEmbed/SSRF blocked. Primary target (signl4) unreachable 5+ probes. Only residual: low-value WP user enumeration + unprobed signl4 reachability. Logic-flaw hunt blocked until signl4 API is reachable; recommend alt-port/Host parity check before further spend.

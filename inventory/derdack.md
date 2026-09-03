@@ -50,3 +50,9 @@ www.derdack.com
 - NEW www.derdack.com/wp-json/wp/v2/posts returns 200 with published posts; /wp-json/wp/v2/posts?status=draft returns 400 (requires auth); /wp-json/wp/v2/pages returns 200 with many pages
 - NEW signl4.derdack.com remains unreachable (connection timeout on AWS 13.94.244.66)
 - CHANGED Inventory validated: 5/9 live Derdack hosts (dev, www, derdack.com, blog, techblog); 2 unreachable (signl4), 1 NXDOMAIN (signals), 1 parked (de/www.de)
+
+## 2026-09-03 23:32:47 UTC
+- NEW nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+- CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+- NEW No new live probe data since 2026-09-03 21:36:55 UTC — current surface matches last validated state
+- CHANGED None — inventory stable at 5/9 live Derdack hosts (dev, www, derdack.com, blog, techblog); signl4 unreachable, signals NXDOMAIN, de/www.de parked
