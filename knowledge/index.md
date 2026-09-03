@@ -3,3 +3,12 @@
 - 2026-09-03 ACCEPTED MISCONFIG @ dev.derdack.com: dev environments frequently expose debug interfaces; passive probe cost near-zero
 - 2026-09-03 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
 - 2026-09-03 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+- 2026-09-03 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+- 2026-09-03 ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+- 2026-09-03 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+- 2026-09-03 REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- 2026-09-03 ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive probe cost near-zero
+- 2026-09-03 REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+- 2026-09-03 REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+- 2026-09-03 ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+- 2026-09-03 REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
