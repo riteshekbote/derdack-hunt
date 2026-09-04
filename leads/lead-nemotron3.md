@@ -368,3 +368,54 @@ testability: PASSIVE
 [LEARN] ACCEPTED MISCONFIG @ www.derdack.com: blog.derdack.com & techblog.derdack.com HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
 [LEARN] REJECTED AUTH @ www.derdack.com: Media library `/wp-json/wp/v2/media` returns 200 but only public assets (stock images, 1 MP3 podcast); no internal docs/PDFs/backups/PII found
 [RISK] derdack: 65 — dev.derdack.com misconfiguration high immediate yield (path traversal disclosure to sensitive files .ssh/ exists); blog/techblog HTTPS-to-HTTP downgrade chain enables session hijacking on subdomain visitors; www.derdack.com WordPress REST API medium risk (10 users enumerated, full content map, media library public but no sensitive files); signl4.derdack.com SaaS high value but permanently unreachable; 4/9 inventory hosts not Derdack infrastructure (parked/NXDOMAIN/unreachable)
+## 2026-09-04 17:56:06 UTC [target] (model nemotron3)
+[NEW] dev.derdack.com/.ssh/id_rsa, /.ssh/authorized_keys, /.ssh/known_hosts all return 403 (directory exists but individual files blocked)
+[NEW] dev.derdack.com/wp-json/, /wp-login.php return 404; /xmlrpc.php returns 503 (nginx) — no WordPress on dev host
+[NEW] www.derdack.com/wp-json/wp/v2/media returns 2170 items across 217 pages — all public marketing assets (images, logos, 1 MP3 podcast), no sensitive docs/PDFs/backups
+[NEW] blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade redirects confirmed live (302 to http://www.derdack.com/...)
+[NEW] www.derdack.com & derdack.com lack HSTS, CSP, X-Frame-Options headers confirmed
+[CHANGED] Media library hypothesis: 2170 public assets only, no internal file disclosure (previously 108 items noted)
+[PRIO] dev.derdack.com,7.8,a=9 b=7 t=9 g=9 c=6 f=5
+[PRIO] www.derdack.com,7.7,a=9 b=8 t=8 g=8 c=5 f=5
+[PRIO] derdack.com,6.0,a=6 b=8 t=5 g=5 c=6 f=4
+[PRIO] blog.derdack.com,3.9,a=4 b=4 t=4 g=4 c=3 f=4
+[PRIO] techblog.derdack.com,3.9,a=4 b=4 t=4 g=4 c=3 f=4
+[HYP] dev.derdack.com Apache mod_negotiation MultiViews sensitive path disclosure
+class: MISCONFIG
+asset: dev.derdack.com
+confidence: 85
+reasoning: /.well-known/ returns 300 Multiple Choices enumerating /.ssh/, /.bash_history/, /.viminfo/ as "similar documents"; Apache mod_negotiation/MultiViews confirmed across 6 probe cycles; direct access to /.ssh/ returns 403 confirming directory exists but blocked; individual key files also 403
+evidence_needed: 300 response body listing sensitive paths; 403 on direct file access confirms files exist but blocked
+verify_steps: GET https://dev.derdack.com/.well-known/; GET https://dev.derdack.com/.ssh/; GET https://dev.derdack.com/.bash_history/; GET https://dev.derdack.com/.viminfo/
+impact: Information disclosure of sensitive file paths on dev host; aids reconnaissance for further attacks; potential credential/key exposure if permissions misconfigured elsewhere
+testability: PASSIVE
+[HYP] blog.derdack.com & techblog.derdack.com HTTPS-to-HTTP downgrade redirect chain
+class: MISCONFIG
+asset: blog.derdack.com, techblog.derdack.com
+confidence: 80
+reasoning: Both subdomains redirect via HTTP (302 to http://www.derdack.com/...) even when accessed via HTTPS; creates mixed content / downgrade risk for visitors; session cookies without Secure flag could be leaked; sslstrip viable on subdomain visitors
+evidence_needed: HTTP 302 redirect to http:// (not https://) from both HTTP and HTTPS requests on blog/techblog subdomains; cookie Secure flag analysis on session cookies
+verify_steps: GET http://blog.derdack.com/ -v; GET https://blog.derdack.com/ -v; GET http://techblog.derdack.com/ -v; GET https://techblog.derdack.com/ -v
+impact: Session hijacking via downgrade on subdomain visitors; cookie theft if Secure flag missing; phishing via HTTP redirect manipulation
+testability: PASSIVE
+[HYP] www.derdack.com Missing security headers (HSTS, CSP, X-Frame-Options) on primary customer-facing domain
+class: MISCONFIG
+asset: www.derdack.com, derdack.com
+confidence: 65
+reasoning: www.derdack.com and derdack.com root lack HSTS, CSP, X-Frame-Options headers; Apache server exposes version via Server header; Clickjacking and MITM risks present on primary customer-facing domain
+evidence_needed: Absence of Strict-Transport-Security, Content-Security-Policy, X-Frame-Options headers on HTTPS responses
+verify_steps: GET https://www.derdack.com/ -I; GET https://derdack.com/ -I
+impact: Clickjacking via missing X-Frame-Options; SSL stripping via missing HSTS; XSS impact amplified via missing CSP
+testability: PASSIVE
+[PARKED] www.derdack.com Missing security headers: confidence 65 but impact is defensive/informational — no direct exploit without chaining; program excludes SSL/TLS best practice findings
+[FINAL] dev.derdack.com Apache mod_negotiation MultiViews sensitive file path disclosure — ranked #1 (confidence 85, passive verify, info disclosure on dev host)
+[FINAL] blog.derdack.com & techblog.derdack.com HTTPS-to-HTTP downgrade redirect chain — ranked #2 (confidence 80, passive verify, session hijacking risk on subdomain visitors)
+[NEXT] PROBE: GET https://dev.derdack.com/.well-known/ (confirm 300 body still lists /.ssh/, /.bash_history/, /.viminfo/ as "similar documents" for evidence package)
+[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive probe cost near-zero
+[LEARN] ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
+[LEARN] REJECTED MISCONFIG @ dev.derdack.com: WordPress staging/debug exposure — wp-json/wp-login/xmlrpc all 404/503; no WP on dev host
+[LEARN] ACCEPTED AUTH @ www.derdack.com: Media library `/wp-json/wp/v2/media` returns 200 with 2170 items but only public marketing assets (images, logos, 1 MP3 podcast); no internal docs/PDFs/backups/PII found
+[LEARN] REJECTED OTHER @ signl4.derdack.com: permanently unreachable across 8+ probe cycles (all TCP timeout); all attack surface value = 0
+[LEARN] REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+[LEARN] REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+[RISK] derdack: 70 — dev.derdack.com MultiViews high immediate yield (path disclosure to sensitive files .ssh/ exists but blocked); blog/techblog HTTPS-to-HTTP downgrade chain enables session hijacking on subdomain visitors; www.derdack.com WordPress REST API medium risk (10 users enumerated, full content map, media library public but no sensitive files); signl4.derdack.com SaaS high value but permanently unreachable; 4/9 inventory hosts not Derdack infrastructure (parked/NXDOMAIN/unreachable)

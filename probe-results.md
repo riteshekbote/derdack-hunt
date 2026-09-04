@@ -112,3 +112,17 @@ https://dev.derdack.com/.ssh/id_rsa -> HTTP 403
 https://dev.derdack.com/.ssh/authorized_keys -> HTTP 403
 https://dev.derdack.com/.ssh/known_hosts -> HTTP 403
 https://dev.derdack.com/wp-json/ -> HTTP 404
+
+## 2026-09-04 18:00:33 UTC
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://dev.derdack.com/.ssh/ -> HTTP 403
+https://dev.derdack.com/.bash_history/ -> HTTP 404
+https://dev.derdack.com/.viminfo/ -> HTTP 404
+https://blog.derdack.com/ -> 200 len=?
+https://techblog.derdack.com/ -> 200 len=?
+https://www.derdack.com/ -> 200 len=?
+https://derdack.com/ -> 200 len=?
+https://www.derdack.com -> 200 len=?
+https://www.derdack.com/de/enterprise-alert-9-4-1-release/ -> 200 len=?
+https://www.derdack.com/de/wp-json/wp/v2/posts/11640/revisions -> HTTP 401
+https://www.derdack.com/de/wp-json/wp/v2/posts/11640/autosaves -> HTTP 401

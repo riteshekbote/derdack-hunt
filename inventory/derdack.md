@@ -86,3 +86,19 @@ www.derdack.com
 - NEW blog.derdack.com & techblog.derdack.com HTTPS redirects to HTTP (not HTTPS) on www.derdack.com — downgrade/mixed content chain confirmed
 - NEW derdack.com & www.derdack.com lack HSTS, CSP, X-Frame-Options headers
 - CHANGED Media library hypothesis confidence adjusted: public assets only, no internal file disclosure found
+
+## 2026-09-04 17:59:53 UTC
+- NEW www.derdack.com `/de/` and `/ea/` are separate WordPress Multisite installations (uploads/sites/5, sites/6) — completely unprobed until this cycle; namespaces include complianz/v1, wordpress-popular-p
+- NEW www.derdack.com `/de/xmlrpc.php` returns 200 with full method list (pingback.ping, system.multicall, wp.getUsers, wp.uploadFile, mt.*) — root xmlrpc.php is 503-blocked but /de/ install is fully expose
+- NEW www.derdack.com `/ea/` xmlrpc.php returns 405 (blocked) — /de/ is the odd one out
+- NEW www.derdack.com `/ea/` media exposes Whitepaper_test.pdf (3MB, 2017) — likely test artifact in public media library
+- NEW dev.derdack.com root returns 403 with sedoparking.com IONOSParkingDE iframe (parked/error page) while specific paths (/.well-known/, /.ssh/, /backups/, /logs/) still served by Apache with x-ws-origin/
+- NEW derdack.com bare domain 302 → https://www.derdack.com (no differential vhost content)
+- NEW `x-ws-origin: available` + `x-ws-ratelimit-*` custom headers present on ALL derdack hosts (dev, www, derdack) — custom reverse-proxy layer fingerprint
+- CHANGED Previous hypothesis "dev.derdack.com WordPress install" REJECTED — wp-json/ 404, but root is a parked/error page, not a dev app
+- NEW dev.derdack.com/.ssh/id_rsa, /.ssh/authorized_keys, /.ssh/known_hosts all return 403 (directory exists but individual files blocked)
+- NEW dev.derdack.com/wp-json/, /wp-login.php return 404; /xmlrpc.php returns 503 (nginx) — no WordPress on dev host
+- NEW www.derdack.com/wp-json/wp/v2/media returns 2170 items across 217 pages — all public marketing assets (images, logos, 1 MP3 podcast), no sensitive docs/PDFs/backups
+- NEW blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade redirects confirmed live (302 to http://www.derdack.com/...)
+- NEW www.derdack.com & derdack.com lack HSTS, CSP, X-Frame-Options headers confirmed
+- CHANGED Media library hypothesis: 2170 public assets only, no internal file disclosure (previously 108 items noted)

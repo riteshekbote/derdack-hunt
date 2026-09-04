@@ -145,3 +145,22 @@
 - LEARN: REJECTED SSRF @ www.derdack.com: Yoast `file_size` endpoint returns 401 (auth-gated); no SSRF possible without authentication
 - LEARN: ACCEPTED MISCONFIG @ www.derdack.com: blog.derdack.com & techblog.derdack.com HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
 - LEARN: REJECTED AUTH @ www.derdack.com: Media library `/wp-json/wp/v2/media` returns 200 but only public assets (stock images, 1 MP3 podcast); no internal docs/PDFs/ba
+
+## RANKED HYPOTHESES 2026-09-04 17:59:53 UTC
+- [85] dev.derdack.com: dev.derdack.com Apache mod_negotiation MultiViews sensitive path disclosure (from art/lead_nemotron3.txt)
+- [55] www.derdack.com/de/xmlrpc.php: /de/ WordPress XML-RPC full exposure enables SSRF via pingback.ping and/or unauthenticated method abuse (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: POST https://www.derdack.com/de/xmlrpc.php pingback.ping source=http://169.254.169.254/latest/meta-data/ target=https://www.derdack.com/de/enterprise-ale
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://dev.derdack.com/.well-known/ (confirm 300 body still lists /.ssh/, /.bash_history/, /.viminfo/ as "similar documents" for evidence package)
+- LEARN: ACCEPTED MISCONFIG @ www.derdack.com: /de/ and /ea/ are separate WP Multisite subdirectory installs (sites/5 and sites/6) with unique plugin namespaces (complia
+- LEARN: ACCEPTED AUTH @ www.derdack.com/de/: xmlrpc.php fully functional (200, full method list) while root xmlrpc is 503-blocked — endpoint exposure anomaly on multisi
+- LEARN: ACCEPTED AUTH @ www.derdack.com/ea/: xmlrpc.php returns 405 (blocked) — /de/ is the anomalous sub-install
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: root returns parked 403 with IONOS sedoparking iframe while /.well-known/, /.ssh/, /backups/, /logs/ still served via Apac
+- LEARN: ACCEPTED MISCONFIG @ all: x-ws-origin: available + x-ws-ratelimit custom headers present on every derdack host — consistent shared reverse-proxy/WAF fingerprint
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com: WordPress install — wp-json/ 404, wp-admin 404, xmlrpc not present; previous hypothesis invalidated
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive 
+- LEARN: ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com: WordPress staging/debug exposure — wp-json/wp-login/xmlrpc all 404/503; no WP on dev host
+- LEARN: ACCEPTED AUTH @ www.derdack.com: Media library `/wp-json/wp/v2/media` returns 200 with 2170 items but only public marketing assets (images, logos, 1 MP3 podcast
+- LEARN: REJECTED OTHER @ signl4.derdack.com: permanently unreachable across 8+ probe cycles (all TCP timeout); all attack surface value = 0
+- LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+- LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
