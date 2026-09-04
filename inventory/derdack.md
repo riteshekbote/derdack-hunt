@@ -56,3 +56,10 @@ www.derdack.com
 - CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
 - NEW No new live probe data since 2026-09-03 21:36:55 UTC — current surface matches last validated state
 - CHANGED None — inventory stable at 5/9 live Derdack hosts (dev, www, derdack.com, blog, techblog); signl4 unreachable, signals NXDOMAIN, de/www.de parked
+
+## 2026-09-04 01:28:34 UTC
+- NEW bigpickle added SIGNL4 API reachable via alternate host-header/legacy TLS port hypothesis (confidence 40, class OTHER) — AWS 13.94.244.66 times out on 80/443; may be Host-filtered multi-tenant proxy
+- NEW bigpickle REJECTED dev.derdack.com MultiViews as minimal impact — "static dot-prefix basename echo, identical output for fabricated paths proves no real sensitive files"
+- NEW bigpickle ACCEPTED www.derdack.com WP REST API auth gates intact — settings/users/me/oembed-proxy/drafts return 401/400; user enumeration confirmed but low-value public blog exposure
+- NEW bigpickle REJECTED SSRF @ www.derdack.com — oEmbed proxy returns 401 for proxied requests
+- CHANGED No new live probe data since 2026-09-03 23:33:19 UTC — surface frozen at 5/9 live Derdack hosts

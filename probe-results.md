@@ -69,3 +69,16 @@ https://app.signl4.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service
 https://dashboard.signl4.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
 https://signl4.derdack.com/.well-known/openid-configuration -> ERR <urlopen error timed out>
 https://dev.derdack.com/.well-known/openid-configuration -> HTTP 300
+
+## 2026-09-04 01:28:57 UTC
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://dev.derdack.com/.ssh/id_rsa -> HTTP 403
+https://dev.derdack.com/.bash_history -> HTTP 403
+https://dev.derdack.com/.viminfo -> HTTP 403
+https://www.derdack.com/wp-json/wp/v2/users/1 -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/media -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/posts?status=draft -> HTTP 400
+https://dev.derdack.com/.well-known/openid-configuration -> HTTP 300
+https://www.derdack.com/wp-json/wp/v2/posts/5945/revisions -> HTTP 401
+https://www.derdack.com/wp-json/wp/v2/posts/5945/autosaves -> HTTP 401
+https://www.derdack.com/wp-json/wp/v2/users/2 -> HTTP 404

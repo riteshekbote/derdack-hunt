@@ -181,3 +181,42 @@ evidence_needed: 200 on a protected revision endpoint
 verify_steps: GET /wp-json/wp/v2/posts/5945/revisions ; GET /wp-json/wp/v2/posts/5945/autosaves
 impact: leak of unpublished content; severity LOW
 testability: PASSIVE
+## 2026-09-04 01:19:45 UTC [target] (model bigpickle)
+[PRIO] signl4.derdack.com,5.45,a7,b9,t6,g1,c2,f2
+[PRIO] www.derdack.com,4.85,a5,b8,t5,g1,c3,f5
+[PRIO] dev.derdack.com,4.15,a6,b4,t4,g2,c3,f5
+[HYP] signl4.derdack.com alternate Host-header or legacy port access
+class: OTHER
+asset: signl4.derdack.com (13.94.244.66)
+confidence: 40
+reasoning: AWS IP times out on 80/443 across 5+ cycles; SaaS reverse-proxy may filter by Host header or serve on non-standard port; one final test before permanent rejection
+evidence_needed: any non-timeout HTTP response on Host/Port variant
+verify_steps: GET http://13.94.244.66:8080/ -m5; GET http://13.94.244.66:8443/ -m5; curl -k -H "Host: signl4.derdack.com" https://13.94.244.66/ -m5
+impact: unlocks primary SaaS API target for full AUTH/business-logic testing; severity HIGH (enabler)
+testability: PASSIVE
+[HYP] WP REST API post revisions leaking draft content
+class: IDOR
+asset: www.derdack.com/wp-json/wp/v2/posts/5945/revisions
+confidence: 25
+reasoning: published post 5945 confirmed via earlier probes; revisions endpoint may expose draft/preview content if capability check misconfigured; all prior protected WP endpoints returned 401, lowering likelihood
+evidence_needed: 200 response with revision content
+verify_steps: GET https://www.derdack.com/wp-json/wp/v2/posts/5945/revisions; GET https://www.derdack.com/wp-json/wp/v2/posts/5945/autosaves
+impact: leak of unpublished content; severity LOW
+testability: PASSIVE
+[HYP] WP user email/PII leakage via single-user endpoint
+class: IDOR
+asset: www.derdack.com/wp-json/wp/v2/users/1
+confidence: 30
+reasoning: /users collection returned names+slugs (confirmed); single-user endpoints may expose email/PII even when collection does not
+evidence_needed: 200 with email/PII fields
+verify_steps: GET https://www.derdack.com/wp-json/wp/v2/users/1; GET https://www.derdack.com/wp-json/wp/v2/users/2
+impact: PII leak of user email; severity LOW-MEDIUM
+testability: PASSIVE
+[PARKED] WP revisions: confidence 25 < 40; every protected WP endpoint returned 401 cleanly; low probability of misconfigured capability check.
+[PARKED] WP single-user PII: confidence 30 < 40; WP default REST API does not expose email on single-user without auth; prior /users collection response already showed no email field.
+[FINAL] Only survivor:
+[NEXT] PROBE: GET http://13.94.244.66:8080/ -m5 && GET http://13.94.244.66:8443/ -m5 && curl -k -H "Host: signl4.derdack.com" https://13.94.244.66/ -m5 (all passive, 1 rps; final check before permanent rejection of signl4)
+[LEARN] REJECTED IDOR @ www.derdack.com revisions/autosaves: confidence 25 < 40; all prior protected WP endpoints returned 401; capability check appears intact.
+[LEARN] REJECTED IDOR @ www.derdack.com users/{id} PII: confidence 30 < 40; /users collection already exposed no email; single-user endpoint unlikely to differ.
+[LEARN] ACCEPTED OTHER @ signl4.derdack.com: 40 confidence warranting final probe — if alternate Host/port fails, permanently reject signl4 and pivot all remaining effort to www.derdack.com WP surface.
+[RISK] derdack: 32 (low). signl4 primary API target unreachable across 6 cycles; dev MultiViews is benign static listing; WP REST API auth gates intact across all protected routes; WP user enumeration confirmed but low-value public-blog exposure only. No active vulnerability confirmed to date. If signl4 alternate-port probe fails, remaining attack surface is limited to WP business-logic flaws (requires authenticated testing) or low-value info disclosure.
