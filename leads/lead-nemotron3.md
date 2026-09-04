@@ -243,3 +243,4 @@ testability: PASSIVE
 [LEARN] ACCEPTED AUTH @ www.derdack.com: WP REST API correctly enforces auth on settings/users/me/oembed-proxy/drafts (401/400); user enumeration confirmed but low-value public-blog exposure only
 [LEARN] REJECTED SSRF @ www.derdack.com: oEmbed proxy returns 401 for proxied requests — SSRF vector blocked
 [RISK] derdack: 65 — dev.derdack.com misconfiguration high immediate yield (path traversal disclosure to sensitive files); www.derdack.com WordPress REST API medium-high risk (10 users enumerated, full content map, individual author PII likely); signl4.derdack.com SaaS high value but unreachable; 4/9 inventory hosts not Derdack infrastructure (parked/NXDOMAIN/unreachable)
+## 2026-09-04 06:15:22 UTC [target] (model nemotron3)

@@ -220,3 +220,25 @@ testability: PASSIVE
 [LEARN] REJECTED IDOR @ www.derdack.com users/{id} PII: confidence 30 < 40; /users collection already exposed no email; single-user endpoint unlikely to differ.
 [LEARN] ACCEPTED OTHER @ signl4.derdack.com: 40 confidence warranting final probe — if alternate Host/port fails, permanently reject signl4 and pivot all remaining effort to www.derdack.com WP surface.
 [RISK] derdack: 32 (low). signl4 primary API target unreachable across 6 cycles; dev MultiViews is benign static listing; WP REST API auth gates intact across all protected routes; WP user enumeration confirmed but low-value public-blog exposure only. No active vulnerability confirmed to date. If signl4 alternate-port probe fails, remaining attack surface is limited to WP business-logic flaws (requires authenticated testing) or low-value info disclosure.
+## 2026-09-04 06:01:08 UTC [target] (model bigpickle)
+[NEW] signl4.derdack.com alternate port/host probes ALL returned http_code=000 (TCP timeout on 8080, 8443, IP+Host header variant) — signl4 permanently unreachable
+[NEW] Yoast SEO REST API `/yoast/v1/` route schema fully enumerated: file_size, statistics, workouts, semrush, configuration endpoints all return 401 (auth-gated); `get_head?url=` returns 200 (expected public functionality)
+[NEW] WP `/wp-json/wp/v2/users/1` confirmed: returns only id, name, slug, link — NO email/PII (properly gated)
+[NEW] CF7 endpoint `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated)
+[NEW] `xmlrpc.php` returns 503 (blocked at LB level)
+[PRIO] www.derdack.com,4.50,a5,b7,t4,g0,c2,f5
+[PRIO] dev.derdack.com,3.90,a3,b3,t3,g0,c4,f5
+[PRIO] signl4.derdack.com,0.00,0,0,0,0,0,0
+[PARKED] signl4 alternate port/host: confidence 0 — all 4 probes returned http_code=000; signl4 is permanently unreachable (firewall/ACL block at TCP layer, not HTTP filtering)
+[PARKED] WP revisions/autosaves: confidence 25 < 40; verified 401 on revisions and autosaves endpoints
+[PARKED] WP user PII: confidence 30 < 40; `/users/1` confirmed returns only name/slug, no email
+[PARKED] Yoast file_size SSRF: confidence 20 < 40; endpoint returns 401 (auth-gated), no SSRF possible without auth
+[PARKED] CF7 info disclosure: confidence 15 < 40; endpoint returns 403 (properly gated)
+[FINAL] No survivors. All attack vectors on the passive-permitted surface have been probed and verified as properly gated. The only remaining high-value target (signl4) is permanently unreachable.
+[LEARN] REJECTED OTHER @ signl4.derdack.com: alternate port/host probes all returned http_code=000; signl4 is permanently unreachable across 80, 443, 8080, 8443, and IP+Host header variants; firewall/ACL block is TCP-layer, not HTTP-filtering — permanently reject signl4.
+[LEARN] ACCEPTED AUTH @ www.derdack.com: Yoast SEO REST API (`/yoast/v1/`) route schema fully enumerated but all admin endpoints (file_size, statistics, workouts, semrush, configuration, check_capability) return 401; only `get_head?url=` is public (expected functionality).
+[LEARN] ACCEPTED AUTH @ www.derdack.com: `/wp-json/wp/v2/users/1` confirmed returns only id, name, slug, link — no email/PII; user enumeration is low-value public-blog exposure only.
+[LEARN] ACCEPTED MISCONFIG @ www.derdack.com: `xmlrpc.php` returns 503 (blocked at LB level); attack vector neutralized.
+[LEARN] ACCEPTED AUTH @ www.derdack.com: CF7 endpoint `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated).
+[LEARN] REJECTED SSRF @ www.derdack.com: Yoast `file_size` endpoint returns 401 (auth-gated); no SSRF possible without authentication.
+[RISK] derdack: 25 (low). signl4 permanently rejected (8 probe cycles, all TCP timeout). WP REST API auth gates confirmed intact across every protected route: users/me, revisions, autosaves, drafts, CF7, Yoast admin endpoints. xmlrpc blocked at LB. dev.derdack.com MultiViews is benign static listing (403 on dot-prefix files). No active vulnerability confirmed across 8+ probe cycles. Attack surface exhausted under passive-only constraints. Remaining hunt value requires authenticated WP admin access for business-logic testing (form handling, plugin interactions, user management workflows) — not available under passive probe rules.

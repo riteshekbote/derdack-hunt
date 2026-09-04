@@ -63,3 +63,10 @@ www.derdack.com
 - NEW bigpickle ACCEPTED www.derdack.com WP REST API auth gates intact — settings/users/me/oembed-proxy/drafts return 401/400; user enumeration confirmed but low-value public blog exposure
 - NEW bigpickle REJECTED SSRF @ www.derdack.com — oEmbed proxy returns 401 for proxied requests
 - CHANGED No new live probe data since 2026-09-03 23:33:19 UTC — surface frozen at 5/9 live Derdack hosts
+
+## 2026-09-04 06:15:30 UTC
+- NEW signl4.derdack.com alternate port/host probes ALL returned http_code=000 (TCP timeout on 8080, 8443, IP+Host header variant) — signl4 permanently unreachable
+- NEW Yoast SEO REST API `/yoast/v1/` route schema fully enumerated: file_size, statistics, workouts, semrush, configuration endpoints all return 401 (auth-gated); `get_head?url=` returns 200 (expected publ
+- NEW WP `/wp-json/wp/v2/users/1` confirmed: returns only id, name, slug, link — NO email/PII (properly gated)
+- NEW CF7 endpoint `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated)
+- NEW `xmlrpc.php` returns 503 (blocked at LB level)
