@@ -37,3 +37,5 @@ reasoning: Line contains commented-out debug endpoint: `//endpoint = 'https://b5
 impact: Low — Commented-out code is not executed. However, it leaks a historical debug endpoint that could be investigated for further information. If someone uncomments it, all Zabbix alerts would be sent to a third-party service (Pipedream) instead of SIGNL4.
 verify_steps: Passive only: (1) Check if the Pipedream endpoint is still active: `curl -s -o /dev/null -w '%{http_code}' https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net` (2) If active, confirms debug artifact was real (not just a test UUID).
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 19:57:19 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
