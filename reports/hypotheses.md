@@ -89,3 +89,32 @@
 - LEARN: ACCEPTED MISCONFIG @ www.derdack.com: `xmlrpc.php` returns 503 (blocked at LB level); attack vector neutralized.
 - LEARN: ACCEPTED AUTH @ www.derdack.com: CF7 endpoint `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated).
 - LEARN: REJECTED SSRF @ www.derdack.com: Yoast `file_size` endpoint returns 401 (auth-gated); no SSRF possible without authentication.
+
+## RANKED HYPOTHESES 2026-09-04 11:01:16 UTC
+- [85] dev.derdack.com: dev.derdack.com Apache mod_negotiation MultiViews sensitive file path disclosure (from art/lead_nemotron3.txt)
+- [35] www.derdack.com/wp-json/: WP Theme/plugin GraphQL/REST discovery via /wp-json/ routes (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: All passive attack vectors on www.derdack.com and dev.derdack.com have been probed and verified as properly gated. signl4 permanently unreachable (8 cycl
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://www.derdack.com/wp-json/wp/v2/media?per_page=100 && GET https://www.derdack.com/wp-json/wp/v2/media?page=2 && GET https://www.derdack.com/wp-
+- LEARN: REJECTED OTHER @ signl4.derdack.com: alternate port/host probes all returned http_code=000; signl4 permanently unreachable
+- LEARN: ACCEPTED AUTH @ www.derdack.com: Yoast SEO REST API routes all return 401; only `get_head?url=` is public
+- LEARN: ACCEPTED AUTH @ www.derdack.com: `/wp-json/wp/v2/users/1` returns only name/slug; no PII
+- LEARN: ACCEPTED MISCONFIG @ www.derdack.com: xmlrpc.php returns 503 (blocked at LB)
+- LEARN: ACCEPTED AUTH @ www.derdack.com: CF7 endpoint returns 403 (properly gated)
+- LEARN: REJECTED SSRF @ www.derdack.com: Yoast `file_size` returns 401 (auth-gated)
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive 
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+- LEARN: REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+- LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+- LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com: MultiViews path disclosure is a static dot-prefix basename echo — identical output for fabricated paths proves no real sen
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WP REST API correctly enforces auth on settings/users/me/oembed-proxy/drafts (401/400); user enumeration confirmed but low-valu
+- LEARN: REJECTED SSRF @ www.derdack.com: oEmbed proxy returns 401 for proxied requests — SSRF vector blocked
+- LEARN: REJECTED IDOR @ www.derdack.com revisions/autosaves: confidence 25 < 40; all prior protected WP endpoints returned 401; capability check appears intact
+- LEARN: REJECTED IDOR @ www.derdack.com users/{id} PII: confidence 30 < 40; /users collection already exposed no email; single-user endpoint unlikely to differ
+- LEARN: REJECTED OTHER @ signl4.derdack.com: alternate port/host probes all returned http_code=000; signl4 is permanently unreachable across 80, 443, 8080, 8443, and IP
+- LEARN: ACCEPTED AUTH @ www.derdack.com: Yoast SEO REST API (`/yoast/v1/`) route schema fully enumerated but all admin endpoints (file_size, statistics, workouts, semru
+- LEARN: ACCEPTED AUTH @ www.derdack.com: `/wp-json/wp/v2/users/1` confirmed returns only id, name, slug, link — no email/PII; user enumeration is low-value public-blog 
+- LEARN: ACCEPTED MISCONFIG @ www.derdack.com: `xmlrpc.php` returns 503 (blocked at LB level); attack vector neutralized
+- LEARN: ACCEPTED AUTH @ www.derdack.com: CF7 endpoint `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated)
+- LEARN: REJECTED SSRF @ www.derdack.com: Yoast `file_size` endpoint returns 401 (auth-gated); no SSRF possible without authentication

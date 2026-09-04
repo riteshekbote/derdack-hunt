@@ -33,3 +33,9 @@
 - 2026-09-04 ACCEPTED MISCONFIG @ www.derdack.com: `xmlrpc.php` returns 503 (blocked at LB level); attack vector neutralized.
 - 2026-09-04 ACCEPTED AUTH @ www.derdack.com: CF7 endpoint `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated).
 - 2026-09-04 REJECTED SSRF @ www.derdack.com: Yoast `file_size` endpoint returns 401 (auth-gated); no SSRF possible without authentication.
+- 2026-09-04 REJECTED OTHER @ signl4.derdack.com: alternate port/host probes all returned http_code=000; signl4 permanently unreachable
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com: Yoast SEO REST API routes all return 401; only `get_head?url=` is public
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com: `/wp-json/wp/v2/users/1` returns only name/slug; no PII
+- 2026-09-04 ACCEPTED MISCONFIG @ www.derdack.com: xmlrpc.php returns 503 (blocked at LB)
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com: CF7 endpoint returns 403 (properly gated)
+- 2026-09-04 REJECTED SSRF @ www.derdack.com: Yoast `file_size` returns 401 (auth-gated)

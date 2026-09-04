@@ -85,3 +85,16 @@ https://www.derdack.com/wp-json/wp/v2/users/2 -> HTTP 404
 
 ## 2026-09-04 06:15:30 UTC
 
+
+## 2026-09-04 11:01:40 UTC
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://dev.derdack.com/.ssh/id_rsa -> HTTP 403
+https://dev.derdack.com/.bash_history -> HTTP 403
+https://dev.derdack.com/.viminfo -> HTTP 403
+https://www.derdack.com/wp-json/wp/v2/media?per_page=100 -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/media?page=2 -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/media?status=any -> HTTP 400
+https://derdack.com/ -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/pages?status=publish&per_page=100 -> 200 len=?
+https://dev.derdack.com/wp-admin/ -> HTTP 404
+https://dev.derdack.com/phpinfo.php -> HTTP 404

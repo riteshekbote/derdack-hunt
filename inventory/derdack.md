@@ -70,3 +70,12 @@ www.derdack.com
 - NEW WP `/wp-json/wp/v2/users/1` confirmed: returns only id, name, slug, link — NO email/PII (properly gated)
 - NEW CF7 endpoint `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated)
 - NEW `xmlrpc.php` returns 503 (blocked at LB level)
+
+## 2026-09-04 11:01:16 UTC
+- NEW www.derdack.com `/wp-json/wp/v2/users/2` returns 404 (user ID 2 not found) — user enumeration via collection works but individual IDs may be sparse/gapped
+- NEW www.derdack.com `/wp-json/wp/v2/posts/5945/revisions` and `/autosaves` return 401 (auth-gated, no IDOR)
+- NEW www.derdack.com `/yoast/v1/` admin endpoints (file_size, statistics, workouts, semrush, configuration) all return 401; only `get_head?url=` public
+- NEW www.derdack.com `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated)
+- NEW www.derdack.com `xmlrpc.php` returns 503 (blocked at LB level)
+- CHANGED signl4.derdack.com permanently unreachable — all Host/port variants (80, 443, 8080, 8443, IP+Host header) return http_code=000 (TCP timeout); firewall/ACL block at TCP layer
+- CHANGED dev.derdack.com MultiViews 300 response stable across 4 probe cycles — static dot-prefix basename echo (bigpickle: minimal impact, identical output for fabricated paths)

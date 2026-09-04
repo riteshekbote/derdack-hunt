@@ -1,22 +1,35 @@
-## 2026-09-04 06:01:08 UTC [target] (model bigpickle)
-[NEW] signl4.derdack.com alternate port/host probes ALL returned http_code=000 (TCP timeout on 8080, 8443, IP+Host header variant) — signl4 permanently unreachable
-[NEW] Yoast SEO REST API `/yoast/v1/` route schema fully enumerated: file_size, statistics, workouts, semrush, configuration endpoints all return 401 (auth-gated); `get_head?url=` returns 200 (expected public functionality)
-[NEW] WP `/wp-json/wp/v2/users/1` confirmed: returns only id, name, slug, link — NO email/PII (properly gated)
-[NEW] CF7 endpoint `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated)
-[NEW] `xmlrpc.php` returns 503 (blocked at LB level)
+## 2026-09-04 10:54:58 UTC [target] (model bigpickle)
 [PRIO] www.derdack.com,4.50,a5,b7,t4,g0,c2,f5
 [PRIO] dev.derdack.com,3.90,a3,b3,t3,g0,c4,f5
 [PRIO] signl4.derdack.com,0.00,0,0,0,0,0,0
-[PARKED] signl4 alternate port/host: confidence 0 — all 4 probes returned http_code=000; signl4 is permanently unreachable (firewall/ACL block at TCP layer, not HTTP filtering)
-[PARKED] WP revisions/autosaves: confidence 25 < 40; verified 401 on revisions and autosaves endpoints
-[PARKED] WP user PII: confidence 30 < 40; `/users/1` confirmed returns only name/slug, no email
-[PARKED] Yoast file_size SSRF: confidence 20 < 40; endpoint returns 401 (auth-gated), no SSRF possible without auth
+[HYP] WP Theme/plugin GraphQL/REST discovery via /wp-json/ routes
+class: AUTH
+asset: www.derdack.com/wp-json/
+confidence: 35
+reasoning: WP REST API user/posts/pages routes confirmed; Yoast, CF7 plugin routes discovered; additional plugin routes (WooCommerce, Learndash, etc.) may expose admin-gated endpoints with logic flaws
+evidence_needed: 200 response on any plugin route exposing user data or write operations without auth
+verify_steps: GET https://www.derdack.com/wp-json/wp/v2/pages?status=publish&per_page=100
+impact: business logic flaws in plugin interactions; severity LOW-MEDIUM
+testability: PASSIVE
+[HYP] dev.derdack.com alternate vhost serving staging content
+class: MISCONFIG
+asset: dev.derdack.com
+confidence: 30
+reasoning: dev.derdack.com confirmed live with MultiViews; may expose staging content, debug info, or admin panels via alternate Host headers or path variations
+evidence_needed: 200 response with sensitive content (admin panel, debug info, phpinfo, .env)
+verify_steps: GET https://dev.derdack.com/wp-admin/; GET https://dev.derdack.com/phpinfo.php
+impact: information disclosure; severity LOW
+testability: PASSIVE
+[PARKED] WP revisions/autosaves: confidence 25 < 40; all protected endpoints returned 401
+[PARKED] WP user PII: confidence 30 < 40; /users/1 returns only name/slug, no email
+[PARKED] Yoast file_size SSRF: confidence 20 < 40; endpoint returns 401 (auth-gated)
 [PARKED] CF7 info disclosure: confidence 15 < 40; endpoint returns 403 (properly gated)
-[FINAL] No survivors. All attack vectors on the passive-permitted surface have been probed and verified as properly gated. The only remaining high-value target (signl4) is permanently unreachable.
-[LEARN] REJECTED OTHER @ signl4.derdack.com: alternate port/host probes all returned http_code=000; signl4 is permanently unreachable across 80, 443, 8080, 8443, and IP+Host header variants; firewall/ACL block is TCP-layer, not HTTP-filtering — permanently reject signl4.
-[LEARN] ACCEPTED AUTH @ www.derdack.com: Yoast SEO REST API (`/yoast/v1/`) route schema fully enumerated but all admin endpoints (file_size, statistics, workouts, semrush, configuration, check_capability) return 401; only `get_head?url=` is public (expected functionality).
-[LEARN] ACCEPTED AUTH @ www.derdack.com: `/wp-json/wp/v2/users/1` confirmed returns only id, name, slug, link — no email/PII; user enumeration is low-value public-blog exposure only.
-[LEARN] ACCEPTED MISCONFIG @ www.derdack.com: `xmlrpc.php` returns 503 (blocked at LB level); attack vector neutralized.
-[LEARN] ACCEPTED AUTH @ www.derdack.com: CF7 endpoint `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated).
-[LEARN] REJECTED SSRF @ www.derdack.com: Yoast `file_size` endpoint returns 401 (auth-gated); no SSRF possible without authentication.
-[RISK] derdack: 25 (low). signl4 permanently rejected (8 probe cycles, all TCP timeout). WP REST API auth gates confirmed intact across every protected route: users/me, revisions, autosaves, drafts, CF7, Yoast admin endpoints. xmlrpc blocked at LB. dev.derdack.com MultiViews is benign static listing (403 on dot-prefix files). No active vulnerability confirmed across 8+ probe cycles. Attack surface exhausted under passive-only constraints. Remaining hunt value requires authenticated WP admin access for business-logic testing (form handling, plugin interactions, user management workflows) — not available under passive probe rules.
+[FINAL] www.derdack.com WP plugin route discovery (35), dev.derdack.com staging content (30) — both below 40 confidence threshold
+[NEXT] HUMAN: All passive attack vectors on www.derdack.com and dev.derdack.com have been probed and verified as properly gated. signl4 permanently unreachable (8 cycles). The only remaining high-value vectors (WP business-logic flaws, plugin interactions) require authenticated testing not available under passive probe rules. Recommend closing hunt or escalating to active testing scope.
+[LEARN] REJECTED OTHER @ signl4.derdack.com: alternate port/host probes all returned http_code=000; signl4 permanently unreachable
+[LEARN] ACCEPTED AUTH @ www.derdack.com: Yoast SEO REST API routes all return 401; only `get_head?url=` is public
+[LEARN] ACCEPTED AUTH @ www.derdack.com: `/wp-json/wp/v2/users/1` returns only name/slug; no PII
+[LEARN] ACCEPTED MISCONFIG @ www.derdack.com: xmlrpc.php returns 503 (blocked at LB)
+[LEARN] ACCEPTED AUTH @ www.derdack.com: CF7 endpoint returns 403 (properly gated)
+[LEARN] REJECTED SSRF @ www.derdack.com: Yoast `file_size` returns 401 (auth-gated)
+[RISK] derdack: 25 (low). signl4 permanently rejected. WP REST API auth gates intact across every protected route. xmlrpc blocked at LB. dev.derdack.com MultiViews is benign static listing. No active vulnerability confirmed across 8+ probe cycles. Attack surface exhausted under passive-only constraints. Remaining hunt value requires authenticated WP admin access for business-logic testing.
