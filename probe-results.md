@@ -126,3 +126,17 @@ https://www.derdack.com -> 200 len=?
 https://www.derdack.com/de/enterprise-alert-9-4-1-release/ -> 200 len=?
 https://www.derdack.com/de/wp-json/wp/v2/posts/11640/revisions -> HTTP 401
 https://www.derdack.com/de/wp-json/wp/v2/posts/11640/autosaves -> HTTP 401
+
+## 2026-09-04 20:19:36 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+https://www.derdack.com/de/ -> 200 len=?
+https://www.derdack.com/ea/xmlrpc.php -> HTTP 405
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://dev.derdack.com/.ssh/ -> HTTP 403
+https://dev.derdack.com/.bash_history/ -> HTTP 404
+https://dev.derdack.com/.viminfo/ -> HTTP 404
+https://www.derdack.com/de/enterprise-alert-9-4-1-release/ -> 200 len=?
+https://www.derdack.com/de/wp-json/wp/v2/posts/11640/revisions -> HTTP 401
+https://www.derdack.com/de/wp-json/wp/v2/posts/11640/autosaves -> HTTP 401
+https://www.derdack.com/de/wp-json/wp/v2/posts?status=draft -> HTTP 400
+https://dev.derdack.com%2f/ -> ERR <urlopen error [Errno -2] Name or service not know

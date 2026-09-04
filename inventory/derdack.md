@@ -102,3 +102,18 @@ www.derdack.com
 - NEW blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade redirects confirmed live (302 to http://www.derdack.com/...)
 - NEW www.derdack.com & derdack.com lack HSTS, CSP, X-Frame-Options headers confirmed
 - CHANGED Media library hypothesis: 2170 public assets only, no internal file disclosure (previously 108 items noted)
+
+## 2026-09-04 20:19:13 UTC
+- NEW www.derdack.com `/de/xmlrpc.php` returns 200 with full method list including pingback.ping — root xmlrpc is 503-blocked but /de/ is fully exposed
+- NEW www.derdack.com `/ea/` media exposes Whitepaper_test.pdf (3MB, 2017) — public test artifact
+- NEW dev.derdack.com root returns 403 with sedoparking.com IONOSParkingDE iframe while specific paths (/.well-known/, /.ssh/, /backups/, /logs/) still served
+- NEW `x-ws-origin: available` + `x-ws-ratelimit-*` custom headers present on ALL derdack hosts
+- CHANGED Previous hypothesis "dev.derdack.com WordPress install" REJECTED — wp-json/ 404, root is parked page
+- NEW www.derdack.com/de/xmlrpc.php POST returns full method list (pingback.ping, system.multicall, wp.getUsers, wp.uploadFile, metaWeblog.newMediaObject, mt.*, blogger.*) — unauthenticated XML-RPC fully ex
+- NEW www.derdack.com/ea/xmlrpc.php POST also returns full method list — both /de/ and /ea/ multisite installs have exposed XML-RPC (previous report of 405 was for GET only)
+- NEW pingback.ping to 169.254.169.254 returns faultCode 0 (empty faultString) — ambiguous; SSRF attempt neither clearly blocked nor confirmed successful
+- NEW metaWeblog.getUsersBlogs with empty credentials returns empty string — no unauthenticated blog enumeration via this method
+- NEW dev.derdack.com/.well-known/ returns 300 Multiple Choices listing /.ssh/, /.bash_history/, /.viminfo/ — Apache mod_negotiation/MultiViews confirmed across probe cycles
+- NEW www.derdack.com/de/ and /ea/ media libraries contain only images (jpeg/png) — no PDF whitepapers or sensitive docs found (Whitepaper_test.pdf not present)
+- CHANGED Previous hypothesis "/ea/ xmlrpc.php returns 405" corrected: GET returns 405, POST returns full method list — both multisite installs exposed
+- CHANGED Whitepaper_test.pdf hypothesis invalidated — not found in current /ea/ or /de/ media libraries
