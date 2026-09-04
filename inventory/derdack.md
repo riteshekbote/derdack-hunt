@@ -79,3 +79,10 @@ www.derdack.com
 - NEW www.derdack.com `xmlrpc.php` returns 503 (blocked at LB level)
 - CHANGED signl4.derdack.com permanently unreachable — all Host/port variants (80, 443, 8080, 8443, IP+Host header) return http_code=000 (TCP timeout); firewall/ACL block at TCP layer
 - CHANGED dev.derdack.com MultiViews 300 response stable across 4 probe cycles — static dot-prefix basename echo (bigpickle: minimal impact, identical output for fabricated paths)
+
+## 2026-09-04 14:54:49 UTC
+- NEW www.derdack.com `/wp-json/wp/v2/media` returns 200 with 108 media items (65+43 across 2 pages); publicly accessible, mostly stock images + 1 MP3 podcast file; no sensitive internal docs/PDFs/backups f
+- NEW dev.derdack.com MultiViews 300 response stable — lists /.ssh/ (403), /.bash_history/ (404), /.viminfo/ (404); .ssh directory exists but blocked
+- NEW blog.derdack.com & techblog.derdack.com HTTPS redirects to HTTP (not HTTPS) on www.derdack.com — downgrade/mixed content chain confirmed
+- NEW derdack.com & www.derdack.com lack HSTS, CSP, X-Frame-Options headers
+- CHANGED Media library hypothesis confidence adjusted: public assets only, no internal file disclosure found

@@ -98,3 +98,17 @@ https://derdack.com/ -> 200 len=?
 https://www.derdack.com/wp-json/wp/v2/pages?status=publish&per_page=100 -> 200 len=?
 https://dev.derdack.com/wp-admin/ -> HTTP 404
 https://dev.derdack.com/phpinfo.php -> HTTP 404
+
+## 2026-09-04 14:55:22 UTC
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://dev.derdack.com/.ssh/ -> HTTP 403
+https://dev.derdack.com/.bash_history/ -> HTTP 404
+https://dev.derdack.com/.viminfo/ -> HTTP 404
+https://blog.derdack.com/ -> 200 len=?
+https://techblog.derdack.com/ -> 200 len=?
+https://www.derdack.com/ -> 200 len=?
+https://derdack.com/ -> 200 len=?
+https://dev.derdack.com/.ssh/id_rsa -> HTTP 403
+https://dev.derdack.com/.ssh/authorized_keys -> HTTP 403
+https://dev.derdack.com/.ssh/known_hosts -> HTTP 403
+https://dev.derdack.com/wp-json/ -> HTTP 404

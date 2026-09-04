@@ -39,3 +39,7 @@
 - 2026-09-04 ACCEPTED MISCONFIG @ www.derdack.com: xmlrpc.php returns 503 (blocked at LB)
 - 2026-09-04 ACCEPTED AUTH @ www.derdack.com: CF7 endpoint returns 403 (properly gated)
 - 2026-09-04 REJECTED SSRF @ www.derdack.com: Yoast `file_size` returns 401 (auth-gated)
+- 2026-09-04 ACCEPTED MISCONFIG @ dev.derdack.com: MultiViews confirmed; WordPress installation status unknown — probe required.
+- 2026-09-04 REJECTED OTHER @ signl4.derdack.com: permanently unreachable across 8+ probe cycles (all TCP timeout); all attack surface value = 0.
+- 2026-09-04 ACCEPTED MISCONFIG @ www.derdack.com: blog.derdack.com & techblog.derdack.com HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
+- 2026-09-04 REJECTED AUTH @ www.derdack.com: Media library `/wp-json/wp/v2/media` returns 200 but only public assets (stock images, 1 MP3 podcast); no internal docs/PDFs/backups/PII found
