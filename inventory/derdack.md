@@ -117,3 +117,5 @@ www.derdack.com
 - NEW www.derdack.com/de/ and /ea/ media libraries contain only images (jpeg/png) — no PDF whitepapers or sensitive docs found (Whitepaper_test.pdf not present)
 - CHANGED Previous hypothesis "/ea/ xmlrpc.php returns 405" corrected: GET returns 405, POST returns full method list — both multisite installs exposed
 - CHANGED Whitepaper_test.pdf hypothesis invalidated — not found in current /ea/ or /de/ media libraries
+
+## 2026-09-04 22:25:11 UTC

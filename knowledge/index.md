@@ -55,3 +55,7 @@
 - 2026-09-04 ACCEPTED AUTH @ www.derdack.com/ea/: xmlrpc.php POST returns full method list (GET returns 405) — /ea/ also exposed, not just /de/
 - 2026-09-04 REJECTED SSRF @ www.derdack.com/de/: pingback.ping to 169.254.169.254 returns faultCode 0 empty — ambiguous, not confirmed SSRF
 - 2026-09-04 REJECTED MISCONFIG @ www.derdack.com/ea/: Whitepaper_test.pdf not found in media library — hypothesis invalidated
+- 2026-09-04 REJECTED SSRF @ www.derdack.com/de/: pingback.ping→169.254.169.254 returns faultCode 0 empty faultString — no fetch artifact, cloud-metadata SSRF unconfirmed; closed
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com/ea/: xmlrpc.php POST returns full method list (earlier 405 was GET-only) — BOTH /de/ and /ea/ multisite installs run open XML-RPC
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com/de/: metaWeblog.getUsersBlogs(empty creds)→empty string, not 401/403 fault — non-standard XML-RPC auth handling; method-level cap check warranted
+- 2026-09-04 REJECTED MISCONFIG @ www.derdack.com/ea/: Whitepaper_test.pdf absent from /de/+/ea/ media (images only) — test-PDF vector invalidated

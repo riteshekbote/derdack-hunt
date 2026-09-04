@@ -2251,3 +2251,146 @@ testability: PASSIVE
 [LEARN] REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
 
 [RISK] derdack: 72 — dev.derdack.com MultiViews high immediate yield (path disclosure to existing /.ssh/ directory); www.derdack.com/de/ and /ea/ XML-RPC fully exposed with dangerous methods (pingback.ping, system.multicall, wp.uploadFile) bypassing root LB block; blog/techblog HTTPS-to-HTTP downgrade chain enables session hijacking; www.derdack.com WP REST API medium risk (user enumeration, public media); signl4 permanently unreachable; 4/9 inventory hosts not Derdack infrastructure
+===== ANALYST nemotron3 2026-09-04 22:25:11 UTC =====
+[0m
+> build · nemotron-3-ultra-free
+[0m
+[0m$ [0mls -la /home/runner/work/derdack-hunt/derdack-hunt/
+total 168
+drwxr-xr-x 12 runner runner  4096 Sep  4 22:22 .
+drwxr-xr-x  3 runner runner  4096 Sep  4 22:22 ..
+drwxr-xr-x  7 runner runner  4096 Sep  4 22:22 .git
+drwxr-xr-x  3 runner runner  4096 Sep  4 22:22 .github
+-rw-r--r--  1 runner runner  1831 Sep  4 22:22 README.md
+-rw-r--r--  1 runner runner    43 Sep  4 22:22 analyst-out.txt
+-rw-r--r--  1 runner runner 37491 Sep  4 22:22 analyst-prompt.txt
+-rw-r--r--  1 runner runner 33612 Sep  4 22:22 ctx.txt
+drwxr-xr-x  2 runner runner  4096 Sep  4 22:22 inventory
+drwxr-xr-x  2 runner runner  4096 Sep  4 22:22 knowledge
+drwxr-xr-x  2 runner runner  4096 Sep  4 22:22 leads
+-rw-r--r--  1 runner runner  6713 Sep  4 22:22 probe-results.md
+drwxr-xr-x  2 runner runner  4096 Sep  4 22:22 recon-notes
+drwxr-xr-x  2 runner runner  4096 Sep  4 22:22 reports
+drwxr-xr-x  2 runner runner  4096 Sep  4 22:22 reposcan-raw
+-rw-r--r--  1 runner runner  3292 Sep  4 22:22 scope.yml
+drwxr-xr-x  2 runner runner  4096 Sep  4 22:22 scripts
+-rw-r--r--  1 runner runner    33 Sep  4 22:22 state_bigpickle.json
+-rw-r--r--  1 runner runner    33 Sep  4 22:22 state_laguna.json
+-rw-r--r--  1 runner runner    33 Sep  4 22:22 state_ling3.json
+-rw-r--r--  1 runner runner    33 Sep  4 22:22 state_longcat.json
+-rw-r--r--  1 runner runner    33 Sep  4 22:22 state_mimo.json
+-rw-r--r--  1 runner runner    33 Sep  4 22:22 state_nemotron3.json
+drwxr-xr-x  2 runner runner  4096 Sep  4 22:22 triage
+[0m
+[0m→ [0mRead state_nemotron3.json
+[0m→ [0mRead state_bigpickle.json
+[0m→ [0mRead state_laguna.json
+[0m→ [0mRead state_ling3.json
+[0m→ [0mRead state_mimo.json
+[0m→ [0mRead state_longcat.json
+[0m
+[0m$ [0mls -la /home/runner/work/derdack-hunt/derdack-hunt/leads/
+total 132
+drwxr-xr-x  2 runner runner  4096 Sep  4 22:22 .
+drwxr-xr-x 12 runner runner  4096 Sep  4 22:22 ..
+-rw-r--r--  1 runner runner 44750 Sep  4 22:22 lead-bigpickle.md
+-rw-r--r--  1 runner runner   510 Sep  4 22:22 lead-laguna.md
+-rw-r--r--  1 runner runner   500 Sep  4 22:22 lead-ling3.md
+-rw-r--r--  1 runner runner   468 Sep  4 22:22 lead-longcat.md
+-rw-r--r--  1 runner runner    18 Sep  4 22:22 lead-mimo.md
+-rw-r--r--  1 runner runner 54973 Sep  4 22:22 lead-nemotron3.md
+-rw-r--r--  1 runner runner  4758 Sep  4 22:22 reposcan-derdack.md
+[0m
+[0m→ [0mRead leads/lead-nemotron3.md
+[0m→ [0mRead leads/lead-bigpickle.md
+Now I have full context. Let me execute the 8-step analysis.
+
+---
+
+### STEP 1 — DELTA
+
+**[NEW]** `www.derdack.com/de/xmlrpc.php` POST returns full method list (pingback.ping, system.multicall, wp.getUsers, wp.uploadFile, metaWeblog.newMediaObject, mt.*, blogger.*) — unauthenticated XML-RPC fully exposed on /de/ multisite while root xmlrpc.php is 503-blocked  
+**[NEW]** `www.derdack.com/ea/xmlrpc.php` POST also returns full method list — both /de/ and /ea/ multisite installs have exposed XML-RPC (previous report of 405 was for GET only)  
+**[NEW]** pingback.ping to 169.254.169.254 returns faultCode 0 (empty faultString) — ambiguous; SSRF attempt neither clearly blocked nor confirmed successful  
+**[NEW]** metaWeblog.getUsersBlogs with empty credentials returns empty string — no unauthenticated blog enumeration via this method  
+**[NEW]** dev.derdack.com/.well-known/ returns 300 Multiple Choices listing /.ssh/, /.bash_history/, /.viminfo/ — Apache mod_negotiation/MultiViews confirmed across probe cycles  
+**[NEW]** www.derdack.com/de/ and /ea/ media libraries contain only images (jpeg/png) — no PDF whitepapers or sensitive docs found (Whitepaper_test.pdf not present)  
+**[CHANGED]** Previous hypothesis "/ea/ xmlrpc.php returns 405" corrected: GET returns 405, POST returns full method list — both multisite installs exposed  
+**[CHANGED]** Whitepaper_test.pdf hypothesis invalidated — not found in current /ea/ or /de/ media libraries  
+
+---
+
+### STEP 2 — PRIORITIZE
+
+**[PRIO]** www.derdack.com/de/,8.6,a=9 b=8 t=9 g=10 c=6 f=9  
+**[PRIO]** www.derdack.com/ea/,7.8,a=8 b=7 t=9 g=10 c=5 f=9  
+**[PRIO]** dev.derdack.com,7.2,a=8 b=6 t=7 g=9 c=5 f=8  
+**[PRIO]** www.derdack.com/,7.0,a=8 b=9 t=7 g=7 c=6 f=5  
+**[PRIO]** blog.derdack.com,5.8,a=5 b=5 t=5 g=10 c=4 f=8  
+**[PRIO]** techblog.derdack.com,5.8,a=5 b=5 t=5 g=10 c=4 f=8  
+
+---
+
+### STEP 3 — HYPOTHESES
+
+**[HYP]** www.derdack.com/de/ XML-RPC pingback.ping SSRF to cloud metadata  
+class: SSRF  
+asset: www.derdack.com/de/xmlrpc.php  
+confidence: 70  
+reasoning: XML-RPC fully exposed on /de/ multisite with pingback.ping method; root xmlrpc.php blocked at LB (503) but /de/ bypasses protection; pingback.ping to 169.254.169.254 returns faultCode 0 (ambiguous — not clearly blocked); system.multicall enables amplification; wp.uploadFile/metaWeblog.newMediaObject enable file upload if auth bypassed  
+evidence_needed: Successful pingback.ping callback from 169.254.169.254 metadata endpoint proving SSRF; or system.multicall with pingback.ping batch showing internal network access  
+verify_steps: POST https://www.derdack.com/de/xmlrpc.php pingback.ping source=http://169.254.169.254/latest/meta-data/ target=https://www.derdack.com/de/; POST system.multicall with multiple pingback.ping to internal IPs  
+impact: Cloud metadata credential theft (IAM role, user-data, SSH keys); internal network mapping; potential RCE via metadata service exploits  
+testability: PASSIVE  
+
+**[HYP]** www.derdack.com/de/ & /ea/ XML-RPC unauthenticated method abuse via system.multicall amplification  
+class: AUTH  
+asset: www.derdack.com/de/xmlrpc.php, www.derdack.com/ea/xmlrpc.php  
+confidence: 75  
+reasoning: Both multisite installs expose full XML-RPC method list via POST (system.listMethods, system.multicall, pingback.ping, wp.getUsers, wp.uploadFile, metaWeblog.*, mt.*, blogger.*); root xmlrpc.php blocked (503) but multisite installs bypass WAF/LB protection; system.multicall allows batching hundreds of calls in single request for brute-force amplification; wp.getUsers/wp.uploadFile require auth but no rate-limiting observed  
+evidence_needed: system.multicall with 100+ wp.getUsers calls showing no rate-limit; successful pingback.ping to attacker-controlled server confirming outbound connectivity  
+verify_steps: POST https://www.derdack.com/de/xmlrpc.php system.multicall with 50 wp.getUsers calls; POST https://www.derdack.com/ea/xmlrpc.php system.multicall with 50 pingback.ping to callback server  
+impact: Credential stuffing amplification via multicall; user enumeration via wp.getUsers; pingback-based SSRF/port scanning; potential file upload via wp.uploadFile if weak credentials exist  
+testability: PASSIVE  
+
+**[HYP]** dev.derdack.com Apache mod_negotiation MultiViews sensitive path disclosure  
+class: MISCONFIG  
+asset: dev.derdack.com  
+confidence: 85  
+reasoning: /.well-known/ returns 300 Multiple Choices enumerating /.ssh/, /.bash_history/, /.viminfo/ as "similar documents"; Apache mod_negotiation/MultiViews confirmed; /.ssh/ directory exists (403 on direct access); individual key files (id_rsa, authorized_keys, known_hosts) return 403 confirming existence but blocked; parked root (403 sedoparking iframe) while sensitive paths still served by Apache  
+evidence_needed: 300 response body listing sensitive paths; 403 on /.ssh/ and key files confirming directory/files exist  
+verify_steps: GET https://dev.derdack.com/.well-known/; GET https://dev.derdack.com/.ssh/; GET https://dev.derdack.com/.bash_history/; GET https://dev.derdack.com/.viminfo/  
+impact: Information disclosure of sensitive file paths on dev host; aids reconnaissance for further attacks; potential credential/key exposure if permissions misconfigured elsewhere; confirms Apache misconfiguration on development infrastructure  
+testability: PASSIVE  
+
+---
+
+### STEP 4 — SELF-CRITIQUE
+
+**[PARKED]** www.derdack.com/de/ XML-RPC pingback.ping SSRF to cloud metadata: confidence 70 but faultCode 0 is ambiguous — could be parse error or silent failure; no callback verification possible passively  
+**[PARKED]** www.derdack.com/de/ & /ea/ XML-RPC unauthenticated method abuse via system.multicall: confidence 75 but all sensitive methods (wp.getUsers, wp.uploadFile) require auth; multicall amplification only useful with valid credentials  
+**[FINAL]** dev.derdack.com Apache mod_negotiation MultiViews sensitive path disclosure — ranked #1 (confidence 85, passive verify, info disclosure on dev host with existing /.ssh/ directory)  
+
+---
+
+### STEP 5 — NEXT ACTION
+
+**[NEXT]** PROBE: GET https://dev.derdack.com/.well-known/ (confirm 300 body still lists /.ssh/, /.bash_history/, /.viminfo/ as "similar documents" for evidence package)  
+
+---
+
+### STEP 6 — LEARNING
+
+[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive probe cost near-zero  
+[LEARN] ACCEPTED AUTH @ www.derdack.com/de/: xmlrpc.php fully functional (200, full method list) while root xmlrpc is 503-blocked — endpoint exposure anomaly on multisite subsite  
+[LEARN] ACCEPTED AUTH @ www.derdack.com/ea/: xmlrpc.php POST returns full method list (GET returns 405) — /ea/ also exposed, not just /de/  
+[LEARN] REJECTED SSRF @ www.derdack.com/de/: pingback.ping to 169.254.169.254 returns faultCode 0 empty — ambiguous, not confirmed SSRF  
+[LEARN] REJECTED MISCONFIG @ www.derdack.com/ea/: Whitepaper_test.pdf not found in media library — hypothesis invalidated  
+[LEARN] REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing  
+[LEARN] REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings  
+
+---
+
+### STEP 7 — RISK
+
+[RISK] derdack: 72 — dev.derdack.com MultiViews high immediate yield (path disclosure to existing /.ssh/ directory); www.derdack.com/de/ and /ea/ XML-RPC fully exposed with dangerous methods (pingback.ping, system.multicall, wp.uploadFile) bypassing root LB block; blog/techblog HTTPS-to-HTTP downgrade chain enables session hijacking; www.derdack.com WP REST API medium risk (user enumeration, public media); signl4 permanently unreachable; 4/9 inventory hosts not Derdack infrastructure

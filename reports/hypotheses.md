@@ -183,3 +183,18 @@
 - LEARN: REJECTED MISCONFIG @ www.derdack.com/ea/: Whitepaper_test.pdf not found in media library — hypothesis invalidated
 - LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
 - LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+
+## RANKED HYPOTHESES 2026-09-04 22:25:11 UTC
+- [50] www.derdack.com/de/xmlrpc.php: /de/ multisite XML-RPC legacy methods bypass REST content gating (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: GET https://www.derdack.com/de/wp-json/wp/v2/posts/11640/revisions (200 = IDOR leak, 401 = gated); if 200, also GET /de/wp-json/wp/v2/posts/11640/autosav
+- LEARN: REJECTED SSRF @ www.derdack.com/de/: pingback.ping→169.254.169.254 returns faultCode 0 empty faultString — no fetch artifact, cloud-metadata SSRF unconfirmed; c
+- LEARN: ACCEPTED AUTH @ www.derdack.com/ea/: xmlrpc.php POST returns full method list (earlier 405 was GET-only) — BOTH /de/ and /ea/ multisite installs run open XML-RP
+- LEARN: ACCEPTED AUTH @ www.derdack.com/de/: metaWeblog.getUsersBlogs(empty creds)→empty string, not 401/403 fault — non-standard XML-RPC auth handling; method-level ca
+- LEARN: REJECTED MISCONFIG @ www.derdack.com/ea/: Whitepaper_test.pdf absent from /de/+/ea/ media (images only) — test-PDF vector invalidated
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive 
+- LEARN: ACCEPTED AUTH @ www.derdack.com/de/: xmlrpc.php fully functional (200, full method list) while root xmlrpc is 503-blocked — endpoint exposure anomaly on multisi
+- LEARN: ACCEPTED AUTH @ www.derdack.com/ea/: xmlrpc.php POST returns full method list (GET returns 405) — /ea/ also exposed, not just /de/
+- LEARN: REJECTED SSRF @ www.derdack.com/de/: pingback.ping to 169.254.169.254 returns faultCode 0 empty — ambiguous, not confirmed SSRF
+- LEARN: REJECTED MISCONFIG @ www.derdack.com/ea/: Whitepaper_test.pdf not found in media library — hypothesis invalidated
+- LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+- LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
