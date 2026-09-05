@@ -185,3 +185,15 @@ www.derdack.com
 - NEW www.derdack.com/de/xmlrpc.php returns 405 Allow:POST with `x-ws-origin: available` + `x-ws-ratelimit-*` headers — XML-RPC POST endpoint exposed on /de/ multisite while root blocked at LB
 - CHANGED api.signl4.com read-route hypothesis CLOSED: extended sweep confirms every registered route Bearer-gated or POST-sink; zero unauth read surface
 - CHANGED Cross-env JWKS key-reuse RE-VERIFIED programmatic deep-equal=True this cycle (kid/n/x5t/x5c identical)
+
+## 2026-09-05 19:27:48 UTC
+- NEW OTGS Installer source (Push.php) confirms GET-only, no permission_callback, fixed outbound target → SSRF INVALIDATED
+- NEW devconnect OIDC password grant confirmed alongside 7 other grant types
+- CHANGED api.signl4.com route population finalized: alerts(405 POST), teams/webhooks/subscriptions(401 Bearer), csp/report(405 POST sink) — zero unauth read surface
+- CHANGED Cross-env JWKS key-reuse re-verified: kid/n/x5t/x5c byte-identical x4 deep-equal
+- NEW OTGS Installer source code (Push.php) analyzed: `fetch-subscription` route is GET-only, no `permission_callback`, handler takes zero args, outbound target fixed to `api.wpml.org`/`api.toolset.com` wit
+- NEW Cross-env JWKS key-reuse re-verified programmatic deep-equal=True (kid/n/x5t/x5c identical) — staging `devconnect.signl4.com` RS256 key byte-identical to prod `connect.signl4.com`
+- NEW `api.signl4.com/api/v2/alerts` confirmed with security headers: HSTS, CSP, `X-Frame-Options: DENY`, `Microsoft-HTTPAPI/2.0` — POST-only ingestion route live, zero unauth GET surface
+- NEW `www.derdack.com/de/xmlrpc.php` returns `405 Allow:POST` with `x-ws-origin: available` + `x-ws-ratelimit-*` headers — XML-RPC POST endpoint exposed on `/de/` multisite while root blocked at LB
+- CHANGED `api.signl4.com` read-route hypothesis CLOSED: extended sweep confirms every registered route Bearer-gated or POST-sink; zero unauth read surface
+- CHANGED `www.signl4.com` SSRF hypothesis (OTGS Installer) INVALIDATED by source code review — no attacker-controlled URL, no site-key echo, fixed vendor endpoint

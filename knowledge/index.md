@@ -95,3 +95,4 @@
 - 2026-09-05 ACCEPTED MISCONFIG @ s4dev1-8.enterprisealert.com: all resolve 4.207.244.99, 404 root / 504 on identity+webhook+api — inert staging fleet
 - 2026-09-05 REJECTED SSRF @ www.signl4.com: OTGS Installer fetch-subscription (Push.php source): GET-only, NO permission_callback, handler takes no args; 200/403 = 2h refresh-interval gating not ?url=; outbound target FIXED api.wpml.org/api.toolset.com w/ stored site_key → no attacker URL control, no site-key echo → SSRF + disclosure invalidated.
 - 2026-09-05 ACCEPTED AUTH @ www.signl4.com: fetch-subscription route confirmed unauthenticated (missing permission_callback per source + observed 200) but impact = throttled vendor-side subscription refresh only; no program-specific exploit → negligible, parked.
+- 2026-09-05 ACCEPTED AUTH @ devconnect.signl4.com: OIDC discovery 200, grant_types includes password + RS256 key byte-identical to prod — cross-env identity isolation failure confirmed.
