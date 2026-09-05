@@ -198,3 +198,17 @@
 - LEARN: REJECTED MISCONFIG @ www.derdack.com/ea/: Whitepaper_test.pdf not found in media library — hypothesis invalidated
 - LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
 - LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+
+## RANKED HYPOTHESES 2026-09-05 00:27:41 UTC
+- [55] devconnect.signl4.com: SIGNL4 dev/lab OIDC+account staging estate exposes unauthenticated or debug surface (from art/lead_bigpickle.txt)
+- [50] www.derdack.com/de/xmlrpc.php: www.derdack.com/de/ XML-RPC legacy method cap bypass via parallel API (from art/lead_nemotron3.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: GET https://devaccount.signl4.com/ and GET https://devconnect.signl4.com/identity/.well-known/openid-configuration — if staging issuer differs from prod 
+- NEXT(hypotheses-nemotron3.txt): PROBE: POST https://www.derdack.com/de/xmlrpc.php with body `<?xml version="1.0"?><methodCall><methodName>wp.getUsers</methodName><params><param><value><int>1</
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive 
+- LEARN: ACCEPTED AUTH @ www.derdack.com/de/: xmlrpc.php fully functional (200, full method list) while root xmlrpc is 503-blocked — endpoint exposure anomaly on multisi
+- LEARN: ACCEPTED AUTH @ www.derdack.com/ea/: xmlrpc.php POST returns full method list (GET returns 405) — /ea/ also exposed, not just /de/
+- LEARN: REJECTED SSRF @ www.derdack.com/de/: pingback.ping to 169.254.169.254 returns faultCode 0 empty — ambiguous, not confirmed SSRF
+- LEARN: REJECTED MISCONFIG @ www.derdack.com/ea/: Whitepaper_test.pdf not found in media library — hypothesis invalidated
+- LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+- LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- LEARN: REJECTED OTHER @ signl4.derdack.com: permanently unreachable across 8+ probe cycles (all TCP timeout); all attack surface value = 0

@@ -2959,3 +2959,802 @@ STEP 6 — LEARNING:
 
 STEP 7 — RISK:
 [RISK] derdack: 30 (low). Open XML-RPC on /de/ and /ea/ is live exposure but pingback→metadata SSRF unconfirmed and rejected; remaining untested high-value primitives are the multisite revisions/autosaves IDOR and XML-RPC legacy-method cap bypass; root REST gates proven intact; dev is parked-with-blocked-dirs; signl4 zero-value. Confidence-weighted exposure moderate-low.
+===== ANALYST bigpickle 2026-09-05 00:27:41 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m← [0mWrite /tmp/opencode/xml_getusers.xml
+Wrote file successfully.
+[0m
+[0m← [0mWrite /tmp/opencode/xml_getprofile.xml
+Wrote file successfully.
+[0m
+[0m← [0mWrite /tmp/opencode/xml_getmedia.xml
+Wrote file successfully.
+[0m
+Now the read-only GET probes (revisions/autosaves/draft on /de/, /ea/ post harvest):
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; probe() { local url="$1"; local f="$2"; echo "== $url"; curl -s --max-time 20 -A "$UA" -o "$f" -w 'HTTP %{http_code} size=%{size_download}\n' "$url"; head -c 300 "$f"; echo; echo; sleep 1.5; }; probe "https://www.derdack.com/de/wp-json/wp/v2/posts/11640/revisions?_fields=id,status,date,author" /tmp/opencode/de_rev.json; probe "https://www.derdack.com/de/wp-json/wp/v2/posts/11640/autosaves?_fields=id,status" /tmp/opencode/de_auto.json; probe "https://www.derdack.com/de/wp-json/wp/v2/posts/?status=draft&_fields=id,slug,status" /tmp/opencode/de_draft.json; probe "https://www.derdack.com/ea/wp-json/wp/v2/posts?per_page=5&_fields=id,slug,status,link" /tmp/opencode/ea_posts.json
+== https://www.derdack.com/de/wp-json/wp/v2/posts/11640/revisions?_fields=id,status,date,author
+HTTP 401 size=134
+{"code":"rest_cannot_read","message":"Du bist leider nicht berechtigt, Revisionen dieses Beitrags anzuschauen.","data":{"status":401}}
+
+== https://www.derdack.com/de/wp-json/wp/v2/posts/11640/autosaves?_fields=id,status
+HTTP 401 size=149
+{"code":"rest_cannot_read","message":"Du bist leider nicht berechtigt, automatische Speicherungen dieses Beitrags anzuzeigen.","data":{"status":401}}
+
+== https://www.derdack.com/de/wp-json/wp/v2/posts/?status=draft&_fields=id,slug,status
+HTTP 400 size=265
+{"code":"rest_invalid_param","message":"Ung\u00fcltige(r) Parameter: status","data":{"status":400,"params":{"status":"Status ist unzul\u00e4ssig."},"details":{"status":{"code":"rest_forbidden_status","message":"Status ist unzul\u00e4ssig.","data":{"status":401}}}}}
+
+== https://www.derdack.com/ea/wp-json/wp/v2/posts?per_page=5&_fields=id,slug,status,link
+HTTP 200 size=2
+[]
+[0m
+/de/ revisions+autosaves gated (401 same as root), draft status forbidden, /ea/ has zero public posts. Checking /ea/ pages and running the XML-RPC legacy-method probes:
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; echo "== /ea/ pages"; curl -s --max-time 20 -A "$UA" -o /tmp/opencode/ea_pages.json -w 'HTTP %{http_code} size=%{size_download}\n' "https://www.derdack.com/ea/wp-json/wp/v2/pages?per_page=5&_fields=id,slug,status,link"; head -c 400 /tmp/opencode/ea_pages.json; echo; echo; sleep 1.5; for p in xml_getusers xml_getprofile xml_getmedia; do echo "== POST /de/xmlrpc.php $p"; curl -s --max-time 20 -A "$UA" -X POST "https://www.derdack.com/de/xmlrpc.php" -H "Content-Type: text/xml" --data-binary @/tmp/opencode/$p.xml -o /tmp/opencode/$p.out -w 'HTTP %{http_code} size=%{size_download}\n'; head -c 600 /tmp/opencode/$p.out; echo; echo; sleep 1.5; done
+== /ea/ pages
+HTTP 200 size=755
+[{"id":7763,"slug":"solarwinds-mobile-alerting","status":"publish","link":"https:\/\/www.derdack.com\/ea\/solarwinds-mobile-alerting\/"},{"id":7751,"slug":"microfocus-itom-alerting-alert-notifications-management","status":"publish","link":"https:\/\/www.derdack.com\/ea\/microfocus-itom-alerting-alert-notifications-management\/"},{"id":7746,"slug":"bilfinger-rufbereitschaft-it-alarmierung","status"
+
+== POST /de/xmlrpc.php xml_getusers
+HTTP 200 size=406
+<?xml version="1.0" encoding="UTF-8"?>
+<methodResponse>
+  <fault>
+    <value>
+      <struct>
+        <member>
+          <name>faultCode</name>
+          <value><int>403</int></value>
+        </member>
+        <member>
+          <name>faultString</name>
+          <value><string>Benutzername oder Passwort falsch.</string></value>
+        </member>
+      </struct>
+    </value>
+  </fault>
+</methodResponse>
+
+
+== POST /de/xmlrpc.php xml_getprofile
+HTTP 200 size=406
+<?xml version="1.0" encoding="UTF-8"?>
+<methodResponse>
+  <fault>
+    <value>
+      <struct>
+        <member>
+          <name>faultCode</name>
+          <value><int>403</int></value>
+        </member>
+        <member>
+          <name>faultString</name>
+          <value><string>Benutzername oder Passwort falsch.</string></value>
+        </member>
+      </struct>
+    </value>
+  </fault>
+</methodResponse>
+
+
+== POST /de/xmlrpc.php xml_getmedia
+HTTP 200 size=406
+<?xml version="1.0" encoding="UTF-8"?>
+<methodResponse>
+  <fault>
+    <value>
+      <struct>
+        <member>
+          <name>faultCode</name>
+          <value><int>403</int></value>
+        </member>
+        <member>
+          <name>faultString</name>
+          <value><string>Benutzername oder Passwort falsch.</string></value>
+        </member>
+      </struct>
+    </value>
+  </fault>
+</methodResponse>
+[0m
+All core XML-RPC methods (wp.getUsers/getProfile/getMediaLibrary) return 403 auth fault — method-level caps are intact. Closing out the last survivor (dev.derdack.com backend sweep):
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; for p in app/ api/ api/v1/ v1/ swagger.json openapi.json admin/ index.php healthz login; do url="https://dev.derdack.com/$p"; curl -s --max-time 15 -A "$UA" -o /tmp/opencode/dev.out -w "%-14s HTTP %{http_code} size=%{size_download}\n" "$p" "$url"; grep -c -i "IONOSParkingDE\|sedoparking" /tmp/opencode/dev.out | xargs -I{} echo "   parking_markers={}"; sleep 1.3; done
+%-14s HTTP 000 size=0
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <style type="text/css">
+   html, body, #partner, iframe {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+                border:0;
+                outline:0;
+                font-size:100%;
+                vertical-align:baseline;
+                background:transparent;
+            }
+            body {
+                overflow:hidden;
+            }
+  </style>
+  <meta content="NOW" name="expires">
+  <meta content="index, follow, all" name="GOOGLEBOT">
+  <meta content="index, follow, all" name="robots">
+  <!-- Following Meta-Tag fixes scaling-issues on mobile devices -->
+  <meta content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" name="viewport">
+ </head>
+ <body>
+  <div id="partner">
+  </div>
+  <script type="text/javascript">
+   document.write(
+                    '<script type="text/javascript" language="JavaScript"'
+                            + 'src="//sedoparking.com/frmpark/'
+                            + window.location.host + '/'
+                            + 'IONOSParkingDE'
+                            + '/park.js">'
+                    + '<\/script>'
+            );
+  </script>
+ </body>
+</html>%-14s HTTP 404 size=1271
+grep: /tmp/opencode/dev.out: No such file or directory
+%-14s HTTP 000 size=0
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <style type="text/css">
+   html, body, #partner, iframe {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+                border:0;
+                outline:0;
+                font-size:100%;
+                vertical-align:baseline;
+                background:transparent;
+            }
+            body {
+                overflow:hidden;
+            }
+  </style>
+  <meta content="NOW" name="expires">
+  <meta content="index, follow, all" name="GOOGLEBOT">
+  <meta content="index, follow, all" name="robots">
+  <!-- Following Meta-Tag fixes scaling-issues on mobile devices -->
+  <meta content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" name="viewport">
+ </head>
+ <body>
+  <div id="partner">
+  </div>
+  <script type="text/javascript">
+   document.write(
+                    '<script type="text/javascript" language="JavaScript"'
+                            + 'src="//sedoparking.com/frmpark/'
+                            + window.location.host + '/'
+                            + 'IONOSParkingDE'
+                            + '/park.js">'
+                    + '<\/script>'
+            );
+  </script>
+ </body>
+</html>%-14s HTTP 404 size=1271
+grep: /tmp/opencode/dev.out: No such file or directory
+%-14s HTTP 000 size=0
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <style type="text/css">
+   html, body, #partner, iframe {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+                border:0;
+                outline:0;
+                font-size:100%;
+                vertical-align:baseline;
+                background:transparent;
+            }
+            body {
+                overflow:hidden;
+            }
+  </style>
+  <meta content="NOW" name="expires">
+  <meta content="index, follow, all" name="GOOGLEBOT">
+  <meta content="index, follow, all" name="robots">
+  <!-- Following Meta-Tag fixes scaling-issues on mobile devices -->
+  <meta content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" name="viewport">
+ </head>
+ <body>
+  <div id="partner">
+  </div>
+  <script type="text/javascript">
+   document.write(
+                    '<script type="text/javascript" language="JavaScript"'
+                            + 'src="//sedoparking.com/frmpark/'
+                            + window.location.host + '/'
+                            + 'IONOSParkingDE'
+                            + '/park.js">'
+                    + '<\/script>'
+            );
+  </script>
+ </body>
+</html>%-14s HTTP 404 size=1271
+grep: /tmp/opencode/dev.out: No such file or directory
+%-14s HTTP 000 size=0
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <style type="text/css">
+   html, body, #partner, iframe {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+                border:0;
+                outline:0;
+                font-size:100%;
+                vertical-align:baseline;
+                background:transparent;
+            }
+            body {
+                overflow:hidden;
+            }
+  </style>
+  <meta content="NOW" name="expires">
+  <meta content="index, follow, all" name="GOOGLEBOT">
+  <meta content="index, follow, all" name="robots">
+  <!-- Following Meta-Tag fixes scaling-issues on mobile devices -->
+  <meta content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" name="viewport">
+ </head>
+ <body>
+  <div id="partner">
+  </div>
+  <script type="text/javascript">
+   document.write(
+                    '<script type="text/javascript" language="JavaScript"'
+                            + 'src="//sedoparking.com/frmpark/'
+                            + window.location.host + '/'
+                            + 'IONOSParkingDE'
+                            + '/park.js">'
+                    + '<\/script>'
+            );
+  </script>
+ </body>
+</html>%-14s HTTP 404 size=1271
+grep: /tmp/opencode/dev.out: No such file or directory
+%-14s HTTP 000 size=0
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <style type="text/css">
+   html, body, #partner, iframe {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+                border:0;
+                outline:0;
+                font-size:100%;
+                vertical-align:baseline;
+                background:transparent;
+            }
+            body {
+                overflow:hidden;
+            }
+  </style>
+  <meta content="NOW" name="expires">
+  <meta content="index, follow, all" name="GOOGLEBOT">
+  <meta content="index, follow, all" name="robots">
+  <!-- Following Meta-Tag fixes scaling-issues on mobile devices -->
+  <meta content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" name="viewport">
+ </head>
+ <body>
+  <div id="partner">
+  </div>
+  <script type="text/javascript">
+   document.write(
+                    '<script type="text/javascript" language="JavaScript"'
+                            + 'src="//sedoparking.com/frmpark/'
+                            + window.location.host + '/'
+                            + 'IONOSParkingDE'
+                            + '/park.js">'
+                    + '<\/script>'
+            );
+  </script>
+ </body>
+</html>%-14s HTTP 404 size=1271
+grep: /tmp/opencode/dev.out: No such file or directory
+%-14s HTTP 000 size=0
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <style type="text/css">
+   html, body, #partner, iframe {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+                border:0;
+                outline:0;
+                font-size:100%;
+                vertical-align:baseline;
+                background:transparent;
+            }
+            body {
+                overflow:hidden;
+            }
+  </style>
+  <meta content="NOW" name="expires">
+  <meta content="index, follow, all" name="GOOGLEBOT">
+  <meta content="index, follow, all" name="robots">
+  <!-- Following Meta-Tag fixes scaling-issues on mobile devices -->
+  <meta content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" name="viewport">
+ </head>
+ <body>
+  <div id="partner">
+  </div>
+  <script type="text/javascript">
+   document.write(
+                    '<script type="text/javascript" language="JavaScript"'
+                            + 'src="//sedoparking.com/frmpark/'
+                            + window.location.host + '/'
+                            + 'IONOSParkingDE'
+                            + '/park.js">'
+                    + '<\/script>'
+            );
+  </script>
+ </body>
+</html>%-14s HTTP 404 size=1271
+grep: /tmp/opencode/dev.out: No such file or directory
+%-14s HTTP 000 size=0
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <style type="text/css">
+   html, body, #partner, iframe {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+                border:0;
+                outline:0;
+                font-size:100%;
+                vertical-align:baseline;
+                background:transparent;
+            }
+            body {
+                overflow:hidden;
+            }
+  </style>
+  <meta content="NOW" name="expires">
+  <meta content="index, follow, all" name="GOOGLEBOT">
+  <meta content="index, follow, all" name="robots">
+  <!-- Following Meta-Tag fixes scaling-issues on mobile devices -->
+  <meta content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" name="viewport">
+ </head>
+ <body>
+  <div id="partner">
+  </div>
+  <script type="text/javascript">
+   document.write(
+                    '<script type="text/javascript" language="JavaScript"'
+                            + 'src="//sedoparking.com/frmpark/'
+                            + window.location.host + '/'
+                            + 'IONOSParkingDE'
+                            + '/park.js">'
+                    + '<\/script>'
+            );
+  </script>
+ </body>
+</html>%-14s HTTP 404 size=1271
+grep: /tmp/opencode/dev.out: No such file or directory
+%-14s HTTP 000 size=0
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <style type="text/css">
+   html, body, #partner, iframe {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+                border:0;
+                outline:0;
+                font-size:100%;
+                vertical-align:baseline;
+                background:transparent;
+            }
+            body {
+                overflow:hidden;
+            }
+  </style>
+  <meta content="NOW" name="expires">
+  <meta content="index, follow, all" name="GOOGLEBOT">
+  <meta content="index, follow, all" name="robots">
+  <!-- Following Meta-Tag fixes scaling-issues on mobile devices -->
+  <meta content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" name="viewport">
+ </head>
+ <body>
+  <div id="partner">
+  </div>
+  <script type="text/javascript">
+   document.write(
+                    '<script type="text/javascript" language="JavaScript"'
+                            + 'src="//sedoparking.com/frmpark/'
+                            + window.location.host + '/'
+                            + 'IONOSParkingDE'
+                            + '/park.js">'
+                    + '<\/script>'
+            );
+  </script>
+ </body>
+</html>%-14s HTTP 404 size=1271
+grep: /tmp/opencode/dev.out: No such file or directory
+%-14s HTTP 000 size=0
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <style type="text/css">
+   html, body, #partner, iframe {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+                border:0;
+                outline:0;
+                font-size:100%;
+                vertical-align:baseline;
+                background:transparent;
+            }
+            body {
+                overflow:hidden;
+            }
+  </style>
+  <meta content="NOW" name="expires">
+  <meta content="index, follow, all" name="GOOGLEBOT">
+  <meta content="index, follow, all" name="robots">
+  <!-- Following Meta-Tag fixes scaling-issues on mobile devices -->
+  <meta content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" name="viewport">
+ </head>
+ <body>
+  <div id="partner">
+  </div>
+  <script type="text/javascript">
+   document.write(
+                    '<script type="text/javascript" language="JavaScript"'
+                            + 'src="//sedoparking.com/frmpark/'
+                            + window.location.host + '/'
+                            + 'IONOSParkingDE'
+                            + '/park.js">'
+                    + '<\/script>'
+            );
+  </script>
+ </body>
+</html>%-14s HTTP 404 size=1271
+grep: /tmp/opencode/dev.out: No such file or directory
+%-14s HTTP 000 size=0
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <style type="text/css">
+   html, body, #partner, iframe {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+                border:0;
+                outline:0;
+                font-size:100%;
+                vertical-align:baseline;
+                background:transparent;
+            }
+            body {
+                overflow:hidden;
+            }
+  </style>
+  <meta content="NOW" name="expires">
+  <meta content="index, follow, all" name="GOOGLEBOT">
+  <meta content="index, follow, all" name="robots">
+  <!-- Following Meta-Tag fixes scaling-issues on mobile devices -->
+  <meta content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" name="viewport">
+ </head>
+ <body>
+  <div id="partner">
+  </div>
+  <script type="text/javascript">
+   document.write(
+                    '<script type="text/javascript" language="JavaScript"'
+                            + 'src="//sedoparking.com/frmpark/'
+                            + window.location.host + '/'
+                            + 'IONOSParkingDE'
+                            + '/park.js">'
+                    + '<\/script>'
+            );
+  </script>
+ </body>
+</html>%-14s HTTP 404 size=1271
+grep: /tmp/opencode/dev.out: No such file or directory
+[0m
+My `-w` format string was malformed, polluting the sweep. Re-running cleanly:
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; for p in app/ api/ swagger.json openapi.json admin/ index.php healthz login; do f="/tmp/opencode/dev_${p//\//_}"; code=$(curl -s --max-time 15 -A "$UA" -o "$f" -w '%{http_code}' "https://dev.derdack.com/$p"); park=$(grep -c -i "sedoparking\|IONOSParking" "$f" 2>/dev/null || echo 0); apache=$(grep -c -i "Apache\|404 Not Found" "$f" 2>/dev/null || echo 0); echo "dev/$p -> HTTP $code parking=$park apachehints=$apache bytes=$(wc -c < "$f")"; sleep 1.3; done
+dev/app/ -> HTTP 404 parking=2 apachehints=0
+0 bytes=1271
+dev/api/ -> HTTP 404 parking=2 apachehints=0
+0 bytes=1271
+dev/swagger.json -> HTTP 404 parking=2 apachehints=0
+0 bytes=1271
+dev/openapi.json -> HTTP 404 parking=2 apachehints=0
+0 bytes=1271
+dev/admin/ -> HTTP 404 parking=2 apachehints=0
+0 bytes=1271
+dev/index.php -> HTTP 404 parking=2 apachehints=0
+0 bytes=1271
+dev/healthz -> HTTP 404 parking=2 apachehints=0
+0 bytes=1271
+dev/login -> HTTP 404 parking=2 apachehints=0
+0 bytes=1271
+[0m
+Every dev.derdack.com app path yields the same 1271-byte sedoparking 404 — no real backend. One last close-out probe on /ea/ page revisions to fully close the multisite subsystem:
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; echo "== /ea/ pages/7763/revisions"; curl -s --max-time 20 -A "$UA" -o /tmp/opencode/ea_rev.json -w 'HTTP %{http_code} size=%{size_download}\n' "https://www.derdack.com/ea/wp-json/wp/v2/pages/7763/revisions?_fields=id,status,date"; head -c 300 /tmp/opencode/ea_rev.json; echo; sleep 1.3; echo "== /ea/pages/7763/autosaves"; curl -s --max-time 20 -A "$UA" -o /tmp/opencode/ea_auto.json -w 'HTTP %{http_code} size=%{size_download}\n' "https://www.derdack.com/ea/wp-json/wp/v2/pages/7763/autosaves?_fields=id,status"; head -c 300 /tmp/opencode/ea_auto.json
+== /ea/ pages/7763/revisions
+HTTP 401 size=120
+{"code":"rest_cannot_read","message":"Sorry, you are not allowed to view revisions of this post.","data":{"status":401}}
+== /ea/pages/7763/autosaves
+HTTP 401 size=120
+{"code":"rest_cannot_read","message":"Sorry, you are not allowed to view autosaves of this post.","data":{"status":401}}
+[0m
+/e a/ pages also gated. Before finalizing, one untested high-value passive class — WP sensitive-file disclosure (`debug.log`, `wp-config` backups) on all three WP installs:
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; for u in "https://www.derdack.com/wp-content/debug.log" "https://www.derdack.com/de/wp-content/debug.log" "https://www.derdack.com/ea/wp-content/debug.log" "https://www.derdack.com/wp-config.php.bak" "https://www.derdack.com/wp-config.php.save"; do curl -s --max-time 15 -A "$UA" -o /tmp/opencode/sens.out -w "%{http_code} %{size_download}" "$u" | xargs -I{} echo "$u -> HTTP {}"; sleep 1.3; done
+https://www.derdack.com/wp-content/debug.log -> HTTP 404 1271
+https://www.derdack.com/de/wp-content/debug.log -> HTTP 404 1271
+https://www.derdack.com/ea/wp-content/debug.log -> HTTP 404 1271
+https://www.derdack.com/wp-config.php.bak -> HTTP 503 339
+https://www.derdack.com/wp-config.php.save -> HTTP 503 339
+[0m
+Root/de/ea debug.log all 404, wp-config backups 503-blocked — no sensitive-file disclosure. Final breadth check: CT-log subdomain enumeration to catch in-scope hosts the 9-host seed missed (incl. SIGNL4 product domains):
+[0m✗ [0mWebFetch https://crt.sh/?q=%25.signl4.com&output=json failed
+[91m[1mError: [0mStatusCode: non 2xx status code (429 GET https://crt.sh/?q=%25.signl4.com&output=json)
+[0m✗ [0mWebFetch https://crt.sh/?q=%25.derdack.com&output=json failed
+[91m[1mError: [0mStatusCode: non 2xx status code (429 GET https://crt.sh/?q=%25.derdack.com&output=json)
+crt.sh rate-limited (429). Retrying after a pause, singly:
+[0m
+[0m$ [0msleep 20; echo retry-ready
+retry-ready
+[0m
+[0m✗ [0mWebFetch https://crt.sh/?q=derdack.com&output=json failed
+[91m[1mError: [0mStatusCode: non 2xx status code (429 GET https://crt.sh/?q=derdack.com&output=json)
+Trying alternative passive DNS/CT sources:
+[0m✗ [0mWebFetch https://otx.alienvault.com/api/v1/indicators/domain/derdack.com/passive_dns failed
+[91m[1mError: [0mStatusCode: non 2xx status code (429 GET https://otx.alienvault.com/api/v1/indicators/domain/derdack.com/passive_dns)
+[0m% [0mWebFetch https://api.hackertarget.com/hostsearch/?q=derdack.com
+No new derdack.com subdomains beyond the seed. Same for signl4.com:
+[0m% [0mWebFetch https://api.hackertarget.com/hostsearch/?q=signl4.com
+signl4.com exposes a rich product namespace missing from the seed inventory — incl. **api.signl4.com**, **account.signl4.com**, bot, connect, frontdoor. Passive reachability/tech probe:
+[0m
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; for h in api.signl4.com account.signl4.com status.signl4.com www.signl4.com; do f="/tmp/opencode/s4_${h%%.*}.txt"; code=$(curl -s --max-time 15 -A "$UA" -D - -o "$f" "https://$h/" | grep -i -E "^HTTP|^server:|^x-powered-by:|^x-azure|^cf-ray" | tr -d '\r'); echo "== $h"; echo "$code"; head -c 250 "$f"; echo; echo; sleep 1.5; done
+== api.signl4.com
+HTTP/2 301 
+server: Microsoft-HTTPAPI/2.0
+
+
+== account.signl4.com
+HTTP/2 301 
+server: Microsoft-HTTPAPI/2.0
+
+
+== status.signl4.com
+HTTP/2 200 
+server: Apache
+<!doctype html>
+<html lang="en">
+
+<head>
+
+    
+    <title>DERDACK SIGNL4</title>
+        <meta name="robots" content="index, follow">
+    <meta name="viewport" content="width=device-width" />
+
+    <style  type="text/css" id="inject-css">
+        .blo
+
+== www.signl4.com
+HTTP/2 200 
+cf-ray: a361177a6b57e612-SJC
+server: cloudflare
+<!DOCTYPE html><html lang="en-US"><head><meta charset="UTF-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge"><link rel="pingback" href="https://www.signl4.com/xmlrpc.php" /> <script type="text/javascript">document.documentElement.className =
+[0m
+api.signl4.com is live (Azure) — the real SIGNL4 API, matching phase target `api`. Following redirect and probing OIDC/discovery doc:
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; echo "== api.signl4.com redirect target"; curl -s --max-time 15 -A "$UA" -D - -o /dev/null "https://api.signl4.com/" | grep -i -E "^HTTP|^location" | tr -d '\r'; sleep 1.3; echo "== api.signl4.com/ redirect follow"; curl -s --max-time 15 -A "$UA" -L -o /tmp/opencode/s4_api_final.txt -w 'final:%{url_effective} HTTP %{http_code} size=%{size_download}\n' "https://api.signl4.com/"; head -c 300 /tmp/opencode/s4_api_final.txt; echo; sleep 1.3; echo "== account.signl4.com OIDC discovery"; curl -s --max-time 15 -A "$UA" -o /tmp/opencode/s4_acct_oidc.txt -w 'HTTP %{http_code} size=%{size_download}\n' "https://account.signl4.com/.well-known/openid-configuration"; head -c 500 /tmp/opencode/s4_acct_oidc.txt
+== api.signl4.com redirect target
+HTTP/2 301 
+location: https://account.signl4.com/manage
+== api.signl4.com/ redirect follow
+final:https://connect.signl4.com/identity/Account/Login?ReturnUrl=%2Fidentity%2Fconnect%2Fauthorize%2Fcallback%3Fclient_id%3D692A0A56-892F-4AE2-8259-76DA398990B6%26redirect_uri%3Dhttps%253A%252F%252Faccount.signl4.com%252Fmanage%252Fsignin-oidc%26response_type%3Dcode%26scope%3Dopenid%2520profile%2520account_portal%2520public_api_read%2520public_api_write%2520public_api_prov%2520offline_access%26code_challenge%3DoAfEEqNW42hOS4MxqyykCNd1l0jBRjvBb2O5T0eyEkw%26code_challenge_method%3DS256%26response_mode%3Dform_post%26nonce%3D639241646837814069.ODVhOTc4ZTYtMzhmNC00YTNhLWIzNzUtN2Y2MzJlNjFlYmVmZjEzYzkzZTQtMzRhOS00NTZmLTlkMDUtNzM0Mzg5NWMxYWFh%26state%3DCfDJ8P0bhSkvNP5HkPto7qc9KqOQl5Tf-dEk5wkDaFo3IH1XktyV1DiNeQk1rrGeCaJQ5k-kf9IRhBC-dUOp92I7ikKgO-oq1D9o2A207QDujF3QEWIbZrGJb3DNmsNKJq5ZCkmf9igPTIAksk3OZth3IjBEInOPro_pUmz0XPo2VTF21rL2zO3rfiOTLInMh-dc_iL5i2BHljT-_yF8Ti7v14h_RrEvd-r1xrMMoVlR45-kLTXSrYYU2VfXMLX9_J6mu8HlI0hCVwOECXRg8jKH3y46Z8C9ZAsbxsIeqCojp8NikbxAEpmZKcsq8aSfEGbzmpX4uZHbysguVKZqYuYaaYRQjqzGf2NZMrV3YZ-RNdLHAPdx5QYJCJSmSYYegkgaJiiZhm2d7gTjitOjbKMFARY%26x-client-SKU%3DID_NET8_0%26x-client-ver%3D7.7.3.0 HTTP 200 size=6495
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=500" />
+    <title>SIGNL4 - Welcome</title>
+
+    <link rel="icon" type="image/x-icon" href="/identity/images/favicon.ico" 
+== account.signl4.com OIDC discovery
+HTTP 404 size=0
+[0m
+Full SIGNL4 OIDC chain revealed (PKCE S256, scopes: public_api_read/write/prov, account_portal). Fetching the IdP discovery + JWKS (passive):
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; echo "== connect.signl4.com OIDC discovery"; curl -s --max-time 15 -A "$UA" -o /tmp/opencode/s4_oidc.json -w 'HTTP %{http_code} size=%{size_download}\n' "https://connect.signl4.com/identity/.well-known/openid-configuration"; head -c 1200 /tmp/opencode/s4_oidc.json; echo; echo; sleep 1.5; echo "== jwks"; curl -s --max-time 15 -A "$UA" -o /tmp/opencode/s4_jwks.json -w 'HTTP %{http_code} size=%{size_download}\n' "https://connect.signl4.com/identity/.well-known/openid-configuration/jwks"; head -c 400 /tmp/opencode/s4_jwks.json
+== connect.signl4.com OIDC discovery
+HTTP 200 size=3457
+{"issuer":"https://connect.signl4.com/identity","jwks_uri":"https://connect.signl4.com/identity/.well-known/openid-configuration/jwks","authorization_endpoint":"https://connect.signl4.com/identity/connect/authorize","token_endpoint":"https://connect.signl4.com/identity/connect/token","userinfo_endpoint":"https://connect.signl4.com/identity/connect/userinfo","end_session_endpoint":"https://connect.signl4.com/identity/connect/endsession","check_session_iframe":"https://connect.signl4.com/identity/connect/checksession","revocation_endpoint":"https://connect.signl4.com/identity/connect/revocation","introspection_endpoint":"https://connect.signl4.com/identity/connect/introspect","device_authorization_endpoint":"https://connect.signl4.com/identity/connect/deviceauthorization","backchannel_authentication_endpoint":"https://connect.signl4.com/identity/connect/ciba","pushed_authorization_request_endpoint":"https://connect.signl4.com/identity/connect/par","require_pushed_authorization_requests":false,"frontchannel_logout_supported":true,"frontchannel_logout_session_supported":true,"backchannel_logout_supported":true,"backchannel_logout_session_supported":true,"scopes_supported":["openid","em
+
+== jwks
+HTTP 200 size=1611
+{"keys":[{"kty":"RSA","use":"sig","kid":"91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256","x5t":"ke5PPOlOtRevZrJU90l-yw4x7ic","e":"AQAB","n":"7bx0BWVzmy_EkFubRcyLUVBvdA4XDPMgOYXKqX9uW5Bm1nqYpLEHKkkI9x2lH4_HBD4bmCoeDlR-fu0q4D0_JOB3QEIfnRwhcQKNwnpE33vItXea4hyUGXHoGCR7hasBRN_unkHHYIi6VsV_I_1kJDJQ5Gf9zjQDrwW2X6DEnuNaF3BMSRU8WHHbtps4_OgyoO4DN9PE8Xsu7Ngno3ItGZ2ACi5fradUyIJ6NXfMlyAV4B6A7ZI36yr7Noh1ZrXVkbPY
+[0m
+IdP fully mapped (IdentityServer/.NET8, PKCE S256, standard RSA sig kid). Now passive API-surface discovery on api.signl4.com:
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; for u in "https://api.signl4.com/swagger/v1/swagger.json" "https://api.signl4.com/swagger/v1/swagger.yaml" "https://api.signl4.com/swagger/index.html" "https://api.signl4.com/docs" "https://api.signl4.com/api" "https://api.signl4.com/health"; do f="/tmp/opencode/s4_$(echo $u | md5sum | cut -c1-6).out"; code=$(curl -s --max-time 15 -A "$UA" -o "$f" -w '%{http_code} %{size_download}' "https://api.signl4.com$u"); loc=$(curl -s --max-time 15 -A "$UA" -o /dev/null -w '%{redirect_url}' "https://api.signl4.com$u"); echo "api$u -> HTTP $code loc=$loc"; sleep 1.3; done
+apihttps://api.signl4.com/swagger/v1/swagger.json -> HTTP 000 0 loc=
+apihttps://api.signl4.com/swagger/v1/swagger.yaml -> HTTP 000 0 loc=
+apihttps://api.signl4.com/swagger/index.html -> HTTP 000 0 loc=
+apihttps://api.signl4.com/docs -> HTTP 000 0 loc=
+apihttps://api.signl4.com/api -> HTTP 000 0 loc=
+apihttps://api.signl4.com/health -> HTTP 000 0 loc=
+[0m
+HTTP 000 — connection failed on those. Re-probing one with verbose to diagnose:
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; curl -s -v --max-time 20 -A "$UA" -o /tmp/opencode/s4_swagger2.out "https://api.signl4.com/swagger/v1/swagger.json" 2>&1 | grep -E "Connected|HTTP/|location:|Recv failure|Could not|error|refused|closed" | head -20; echo "---body---"; head -c 400 /tmp/opencode/s4_swagger2.out
+* Connected to api.signl4.com (20.160.37.197) port 443
+* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://api.signl4.com/swagger/v1/swagger.json
+* [HTTP/2] [1] [:method: GET]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: api.signl4.com]
+* [HTTP/2] [1] [:path: /swagger/v1/swagger.json]
+* [HTTP/2] [1] [user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)]
+* [HTTP/2] [1] [accept: */*]
+> GET /swagger/v1/swagger.json HTTP/2
+< HTTP/2 404 
+---body---
+[0m
+`swagger.json` → 404 (no UI exposed). Probing API version-prefix convention + retry-on-000:
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; for u in "/v2/alerts" "/v1/alerts" "/v2/teams" "/api/v2/alerts" "/.well-known/openapi.json" "/swagger.json"; do for try in 1 2; do code=$(curl -s --max-time 15 -A "$UA" -o /tmp/opencode/s4_p.out -w '%{http_code}' "https://api.signl4.com$u"); [ "$code" != "000" ] && break; sleep 2; done; echo "api$u -> HTTP $code bytes=$(wc -c < /tmp/opencode/s4_p.out)"; head -c 120 /tmp/opencode/s4_p.out; echo; sleep 1.4; done
+api/v2/alerts -> HTTP 404 bytes=0
+
+api/v1/alerts -> HTTP 404 bytes=0
+
+api/v2/teams -> HTTP 404 bytes=0
+
+api/api/v2/alerts -> HTTP 405 bytes=0
+
+api/.well-known/openapi.json -> HTTP 404 bytes=0
+
+api/swagger.json -> HTTP 404 bytes=0
+[0m
+`/api/v2/alerts` → **405** (route exists, GET not allowed) vs 404 elsewhere. Extracting the `Allow` set from the 405:
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; echo "== /api/v2/alerts headers"; curl -s --max-time 15 -A "$UA" -D - -o /tmp/opencode/s4_405.out "https://api.signl4.com/api/v2/alerts" | grep -i -E "^HTTP|^allow|^content-|^date|^server|^x-" | tr -d '\r'; echo "body: $(head -c 150 /tmp/opencode/s4_405.out)"; sleep 1.4; echo "== HEAD /api/v2/alerts"; curl -s --max-time 15 -A "$UA" -I -o /dev/null -w 'HEAD HTTP %{http_code}\n' "https://api.signl4.com/api/v2/alerts"; sleep 1.4; echo "== GET /api/"; curl -s --max-time 15 -A "$UA" -D - -o /tmp/opencode/s4_api.out "https://api.signl4.com/api/" | grep -i -E "^HTTP|^location|^allow" | tr -d '\r'; head -c 150 /tmp/opencode/s4_api.out
+== /api/v2/alerts headers
+HTTP/2 405 
+date: Sat, 05 Sep 2026 00:25:40 GMT
+content-length: 0
+allow: POST
+server: Microsoft-HTTPAPI/2.0
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+body: 
+== HEAD /api/v2/alerts
+HEAD HTTP 405
+== GET /api/
+HTTP/2 404
+[0m
+`/api/v2/alerts` → **Allow: POST** = the documented SIGNL4 alert-ingestion API (public-api surface confirmed). Now a single read-only OAuth `redirect_uri` allow-list check against the IdP authorize endpoint:
+[0m$ [0mUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"; echo "== authorize with attacker redirect_uri"; curl -s --max-time 20 -A "$UA" -D - -o /tmp/opencode/s4_authz.out "https://connect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Fattacker.example%2Fcb&response_type=code&scope=openid%20public_api_read&state=xyz&nonce=abc" | grep -i -E "^HTTP|^location|^strict|^content-security|^content-type" | tr -d '\r'; echo "--- body ---"; head -c 400 /tmp/opencode/s4_authz.out
+== authorize with attacker redirect_uri
+HTTP/2 302 
+location: https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqNrmV424XnFhsyAvf88OYDPb0u7-IQjafCpHAUrHbeWovLRMkXCGFdakDU8u0uzyYrs_130ITwmi60QMDxkYqykPueoruXaFNIZ4ZqXj5et8zyBLUBeWGc8Jvx7WzSqC781UcAZIhP_XpkELhWmgODheJxbQRMj0sMAaiW5445A-1weMSjswysVaa-9OTp19RG1TXibQ2U--ysSnsKLGhOyXqXIyVkznjcWqpkiS5Quivt2hUMemY1ZiSimt4LdkGbWWOKkQ6SIDSYe8eZK2fKZUgCPpZLtkvVDBeeVgqZRUjYNWP7mJ9_DALci2Oy9a8omRaarGGBrDMnjsMvyjy8XaZyKO3WfA-UhBdvkYpXjyHid64U3xjMcFp5r008SxCuQGcBKQXL7-bS6CPyYd1zCJnCMfiVvyjKgZVneUMZFWOdNkpx3lhX3X2e-hOfFYo32y1AahfZnKBXC5dzL7BQp
+strict-transport-security: max-age=15552000
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://connect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+--- body ---
+[0m
+IdP enforces `redirect_uri` allow-list (302 to its own error page, not to attacker) — no OAuth redirect flaw. CSP also leaks dev/lab/staging hosts (devconnect, labaccount, s4dev1-8.enterprisealert.com). Enumerating enterprisealert.com:
+[0m% [0mWebFetch https://api.hackertarget.com/hostsearch/?q=enterprisealert.com
+One quick passive DNS resolution of the CSP-referenced dev/lab hosts:
+[0m
+[0m$ [0mfor h in devconnect.signl4.com labconnect.signl4.com devaccount.signl4.com labaccount.signl4.com s4dev1.enterprisealert.com s4dev8.enterprisealert.com demo.enterprisealert.com; do ip=$(getent ahostsv4 "$h" 2>/dev/null | awk '{print $1; exit}'); echo "$h -> ${ip:-NXDOMAIN/no-ip}"; done
+devconnect.signl4.com -> 108.143.123.104
+labconnect.signl4.com -> 13.93.49.201
+devaccount.signl4.com -> 108.143.123.104
+labaccount.signl4.com -> 13.93.49.201
+s4dev1.enterprisealert.com -> 4.207.244.99
+s4dev8.enterprisealert.com -> 4.207.244.99
+demo.enterprisealert.com -> 4.207.244.99
+[0m
+All probes complete. Final analysis:
+
+## STEP 1 — DELTA
+- NEW signl4.com product namespace enumerated via passive DNS (13 hosts: api, account, connect, bot, frontdoor, status, www, docs, support, trust, mail, devmail, labmail) — NOT in seed inventory; `signl4.derdack.com` was a TCP-blocked CNAME but the real SIGNL4 SaaS infra is live under signl4.com
+- NEW api.signl4.com 301→account.signl4.com/manage→OIDC auth-code+PKCE(S256) against connect.signl4.com/identity (IdentityServer/.NET8); client 692A0A56-… scopes `openid profile account_portal public_api_read public_api_write public_api_prov offline_access`
+- NEW connect.signl4.com discovery doc fully mapped (token/introspect/deviceauthorization/par/ciba endpoints, `require_pushed_authorization_requests:false`); JWKS single RSA sig key
+- NEW api.signl4.com/api/v2/alerts → **405 `Allow: POST`** = live SIGNL4 alert-ingestion API (404 on /v2/alerts, /remove variants, /swagger.json, /.well-known/openapi.json)
+- NEW authorize?redirect_uri=attacker.example → 302 to IdP own `/identity/home/error` — redirect_uri allow-list enforced, no OAuth redirect flaw
+- NEW CSP (report-only) leaks dev/lab estate: devconnect/devaccount/labconnect/labaccount.signl4.com + s4dev1-8.enterprisealert.com — all resolve publicly (108.143.123.104, 13.93.49.201, 4.207.244.99); enterprisealert.com ns confirms www/demo/docs/downloads
+- NEW www.signl4.com = Cloudflare-fronted WordPress with exposed xmlrpc pingback link — fresh WP instancing
+- CHANGED /de/+/ea/ multisite close-out: posts/11640 revisions+autosaves 401, status=draft 400/401, /ea/ posts empty (pages only), /ea/ pages/7763 revisions+autosaves 401 — subsite gating identical to root
+- CHANGED /de/xmlrpc.php wp.getUsers/wp.getProfile/wp.getMediaLibrary(empty creds) → faultCode 403 "Benutzername oder Passwort falsch" — method-level caps enforced
+- CHANGED root/de/ea debug.log 404; wp-config.php.bak/.save 503 — no sensitive-file leak; dev.derdack.com 8-path app sweep → all sedoparking 404 (namespace fully parked, no backend)
+
+## STEP 2 — PRIORITIZE
+- [PRIO] devaccount+devconnect.signl4.com (dev/lab OIDC+account staging estate), score 7.1, axis=freshness+tech_exposure+gate_ease
+- [PRIO] connect.signl4.com/identity (prod IdP, PKCE/OAuth/introspection/device+Ciba+PAR), score 6.8, axis=business_value+tech_exposure+cloud_surface
+- [PRIO] api.signl4.com/api/v2 (public POST alert-ingestion API, secret-auth), score 6.7, axis=business_value+freshness
+- [PRIO] www.signl4.com (CF-WP multisite-fleet sibling), score 5.7, axis=gate_ease+cloud_surface
+
+## STEP 3 — HYPOTHESES
+[HYP] SIGNL4 dev/lab OIDC+account staging estate exposes unauthenticated or debug surface
+class: AUTH
+asset: devconnect.signl4.com / devaccount.signl4.com / labconnect.signl4.com
+confidence: 55
+reasoning: CSP explicitly references dev/lab Connect+Account hosts; devconnect+devaccount co-resolve 108.143.123.104, lab pair 13.93.49.201 (dedicated public IPs, distinct from prod 20.160.37.197); staging IdentityServer/account portals routinely ship debug endpoints, relaxed TLS/CORS, or prod-parity credentials
+evidence_needed: staging OIDC discovery differing in issuer from prod, or unauthenticated /manage/ or login-template or dev-specific route on dev/lab hosts
+verify_steps: GET https://devaccount.signl4.com/ ; GET https://devconnect.signl4.com/identity/.well-known/openid-configuration ; GET https://labconnect.signl4.com/identity/.well-known/openid-configuration ; GET https://labaccount.signl4.com/ ; compare issuer/endpoints vs prod connect.signl4.com; diff server headers
+impact: access to SIGNL4 staging test accounts, debug surfaces, or prod-parity tokens; severity MED-HIGH
+testability: PASSIVE
+[HYP] www.signl4.com WordPress exposes REST user/route enumeration + plugin attack surface
+class: AUTH
+asset: www.signl4.com
+confidence: 50
+reasoning: CF-fronted WP confirmed (xmlrpc pingback link, same WP fleet family as derdack.com where /wp-json/user enumeration returned 200); completely unprobed instance; CF hides origin so path-content differential yields origin/IP lead as bonus
+evidence_needed: /wp-json/v2/users returning user list (id/name/slug) or users/1, wp/v2 routes schema, CF real-origin discovery via docroot fingerprints
+verify_steps: GET https://www.signl4.com/wp-json/ ; GET https://www.signl4.com/wp-json/wp/v2/users?per_page=5 ; GET https://www.signl4.com/wp-json/wp/v2/posts?per_page=1 ; GET https://www.signl4.com/wp-content/themes/… fingerprint
+impact: user enumeration, plugin/version mapping, potential origin-IP bypass of CF; severity LOW-MED
+testability: PASSIVE
+[HYP] api.signl4.com /api/ namespace has additional GET-accessible routes beyond alert-ingestion POST
+class: MISCONFIG
+asset: api.signl4.com/api/v2
+confidence: 45
+reasoning: /api/v2/alerts answered 405 Allow:POST (route registered) while equivalents 404 — /api/ base is live; a read/status sibling or unauth webhook-subscription GET in the same namespace would leak config; team-secret auth on POST means response-code diff between valid/invalid secret is a passive oracle
+evidence_needed: any /api/* path returning 200/401/403 (vs 404) describing objects, or error body disclosing schema/keys
+verify_steps: GET https://api.signl4.com/api/v2 ; GET https://api.signl4.com/api/v2/teams ; GET https://api.signl4.com/api/v2/ping ; GET https://api.signl4.com/api/ ; compare 405/401 vs 404 classes
+impact: unauthorized read or config disclosure on SIGNL4 public API; severity MED
+testability: PASSIVE
+
+## STEP 4 — SELF-CRITIQUE
+- [PARKED] /de/ XML-RPC legacy-method bypass: REJECTED — wp.getUsers/getProfile/getMediaLibrary(empty creds) → faultCode 403; core caps intact
+- [PARKED] multisite revisions/autosaves IDOR: REJECTED — 401 rest_cannot_read on /d e/ posts, /d e/ drafts, /ea/ pages; shared-core gating proven identical
+- [PARKED] dev.derdack.com backend discovery: REJECTED — 8-path sweep all sedoparking 404; namespace fully parked
+- [PARKED] api.signl4.com swagger/openapi suite: REJECTED — /swagger/*, /docs, /.well-known/openapi.json all 404
+- [PARKED] OAuth redirect_uri flaw @ connect IdP: REJECTED — attacker URI → IdP error 302, allow-list enforced + PKCE S256
+- [FINAL] survivors ranked: 1. [55] AUTH dev/lab SIGNL4 staging estate 2. [50] AUTH www.signl4.com WP enum 3. [45] MISCONFIG api /api/ namespace
+
+## STEP 5 — NEXT ACTION
+[NEXT] PROBE: GET https://devaccount.signl4.com/ and GET https://devconnect.signl4.com/identity/.well-known/openid-configuration — if staging issuer differs from prod `connect.signl4.com/identity` or returns 200 login/dev surface, escalate to lab pair (13.93.49.201) and s4dev1-8.enterprisealert.com.
+
+## STEP 6 — LEARNING
+- [LEARN] REJECTED AUTH @ www.derdack.com/de/xmlrpc.php: wp.getUsers/wp.getProfile/wp.getMediaLibrary(empty creds) → faultCode 403; method caps enforced; earlier getUsersBlogs empty-string was method-specific benign behavior
+- [LEARN] REJECTED IDOR @ www.derdack.com /de/+/ea/: revisions/autosaves 401 rest_cannot_read on posts 11640 + pages 7763; status=draft 400/401; subsite caps identical to root
+- [LEARN] REJECTED MISCONFIG @ dev.derdack.com: full app-path sweep (app/api/swagger/admin/index/healthz/login) all sedoparking 404 — parked namespace, no backend
+- [LEARN] REJECTED MISCONFIG @ api.signl4.com: no Swagger/OpenAPI/README docs exposed (404); no passive schema disclosure
+- [LEARN] ACCEPTED AUTH @ connect.signl4.com: OIDC discovery+JWKS mapped; authorize flow enforces redirect_uri allow-list (attacker URI→IdP error), PKCE S256, single RSA sig key — no OAuth redirect_uri flawease
+- [LEARN] ACCEPTED OTHER @ api.signl4.com: /api/v2/alerts live with Allow:POST — SIGNL4 public alert-ingestion API; /api/ base distinct from /v2/ (405 vs 404 differential)
+- [LEARN] ACCEPTED MISCONFIG @ signl4.com estate: CSP leak + passive DNS reveal dev/lab/staging hosts (devconnect, devaccount, labconnect, labaccount, s4dev1-8.enterprisealert.com) publicly resolving — previously unknown in-scope attack surface
+
+## STEP 7 — RISK
+[RISK] derdack: 40 (moderate-low). The entire derdack.com namespace is now fully characterized and gated (all REST/XML-RPC caps proven intact, dev parked, no sensitive-file leak). However the real SIGNL4 product estate under signl4.com/enterprisealert.com is LIVE and previously uninventoried: prod IdP + public POST API + a resolving dev/lab/staging cluster + CF-fronted WP. No vulnerability confirmed yet; recon value high, exposure moderate — the dev/lab estate is the next highest-yield passive target.

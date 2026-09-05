@@ -461,3 +461,33 @@ testability: PASSIVE
 [LEARN] ACCEPTED AUTH @ www.derdack.com/de/: metaWeblog.getUsersBlogs(empty creds)→empty string, not 401/403 fault — non-standard XML-RPC auth handling; method-level cap check warranted
 [LEARN] REJECTED MISCONFIG @ www.derdack.com/ea/: Whitepaper_test.pdf absent from /de/+/ea/ media (images only) — test-PDF vector invalidated
 [RISK] derdack: 30 (low). Open XML-RPC on /de/ and /ea/ is live exposure but pingback→metadata SSRF unconfirmed and rejected; remaining untested high-value primitives are the multisite revisions/autosaves IDOR and XML-RPC legacy-method cap bypass; root REST gates proven intact; dev is parked-with-blocked-dirs; signl4 zero-value. Confidence-weighted exposure moderate-low.
+## 2026-09-05 00:26:58 UTC [target] (model bigpickle)
+[HYP] SIGNL4 dev/lab OIDC+account staging estate exposes unauthenticated or debug surface
+class: AUTH
+asset: devconnect.signl4.com / devaccount.signl4.com / labconnect.signl4.com
+confidence: 55
+reasoning: CSP explicitly references dev/lab Connect+Account hosts; devconnect+devaccount co-resolve 108.143.123.104, lab pair 13.93.49.201 (dedicated public IPs, distinct from prod 20.160.37.197); staging IdentityServer/account portals routinely ship debug endpoints, relaxed TLS/CORS, or prod-parity credentials
+evidence_needed: staging OIDC discovery differing in issuer from prod, or unauthenticated /manage/ or login-template or dev-specific route on dev/lab hosts
+verify_steps: GET https://devaccount.signl4.com/ ; GET https://devconnect.signl4.com/identity/.well-known/openid-configuration ; GET https://labconnect.signl4.com/identity/.well-known/openid-configuration ; GET https://labaccount.signl4.com/ ; compare issuer/endpoints vs prod connect.signl4.com; diff server headers
+impact: access to SIGNL4 staging test accounts, debug surfaces, or prod-parity tokens; severity MED-HIGH
+testability: PASSIVE
+[HYP] www.signl4.com WordPress exposes REST user/route enumeration + plugin attack surface
+class: AUTH
+asset: www.signl4.com
+confidence: 50
+reasoning: CF-fronted WP confirmed (xmlrpc pingback link, same WP fleet family as derdack.com where /wp-json/user enumeration returned 200); completely unprobed instance; CF hides origin so path-content differential yields origin/IP lead as bonus
+evidence_needed: /wp-json/v2/users returning user list (id/name/slug) or users/1, wp/v2 routes schema, CF real-origin discovery via docroot fingerprints
+verify_steps: GET https://www.signl4.com/wp-json/ ; GET https://www.signl4.com/wp-json/wp/v2/users?per_page=5 ; GET https://www.signl4.com/wp-json/wp/v2/posts?per_page=1 ; GET https://www.signl4.com/wp-content/themes/… fingerprint
+impact: user enumeration, plugin/version mapping, potential origin-IP bypass of CF; severity LOW-MED
+testability: PASSIVE
+[HYP] api.signl4.com /api/ namespace has additional GET-accessible routes beyond alert-ingestion POST
+class: MISCONFIG
+asset: api.signl4.com/api/v2
+confidence: 45
+reasoning: /api/v2/alerts answered 405 Allow:POST (route registered) while equivalents 404 — /api/ base is live; a read/status sibling or unauth webhook-subscription GET in the same namespace would leak config; team-secret auth on POST means response-code diff between valid/invalid secret is a passive oracle
+evidence_needed: any /api/* path returning 200/401/403 (vs 404) describing objects, or error body disclosing schema/keys
+verify_steps: GET https://api.signl4.com/api/v2 ; GET https://api.signl4.com/api/v2/teams ; GET https://api.signl4.com/api/v2/ping ; GET https://api.signl4.com/api/ ; compare 405/401 vs 404 classes
+impact: unauthorized read or config disclosure on SIGNL4 public API; severity MED
+testability: PASSIVE
+[NEXT] PROBE: GET https://devaccount.signl4.com/ and GET https://devconnect.signl4.com/identity/.well-known/openid-configuration — if staging issuer differs from prod `connect.signl4.com/identity` or returns 200 login/dev surface, escalate to lab pair (13.93.49.201) and s4dev1-8.enterprisealert.com.
+[RISK] derdack: 40 (moderate-low). The entire derdack.com namespace is now fully characterized and gated (all REST/XML-RPC caps proven intact, dev parked, no sensitive-file leak). However the real SIGNL4 product estate under signl4.com/enterprisealert.com is LIVE and previously uninventoried: prod IdP + public POST API + a resolving dev/lab/staging cluster + CF-fronted WP. No vulnerability confirmed yet; recon value high, exposure moderate — the dev/lab estate is the next highest-yield passive target.
