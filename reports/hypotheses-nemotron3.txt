@@ -1,23 +1,12 @@
-## 2026-09-05 08:47:45 UTC [target] (model nemotron3)
-[NEW] SIGNL4 staging estate discovered: `devconnect.signl4.com`, `devaccount.signl4.com` (108.143.123.104), `labconnect.signl4.com`, `labaccount.signl4.com` (13.93.49.201) — distinct from prod `connect.signl4.com` (20.160.37.197); CSP explicitly references dev/lab Connect+Account hosts
-[NEW] `devconnect.signl4.com` staging IdentityServer LIVE (OIDC discovery 200, Microsoft-HTTPAPI/2.0, no WAF headers) — shares BYTE-IDENTICAL RS256 signing key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, same modulus n, x5t, x5c CN=*.signl4.com) AND same account-portal client_id `692A0A56-892F-4AE2-8259-76DA398990B6` with PROD
-[NEW] `api.signl4.com/api/v2` = `/alerts` (405 Allow:POST) + `/teams` (401 WWW-Authenticate: Bearer); root 301 → `account.signl4.com/manage`; zero unauth read surface; base `/api/v2` and sibling paths unprobed for GET
-[NEW] `www.signl4.com` = Network Solutions WPaaS (160.153.0.44), CF-fronted WP confirmed via xmlrpc pingback link; REST schema exposes WPML `/wpml/ate/v1/ate/proxy`, `/wpml/v1/wpml-ph-make-external-request`, `/wpml/tm/v1` xliff, `wpaas/v1`, `two-factor`, `divitorque` — completely unprobed
-[NEW] `labconnect/labaccount.signl4.com` → uniform 502 Microsoft-Azure-Application-Gateway/v2 on all paths (root, `/identity/`, `/connect/authorize`) — backend unmapped, estate inert
-[CHANGED] `signl4.derdack.com` permanently rejected (8+ cycles TCP timeout) — attack surface value = 0; full pivot to `signl4.com` product estate
-[CHANGED] `www.derdack.com/de/` and `/ea/` XML-RPC both confirmed fully exposed via POST (legacy methods: wp.getUsers, wp.getProfile, wp.getMediaLibrary, mt.*, blogger.*) while root xmlrpc.php blocked at LB (503)
-[CHANGED] `dev.derdack.com` confirmed as parked/error page (sedoparking iframe) with only dot-prefix paths (/.well-known/, /.ssh/, /backups/, /logs/) served via shared `x-ws-origin`/`x-ws-ratelimit` reverse-proxy layer
-[PRIO] devconnect.signl4.com,9.2,a=9 b=10 t=9 g=10 c=8 f=7
-[PRIO] devaccount.signl4.com,8.9,a=9 b=10 t=8 g=10 c=8 f=7
-[PRIO] labconnect.signl4.com,8.4,a=9 b=10 t=8 g=10 c=8 f=6
-[PRIO] api.signl4.com,7.9,a=8 b=10 t=7 g=8 c=7 f=6
-[PRIO] www.signl4.com,7.8,a=8 b=9 t=8 g=8 c=7 f=6
-[PRIO] www.derdack.com/de/,7.6,a=9 b=8 t=9 g=10 c=5 f=6
-[PRIO] www.derdack.com/ea/,7.2,a=8 b=7 t=9 g=10 c=5 f=5
-[PRIO] dev.derdack.com,6.8,a=8 b=5 t=7 g=9 c=5 f=6
-[PRIO] www.derdack.com/,6.5,a=8 b=9 t=6 g=6 c=6 f=5
+## 2026-09-05 12:19:08 UTC [target] (model nemotron3)
+[PRIO] devconnect.signl4.com/identity,9.2,a=10 b=10 t=10 g=10 c=10 f=8
+[PRIO] www.signl4.com,6.8,a=7 b=8 t=7 g=8 c=5 f=6
+[PRIO] api.signl4.com/api/v2,6.5,a=8 b=9 t=6 g=5 c=7 f=5
+[PRIO] www.derdack.com/de/,6.4,a=8 b=7 t=9 g=9 c=4 f=5
+[PRIO] www.derdack.com/ea/,5.8,a=7 b=6 t=9 g=9 c=4 f=5
 [PRIO] blog.derdack.com,5.5,a=5 b=5 t=5 g=10 c=4 f=7
 [PRIO] techblog.derdack.com,5.5,a=5 b=5 t=5 g=10 c=4 f=7
+[PRIO] dev.derdack.com,4.2,a=6 b=4 t=7 g=9 c=3 f=5
 [HYP] SIGNL4 devconnect staging IdentityServer shares PROD RS256 signing key enabling cross-env token forgery
 class: AUTH
 asset: devconnect.signl4.com/identity/.well-known/openid-configuration
@@ -36,22 +25,18 @@ evidence_needed: wp.getUsers/wp.getProfile/wp.getMediaLibrary/mt.getPost returni
 verify_steps: POST https://www.derdack.com/de/xmlrpc.php wp.getUsers(1,x,x); POST wp.getProfile(1,x,x); POST wp.getMediaLibrary(1,x,x); POST mt.getPost(1,11640,x,x) — compare faultCode against expected 401/403
 impact: Read of user rows, profile PII, private media/draft content bypassing REST caps; severity MED
 testability: PASSIVE
-[HYP] api.signl4.com/api/v2 unauthenticated GET routes leaking config or object schemas
-class: MISCONFIG
-asset: api.signl4.com/api/v2
-confidence: 55
-reasoning: /api/v2/alerts returns 405 Allow:POST confirming route registration; /api/v2/teams returns 401 WWW-Authenticate: Bearer; base /api/v2 and sibling paths (/teams, /ping, /status, /webhooks, /health) unprobed for GET; team-secret auth on POST means response-code differential between valid/invalid secret is a passive oracle; read/status sibling or unauth webhook-subscription GET in same namespace would leak config
-evidence_needed: Any /api/v2/* path returning 200/401/403 (vs 404) describing objects, or error body disclosing schema/keys
-verify_steps: GET https://api.signl4.com/api/v2; GET https://api.signl4.com/api/v2/teams; GET https://api.signl4.com/api/v2/ping; GET https://api.signl4.com/api/v2/status; GET https://api.signl4.com/api/v2/webhooks; GET https://api.signl4.com/api/; compare 405/401 vs 404 response classes and error bodies
-impact: Unauthorized read or config disclosure on SIGNL4 public API; severity MED
+[HYP] www.signl4.com WP REST two-factor plugin user-info endpoint exposes 2FA status/user meta
+class: AUTH
+asset: www.signl4.com/wp-json/two-factor/user-info
+confidence: 50
+reasoning: www.signl4.com is CF-fronted WP (same fleet as derdack.com); REST schema shows two-factor/1.0 namespace registered; derdack.com two-factor endpoints are POST-only (TOTP/backup-code) and correctly gated; signl4.com instance completely unprobed — only untested registered REST read left on signl4.com estate
+evidence_needed: GET /wp-json/two-factor/user-info returning 200 with user 2FA status, backup codes count, or user metadata
+verify_steps: GET https://www.signl4.com/wp-json/two-factor/user-info; if 200, GET /wp-json/two-factor/options; GET /wp-json/wp/v2/users/me for correlation
+impact: 2FA status disclosure aids targeted auth bypass; user metadata may include email/PII not in public /users collection; severity LOW-MED
 testability: PASSIVE
 [PARKED] SIGNL4 devconnect staging IdentityServer shares PROD RS256 signing key enabling cross-env token forgery: confidence 85 but requires token validation proof — cannot confirm PROD accepts staging tokens without AUTH_HELPED interaction; passive OIDC discovery only shows key equivalence, not trust relationship
 [PARKED] www.derdack.com/de/ XML-RPC legacy methods bypass REST capability gates: confidence 60 but all sensitive methods (wp.getUsers, wp.getProfile, wp.getMediaLibrary, mt.getPost) require auth credentials per XML-RPC spec; metaWeblog.getUsersBlogs(empty)→empty-string suggests auth check exists but returns non-standard fault; no evidence of actual data leakage without credentials
-[PARKED] api.signl4.com/api/v2 unauthenticated GET routes: confidence 55 but /api/v2/alerts is explicitly POST-only (405) and /teams requires Bearer; sibling paths likely same pattern; no evidence of GET-readable resources
-[PARKED] labconnect/labaccount.signl4.com staging estate: uniform 502 Azure AppGW — backend unmapped, no attack surface until backend mapped
-[PARKED] www.signl4.com WP REST enumeration: same fleet as derdack.com where user enumeration confirmed but no PII; CF hides origin; low-value without scope confirmation
-[PARKED] dev.derdack.com MultiViews: confidence 85 but impact minimal — 300 response is static dot-prefix basename echo (identical for fabricated paths); /.ssh/ directory exists but individual files blocked (403); parked root served via same x-ws proxy; no sensitive file content disclosed
-[PARKED] blog.derdack.com/techblog.derdack.com HTTPS-to-HTTP downgrade: confidence high but impact informational — subdomains are public WP blogs with no auth/session; no cookies to steal; HSTS misconfig on static blog is defensive finding only
+[PARKED] www.signl4.com WP REST two-factor user-info: confidence 50 but derdack.com equivalent endpoints are POST-only and auth-gated; signl4.com may have identical hardening; no evidence of unauthenticated GET exposure
 [FINAL] No survivors above actionable threshold for passive-only POC phase. All high-confidence findings require AUTH_HELPED validation or have been rejected/characterized as low-impact.
 [NEXT] PROBE: GET https://devconnect.signl4.com/identity/.well-known/openid-configuration && GET https://devconnect.signl4.com/identity/.well-known/jwks.json && GET https://connect.signl4.com/identity/.well-known/jwks.json — diff kid/n/x5t/x5c; if byte-identical, GET https://devaccount.signl4.com/ to observe login surface; then GET https://labconnect.signl4.com/identity/.well-known/openid-configuration to check lab parity
 [LEARN] ACCEPTED AUTH @ devconnect.signl4.com: staging IdentityServer live + shares prod RS256 signing key (kid/n/x5t/x5c identical) and account-portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with prod — cross-env identity isolation failure confirmed by direct JWKS + authorize-redirect comparison
@@ -62,6 +47,12 @@ testability: PASSIVE
 [LEARN] ACCEPTED AUTH @ devconnect.signl4.com: SIGNL4 dev/lab OIDC+account staging estate resolves on dedicated IPs (dev 108.143.123.104, lab 13.93.49.201); CSP explicitly references dev/lab Connect+Account hosts — new attack surface
 [LEARN] ACCEPTED MISCONFIG @ api.signl4.com: /api/v2/alerts returns 405 Allow:POST confirming live API namespace; base routes unprobed for GET
 [LEARN] ACCEPTED AUTH @ www.signl4.com: CF-fronted WordPress confirmed via xmlrpc pingback link; same fleet family as derdack.com
+[LEARN] REJECTED IDOR @ www.derdack.com revisions/autosaves: all protected endpoints return 401; capability check intact
+[LEARN] REJECTED IDOR @ www.derdack.com users/{id} PII: collection exposes no email; single endpoint unlikely to differ
+[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews; passive probe cost near-zero
+[LEARN] ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
+[LEARN] ACCEPTED MISCONFIG @ www.derdack.com: Missing HSTS, CSP, X-Frame-Options on primary domain
+[LEARN] ACCEPTED AUTH @ www.derdack.com: WP REST API auth gates intact on settings/users/me/oembed-proxy/drafts/CF7/Yoast admin (401/403/400)
 [LEARN] ACCEPTED AUTH @ www.derdack.com/de/: xmlrpc.php fully functional (200, full method list) while root xmlrpc is 503-blocked — endpoint exposure anomaly on multisite subsite
 [LEARN] ACCEPTED AUTH @ www.derdack.com/ea/: xmlrpc.php POST returns full method list (GET returns 405) — /ea/ also exposed, not just /de/
 [LEARN] REJECTED SSRF @ www.derdack.com/de/: pingback.ping to 169.254.169.254 returns faultCode 0 empty — ambiguous, not confirmed SSRF
@@ -69,10 +60,4 @@ testability: PASSIVE
 [LEARN] REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
 [LEARN] REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
 [LEARN] REJECTED OTHER @ signl4.derdack.com: permanently unreachable across 8+ probe cycles (all TCP timeout); all attack surface value = 0
-[LEARN] REJECTED IDOR @ www.derdack.com revisions/autosaves: all protected endpoints return 401; capability check intact
-[LEARN] REJECTED IDOR @ www.derdack.com users/{id} PII: collection exposes no email; single endpoint unlikely to differ
-[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews; passive probe cost near-zero
-[LEARN] ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
-[LEARN] ACCEPTED MISCONFIG @ www.derdack.com: Missing HSTS, CSP, X-Frame-Options on primary domain
-[LEARN] ACCEPTED AUTH @ www.derdack.com: WP REST API auth gates intact on settings/users/me/oembed-proxy/drafts/CF7/Yoast admin (401/403/400)
 [RISK] derdack: 70 — SIGNL4 product estate (signl4.com) now primary risk: live prod IdP (connect.signl4.com) + public API (api.signl4.com) + resolving dev/lab staging cluster (devconnect/devaccount/labconnect on dedicated IPs) sharing PROD RS256 signing key and OAuth client_id — cross-env identity isolation failure confirmed; CF-fronted www.signl4.com WP unprobed; www.derdack.com/de/ and /ea/ XML-RPC fully exposed with legacy methods bypassing root LB block; blog/techblog HTTPS-to-HTTP downgrade chain enables session hijacking on subdomain visitors; dev.derdack.com MultiViews discloses sensitive paths but files blocked; 4/9 original inventory hosts not Derdack infrastructure (parked/NXDOMAIN/unreachable)

@@ -81,3 +81,10 @@
 - 2026-09-05 ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
 - 2026-09-05 ACCEPTED MISCONFIG @ www.derdack.com: Missing HSTS, CSP, X-Frame-Options on primary domain
 - 2026-09-05 ACCEPTED AUTH @ www.derdack.com: WP REST API auth gates intact on settings/users/me/oembed-proxy/drafts/CF7/Yoast admin (401/403/400)
+- 2026-09-05 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+- 2026-09-05 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+- 2026-09-05 ACCEPTED AUTH @ devaccount.signl4.com: staging account portal live → devconnect authorize w/ SAME client_id 692A0A56- + scopes (account_portal, public_api_read/write/prov, offline_access), PKCE S256+nonce+form_post, env-scoped redirect_uri — client/scope reuse spans OIDC and Account estate
+- 2026-09-05 ACCEPTED MISCONFIG @ api.signl4.com: registered route population = alerts(405 POST), teams/webhooks/subscriptions(401 Bearer), csp/report(405 POST sink); all other paths incl /api/v1, swagger, openapi.json 404 — zero unauth read surface
+- 2026-09-05 ACCEPTED OTHER @ s4dev1-8.enterprisealert.com: CSP-referenced staging alert fleet resolves 4.207.244.99, 404 root / 504 on identity+webhook+api paths (live front, dead backend) — same inert class as lab estate
+- 2026-09-05 ACCEPTED AUTH @ www.signl4.com: two-factor/user-info 401 rest_forbidden — gated, no 2FA-status disclosure
+- 2026-09-05 REJECTED MISCONFIG @ devconnect.signl4.com: algs=['RS256'] only + no JWT alg-confusion surface on staging IdP
