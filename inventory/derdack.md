@@ -134,3 +134,18 @@ www.derdack.com
 - CHANGED `signl4.derdack.com` permanently rejected (8+ cycles TCP timeout) — attack surface value = 0; pivot to `signl4.com` product estate
 - CHANGED `www.derdack.com/de/` and `/ea/` XML-RPC both confirmed fully exposed via POST (legacy methods: wp.getUsers, wp.getProfile, wp.getMediaLibrary, mt.*, blogger.*) while root xmlrpc.php blocked at LB (50
 - CHANGED dev.derdack.com confirmed as parked/error page (sedoparking iframe) with only dot-prefix paths (/.well-known/, /.ssh/, /backups/, /logs/) served via shared `x-ws-origin`/`x-ws-ratelimit` reverse-proxy
+
+## 2026-09-05 08:47:56 UTC
+- NEW devconnect.signl4.com staging IdentityServer LIVE & directly reachable (OIDC discovery 200, no WAF headers, Microsoft-HTTPAPI/2.0)
+- NEW devconnect.signl4.com and prod connect.signl4.com share byte-identical RS256 signing key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) and account-portal client_id 692A0A56-892F-4AE2-8259-76DA39
+- NEW www.signl4.com = Network Solutions WPaaS (160.153.0.44) with WPML ate/proxy, wpaas, divitorque, two-factor plugins exposed in REST schema
+- NEW api.signl4.com /api/v2 population = alerts(405 POST-only) + teams(401 Bearer) only; zero unauth read surface
+- NEW labconnect/labaccount.signl4.com → uniform 502 Azure AppGW/v2 (backend unmapped, estate inert)
+- NEW SIGNL4 staging estate discovered: `devconnect.signl4.com`, `devaccount.signl4.com` (108.143.123.104), `labconnect.signl4.com`, `labaccount.signl4.com` (13.93.49.201) — distinct from prod `connect.sign
+- NEW `devconnect.signl4.com` staging IdentityServer LIVE (OIDC discovery 200, Microsoft-HTTPAPI/2.0, no WAF headers) — shares BYTE-IDENTICAL RS256 signing key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27R
+- NEW `api.signl4.com/api/v2` = `/alerts` (405 Allow:POST) + `/teams` (401 WWW-Authenticate: Bearer); root 301 → `account.signl4.com/manage`; zero unauth read surface; base `/api/v2` and sibling paths unpro
+- NEW `www.signl4.com` = Network Solutions WPaaS (160.153.0.44), CF-fronted WP confirmed via xmlrpc pingback link; REST schema exposes WPML `/wpml/ate/v1/ate/proxy`, `/wpml/v1/wpml-ph-make-external-request`
+- NEW `labconnect/labaccount.signl4.com` → uniform 502 Microsoft-Azure-Application-Gateway/v2 on all paths (root, `/identity/`, `/connect/authorize`) — backend unmapped, estate inert
+- CHANGED `signl4.derdack.com` permanently rejected (8+ cycles TCP timeout) — attack surface value = 0; full pivot to `signl4.com` product estate
+- CHANGED `www.derdack.com/de/` and `/ea/` XML-RPC both confirmed fully exposed via POST (legacy methods: wp.getUsers, wp.getProfile, wp.getMediaLibrary, mt.*, blogger.*) while root xmlrpc.php blocked at LB (50
+- CHANGED `dev.derdack.com` confirmed as parked/error page (sedoparking iframe) with only dot-prefix paths (/.well-known/, /.ssh/, /backups/, /logs/) served via shared `x-ws-origin`/`x-ws-ratelimit` reverse-pro

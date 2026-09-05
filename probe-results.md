@@ -163,3 +163,6 @@ https://dev.derdack.com/.viminfo/ -> HTTP 404
 
 ## 2026-09-05 04:59:22 UTC
 https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-05 08:47:59 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
