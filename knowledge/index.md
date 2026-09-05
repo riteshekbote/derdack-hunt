@@ -96,3 +96,10 @@
 - 2026-09-05 REJECTED SSRF @ www.signl4.com: OTGS Installer fetch-subscription (Push.php source): GET-only, NO permission_callback, handler takes no args; 200/403 = 2h refresh-interval gating not ?url=; outbound target FIXED api.wpml.org/api.toolset.com w/ stored site_key → no attacker URL control, no site-key echo → SSRF + disclosure invalidated.
 - 2026-09-05 ACCEPTED AUTH @ www.signl4.com: fetch-subscription route confirmed unauthenticated (missing permission_callback per source + observed 200) but impact = throttled vendor-side subscription refresh only; no program-specific exploit → negligible, parked.
 - 2026-09-05 ACCEPTED AUTH @ devconnect.signl4.com: OIDC discovery 200, grant_types includes password + RS256 key byte-identical to prod — cross-env identity isolation failure confirmed.
+- 2026-09-05 REJECTED BUSLOGIC @ api.signl4.com/api/v2/alerts: POST returns 401 (auth required) — unauthenticated alert ingestion hypothesis invalidated; endpoint Bearer-gated like all other /api/v2 routes
+- 2026-09-05 REJECTED AUTH @ www.derdack.com/de/xmlrpc.php wp.uploadFile: faultCode 403 "incorrect username/password" — XML-RPC mutating methods enforce authentication
+- 2026-09-05 REJECTED AUTH @ www.derdack.com/ea/xmlrpc.php wp.uploadFile: faultCode 403 "Incorrect username or password" — same auth enforcement on /ea/ multisite
+- 2026-09-05 ACCEPTED MISCONFIG @ api.signl4.com/api/v2/csp/report: POST returns 204 unauthenticated — CSP reporting sink, expected, negligible impact
+- 2026-09-05 ACCEPTED AUTH @ devconnect.signl4.com: password grant listed but returns invalid_client without client_secret — grant enabled but not exploitable without secret
+- 2026-09-05 ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 5x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com) — cross-env signing key reuse confirmed
+- 2026-09-05 ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options

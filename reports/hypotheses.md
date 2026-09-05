@@ -376,3 +376,23 @@
 - LEARN: ACCEPTED AUTH @ www.signl4.com: two-factor/user-info 401 rest_forbidden — gated, no 2FA-status disclosure
 - LEARN: REJECTED SSRF @ www.signl4.com: OTGS Installer fetch-subscription (Push.php source): GET-only, NO permission_callback, handler takes no args; 200/403 = 2h refre
 - LEARN: ACCEPTED AUTH @ www.signl4.com: fetch-subscription route confirmed unauthenticated (missing permission_callback per source + observed 200) but impact = throttle
+
+## RANKED HYPOTHESES 2026-09-05 21:49:10 UTC
+- [90] devconnect.signl4.com/identity/connect/token: staging-minted JWT accepted by prod trust domain (from art/lead_bigpickle.txt)
+- [85] devconnect.signl4.com/identity/connect/token: devconnect.signl4.com/identity/connect/token password grant + shared RS256 key enables cross-env token forgery with valid credentials (from art/lead_nemotron3.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: submit confirmed cross-env signing-key + OAuth client/scope reuse report draft to bugs.olivermaicher.eu (evidence pack complete: JWKS deep-equal x4, scop
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://www.derdack.com/wp-login.php -H "Accept: text/html" — observe Set-Cookie headers for wordpress_logged_in_* and wordpress_sec_*; confirm Domai
+- LEARN: REJECTED SSRF @ www.signl4.com: OTGS Installer fetch-subscription (Push.php source): GET-only, NO permission_callback, handler takes no args; 200/403 = 2h refre
+- LEARN: ACCEPTED AUTH @ www.signl4.com: fetch-subscription route confirmed unauthenticated (missing permission_callback per source + observed 200) but impact = throttle
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com: OIDC discovery 200, grant_types includes password + RS256 key byte-identical to prod — cross-env identity isolation failu
+- LEARN: ACCEPTED MISCONFIG @ s4dev1-8.enterprisealert.com: all resolve 4.207.244.99, 404 root / 504 on identity+webhook+api — inert staging fleet
+- LEARN: ACCEPTED AUTH @ www.signl4.com: two-factor/user-info 401 rest_forbidden — gated, no 2FA-status disclosure
+- LEARN: REJECTED SSRF @ www.signl4.com: OTGS Installer fetch-subscription (Push.php source): GET-only, NO permission_callback, handler takes no args; 200/403 = 2h refre
+- LEARN: ACCEPTED AUTH @ www.signl4.com: fetch-subscription route confirmed unauthenticated (missing permission_callback per source + observed 200) but impact = throttle
+- LEARN: REJECTED BUSLOGIC @ api.signl4.com/api/v2/alerts: POST returns 401 (auth required) — unauthenticated alert ingestion hypothesis invalidated; endpoint Bearer-gat
+- LEARN: REJECTED AUTH @ www.derdack.com/de/xmlrpc.php wp.uploadFile: faultCode 403 "incorrect username/password" — XML-RPC mutating methods enforce authentication
+- LEARN: REJECTED AUTH @ www.derdack.com/ea/xmlrpc.php wp.uploadFile: faultCode 403 "Incorrect username or password" — same auth enforcement on /ea/ multisite
+- LEARN: ACCEPTED MISCONFIG @ api.signl4.com/api/v2/csp/report: POST returns 204 unauthenticated — CSP reporting sink, expected, negligible impact
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com: password grant listed but returns invalid_client without client_secret — grant enabled but not exploitable without secret
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 5x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256
+- LEARN: ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CS
