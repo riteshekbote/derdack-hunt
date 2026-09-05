@@ -345,3 +345,17 @@
 - LEARN: REJECTED MISCONFIG @ devconnect.signl4.com: algs=['RS256'] only — no JWT alg-confusion surface on staging IdP
 - LEARN: ACCEPTED MISCONFIG @ s4dev1-8.enterprisealert.com: all resolve 4.207.244.99, 404 root / 504 on identity+webhook+api — inert staging fleet
 - LEARN: ACCEPTED AUTH @ www.signl4.com: two-factor/user-info 401 rest_forbidden — gated, no 2FA-status disclosure
+
+## RANKED HYPOTHESES 2026-09-05 17:35:38 UTC
+- [90] devconnect.signl4.com/identity/connect/token: devconnect.signl4.com/identity/connect/token password grant + shared RS256 key enables cross-env token forgery with valid credentials (from art/lead_nemotron3.txt)
+- [85] devconnect.signl4.com/identity: devconnect+devaccount staging trust domain = prod trust domain (key, client, FULL scope set incl Enterprise Alert + reseller + mobile) (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: submit confirmed cross-env signing-key + OAuth client/scope reuse report draft to bugs.olivermaicher.eu (report queued, evidence pack complete: OIDC+JWKS
+- NEXT(hypotheses-nemotron3.txt): PROBE: POST https://api.signl4.com/api/v2/alerts Content-Type:application/json {"title":"probe","message":"test","external_id":"poc-001"} — observe status, erro
+- LEARN: REJECTED SSRF @ www.signl4.com: OTGS Installer fetch-subscription (Push.php source): GET-only, NO permission_callback, handler takes no args; 200/403 = 2h refre
+- LEARN: ACCEPTED AUTH @ www.signl4.com: fetch-subscription route confirmed unauthenticated (missing permission_callback per source + observed 200) but impact = throttle
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com: OIDC discovery 200, grant_types includes password + RS256 key byte-identical to prod (kid 91EE4F3CE94EB517AF66B254F7497EC
+- LEARN: ACCEPTED MISCONFIG @ api.signl4.com/api/v2: /alerts 405 Allow:POST, /teams /webhooks /subscriptions 401 Bearer, /csp/report 405 POST sink — zero unauth read sur
+- LEARN: ACCEPTED AUTH @ www.derdack.com/de/: xmlrpc.php POST 405 Allow:POST with full method list (wp.uploadFile, metaWeblog.newMediaObject) — legacy XML-RPC exposed on
+- LEARN: REJECTED MISCONFIG @ devconnect.signl4.com: algs=['RS256'] only — no JWT alg-confusion surface on staging IdP
+- LEARN: ACCEPTED MISCONFIG @ s4dev1-8.enterprisealert.com: all resolve 4.207.244.99, 404 root / 504 on identity+webhook+api — inert staging fleet
+- LEARN: ACCEPTED AUTH @ www.signl4.com: two-factor/user-info 401 rest_forbidden — gated, no 2FA-status disclosure

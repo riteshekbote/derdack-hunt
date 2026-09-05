@@ -173,3 +173,15 @@ www.derdack.com
 - NEW www.derdack.com/de/xmlrpc.php returns 405 Allow:POST with `x-ws-origin: available` + `x-ws-ratelimit-*` headers — XML-RPC POST endpoint exposed on /de/ multisite while root blocked at LB
 - CHANGED api.signl4.com read-route hypothesis CLOSED: extended sweep confirms every registered route Bearer-gated or POST-sink; zero unauth read surface
 - CHANGED Cross-env JWKS key-reuse RE-VERIFIED programmatic deep-equal=True this cycle (kid/n/x5t/x5c identical)
+
+## 2026-09-05 17:35:38 UTC
+- NEW RAG resolved OTGS Installer route: vendor/otgs/installer/includes/rest/Push.php — GET-only `otgs/installer/v1/push/fetch-subscription`, NO permission_callback key at all; handler `fetch_subscription()
+- NEW Handler: if time()-last_refresh > 7200s → `refresh_subscriptions_data()` + return 200 {"message":"OK"}; else return 403 {"message":"OK"} — the observed 200/403 variance is refresh-INTERVAL gating, NOT
+- NEW `OTGS_Installer_Fetch_Subscription::get()` (site-key/fetch-subscription class): body carries stored site_key + fixed site_url + plugin versions, wp_remote_post to `$repository->get_api_url()` = FIXED 
+- CHANGED www.signl4.com fetch-subscription SSRF hypothesis INVALIDATED by source: route takes no params, outbound target fixed, no site-key echo; GET 200 only proves missing permission_callback (broken access 
+- NEW devconnect.signl4.com OIDC discovery confirms `password` grant type (resource owner password credentials) enabled alongside authorization_code, client_credentials, refresh_token, implicit, device_code
+- NEW devconnect.signl4.com & connect.signl4.com JWKS byte-identical re-verified: kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, modulus `n`, x5t `ke5PPOlOtRevZrJU90l-yw4x7ic`, x5c `CN=*.signl4.com` —
+- NEW api.signl4.com/api/v2/alerts returns 405 Allow:POST with Microsoft-HTTPAPI/2.0, HSTS, CSP, X-Frame-Options: DENY — POST-only alert ingestion route confirmed live, zero unauth GET surface
+- NEW www.derdack.com/de/xmlrpc.php returns 405 Allow:POST with `x-ws-origin: available` + `x-ws-ratelimit-*` headers — XML-RPC POST endpoint exposed on /de/ multisite while root blocked at LB
+- CHANGED api.signl4.com read-route hypothesis CLOSED: extended sweep confirms every registered route Bearer-gated or POST-sink; zero unauth read surface
+- CHANGED Cross-env JWKS key-reuse RE-VERIFIED programmatic deep-equal=True this cycle (kid/n/x5t/x5c identical)

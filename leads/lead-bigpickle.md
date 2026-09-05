@@ -813,3 +813,60 @@ impact: confirms one trust anchor across prod+staging; same severity family as #
 testability: HUMAN_ONLY
 [NEXT] RAG: pull OTGS Installer plugin source (wordpress.org OTGS Installer / WPML vendor) for `register_rest_route("otgs/installer/v1/push/fetch-subscription", ...)` registration args + handler body to define exact param schema and permission_callback status — converts the confirmed unauth 200 on www.signl4.com into an exact POST test for HUMAN validation (benign OAST target; never 169.254.169.254 pre-auth). Report draft for the [85] cross-env finding stays queued at bugs.olivermaicher.eu.
 [RISK] derdack: 47 (moderate). Confirmed finding strengthened this cycle: prod SIGNL4/EA identity estate (IdP + account + reseller + mobile scopes, Derdack entitlement claims, OAuth client) is trusted byte-identical-by-key on a public un-WAF'd staging IdP on a different software train — 4th independent deep-equal. Exploit remains gated on staging credential compromise (keeps below HIGH). New minor surface: unauthenticated OTGS Installer fetch-subscription on www.signl4.com (immature, needs source+OAST). All other assets gated or inert. Confidence-weighted exposure moderate; top report = cross-env key/client/scope reuse.
+## 2026-09-05 17:35:27 UTC [target] (model bigpickle)
+[NEW] RAG resolved OTGS Installer route: vendor/otgs/installer/includes/rest/Push.php — GET-only `otgs/installer/v1/push/fetch-subscription`, NO permission_callback key at all; handler `fetch_subscription()` takes NO request args.
+[NEW] Handler: if time()-last_refresh > 7200s → `refresh_subscriptions_data()` + return 200 {"message":"OK"}; else return 403 {"message":"OK"} — the observed 200/403 variance is refresh-INTERVAL gating, NOT `?url=` param (my prior reasoning was wrong).
+[NEW] `OTGS_Installer_Fetch_Subscription::get()` (site-key/fetch-subscription class): body carries stored site_key + fixed site_url + plugin versions, wp_remote_post to `$repository->get_api_url()` = FIXED api.wpml.org/api.toolset.com from repositories.xml — attacker has NO URL control, response body not returned to caller.
+[CHANGED] www.signl4.com fetch-subscription SSRF hypothesis INVALIDATED by source: route takes no params, outbound target fixed, no site-key echo; GET 200 only proves missing permission_callback (broken access control, LOW impact — throttled vendor-side refresh, no privilege/data effect).
+[RISK] derdack: 48 (moderate). RAG closed the last open passive lead: OTGS fetch-subscription is confirmed-unauth but impact is a throttled server-side subscription refresh (no SSRF, no site-key disclosure, no ATO primitive). Cross-env signing-key/client/scope reuse remains the sole report-worthy confirmed finding (re-verified 4x deep-equal; exploit gated on staging credential compromise). api.signl4.com sweep fully closed (all Bearer-gated/POST-sink), lab/s4dev fleets dead-backend, WP estates gated, MultiViews benign. Passive surface exhausted; next real progress requires the report submission + HUMAN staging-token mint.
+[HYP] devconnect+devaccount staging trust domain = prod trust domain (key, client, FULL scope set incl Enterprise Alert + reseller + mobile)
+class: AUTH
+asset: devconnect.signl4.com/identity + devaccount.signl4.com/manage vs connect.signl4.com/identity + account.signl4.com/manage
+confidence: 85
+reasoning: JWKS deep-equal=True x4 (kid/n/x5t/x5c identical); scopes_supported 12/12 incl public_api_ea_manage/alerting, reseller_portal, mobile_api; Derdack claims (subscription_id, branch_id, is_branch_manager, is_stakeholder) identical; grants 8/8; staging = DIFFERENT build (ID_NET10_0 8.19.2.0 vs prod ID_NET8_0 7.7.3.0) = shared key material; staging direct IP, no WAF
+evidence_needed: staging-minted JWT accepted by prod api/connect — needs staging client secret (HUMAN)
+verify_steps: OIDC+JWKS both envs (done, diff=false x4); scopes/claims/grants parity (done); account/manage both envs same client+scope (done); POST /identity/connect/token w/ legit staging creds (HUMAN)
+impact: staging compromise ⇒ token forge w/ account_portal+public_api_read/write/prov+public_api_ea_manage/alerting+reseller_portal → ATO across SIGNL4+Enterprise Alert customer data + reseller; severity MED-HIGH→HIGH
+testability: AUTH_HELPED
+[HYP] api.signl4.com token validation shares the same JWKS trust anchor as staging
+class: AUTH
+asset: api.signl4.com/api/v2
+confidence: 40
+reasoning: single shared RS256 key across prod IdP+staging implies single validation boundary; no passive signal for which JWKS api trusts; additive to top finding
+evidence_needed: Bearer token accepted/rejected on /api/v2/teams (HUMAN)
+verify_steps: GET /api/v2/teams w/ staging-signed Bearer (HUMAN)
+impact: confirms single trust anchor across prod+staging; same severity family as top finding
+testability: HUMAN_ONLY
+[NEXT] HUMAN: submit confirmed cross-env signing-key + OAuth client/scope reuse report draft to bugs.olivermaicher.eu (report queued, evidence pack complete: OIDC+JWKS diff=false x4, scopes/claims/grants parity, account/manage client+scope parity, differing build trains). OTGS lead closed by RAG (no SSRF/site-key). Passive probes exhausted — further live work requires HUMAN (staging token mint, api Bearer test).
+[LEARN] REJECTED SSRF @ www.signl4.com: OTGS Installer fetch-subscription (Push.php source): GET-only, NO permission_callback, handler takes no args; 200/403 = 2h refresh-interval gating not ?url=; outbound target FIXED api.wpml.org/api.toolset.com w/ stored site_key → no attacker URL control, no site-key echo → SSRF + disclosure invalidated.
+[LEARN] ACCEPTED AUTH @ www.signl4.com: fetch-subscription route confirmed unauthenticated (missing permission_callback per source + observed 200) but impact = throttled vendor-side subscription refresh only; no program-specific exploit → negligible, parked.
+[RISK] derdack: 48 (moderate). RAG closed last open passive lead; cross-env key/client/scope reuse is the sole confirmed report-worthy finding (exploit gated on staging credential compromise keeps below HIGH). api signed surface fully gated, WP estates gated, lab/s4dev inert. Next real progress = report submission + HUMAN staging-token mint.
+[HYP] devconnect+devaccount staging trust domain = prod trust domain (key, client, FULL scope set incl Enterprise Alert + reseller + mobile)
+class: AUTH
+asset: devconnect.signl4.com/identity + devaccount.signl4.com/manage vs connect.signl4.com/identity + account.signl4.com/manage
+confidence: 85
+reasoning: JWKS deep-equal=True x4 (kid/n/x5t/x5c identical); scopes_supported 12/12 incl public_api_ea_manage/alerting, reseller_portal, mobile_api; Derdack claims (subscription_id, branch_id, is_branch_manager, is_stakeholder) identical; grants 8/8; staging = DIFFERENT build (ID_NET10_0 8.19.2.0 vs prod ID_NET8_0 7.7.3.0) = shared key material not snapshot; staging direct IP, no WAF
+evidence_needed: staging-minted JWT accepted by prod api/connect — needs staging client secret (HUMAN)
+verify_steps: OIDC+JWKS both envs (done, diff=false x4); scopes/claims/grants parity (done); account/manage both envs same client_id+scope (done); POST /identity/connect/token w/ legit staging creds (HUMAN)
+impact: staging compromise ⇒ token forge w/ account_portal+public_api_read/write/prov+public_api_ea_manage/alerting+reseller_portal → ATO across SIGNL4 + Enterprise Alert customer alert data + reseller portal; severity MED-HIGH→HIGH
+testability: AUTH_HELPED
+[HYP] www.signl4.com OTGS Installer fetch-subscription = unauthenticated broken-access endpoint (no permission_callback) triggering throttled server-side subscription refresh
+class: AUTH
+asset: www.signl4.com/wp-json/otgs/installer/v1/push/fetch-subscription
+confidence: 35
+reasoning: source Push.php registers route w/ only methods+callback (no permission_callback) ⇒ public in WP<5.5 semantics; bare GET observed 200 {"message":"OK"}; handler calls refresh_subscriptions_data() → wp_remote_post to FIXED api.wpml.org/api.toolset.com carrying stored site_key; 200/403 = 2h interval; NO attacker URL control, response body only "OK", site_key stays server-side
+evidence_needed: none further — exploit effect already bounded by source; would need authenticated server-side context to matter
+verify_steps: GET route bare (200, done); source review of Push.php + subscriber class (done)
+impact: anonymous repeat-trigger of a throttled (2h) vendor-side subscription refresh; no data exposure, no privilege change, no SSRF — program-specific exploit not demonstrated; severity INFO/LOW
+testability: PASSIVE
+[HYP] api.signl4.com token validation shares the same JWKS trust anchor as staging
+class: AUTH
+asset: api.signl4.com/api/v2
+confidence: 40
+reasoning: single shared RS256 key across prod IdP+staging implies single validation boundary; no passive signal exists for which JWKS api trusts; additive proof for top finding
+evidence_needed: Bearer token accepted/rejected on /api/v2/teams (HUMAN)
+verify_steps: GET /api/v2/teams w/ staging-signed Bearer (HUMAN)
+impact: confirms one trust anchor across prod+staging; same severity family as top finding
+testability: HUMAN_ONLY
+[NEXT] HUMAN: submit the confirmed cross-env signing-key + OAuth client/scope reuse report draft to bugs.olivermaicher.eu (evidence pack complete: JWKS deep-equal x4, scopes/claims/grants parity, account/manage client+scope parity, differing build trains). Passive probes exhausted — remaining live work (staging token mint, api Bearer test) requires HUMAN.
+[RISK] derdack: 48 (moderate). RAG closed the last open passive lead (OTGS falsified to informational). Sole report-worthy confirmed finding unchanged and re-verified 4x: prod SIGNL4 IdP + account portal share the RS256 signing key, OAuth client_id, and full prod scope set (incl EA manage/alerting, reseller) with a public un-WAF'd staging estate on a different software train — exploit remains bound to staging credential compromise (keeps below HIGH). api.signl4.com fully gated, lab/s4dev fleets dead-backend, WP estates gated, MultiViews benign. Passive surface exhausted; next real progress = report submission + HUMAN staging-token mint. Confidence-weighted exposure moderate.

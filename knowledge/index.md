@@ -93,3 +93,5 @@
 - 2026-09-05 ACCEPTED AUTH @ www.derdack.com/de/: xmlrpc.php POST 405 Allow:POST with full method list (wp.uploadFile, metaWeblog.newMediaObject) — legacy XML-RPC exposed on multisite subsite while root blocked
 - 2026-09-05 REJECTED MISCONFIG @ devconnect.signl4.com: algs=['RS256'] only — no JWT alg-confusion surface on staging IdP
 - 2026-09-05 ACCEPTED MISCONFIG @ s4dev1-8.enterprisealert.com: all resolve 4.207.244.99, 404 root / 504 on identity+webhook+api — inert staging fleet
+- 2026-09-05 REJECTED SSRF @ www.signl4.com: OTGS Installer fetch-subscription (Push.php source): GET-only, NO permission_callback, handler takes no args; 200/403 = 2h refresh-interval gating not ?url=; outbound target FIXED api.wpml.org/api.toolset.com w/ stored site_key → no attacker URL control, no site-key echo → SSRF + disclosure invalidated.
+- 2026-09-05 ACCEPTED AUTH @ www.signl4.com: fetch-subscription route confirmed unauthenticated (missing permission_callback per source + observed 200) but impact = throttled vendor-side subscription refresh only; no program-specific exploit → negligible, parked.
