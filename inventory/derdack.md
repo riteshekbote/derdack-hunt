@@ -121,3 +121,16 @@ www.derdack.com
 ## 2026-09-04 22:25:11 UTC
 
 ## 2026-09-05 00:27:41 UTC
+
+## 2026-09-05 04:59:19 UTC
+- NEW devconnect.signl4.com staging IdentityServer LIVE & directly reachable (OIDC discovery 200, no WAF headers, Microsoft-HTTPAPI/2.0) — prior cycle only hypothesized
+- NEW devconnect.signl4.com and prod connect.signl4.com expose a BYTE-IDENTICAL RS256 signing key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, same modulus n, x5t, x5c CN=*.signl4.com) AND the same a
+- NEW www.signl4.com = Network Solutions WPaaS (160.153.0.44), REST schema exposes WPML /wpml/ate/v1/ate/proxy, /wpml/v1/wpml-ph-make-external-request, /wpml/tm/v1 xliff paths, wpaas/v1, two-factor, divitor
+- NEW api.signl4.com /api/v2 population = /alerts (405 POST-only) + /teams (401 WWW-Authenticate: Bearer); / → 301 account.signl4.com/manage; zero unauth read surface
+- NEW labconnect/labaccount.signl4.com → uniform 502 Microsoft-Azure-Application-Gateway/v2 on all paths — backend unmapped, estate inert
+- NEW SIGNL4 dev/lab staging estate discovered: `devconnect.signl4.com`, `devaccount.signl4.com` (co-resolve 108.143.123.104), `labconnect.signl4.com`, `labaccount.signl4.com` (13.93.49.201) — distinct from
+- NEW `www.signl4.com` — CF-fronted WordPress instance confirmed (xmlrpc pingback link, same WP fleet family as derdack.com); completely unprobed
+- NEW `api.signl4.com/api/v2` — POST-only `/alerts` endpoint returns 405 Allow:POST (route registered); base `/api/v2` and sibling paths unprobed for GET-accessible routes
+- CHANGED `signl4.derdack.com` permanently rejected (8+ cycles TCP timeout) — attack surface value = 0; pivot to `signl4.com` product estate
+- CHANGED `www.derdack.com/de/` and `/ea/` XML-RPC both confirmed fully exposed via POST (legacy methods: wp.getUsers, wp.getProfile, wp.getMediaLibrary, mt.*, blogger.*) while root xmlrpc.php blocked at LB (50
+- CHANGED dev.derdack.com confirmed as parked/error page (sedoparking iframe) with only dot-prefix paths (/.well-known/, /.ssh/, /backups/, /logs/) served via shared `x-ws-origin`/`x-ws-ratelimit` reverse-proxy

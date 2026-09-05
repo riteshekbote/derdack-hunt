@@ -160,3 +160,6 @@ https://dev.derdack.com/.well-known/ -> HTTP 300
 https://dev.derdack.com/.ssh/ -> HTTP 403
 https://dev.derdack.com/.bash_history/ -> HTTP 404
 https://dev.derdack.com/.viminfo/ -> HTTP 404
+
+## 2026-09-05 04:59:22 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405

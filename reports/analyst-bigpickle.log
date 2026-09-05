@@ -3758,3 +3758,462 @@ testability: PASSIVE
 
 ## STEP 7 — RISK
 [RISK] derdack: 40 (moderate-low). The entire derdack.com namespace is now fully characterized and gated (all REST/XML-RPC caps proven intact, dev parked, no sensitive-file leak). However the real SIGNL4 product estate under signl4.com/enterprisealert.com is LIVE and previously uninventoried: prod IdP + public POST API + a resolving dev/lab/staging cluster + CF-fronted WP. No vulnerability confirmed yet; recon value high, exposure moderate — the dev/lab estate is the next highest-yield passive target.
+===== ANALYST bigpickle 2026-09-05 04:59:19 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mmkdir -p /tmp/opencode/poc
+(no output)
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+c() { name="$1"; url="$2"; curl -sS -m 20 -o "$P/$name.body" -D "$P/$name.hdr" -w "%{http_code}|%{time_total}|%{remote_ip}|%{ssl_verify_result}\n" "$url"; }
+c devaccount_root "https://devaccount.signl4.com/"; sleep 1
+c devconnect_oidc "https://devconnect.signl4.com/identity/.well-known/openid-configuration"; sleep 1
+c labconnect_oidc "https://labconnect.signl4.com/identity/.well-known/openid-configuration"; sleep 1
+301|0.502033|108.143.123.104|0
+200|0.511537|108.143.123.104|0
+502|0.512317|13.93.49.201|0
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+echo "=== devaccount_root redirect ==="; grep -i '^location:' "$P/devaccount_root.hdr"
+echo "=== devaccount_root headers ==="; grep -iE '^(server|set-cookie|x-|cf-|content-type|via|link):' "$P/devaccount_root.hdr"
+echo "=== devconnect_oidc status ==="; grep -iE '^(server|x-|cf-|content-type|via|cache-control):' "$P/devconnect_oidc.hdr"
+echo "=== devconnect_oidc body (first 600) ==="; head -c 600 "$P/devconnect_oidc.body"
+=== devaccount_root redirect ===
+location: https://devaccount.signl4.com/manage
+=== devaccount_root headers ===
+server: Microsoft-HTTPAPI/2.0
+=== devconnect_oidc status ===
+content-type: application/json; charset=UTF-8
+server: Microsoft-HTTPAPI/2.0
+=== devconnect_oidc body (first 600) ===
+{"issuer":"https://devconnect.signl4.com/identity","jwks_uri":"https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks","authorization_endpoint":"https://devconnect.signl4.com/identity/connect/authorize","token_endpoint":"https://devconnect.signl4.com/identity/connect/token","userinfo_endpoint":"https://devconnect.signl4.com/identity/connect/userinfo","end_session_endpoint":"https://devconnect.signl4.com/identity/connect/endsession","check_session_iframe":"https://devconnect.signl4.com/identity/connect/checksession","revocation_endpoint":"https://devconnect.signl4.com/iden
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+c() { name="$1"; url="$2"; curl -sS -m 20 -o "$P/$name.body" -D "$P/$name.hdr" -w "%{http_code}|%{time_total}\n" "$url"; }
+c prod_oidc "https://connect.signl4.com/identity/.well-known/openid-configuration"; sleep 1
+c dev_jwks "https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks"; sleep 1
+c prod_jwks "https://connect.signl4.com/identity/.well-known/openid-configuration/jwks"; sleep 1
+c devaccount_manage "https://devaccount.signl4.com/manage"; sleep 1
+c labconnect_root "https://labconnect.signl4.com/"; sleep 1
+200|0.493630
+200|0.422740
+200|0.404540
+302|0.548822
+502|0.407463
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+echo "=== dev jwks body ==="; head -c 800 "$P/dev_jwks.body"; echo
+echo "=== prod jwks body ==="; head -c 800 "$P/prod_jwks.body"; echo
+echo "=== devaccount /manage redirect ==="; grep -i '^location:' "$P/devaccount_manage.hdr"
+=== dev jwks body ===
+{"keys":[{"kty":"RSA","use":"sig","kid":"91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256","x5t":"ke5PPOlOtRevZrJU90l-yw4x7ic","e":"AQAB","n":"7bx0BWVzmy_EkFubRcyLUVBvdA4XDPMgOYXKqX9uW5Bm1nqYpLEHKkkI9x2lH4_HBD4bmCoeDlR-fu0q4D0_JOB3QEIfnRwhcQKNwnpE33vItXea4hyUGXHoGCR7hasBRN_unkHHYIi6VsV_I_1kJDJQ5Gf9zjQDrwW2X6DEnuNaF3BMSRU8WHHbtps4_OgyoO4DN9PE8Xsu7Ngno3ItGZ2ACi5fradUyIJ6NXfMlyAV4B6A7ZI36yr7Noh1ZrXVkbPYkjcpWKH9PR1toeRJp83wc2vh6z5r77hHMKyKdzCx4uCsN6p-zlsuZoA1xumoydVhzmcG1G7ThgvxHk9NGQ","x5c":["MIIDNDCCAhygAwIBAgIQd2nPiwxkQjSr9WopSTtKgzANBgkqhkiG9w0BAQsFADAXMRUwEwYDVQQDDAwqLnNpZ25sNC5jb20wHhcNMjUxMTIxMDQxMTE5WhcNMjcxMTIxMDQyMTE5WjAXMRUwEwYDVQQDDAwqLnNpZ25sNC5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDtvHQFZXObL8SQW5tFzItRUG90DhcM8yA5hcqpf25bkGbWepiksQcqSQj3HaUfj8cEPhuYKh4OVH5+7SrgPT8k4HdAQh+d
+=== prod jwks body ===
+{"keys":[{"kty":"RSA","use":"sig","kid":"91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256","x5t":"ke5PPOlOtRevZrJU90l-yw4x7ic","e":"AQAB","n":"7bx0BWVzmy_EkFubRcyLUVBvdA4XDPMgOYXKqX9uW5Bm1nqYpLEHKkkI9x2lH4_HBD4bmCoeDlR-fu0q4D0_JOB3QEIfnRwhcQKNwnpE33vItXea4hyUGXHoGCR7hasBRN_unkHHYIi6VsV_I_1kJDJQ5Gf9zjQDrwW2X6DEnuNaF3BMSRU8WHHbtps4_OgyoO4DN9PE8Xsu7Ngno3ItGZ2ACi5fradUyIJ6NXfMlyAV4B6A7ZI36yr7Noh1ZrXVkbPYkjcpWKH9PR1toeRJp83wc2vh6z5r77hHMKyKdzCx4uCsN6p-zlsuZoA1xumoydVhzmcG1G7ThgvxHk9NGQ","x5c":["MIIDNDCCAhygAwIBAgIQd2nPiwxkQjSr9WopSTtKgzANBgkqhkiG9w0BAQsFADAXMRUwEwYDVQQDDAwqLnNpZ25sNC5jb20wHhcNMjUxMTIxMDQxMTE5WhcNMjcxMTIxMDQyMTE5WjAXMRUwEwYDVQQDDAwqLnNpZ25sNC5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDtvHQFZXObL8SQW5tFzItRUG90DhcM8yA5hcqpf25bkGbWepiksQcqSQj3HaUfj8cEPhuYKh4OVH5+7SrgPT8k4HdAQh+d
+=== devaccount /manage redirect ===
+location: https://devconnect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Fdevaccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=Jf6lm6Ij0zqHPMXsiLpNuCkRhg9nio36PzrqUPUln8s&code_challenge_method=S256&response_mode=form_post&nonce=639241809048201720.ZGJiYWM5M2YtOTMzMS00NTU1LTk0ZjQtYmU5OTRlYjVkMzJkMDU1NDMxYTktODY2Ny00NDUzLTg5YzYtNjU0MDM2YTA1MTY0&state=CfDJ8HRhdHKj5_pDq2dFwl0f4pxzNWFz4cU5zRmC_9uqqletM-zp6Mu0Spc06inufWLdkb4psTnew39VdJPAnlHCQ4gKT0faAZKpHs6NNE2cp4DKktZEceyPhU3MJTp0WgGaE9PGbiPPK1qkuJykFJ5h5Cx2cb90APjKdJgKIM_7vmBp2Iio1d7-KYPmppWm5XEERL_yTJ4Dw7X79sv7a9wHGcYKNwuMMOWp7XrzHfy20Lx-QtNR9wTh-NgGQOoaJcLg8EyzP-S20U5CfRIRKuGiRMF9WN_BbwDAuWrdCdA1W37roBpyJQsgtVds2fDuOaflBd60R8sdE8eADLYS1c9Ez1udLDs4B6W6zQwd9sSXEfR3AYs94Grn7Cw2gChWPQXxvVCZop9AFXorCin0hASzu7c&x-client-SKU=ID_NET10_0&x-client-ver=8.19.2.0
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+python3 - "$P/dev_jwks.body" "$P/prod_jwks.body" "$P/devconnect_oidc.body" "$P/prod_oidc.body" <<'EOF'
+import json,sys
+d=json.load(open(sys.argv[1])); pd=json.load(open(sys.argv[2]))
+dn=d['keys'][0]['n']; pn=pd['keys'][0]['n']
+print("kid equal:", d['keys'][0]['kid']==pd['keys'][0]['kid'])
+print("RSA modulus n equal (dev==prod):", dn==pn)
+print("x5t equal:", d['keys'][0]['x5t']==pd['keys'][0]['x5t'])
+print("x5c equal:", d['keys'][0]['x5c']==pd['keys'][0]['x5c'])
+dev=json.load(open(sys.argv[3])); prod=json.load(open(sys.argv[4]))
+print("\nDEV issuer:", dev.get('issuer'))
+print("PROD issuer:", prod.get('issuer'))
+for f in ['id_token_signing_alg_values_supported','grant_types_supported','token_endpoint_auth_methods_supported','scopes_supported']:
+    dv=dev.get(f); pv=prod.get(f)
+    print(f"\n{f}\n  dev : {dv}\n  prod: {pv}\n  equal: {dv==pv}")
+dv=set(dev.get('scopes_supported') or []); pv=set(prod.get('scopes_supported') or [])
+print("scopes dev-not-in-prod:", sorted(dv-pv))
+print("scopes prod-not-in-dev:", sorted(pv-dv))
+devk=set(dev.keys()); prodk=set(prod.keys())
+print("discovery keys only-in-dev:", sorted(devk-prodk))
+print("discovery keys only-in-prod:", sorted(prodk-devk))
+EOF
+kid equal: True
+RSA modulus n equal (dev==prod): True
+x5t equal: True
+x5c equal: True
+
+DEV issuer: https://devconnect.signl4.com/identity
+PROD issuer: https://connect.signl4.com/identity
+
+id_token_signing_alg_values_supported
+  dev : ['RS256']
+  prod: ['RS256']
+  equal: True
+
+grant_types_supported
+  dev : ['authorization_code', 'client_credentials', 'refresh_token', 'implicit', 'password', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:openid:params:grant-type:ciba', 'urn:ietf:params:oauth:grant-type:token-exchange']
+  prod: ['authorization_code', 'client_credentials', 'refresh_token', 'implicit', 'password', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:openid:params:grant-type:ciba', 'urn:ietf:params:oauth:grant-type:token-exchange']
+  equal: True
+
+token_endpoint_auth_methods_supported
+  dev : ['client_secret_basic', 'client_secret_post']
+  prod: ['client_secret_basic', 'client_secret_post']
+  equal: True
+
+scopes_supported
+  dev : ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access']
+  prod: ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access']
+  equal: True
+scopes dev-not-in-prod: []
+scopes prod-not-in-dev: []
+discovery keys only-in-dev: []
+discovery keys only-in-prod: []
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+echo "=== devconnect headers ==="; grep -iE '^(server|x-|cf-|via|set-cookie|cache-control|content-type):' "$P/devconnect_oidc.hdr"
+echo "=== prod headers ==="; grep -iE '^(server|x-|cf-|via|set-cookie|cache-control|content-type):' "$P/prod_oidc.hdr"
+c() { name="$1"; url="$2"; curl -sS -m 20 -o "$P/$name.body" -D "$P/$name.hdr" -w "%{http_code}|%{time_total}\n" "$url"; }
+c lab_identity "https://labconnect.signl4.com/identity/"; sleep 1
+c lab_authorize "https://labconnect.signl4.com/identity/connect/authorize"; sleep 1
+c labaccount_root "https://labaccount.signl4.com/"; sleep 1
+=== devconnect headers ===
+content-type: application/json; charset=UTF-8
+server: Microsoft-HTTPAPI/2.0
+=== prod headers ===
+content-type: application/json; charset=UTF-8
+server: Microsoft-HTTPAPI/2.0
+502|0.400986
+502|0.405926
+502|0.473857
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+echo "=== lab 502 body + hdr ==="; grep -iE '^(server|content-type|x-|cf-):' "$P/lab_identity.hdr"; head -c 300 "$P/lab_identity.body"
+=== lab 502 body + hdr ===
+server: Microsoft-Azure-Application-Gateway/v2
+content-type: text/html
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>Microsoft-Azure-Application-Gateway/v2</center>
+</body>
+</html>
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+c() { name="$1"; url="$2"; curl -sS -m 20 -o "$P/$name.body" -D "$P/$name.hdr" -w "%{http_code}|%{size_download}|%{remote_ip}|%{time_total}\n" "$url"; }
+c signl4wp_root "https://www.signl4.com/"; sleep 1
+c signl4wp_json "https://www.signl4.com/wp-json/"; sleep 1
+c signl4wp_users "https://www.signl4.com/wp-json/wp/v2/users?per_page=5"; sleep 1
+c signl4wp_posts "https://www.signl4.com/wp-json/wp/v2/posts?per_page=1"; sleep 1
+200|392089|160.153.0.44|0.193393
+200|414011|160.153.0.44|0.659397
+200|44118|160.153.0.44|0.874243
+200|34113|160.153.0.44|0.747602
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+echo "=== content types ==="
+for n in signl4wp_root signl4wp_json signl4wp_users signl4wp_posts; do printf "%s: " "$n"; grep -i '^content-type' "$P/$n.hdr"; done
+echo "=== wp-json head ==="; head -c 400 "$P/signl4wp_json.body"; echo
+echo "=== users head ==="; head -c 900 "$P/signl4wp_users.body"; echo
+echo "=== posts head ==="; head -c 300 "$P/signl4wp_posts.body"
+=== content types ===
+signl4wp_root: content-type: text/html; charset=UTF-8
+signl4wp_json: content-type: application/json; charset=UTF-8
+signl4wp_users: content-type: application/json; charset=UTF-8
+signl4wp_posts: content-type: application/json; charset=UTF-8
+=== wp-json head ===
+{"name":"DERDACK SIGNL4","description":"Mobile Alerting and Anywhere Incident Management","url":"https:\/\/www.signl4.com","home":"https:\/\/www.signl4.com","gmt_offset":"0","timezone_string":"","page_for_posts":0,"page_on_front":23,"show_on_front":"page","namespaces":["oembed\/1.0","two-factor","wp-site-designer\/v1","wpaas\/v1","wpml\/v1","coblocks","contact-form-7\/v1","omgf\/v1","yoast\/v1","w
+=== users head ===
+[{"id":1,"name":"derdacksignl4","url":"https:\/\/www.signl4.com","description":"","link":"https:\/\/www.signl4.com\/blog\/author\/derdacksignl4\/","slug":"derdacksignl4","avatar_urls":{"24":"https:\/\/secure.gravatar.com\/avatar\/ae6fcaa0f7053a04ca9d3c41e69b1654f10a02fe2d5835e2ddadd44198248642?s=24&d=mm&r=g","48":"https:\/\/secure.gravatar.com\/avatar\/ae6fcaa0f7053a04ca9d3c41e69b1654f10a02fe2d5835e2ddadd44198248642?s=48&d=mm&r=g","96":"https:\/\/secure.gravatar.com\/avatar\/ae6fcaa0f7053a04ca9d3c41e69b1654f10a02fe2d5835e2ddadd44198248642?s=96&d=mm&r=g"},"meta":[],"yoast_head":"<!-- This site is optimized with the Yoast SEO Premium plugin v28.4 (Yoast SEO v28.4) - https:\/\/yoast.com\/product\/yoast-seo-premium-wordpress\/ -->\n<title>derdacksignl4, Author at DERDACK SIGNL4<\/title>\n<meta name=\"robots\" content=\"index, follow, max-snippet:-1, max-image-preview:large, max-video-preview
+=== posts head ===
+[{"id":36621,"date":"2026-09-04T10:41:43","date_gmt":"2026-09-04T10:41:43","guid":{"rendered":"https:\/\/www.signl4.com\/?p=36621"},"modified":"2026-09-04T12:05:46","modified_gmt":"2026-09-04T12:05:46","slug":"incident-chat-and-virtual-war-rooms","status":"publish","type":"post","link":"https:\/\/ww
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+python3 - "$P/signl4wp_json.body" <<'EOF'
+import json,sys
+d=json.load(open(sys.argv[1]))
+routes=sorted(d.get('routes',{}).keys())
+for r in routes:
+    if r.startswith('/wpaas') or r.startswith('/wpml') or r.startswith('/omgf') or r.startswith('/two-factor') or ('users' in r) or ('settings' in r) or ('media' in r):
+        print(r)
+print("\n--- auth-gated flags sample (non-public routes):")
+for r in routes:
+    if any(k in r for k in ('wpaas/v1/purge','wpaas/v1/plugin','wpaas/v1/backup','wpml/v1/content','wpml/v1/media')):
+        v=d['routes'][r]
+        print(r, "methods:", list(v.get('methods',{}).keys()), "args:", list(v.get('args',{}).keys())[:6])
+EOF
+/divitorque-lite/v1/get_common_settings
+/divitorque-lite/v1/save_common_settings
+/omgf/v1
+/omgf/v1/adminbar-menu/status
+/omgf/v1/dashboard/dismiss-notice
+/two-factor
+/two-factor/bulk-action
+/two-factor/disable-authenticator-app
+/two-factor/disable-yubikey
+/two-factor/generate-app-code
+/two-factor/get-email-template
+/two-factor/google-authenticator-toggle
+/two-factor/methods-status
+/two-factor/send-verification-email
+/two-factor/set-email-template
+/two-factor/setup-yubikey
+/two-factor/status
+/two-factor/test-email-template
+/two-factor/toggle
+/two-factor/user-filter
+/two-factor/user-info
+/two-factor/user-roles
+/two-factor/user-search
+/two-factor/validate-app-code
+/two-factor/validate-yubikey
+/two-factor/verify-email-code
+/two-factor/yubikey-toggle
+/wp-site-designer/v1/media/sideload
+/wp/v2/media
+/wp/v2/media/(?P<id>[\d]+)
+/wp/v2/media/(?P<id>[\d]+)/edit
+/wp/v2/media/(?P<id>[\d]+)/post-process
+/wp/v2/settings
+/wp/v2/users
+/wp/v2/users/(?P<id>[\d]+)
+/wp/v2/users/(?P<user_id>(?:[\d]+|me))/application-passwords
+/wp/v2/users/(?P<user_id>(?:[\d]+|me))/application-passwords/(?P<uuid>[\w\-]+)
+/wp/v2/users/(?P<user_id>(?:[\d]+|me))/application-passwords/introspect
+/wp/v2/users/me
+/wpaas/v1
+/wpaas/v1/2fa-status
+/wpaas/v1/activity-logs
+/wpaas/v1/diagnostics
+/wpaas/v1/dismiss-notice
+/wpaas/v1/dismiss-whats-new
+/wpaas/v1/feature_flag
+/wpaas/v1/flush-cache
+/wpaas/v1/flush-cache/status
+/wpaas/v1/form-submit
+/wpaas/v1/nps-form-configuration
+/wpaas/v1/nps-form-dismiss
+/wpaas/v1/nps-form-submit
+/wpaas/v1/plugin-updates
+/wpaas/v1/smart-updates
+/wpaas/v1/smart-updates/dismiss
+/wpaas/v1/toggle-llms
+/wpaas/v1/toggle-trusted-site
+/wpaas/v1/toggle-xmlrpc
+/wpaas/v1/trusted-site-sso
+/wpml/ate/v1
+/wpml/ate/v1/ate/proxy
+/wpml/st/v1
+/wpml/st/v1/import_mo_strings
+/wpml/st/v1/pre_generate_mo_files
+/wpml/st/v1/settings
+/wpml/st/v1/string-packages
+/wpml/st/v1/strings
+/wpml/st/v1/strings/filters
+/wpml/st/v1/strings/itemscount
+/wpml/st/v1/strings/processstringsqueue
+/wpml/st/v1/strings/settings
+/wpml/tm/v1
+/wpml/tm/v1/ams/console
+/wpml/tm/v1/ams/engines
+/wpml/tm/v1/ams/register_manager
+/wpml/tm/v1/ams/status
+/wpml/tm/v1/ams/synchronize/managers
+/wpml/tm/v1/ams/synchronize/translators
+/wpml/tm/v1/ate/jobs
+/wpml/tm/v1/ate/jobs/(?P<ateJobId>\d+)
+/wpml/tm/v1/ate/jobs/(?P<ateJobId>\d+)/fix
+/wpml/tm/v1/ate/jobs/download
+/wpml/tm/v1/ate/jobs/receive/(?P<wpmlJobId>\d+)
+/wpml/tm/v1/ate/jobs/retry
+/wpml/tm/v1/ate/jobs/store
+/wpml/tm/v1/ate/jobs/sync
+/wpml/tm/v1/jobs
+/wpml/tm/v1/jobs/assign
+/wpml/tm/v1/jobs/cancel
+/wpml/tm/v1/tp/apply-translations
+/wpml/tm/v1/tp/batches/status
+/wpml/tm/v1/tp/batches/sync
+/wpml/tm/v1/tp/xliff/download/(?P<job_id>\d+)/(?P<job_type>\w+)
+/wpml/tm/v1/xliff/fetch/(?P<jobId>\d+)
+/wpml/v1
+/wpml/v1/account-balances
+/wpml/v1/cancel-jobs
+/wpml/v1/cancelallautomaticjobs
+/wpml/v1/capture/event
+/wpml/v1/credits
+/wpml/v1/custom-xml-config
+/wpml/v1/custom-xml-config/validate
+/wpml/v1/dismiss-notice
+/wpml/v1/dismiss-notice-per-user
+/wpml/v1/enable-ate
+/wpml/v1/get-credits-per-word
+/wpml/v1/get-dismissed-notices
+/wpml/v1/get-engines
+/wpml/v1/get-needs-update-count-created-in-cte
+/wpml/v1/get-words-to-translate-for-items
+/wpml/v1/get-words-to-translate-for-types
+/wpml/v1/getlocaltranslatorbyid
+/wpml/v1/getlocaltranslators
+/wpml/v1/gettranslationeditortype
+/wpml/v1/gettranslationstatus
+/wpml/v1/getuntranslatedtypescount
+/wpml/v1/glossary-count
+/wpml/v1/has-posts-using-native-editor
+/wpml/v1/item-sections/populated
+/wpml/v1/minimum-requirements
+/wpml/v1/posthog/refresh-cache
+/wpml/v1/posts
+/wpml/v1/posts/count
+/wpml/v1/posts/hierarchical
+/wpml/v1/posts/taxonomies
+/wpml/v1/posts/terms
+/wpml/v1/reloadremotetranslationservice
+/wpml/v1/resend-unsolvable-jobs
+/wpml/v1/rest/status
+/wpml/v1/save-automatic-translation-settings
+/wpml/v1/save-translator-note
+/wpml/v1/send-to-translation/default-batch-name
+/wpml/v1/send-to-translation/validate-batch-name
+/wpml/v1/send-to-translation/validate-translation-options
+/wpml/v1/set-review-translation-option
+/wpml/v1/tranlsation-proxy/getlastpickedup
+/wpml/v1/translate-everything/disable
+/wpml/v1/translate-everything/enable
+/wpml/v1/translate-existing-content
+/wpml/v1/translation-proxy/commit-batch
+/wpml/v1/translation-proxy/getRemoteJobsCount
+/wpml/v1/troubleshooting/enable-alias-domain
+/wpml/v1/troubleshooting/posthog
+/wpml/v1/troubleshooting/register-alias-domain
+/wpml/v1/troubleshooting/reset-alias-domain
+/wpml/v1/unsolvable-jobs
+/wpml/v1/updates
+/wpml/v1/website-contexts
+/wpml/v1/wpml-content-stats
+/wpml/v1/wpml-ph-make-external-request
+/wpml/v1/wpml-proxy/status
+/wpml/v1/wpml/posthog/capture-event
+/yoast/v1/redirects/settings
+
+--- auth-gated flags sample (non-public routes):
+Traceback (most recent call last):
+  File "<stdin>", line 11, in <module>
+AttributeError: 'list' object has no attribute 'keys'
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+c() { name="$1"; url="$2"; curl -sS -m 20 -o "$P/$name.body" -D "$P/$name.hdr" -w "%{http_code}|%{size_download}\n" "$url"; }
+c w_wpml_proxy "https://www.signl4.com/wp-json/wpml/ate/v1/ate/proxy"; sleep 1
+c w_wpml_req "https://www.signl4.com/wp-json/wpml/v1/wpml-ph-make-external-request"; sleep 1
+c w_wpaas_logs "https://www.signl4.com/wp-json/wpaas/v1/activity-logs"; sleep 1
+c w_wpaas_diag "https://www.signl4.com/wp-json/wpaas/v1/diagnostics"; sleep 1
+c w_divi_cfg "https://www.signl4.com/wp-json/divitorque-lite/v1/get_common_settings"; sleep 1
+c w_user1 "https://www.signl4.com/wp-json/wp/v2/users/1"; sleep 1
+c w_media "https://www.signl4.com/wp-json/wp/v2/media?per_page=1"
+401|98
+404|114
+401|98
+404|114
+401|99
+200|9096
+200|6234
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+echo "=== wpml-ph 404 body ==="; head -c 300 "$P/w_wpml_req.body"; echo
+echo "=== wpaas 404 body ==="; head -c 300 "$P/w_wpaas_diag.body"; echo
+echo "=== users/1 ==="; head -c 700 "$P/w_user1.body"; echo
+echo "=== media ==="; head -c 400 "$P/w_media.body"
+=== wpml-ph 404 body ===
+{"code":"rest_no_route","message":"No route was found matching the URL and request method.","data":{"status":404}}
+=== wpaas 404 body ===
+{"code":"rest_no_route","message":"No route was found matching the URL and request method.","data":{"status":404}}
+=== users/1 ===
+{"id":1,"name":"derdacksignl4","url":"https:\/\/www.signl4.com","description":"","link":"https:\/\/www.signl4.com\/blog\/author\/derdacksignl4\/","slug":"derdacksignl4","avatar_urls":{"24":"https:\/\/secure.gravatar.com\/avatar\/ae6fcaa0f7053a04ca9d3c41e69b1654f10a02fe2d5835e2ddadd44198248642?s=24&d=mm&r=g","48":"https:\/\/secure.gravatar.com\/avatar\/ae6fcaa0f7053a04ca9d3c41e69b1654f10a02fe2d5835e2ddadd44198248642?s=48&d=mm&r=g","96":"https:\/\/secure.gravatar.com\/avatar\/ae6fcaa0f7053a04ca9d3c41e69b1654f10a02fe2d5835e2ddadd44198248642?s=96&d=mm&r=g"},"meta":[],"yoast_head":"<!-- This site is optimized with the Yoast SEO Premium plugin v28.4 (Yoast SEO v28.4) - https:\/\/yoast.com\/product
+=== media ===
+[{"id":36680,"date":"2026-09-04T13:30:04","date_gmt":"2026-09-04T13:30:04","guid":{"rendered":"https:\/\/www.signl4.com\/wp-content\/uploads\/2026\/09\/Incident-Response-Prozess-Zusammenarbeit-SIGNL4.png"},"modified":"2026-09-04T13:30:04","modified_gmt":"2026-09-04T13:30:04","slug":"incident-response-prozess-zusammenarbeit-signl4-2","status":"inherit","type":"attachment","link":"https:\/\/www.sign
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+c() { name="$1"; url="$2"; curl -sS -m 20 -o "$P/$name.body" -D "$P/$name.hdr" -w "%{http_code}|%{size_download}\n" "$url"; }
+c api_root "https://api.signl4.com/"; sleep 1
+c api_v2 "https://api.signl4.com/api/v2"; sleep 1
+c api_alerts "https://api.signl4.com/api/v2/alerts"; sleep 1
+c api_teams "https://api.signl4.com/api/v2/teams"; sleep 1
+c api_ping "https://api.signl4.com/api/v2/ping"; sleep 1
+c api_v1 "https://api.signl4.com/api/v1"
+301|0
+404|0
+405|0
+401|0
+404|0
+404|0
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+echo "=== / redirect ==="; grep -i '^location:' "$P/api_root.hdr"
+echo "=== alerts 405 ==="; head -c 300 "$P/api_alerts.body"; echo
+echo "=== teams 401 ==="; grep -iE '^(www-authenticate|allow|content-type|server):' "$P/api_teams.hdr"; head -c 300 "$P/api_teams.body"
+=== / redirect ===
+location: https://account.signl4.com/manage
+=== alerts 405 ===
+
+=== teams 401 ===
+server: Microsoft-HTTPAPI/2.0
+www-authenticate: Bearer
+[0m
+[0m$ [0mP=/tmp/opencode/poc
+curl -sS -m 20 -o "$P/prod_account_manage.body" -D "$P/prod_account_manage.hdr" -w "%{http_code}|%{time_total}\n" "https://account.signl4.com/manage"; grep -i '^location:' "$P/prod_account_manage.hdr" | head -c 1200
+302|0.437963
+location: https://connect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=s3L3AHOZusTLjpwAUPcuKQQBaClzvQhGk1ZJ1_a5Eck&code_challenge_method=S256&response_mode=form_post&nonce=639241811013361526.ODNhYjg3OGYtN2NhZS00MTllLTk0MzItMTg3YjY1ZmZhNTcxYWJkYTU3N2MtZjFmMS00YjVmLWI0OWItNmFiMTUxMzA5M2Fm&state=CfDJ8P0bhSkvNP5HkPto7qc9KqMf3qqPGOlaaNjyl_gppZUJO8cDZ5W8i3lDKW7u5GpgAlyi_d-6KocG7FHN5bXCslo63M_sZmop3hMMHPNgAiqlmgsZGY3iQPEhX22ViLFi3IO-sUychhmaDl_Lkt-ZzH2tc8Wv0zBEILfyF24id9GMijDBu_sPlv5em6_l60ZePo_yNo1Jf9h33tkpD5e8gulhpoNMaqz28XCFP3E3xLHMf9w0xD_vMMZIeWaI_ROkEOu4PNhSdq93b99Xh07xsE5oUbSWdowrmetEMwdkF0b6BNLbKu9lY8-Txd2IlHA0H1Lb4gZItNauZkeoFhIuWvozn7fgLlxV8ScIoNumuQRL0Urstzm41WI4KVlr5RmO7FXHaJ67xpFOYCLD5Mm_QoU&x-client-SKU=ID_NET8_0&x-client-ver=7.7.3.0
+[0m
+```
+STEP 1 — DELTA
+[NEW] devconnect.signl4.com staging IdentityServer LIVE & directly reachable (OIDC discovery 200, no WAF headers, Microsoft-HTTPAPI/2.0) — prior cycle only hypothesized
+[NEW] devconnect.signl4.com and prod connect.signl4.com expose a BYTE-IDENTICAL RS256 signing key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, same modulus n, x5t, x5c CN=*.signl4.com) AND the same account-portal OAuth client_id 692A0A56-892F-4AE2-8259-76DA398990B6 (devaccount + account portals)
+[NEW] www.signl4.com = Network Solutions WPaaS (160.153.0.44), REST schema exposes WPML /wpml/ate/v1/ate/proxy, /wpml/v1/wpml-ph-make-external-request, /wpml/tm/v1 xliff paths, wpaas/v1, two-factor, divitorque-lite; gate probes: proxy 401, wpaas activity-logs 401, divitorque 401, external-request + wpaas diagnostics rest_no_route (registered for non-GET methods)
+[NEW] api.signl4.com /api/v2 population = /alerts (405 POST-only) + /teams (401 WWW-Authenticate: Bearer); / → 301 account.signl4.com/manage; zero unauth read surface
+[NEW] labconnect/labaccount.signl4.com → uniform 502 Microsoft-Azure-Application-Gateway/v2 on all paths — backend unmapped, estate inert
+
+STEP 2 — PRIORITIZE
+[PRIO] devconnect.signl4.com,7.45,cross-env-signing-key-reuse
+[PRIO] www.signl4.com,6.90,WPML-proxy-WPaaS-surface
+[PRIO] api.signl4.com,5.45,gate-enforcement-confirmed-q
+[PRIO] labconnect.signl4.com,5.20,inert-502
+
+STEP 3 — HYPOTHESES
+[HYP] devconnect staging IdP shares prod token-signing key + OAuth client → cross-env token forgery
+class: AUTH
+asset: devconnect.signl4.com/identity vs connect.signl4.com/identity
+confidence: 75
+reasoning: devconnect OIDC discovery 200 issuer=devconnect.signl4.com/identity; JWKS kid/n/x5t/x5c programmatically equal to prod; both grant_types include password, client_credentials, device_code, token-exchange; staging runs DIFFERENT IdentityServer build (ID_NET10_0 8.19.2.0) than prod (ID_NET8_0 7.7.3.0) — separate software train; account portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6 identical on both; staging has no WAF fingerprint
+evidence_needed: a staging-minted JWT (any grant) whose signature verifies against prod JWKS / is accepted by api.signl4.com; requires a staging client secret (compromise/leak scenario)
+verify_steps: GET https://devconnect.signl4.com/identity/.well-known/openid-configuration (200, done); GET .../jwks (done); GET https://connect.signl4.com/identity/.well-known/openid-configuration/jwks (done, diff=false); GET https://account.signl4.com/manage (302 to same client_id 692A0A56-... on prod IdP, done); POST /identity/connect/token only with legitimately obtained staging creds (HUMAN)
+impact: compromise of publicly-reachable staging IdP or its client secrets ⇒ forge identity/access tokens carrying prod API scopes (public_api_read/write/prov, account_portal) trusted by production SIGNL4 — full ATO chain; severity MED-HIGH
+testability: PASSIVE (key-reuse+client-reuse verified; token mint requires creds → AUTH_HELPED)
+
+[HYP] www.signl4.com WPML ATE proxy / external-request unauthorized SSRF
+class: SSRF
+asset: www.signl4.com/wp-json/wpml/ate/v1/ate/proxy (+ /wpml/v1/wpml-ph-make-external-request)
+confidence: 45
+reasoning: both routes registered in public schema; /wpml/ate/v1/ate/proxy GET→401 (route exists, auth callback invoked); /wpml/v1/wpml-ph-make-external-request GET→rest_no_route "matching URL and request method" = route registered for non-GET method (POST), consistent with WPML ATE transports that fetch remote URLs; wpaas/v1/diagnostics same rest_no_route pattern on GET
+evidence_needed: POST to external-request/proxy with URL param producing a fetch artifact (2xx echo or OAST hit) — impossible to prove with GET-only probes
+verify_steps: GET /wpml/ate/v1/ate/proxy?url=https://internal (401 gate confirmed, done); HEAD /wpml/v1/wpml-ph-make-external-request (method check, no mutation); then POST body {"url": OASt} via HUMAN; never point at 169.254.169.254 before auth confirmed (program: pass on customer-data exposure)
+impact: SSRF to 169.254.169.254 cloud metadata or internal WPaaS services if POST is unauth; severity MED (LOW-MED while gate unproven)
+testability: HUMAN_ONLY (POST + OAST required; GET proves authorization exists, not absence)
+
+STEP 4 — SELF-CRITIQUE
+Dropped: account.signl4.com OAuth redirect_uri/state flaw (PKCE S256 + state + nonce + form_post all present; no dod chain) -> PARKED; api read-route sweep -> PARKED (alerts 405/teams 401 already delimit the population; blind-guess yields low); www.signl4.com user/media enumeration -> PARKED (identical low-value profile to derdack.com).
+[PARKED] OATH @ account.signl4.com redirect_uri/state confusion: PKCE+state+nonce+form_post implemented on both envs; shared client_id but redirect_uris are env-scoped; no demonstrated flaw
+[PARKED] MISCONFIG @ api.signl4.com read-route sweep: registered-route population characterized (alerts POST-only, teams Bearer-401); remaining guesses low-yield
+[PARKED] AUTH @ www.signl4.com user/media enumeration: public blog/marketing only, users/1 no email/PII — not reportable
+[FINAL] survivors ranked: 1. [75] AUTH devconnect↔prod signing-key/client reuse (CONFIRMED data, exploit needs staging creds) 2. [45] SSRF www.signl4.com WPML external-request/proxy (POST-gated, needs OAST)
+
+STEP 5 — NEXT ACTION
+[NEXT] PROBE: GET https://www.signl4.com/wp-json/two-factor/user-info (only untested registered REST read left on signl4.com estate; 200 = 2FA-status/user-meta disclosure on the two-factor plugin, 401/403 = gate); then draft the CONFIRMED devconnect↔prod signing-key/client_id reuse finding for bugs.olivermaicher.eu in the next cycle.
+
+STEP 6 — LEARNING
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com: staging IdentityServer live + shares prod RS256 signing key (kid/n/x5t/x5c identical) and account-portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with prod — cross-env identity isolation failure confirmed by direct JWKS + authorize-redirect comparison
+[LEARN] ACCEPTED MISCONFIG @ labconnect/labaccount.signl4.com: Azure AppGW/v2 502 on all probed paths (root, /identity/, /connect/authorize) — unmapped backend, estate inert
+[LEARN] ACCEPTED MISCONFIG @ api.signl4.com: /api/v2 = alerts(405)+teams(401 Bearer) only; no unauth read surface; root 301 → account.signl4.com/manage
+[LEARN] REJECTED AUTH @ www.signl4.com: WP users/media REST is public-blog-only; users/1 no email/PII — same low value as derdack.com
+[LEARN] ACCEPTED MISCONFIG @ www.signl4.com: WPML ate/proxy 401, wpaas activity-logs 401, divitorque settings 401 (gated); wpml-ph-make-external-request + wpaas diagnostics rest_no_route on GET = registered for POST/other methods only
+
+STEP 7 — RISK
+[RISK] derdack: 45 (moderate). Two discovered exposure vectors: (1) production SIGNL4 IdP shares its token-signing key + OAuth client with a publicly reachable, un-WAF'd staging IdentityServer on a different software train — concrete crypto/client isolation failure, report-worthy, exploit still bound by staging credential compromise; (2) WPML external-request/proxy SSRF candidate POST-gated and unproven. api.signl4.com fully gated, lab estate dead, WP admins gated. Confidence-weighted exposure moderate; top confirmed finding = cross-env key reuse.
+```

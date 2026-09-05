@@ -67,3 +67,17 @@
 - 2026-09-05 REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
 - 2026-09-05 REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
 - 2026-09-05 REJECTED OTHER @ signl4.derdack.com: permanently unreachable across 8+ probe cycles (all TCP timeout); all attack surface value = 0
+- 2026-09-05 ACCEPTED AUTH @ devconnect.signl4.com: staging IdentityServer live + shares prod RS256 signing key (kid/n/x5t/x5c identical) and account-portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with prod — cross-env identity isolation failure confirmed by direct JWKS + authorize-redirect comparison
+- 2026-09-05 ACCEPTED MISCONFIG @ labconnect/labaccount.signl4.com: Azure AppGW/v2 502 on all probed paths (root, /identity/, /connect/authorize) — unmapped backend, estate inert
+- 2026-09-05 ACCEPTED MISCONFIG @ api.signl4.com: /api/v2 = alerts(405)+teams(401 Bearer) only; no unauth read surface; root 301 → account.signl4.com/manage
+- 2026-09-05 REJECTED AUTH @ www.signl4.com: WP users/media REST is public-blog-only; users/1 no email/PII — same low value as derdack.com
+- 2026-09-05 ACCEPTED MISCONFIG @ www.signl4.com: WPML ate/proxy 401, wpaas activity-logs 401, divitorque settings 401 (gated); wpml-ph-make-external-request + wpaas diagnostics rest_no_route on GET = registered for POST/other methods only
+- 2026-09-05 ACCEPTED AUTH @ devconnect.signl4.com: SIGNL4 dev/lab OIDC+account staging estate resolves on dedicated IPs (dev 108.143.123.104, lab 13.93.49.201); CSP explicitly references dev/lab Connect+Account hosts — new attack surface
+- 2026-09-05 ACCEPTED MISCONFIG @ api.signl4.com: /api/v2/alerts returns 405 Allow:POST confirming live API namespace; base routes unprobed for GET
+- 2026-09-05 ACCEPTED AUTH @ www.signl4.com: CF-fronted WordPress confirmed via xmlrpc pingback link; same fleet family as derdack.com
+- 2026-09-05 REJECTED IDOR @ www.derdack.com revisions/autosaves: all protected endpoints return 401; capability check intact
+- 2026-09-05 REJECTED IDOR @ www.derdack.com users/{id} PII: collection exposes no email; single endpoint unlikely to differ
+- 2026-09-05 ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews; passive probe cost near-zero
+- 2026-09-05 ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
+- 2026-09-05 ACCEPTED MISCONFIG @ www.derdack.com: Missing HSTS, CSP, X-Frame-Options on primary domain
+- 2026-09-05 ACCEPTED AUTH @ www.derdack.com: WP REST API auth gates intact on settings/users/me/oembed-proxy/drafts/CF7/Yoast admin (401/403/400)

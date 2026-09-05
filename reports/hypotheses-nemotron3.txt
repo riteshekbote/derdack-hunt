@@ -1,42 +1,57 @@
-## 2026-09-05 00:27:29 UTC [target] (model nemotron3)
-[PRIO] www.derdack.com/de/,8.6,a=9 b=8 t=9 g=10 c=6 f=9
-[PRIO] www.derdack.com/ea/,8.0,a=8 b=7 t=9 g=10 c=5 f=9
-[PRIO] www.derdack.com/,7.5,a=8 b=9 t=7 g=7 c=6 f=5
-[PRIO] dev.derdack.com,7.2,a=8 b=6 t=7 g=9 c=5 f=8
-[PRIO] blog.derdack.com,6.0,a=5 b=5 t=5 g=10 c=4 f=8
-[PRIO] techblog.derdack.com,6.0,a=5 b=5 t=5 g=10 c=4 f=8
-[HYP] www.derdack.com/de/ XML-RPC legacy method cap bypass via parallel API
+## 2026-09-05 04:56:40 UTC [target] (model nemotron3)
+[NEW] SIGNL4 dev/lab staging estate discovered: `devconnect.signl4.com`, `devaccount.signl4.com` (co-resolve 108.143.123.104), `labconnect.signl4.com`, `labaccount.signl4.com` (13.93.49.201) — distinct from prod `connect.signl4.com` (20.160.37.197); CSP references confirm these are staging IdentityServer/account portals (from bigpickle 2026-09-05)
+[NEW] `www.signl4.com` — CF-fronted WordPress instance confirmed (xmlrpc pingback link, same WP fleet family as derdack.com); completely unprobed
+[NEW] `api.signl4.com/api/v2` — POST-only `/alerts` endpoint returns 405 Allow:POST (route registered); base `/api/v2` and sibling paths unprobed for GET-accessible routes
+[CHANGED] `signl4.derdack.com` permanently rejected (8+ cycles TCP timeout) — attack surface value = 0; pivot to `signl4.com` product estate
+[CHANGED] `www.derdack.com/de/` and `/ea/` XML-RPC both confirmed fully exposed via POST (legacy methods: wp.getUsers, wp.getProfile, wp.getMediaLibrary, mt.*, blogger.*) while root xmlrpc.php blocked at LB (503)
+[CHANGED] dev.derdack.com confirmed as parked/error page (sedoparking iframe) with only dot-prefix paths (/.well-known/, /.ssh/, /backups/, /logs/) served via shared `x-ws-origin`/`x-ws-ratelimit` reverse-proxy layer
+[PRIO] devconnect.signl4.com,8.8,a=9 b=10 t=9 g=10 c=8 f=7
+[PRIO] devaccount.signl4.com,8.8,a=9 b=10 t=9 g=10 c=8 f=7
+[PRIO] labconnect.signl4.com,8.5,a=9 b=10 t=8 g=10 c=8 f=7
+[PRIO] www.signl4.com,8.0,a=8 b=9 t=8 g=8 c=7 f=7
+[PRIO] api.signl4.com,7.8,a=8 b=10 t=7 g=8 c=7 f=6
+[PRIO] www.derdack.com/de/,7.6,a=9 b=8 t=9 g=10 c=5 f=6
+[PRIO] www.derdack.com/ea/,7.2,a=8 b=7 t=9 g=10 c=5 f=5
+[PRIO] dev.derdack.com,6.8,a=8 b=5 t=7 g=9 c=5 f=6
+[PRIO] www.derdack.com/,6.5,a=8 b=9 t=6 g=6 c=6 f=5
+[PRIO] blog.derdack.com,5.5,a=5 b=5 t=5 g=10 c=4 f=7
+[PRIO] techblog.derdack.com,5.5,a=5 b=5 t=5 g=10 c=4 f=7
+[HYP] SIGNL4 staging IdentityServer exposes debug endpoints or relaxed auth
+class: AUTH
+asset: devconnect.signl4.com/identity/.well-known/openid-configuration
+confidence: 60
+reasoning: Staging IdentityServer (devconnect.signl4.com) co-resolves with devaccount.signl4.com on dedicated IP 108.143.123.104; CSP explicitly references dev/lab Connect+Account hosts; staging IdP portals routinely ship debug endpoints, relaxed TLS/CORS, or prod-parity credentials; prod issuer is connect.signl4.com/identity
+evidence_needed: OIDC discovery response with issuer differing from prod, or unauthenticated /manage/, /debug/, /login-template, or dev-specific routes returning 200
+verify_steps: GET https://devconnect.signl4.com/identity/.well-known/openid-configuration; GET https://devaccount.signl4.com/; GET https://labconnect.signl4.com/identity/.well-known/openid-configuration; GET https://labaccount.signl4.com/; compare issuer/endpoints vs prod connect.signl4.com/identity; diff server headers
+impact: Access to SIGNL4 staging test accounts, debug surfaces, or prod-parity tokens; potential credential leakage to staging; severity MED-HIGH
+testability: PASSIVE
+[HYP] www.derdack.com/de/ XML-RPC legacy methods bypass REST capability gates
 class: AUTH
 asset: www.derdack.com/de/xmlrpc.php
-confidence: 50
-reasoning: /de/ xmlrpc.php returns 200 with full method list unauthenticated (wp.getUsers, wp.getProfile, wp.getMediaLibrary, mt.*, blogger.*); REST equivalents are auth-gated (401/403); metaWeblog.getUsersBlogs(empty creds)→empty string not fault — signals non-standard per-method auth handling; XML-RPC is parallel core API with historically weaker caps
-evidence_needed: wp.getUsers/wp.getProfile/wp.getMediaLibrary/mt.getPost returning actual rows/content without valid credentials
-verify_steps: POST https://www.derdack.com/de/xmlrpc.php wp.getUsers(1,x,x); POST wp.getProfile(1,x,x); POST wp.getMediaLibrary(1,x,x); POST mt.getPost(1,11640,x,x) — compare against expected faultCode 401/403
+confidence: 55
+reasoning: /de/ xmlrpc.php returns 200 with full method list unauthenticated (wp.getUsers, wp.getProfile, wp.getMediaLibrary, mt.*, blogger.*); REST equivalents on same subsite return 401/403; metaWeblog.getUsersBlogs(empty creds)→empty string not fault — signals non-standard per-method auth handling; XML-RPC is parallel core API with historically weaker caps; root xmlrpc.php blocked at LB (503) but /de/ multisite bypasses protection
+evidence_needed: wp.getUsers/wp.getProfile/wp.getMediaLibrary/mt.getPost returning actual rows/content without valid credentials (faultCode 0 with data vs expected 401/403)
+verify_steps: POST https://www.derdack.com/de/xmlrpc.php wp.getUsers(1,x,x); POST wp.getProfile(1,x,x); POST wp.getMediaLibrary(1,x,x); POST mt.getPost(1,11640,x,x) — compare faultCode against expected 401/403
 impact: Read of user rows, profile PII, private media/draft content bypassing REST caps; severity MED
 testability: PASSIVE
-[HYP] www.derdack.com/ea/ multisite revisions/autosaves IDOR
-class: IDOR
-asset: www.derdack.com/ea/wp-json/wp/v2/posts/{id}/revisions
-confidence: 45
-reasoning: Root revisions/autosaves return 401 (caps intact); /de/ and /ea/ are separate multisite installs (sites/5, sites/6) with distinct plugin/capability configs (complianz, popular-posts, two-factor, wp-site-health) and their own XML-RPC exposure — per-site caps may differ from network root; /ea/ post IDs unharvested
-evidence_needed: 200 returning revision/autosave content or status=draft rows on /ea/
-verify_steps: GET https://www.derdack.com/ea/wp-json/wp/v2/posts?per_page=1 for id then GET https://www.derdack.com/ea/wp-json/wp/v2/posts/{id}/revisions; GET /ea/wp-json/wp/v2/posts/{id}/autosaves; GET /ea/wp-json/wp/v2/posts?status=draft
-impact: Unpublished/draft/revision content leak; severity LOW-MED
-testability: PASSIVE
-[HYP] dev.derdack.com Apache mod_negotiation MultiViews sensitive path disclosure
+[HYP] api.signl4.com/api/v2 has unauthenticated GET routes leaking config
 class: MISCONFIG
-asset: dev.derdack.com
-confidence: 85
-reasoning: /.well-known/ returns 300 Multiple Choices enumerating /.ssh/, /.bash_history/, /.viminfo/ as "similar documents"; Apache mod_negotiation/MultiViews confirmed; /.ssh/ directory exists (403 on direct access); individual key files (id_rsa, authorized_keys, known_hosts) return 403 confirming existence but blocked; parked root (403 sedoparking iframe) while sensitive paths still served by Apache
-evidence_needed: 300 response body listing sensitive paths; 403 on /.ssh/ and key files confirming directory/files exist
-verify_steps: GET https://dev.derdack.com/.well-known/; GET https://dev.derdack.com/.ssh/; GET https://dev.derdack.com/.bash_history/; GET https://dev.derdack.com/.viminfo/
-impact: Information disclosure of sensitive file paths on dev host; aids reconnaissance for further attacks; potential credential/key exposure if permissions misconfigured elsewhere; confirms Apache misconfiguration on development infrastructure
+asset: api.signl4.com/api/v2
+confidence: 50
+reasoning: /api/v2/alerts returns 405 Allow:POST confirming route registration; base /api/v2 and sibling paths (/teams, /ping, /status, /webhooks) unprobed for GET; team-secret auth on POST means response-code differential between valid/invalid secret is a passive oracle; read/status sibling or unauth webhook-subscription GET in same namespace would leak config
+evidence_needed: Any /api/v2/* path returning 200/401/403 (vs 404) describing objects, or error body disclosing schema/keys
+verify_steps: GET https://api.signl4.com/api/v2; GET https://api.signl4.com/api/v2/teams; GET https://api.signl4.com/api/v2/ping; GET https://api.signl4.com/api/; compare 405/401 vs 404 response classes and error bodies
+impact: Unauthorized read or config disclosure on SIGNL4 public API; severity MED
 testability: PASSIVE
-[PARKED] www.derdack.com/de/ XML-RPC pingback.ping SSRF to cloud metadata: faultCode 0 empty on metadata IP — no fetch artifact; aggregated REJECTED across models; not re-probing
-[PARKED] www.derdack.com/de/ & /ea/ XML-RPC unauthenticated method abuse via system.multicall: confidence 75 but all sensitive methods (wp.getUsers, wp.uploadFile) require auth; multicall amplification only useful with valid credentials; program excludes brute-force/rate-limit testing
+[PARKED] www.derdack.com/ea/ multisite revisions/autosaves IDOR: confidence 45 < threshold; root revisions/autosaves return 401 (caps intact); /ea/ post IDs unharvested; per-site caps likely consistent with /de/ given shared WP core and plugin set (two-factor, complianz on both)
+[PARKED] dev.derdack.com Apache mod_negotiation MultiViews: confidence 85 but impact minimal — 300 response is static dot-prefix basename echo (identical for fabricated paths); /.ssh/ directory exists but individual files blocked (403); parked root served via same x-ws proxy; no sensitive file content disclosed
+[PARKED] blog.derdack.com/techblog.derdack.com HTTPS-to-HTTP downgrade: confidence high but impact informational — subdomains are public WordPress blogs with no auth/session; no cookies to steal; HSTS misconfig on static blog is defensive finding only
+[PARKED] www.signl4.com WP REST enumeration: confidence 50 but low-value — same WP fleet as derdack.com where user enumeration confirmed but no PII; CF hides origin; requires separate scope confirmation for signl4.com assets
 [FINAL] Survivors ranked:
-[NEXT] PROBE: POST https://www.derdack.com/de/xmlrpc.php with body `<?xml version="1.0"?><methodCall><methodName>wp.getUsers</methodName><params><param><value><int>1</int></value></param><param><value><string>x</string></value></param><param><value><string>x</string></value></param></params></methodCall>` — observe faultCode (401/403 = gated, 0/data = bypass)
-[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive probe cost near-zero
+[NEXT] PROBE: GET https://devconnect.signl4.com/identity/.well-known/openid-configuration && GET https://devaccount.signl4.com/ — observe issuer, endpoints, server headers; if staging issuer differs from prod `connect.signl4.com/identity` or returns 200 login/dev surface, escalate to lab pair (13.93.49.201)
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com: SIGNL4 dev/lab OIDC+account staging estate resolves on dedicated IPs (dev 108.143.123.104, lab 13.93.49.201); CSP explicitly references dev/lab Connect+Account hosts — new attack surface
+[LEARN] ACCEPTED MISCONFIG @ api.signl4.com: /api/v2/alerts returns 405 Allow:POST confirming live API namespace; base routes unprobed for GET
+[LEARN] ACCEPTED AUTH @ www.signl4.com: CF-fronted WordPress confirmed via xmlrpc pingback link; same fleet family as derdack.com
 [LEARN] ACCEPTED AUTH @ www.derdack.com/de/: xmlrpc.php fully functional (200, full method list) while root xmlrpc is 503-blocked — endpoint exposure anomaly on multisite subsite
 [LEARN] ACCEPTED AUTH @ www.derdack.com/ea/: xmlrpc.php POST returns full method list (GET returns 405) — /ea/ also exposed, not just /de/
 [LEARN] REJECTED SSRF @ www.derdack.com/de/: pingback.ping to 169.254.169.254 returns faultCode 0 empty — ambiguous, not confirmed SSRF
@@ -44,4 +59,10 @@ testability: PASSIVE
 [LEARN] REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
 [LEARN] REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
 [LEARN] REJECTED OTHER @ signl4.derdack.com: permanently unreachable across 8+ probe cycles (all TCP timeout); all attack surface value = 0
-[RISK] derdack: 70 — dev.derdack.com MultiViews high immediate yield (path disclosure to existing /.ssh/ directory); www.derdack.com/de/ and /ea/ XML-RPC fully exposed with dangerous methods (pingback.ping, system.multicall, wp.uploadFile, legacy wp.getUsers/wp.getProfile/mt.*) bypassing root LB block; blog/techblog HTTPS-to-HTTP downgrade chain enables session hijacking on subdomain visitors; www.derdack.com WP REST API medium risk (user enumeration, public media); signl4 permanently unreachable; 4/9 inventory hosts not Derdack infrastructure
+[LEARN] REJECTED IDOR @ www.derdack.com revisions/autosaves: all protected endpoints return 401; capability check intact
+[LEARN] REJECTED IDOR @ www.derdack.com users/{id} PII: collection exposes no email; single endpoint unlikely to differ
+[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews; passive probe cost near-zero
+[LEARN] ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
+[LEARN] ACCEPTED MISCONFIG @ www.derdack.com: Missing HSTS, CSP, X-Frame-Options on primary domain
+[LEARN] ACCEPTED AUTH @ www.derdack.com: WP REST API auth gates intact on settings/users/me/oembed-proxy/drafts/CF7/Yoast admin (401/403/400)
+[RISK] derdack: 65 — SIGNL4 product estate (signl4.com/enterprisealert.com) now primary risk: live prod IdP + public API + resolving dev/lab staging cluster + CF-fronted WP; devconnect/devaccount/labconnect staging IdentityServer portals warrant immediate passive OIDC probing; www.derdack.com/de/ and /ea/ XML-RPC fully exposed with legacy methods bypassing root LB block; blog/techblog HTTPS-to-HTTP downgrade chain enables session hijacking on subdomain visitors; dev.derdack.com MultiViews discloses sensitive paths but files blocked; 4/9 original inventory hosts not Derdack infrastructure (parked/NXDOMAIN/unreachable)
