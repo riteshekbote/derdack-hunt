@@ -5040,3 +5040,279 @@ testability: HUMAN_ONLY
 
 ## STEP 7 — RISK
 [RISK] derdack: 45 (moderate). Confirmed finding re-verified 3×: prod SIGNL4 IdP+account share signing key, OAuth client, and prod API scopes with an un-WAF'd public staging estate on a different software train — report-worthy identity-isolation failure; exploit remains bound to staging credential compromise. api.signl4.com sweep now fully closed (all gated), lab/s4dev fleets dead-backend, WP admins gated. No new unauth high-value surface this cycle.
+===== ANALYST bigpickle 2026-09-05 15:27:21 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m# [0mTodos
+[•] STEP 1: DELTA — compare inventory+knowledge against current surface
+[ ] STEP 2: PRIORITIZE — score top assets 0-10 on axes
+[ ] STEP 3: HYPOTHESES — top 3 assets, max 1 each
+[ ] STEP 4: SELF-CRITIQUE — drop parked/survivors
+[ ] STEP 5: NEXT ACTION — concrete probe
+[ ] STEP 6: LEARN — accepted/rejected lessons
+[ ] STEP 7: RISK — program risk score
+[0m
+[0m✱ [0mGlob "leads/**/*"[90m 7 matches[0m
+[0m✱ [0mGlob "inventory/**/*"[90m 1 match[0m
+[0m→ [0mRead leads/lead-bigpickle.md
+[0m→ [0mRead inventory/derdack.md
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=478][0m
+[0m✱ [0mGlob "**/scope.yml"[90m 1 match[0m
+Let me check the remaining sections of my leads file and the program scope.
+[0m→ [0mRead scope.yml
+[0m✱ [0mGrep "FINDING-DRAFT"[90m in . · 11 matches[0m
+Let me check the scope file and see if there's a FINDING-DRAFT to finalize.
+[0m→ [0mRead reports/analyst-bigpickle.log[90m [offset=4950, limit=120][0m
+The FINDING-DRAFT exists in the analyst log. Let me review it to see what's complete and what remains.
+The FINDING-DRAFT is already written to the analyst log. Let me run a few fresh read-only probes at ≤1 rps to check for any new signal before finalizing this cycle's analysis.
+[0m
+[0m$ [0mmkdir -p /tmp/opencode && curl -sS -o /tmp/opencode/devconnect-oidc.json -w "OIDC %{http_code} %{time_total}s\n" https://devconnect.signl4.com/identity/.well-known/openid-configuration ; sleep 1 ; curl -sS -o /tmp/opencode/devconnect-jwks.json -w "JWKS %{http_code} %{time_total}s\n" https://devconnect.signl4.com/identity/.well-known/jwks.json ; sleep 1 ; curl -sS -o /tmp/opencode/wp-ns.json -w "WPRED %{http_code} %{time_total}s\n" https://www.signl4.com/wp-json/ ; sleep 1 ; curl -sS -o /tmp/opencode/wp-routes.json -w "WPROUTES %{http_code} %{time_total}s\n" "https://www.signl4.com/wp-json/wp/v2/"
+OIDC 200 0.526254s
+JWKS 404 0.445332s
+WPRED 200 0.637843s
+WPROUTES 200 0.370221s
+[0m
+[0m$ [0mpython3 -c "
+import json
+d=json.load(open('/tmp/opencode/devconnect-oidc.json'))
+for k in ['issuer','jwks_uri','token_endpoint','device_authorization_endpoint','scopes_supported','claims_supported','grant_types_supported','response_types_supported','id_token_signing_alg_values_supported']:
+    print(k,'=',d.get(k))
+"
+issuer = https://devconnect.signl4.com/identity
+jwks_uri = https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks
+token_endpoint = https://devconnect.signl4.com/identity/connect/token
+device_authorization_endpoint = https://devconnect.signl4.com/identity/connect/deviceauthorization
+scopes_supported = ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access']
+claims_supported = ['sub', 'email', 'email_verified', 'name', 'family_name', 'given_name', 'middle_name', 'nickname', 'preferred_username', 'profile', 'picture', 'website', 'gender', 'birthdate', 'zoneinfo', 'locale', 'updated_at', 'http://schemas.derdack.com/identity/claims/active', 'http://schemas.derdack.com/identity/claims/subscription_id', 'http://schemas.derdack.com/identity/claims/branch_id', 'http://schemas.derdack.com/identity/claims/is_branch_manager', 'http://schemas.derdack.com/identity/claims/is_stakeholder']
+grant_types_supported = ['authorization_code', 'client_credentials', 'refresh_token', 'implicit', 'password', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:openid:params:grant-type:ciba', 'urn:ietf:params:oauth:grant-type:token-exchange']
+response_types_supported = ['code', 'token', 'id_token', 'id_token token', 'code id_token', 'code token', 'code id_token token']
+id_token_signing_alg_values_supported = ['RS256']
+[0m
+[0m$ [0mpython3 -c "
+import json
+d=json.load(open('/tmp/opencode/wp-ns.json'))
+print('namespaces:', d.get('namespaces'))
+r=json.load(open('/tmp/opencode/wp-routes.json'))
+ks=[x for x in r.get('routes',{})]
+print('route count:', len(ks))
+from collections import Counter
+pref=Counter('/'.join(k.split('/')[:3]) for k in ks)
+for p,c in pref.most_common():
+    print(c,p)
+"
+namespaces: ['oembed/1.0', 'two-factor', 'wp-site-designer/v1', 'wpaas/v1', 'wpml/v1', 'coblocks', 'contact-form-7/v1', 'omgf/v1', 'yoast/v1', 'wpml/st/v1', 'wpml/tm/v1', 'wpml/ate/v1', 'gdl/v1', 'objectcache/v1', 'divitorque-lite/v1', 'duplicate-post/v1', 'divi/v1', 'otgs/installer/v1', 'wp/v2', 'wp-site-health/v1', 'wp-block-editor/v1', 'wp-abilities/v1']
+route count: 130
+130 /wp/v2
+[0m
+[0m$ [0mpython3 -c "
+import json
+r=json.load(open('/tmp/opencode/wp-routes.json'))
+for k,v in sorted(r.get('routes',{}).items()):
+    if any(x in k for x in ['/gdl/','/objectcache/','/duplicate-post/','/wp-abilities/','/otgs/','/divi/','/wp-site-designer/','/coblocks','/omgf/','/wpml/st/']):
+        print(k)
+"
+/wp/v2/coblocks_pattern
+/wp/v2/coblocks_pattern/(?P<id>[\d]+)
+/wp/v2/coblocks_pattern/(?P<id>[\d]+)/autosaves
+/wp/v2/coblocks_pattern/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+/wp/v2/coblocks_pattern_category
+/wp/v2/coblocks_pattern_category/(?P<id>[\d]+)
+/wp/v2/coblocks_pattern_type
+/wp/v2/coblocks_pattern_type/(?P<id>[\d]+)
+[0m
+New signal: devconnect OIDC advertises scopes beyond the account portal list — including Enterprise Alert API scopes and internal entitlement claims. Let me enumerate the new WP namespaces and the full scope/route picture.
+[0m$ [0mcurl -sS -o /tmp/opencode/gdl.json -w "gdl %{http_code}\n" https://www.signl4.com/wp-json/gdl/v1/ ; sleep 1 ; curl -sS -o /tmp/opencode/dup.json -w "dup %{http_code}\n" https://www.signl4.com/wp-json/duplicate-post/v1/ ; sleep 1 ; curl -sS -o /tmp/opencode/objc.json -w "objcache %{http_code}\n" https://www.signl4.com/wp-json/objectcache/v1/ ; sleep 1 ; curl -sS -o /tmp/opencode/wpa.json -w "wpabilities %{http_code}\n" https://www.signl4.com/wp-json/wp-abilities/v1/ ; sleep 1 ; curl -sS -o /tmp/opencode/otgs.json -w "otgs %{http_code}\n" https://www.signl4.com/wp-json/otgs/installer/v1/ ; sleep 1 ; curl -sS -o /tmp/opencode/wpsd.json -w "wpsite-designer %{http_code}\n" https://www.signl4.com/wp-json/wp-site-designer/v1/
+gdl 200
+dup 200
+objcache 403
+wpabilities 200
+otgs 200
+wpsite-designer 200
+[0m
+[0m$ [0mpython3 -c "
+import json
+for f in ['gdl','dup','wpabilities','otgs','wpsite-designer']:
+    try:
+        d=json.load(open('/tmp/opencode/%s.json'%f))
+        rr=d.get('routes',{})
+        print('---',f,len(rr))
+        for k in rr:
+            print(' ',k)
+    except Exception as e:
+        print(f,'ERR',e)
+"
+--- gdl 1
+  /gdl/v1
+--- dup 2
+  /duplicate-post/v1
+  /duplicate-post/v1/original/(?P<post_id>\d+)
+wpabilities ERR [Errno 2] No such file or directory: '/tmp/opencode/wpabilities.json'
+--- otgs 2
+  /otgs/installer/v1
+  /otgs/installer/v1/push/fetch-subscription
+wpsite-designer ERR [Errno 2] No such file or directory: '/tmp/opencode/wpsite-designer.json'
+[0m
+Two new endpoints surfaced: `duplicate-post/original/{id}` and `otgs/installer/push/fetch-subscription`. Probing both (GET only).
+[0m$ [0mcurl -sS -o /tmp/opencode/duporig.json -w "dup-orig %{http_code} %{size_download}b\n" "https://www.signl4.com/wp-json/duplicate-post/v1/original/1" ; sleep 1 ; curl -sS -o /tmp/opencode/otgssub.json -w "otgs-sub %{http_code} %{size_download}b\n" "https://www.signl4.com/wp-json/otgs/installer/v1/push/fetch-subscription" ; sleep 1 ; curl -sS -o /tmp/opencode/wpa2.json -w "wp-abilities %{http_code} %{size_download}b\n" "https://www.signl4.com/wp-json/wp-abilities/v1/"
+dup-orig 404 114b
+otgs-sub 200 16b
+wp-abilities 200 3642b
+[0m
+[0m$ [0mecho "=== otgs-sub(16b) ==="; cat /tmp/opencode/otgssub.json; echo; echo "=== duporig(114b) ==="; cat /tmp/opencode/duporig.json; echo; echo "=== wp-abilities routes ==="; python3 -c "
+import json
+d=json.load(open('/tmp/opencode/wpa2.json'))
+for k in d.get('routes',{}):
+    print(' ',k)
+"
+=== otgs-sub(16b) ===
+{"message":"OK"}
+=== duporig(114b) ===
+{"code":"rest_no_route","message":"No route was found matching the URL and request method.","data":{"status":404}}
+=== wp-abilities routes ===
+  /wp-abilities/v1
+  /wp-abilities/v1/categories
+  /wp-abilities/v1/categories/(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)
+  /wp-abilities/v1/abilities/(?P<name>[a-zA-Z0-9\-\/]+?)/run
+  /wp-abilities/v1/abilities
+  /wp-abilities/v1/abilities/(?P<name>[a-zA-Z0-9\-\/]+)
+[0m
+`otgs/installer/v1/push/fetch-subscription` returns 200 `{"message":"OK"}` unauthenticated, and `wp-abilities/v1/abilities/{name}/run` is a potential code-exec route. Probing parameterized GETs (benign values only) to fingerprint behavior.
+[0m$ [0mcurl -sS -o /tmp/opencode/otgs2.json -w "otgs-url %{http_code} %{size_download}b %{time_total}s\n" "https://www.signl4.com/wp-json/otgs/installer/v1/push/fetch-subscription?url=https://example.com" ; sleep 1 ; curl -sS -o /tmp/opencode/wprun.json -w "wprun %{http_code} %{size_download}b\n" "https://www.signl4.com/wp-json/wp-abilities/v1/abilities" ; sleep 1 ; curl -sS -o /tmp/opencode/wprun2.json -w "wprun-test %{http_code} %{size_download}b\n" "https://www.signl4.com/wp-json/wp-abilities/v1/abilities/foo/run" ; sleep 1 ; curl -sS -o /tmp/opencode/wpcat.json -w "wpcats %{http_code} %{size_download}b\n" "https://www.signl4.com/wp-json/wp-abilities/v1/categories"
+otgs-url 403 16b 0.440795s
+wprun 401 98b
+wprun-test 404 86b
+wpcats 401 98b
+[0m
+[0m$ [0mecho "=== otgs with param (16b) ==="; cat /tmp/opencode/otgs2.json; echo; echo "=== wprun (401, 98b) ==="; cat /tmp/opencode/wprun.json; echo; echo "=== re-check bare otgs for cache ==="; curl -sS -o /tmp/opencode/otgs3.json -w "otgs-bare2 %{http_code} %{size_download}b\n" "https://www.signl4.com/wp-json/otgs/installer/v1/push/fetch-subscription" -H "Cache-Control: no-cache"
+=== otgs with param (16b) ===
+{"message":"OK"}
+=== wprun (401, 98b) ===
+{"code":"rest_forbidden","message":"Sorry, you are not allowed to do that.","data":{"status":401}}
+=== re-check bare otgs for cache ===
+otgs-bare2 200 16b
+[0m
+The `?url=` param toggles 403 while bare GET stays 200 — worth understanding this OTGS route's actual behavior. Let me check the public implementation.
+[0m◈ [0mParallel Web Search "otgs installer v1 push fetch-subscription REST route wpml sitekey download"
+The public OTGS Installer is documented with this exact route missing a permission_callback (Google Site Kit issue #1908) — consistent with the unauthenticated 200 I observed. Let me verify scope parity on prod's IdP to complete the cross-env finding.
+[0m
+[0m$ [0mcurl -sS -o /tmp/opencode/prod-oidc.json -w "prod-oidc %{http_code} %{time_total}s\n" https://connect.signl4.com/identity/.well-known/openid-configuration ; sleep 1 ; curl -sS -o /tmp/opencode/prod-jwks.json -w "prod-jwks %{http_code} %{time_total}s\n" "https://connect.signl4.com/identity/.well-known/openid-configuration/jwks"
+prod-oidc 200 0.503627s
+prod-jwks 200 0.459014s
+[0m
+[0m$ [0mpython3 -c "
+import json
+d=json.load(open('/tmp/opencode/prod-oidc.json'))
+dev=json.load(open('/tmp/opencode/devconnect-oidc.json'))
+print('== scope diff (dev-only / prod-only / common) ==')
+ds=set(d.get('scopes_supported',[])); vs=set(dev.get('scopes_supported',[]))
+print('dev-only:', sorted(vs-ds))
+print('prod-only:', sorted(ds-vs))
+print('common count:', len(ds&vs))
+print('== prod grants ==', sorted(d.get('grant_types_supported',[])))
+print('== prod claims derdack ==', [c for c in d.get('claims_supported',[]) if 'derdack' in c])
+print('== prod build headers ==')
+"
+curl -sSI --max-time 15 https://connect.signl4.com/identity/.well-known/openid-configuration 2>/dev/null | grep -iE "x-client-ver|server:|x-aspnet" ; echo "--- dev ---" ; curl -sSI --max-time 15 https://devconnect.signl4.com/identity/.well-known/openid-configuration 2>/dev/null | grep -iE "x-client-ver|server:|x-aspnet"
+== scope diff (dev-only / prod-only / common) ==
+dev-only: []
+prod-only: []
+common count: 12
+== prod grants == ['authorization_code', 'client_credentials', 'implicit', 'password', 'refresh_token', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:ietf:params:oauth:grant-type:token-exchange', 'urn:openid:params:grant-type:ciba']
+== prod claims derdack == ['http://schemas.derdack.com/identity/claims/active', 'http://schemas.derdack.com/identity/claims/subscription_id', 'http://schemas.derdack.com/identity/claims/branch_id', 'http://schemas.derdack.com/identity/claims/is_branch_manager', 'http://schemas.derdack.com/identity/claims/is_stakeholder']
+== prod build headers ==
+server: Microsoft-HTTPAPI/2.0
+--- dev ---
+server: Microsoft-HTTPAPI/2.0
+[0m
+[0m$ [0mcurl -sS -o /tmp/opencode/dev-jwks.json -w "dev-jwks-real %{http_code}\n" "https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks" ; python3 -c "
+import json
+p=json.load(open('/tmp/opencode/prod-jwks.json'))
+d=json.load(open('/tmp/opencode/dev-jwks.json'))
+print('deep-equal:', p==d)
+if p!=d:
+    pk=[(k['kid'],k['x5t'],k.get('n','')[:40]) for k in p['keys']]
+    dk=[(k['kid'],k['x5t'],k.get('n','')[:40]) for k in d['keys']]
+    print('prod keys:',pk); print('dev keys:',dk)
+else:
+    k=p['keys'][0]
+    import hashlib
+    print('kid:',k['kid'],'x5t:',k['x5t'],'n-sha:',hashlib.sha256(k['n'].encode()).hexdigest()[:16],'x5c CN:',k['x5c'][0][:60])
+"
+dev-jwks-real 200
+deep-equal: True
+kid: 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 x5t: ke5PPOlOtRevZrJU90l-yw4x7ic n-sha: 138f432ba8c1bbaf x5c CN: MIIDNDCCAhygAwIBAgIQd2nPiwxkQjSr9WopSTtKgzANBgkqhkiG9w0BAQsF
+[0m
+[0m# [0mTodos
+[✓] STEP 1: DELTA — compare inventory+knowledge against current surface
+[•] STEP 2: PRIORITIZE — score top assets 0-10 on axes
+[ ] STEP 3: HYPOTHESES — top 3 assets, max 1 each
+[ ] STEP 4: SELF-CRITIQUE — drop parked/survivors
+[ ] STEP 5: NEXT ACTION — concrete probe
+[ ] STEP 6: LEARN — accepted/rejected lessons
+[ ] STEP 7: RISK — program risk score
+[0m
+## STEP 1 — DELTA
+- [NEW] devconnect OIDC `scopes_supported` = 12, FULL prod-parity scope set including `mobile_api`, `reseller_portal`, `public_api_ea_manage`, `public_api_ea_alerting` (Enterprise Alert + reseller families) — shared signing key covers EA + reseller trust domain, not just SIGNL4 account_portal/public_api
+- [NEW] devconnect claims include `schemas.derdack.com/identity/claims/{active,subscription_id,branch_id,is_branch_manager,is_stakeholder}` (identical on prod) — token-carried b2b entitlement claims on both IdPs
+- [NEW] cross-env JWKS deep-equal=True FOURTH independent cycle (kid 91EE4F3C…, n-sha 138f432ba8c1bbaf, x5t ke5PPOlOtRevZrJU90l-yw4x7ic)
+- [NEW] www.signl4.com namespace index yields 23 namespaces incl. previously-unrecorded: `otgs/installer/v1`, `gdl/v1`, `duplicate-post/v1`, `objectcache/v1`(403), `wp-abilities/v1`, `divi/v1`, `wp-site-designer/v1`, `coblocks`
+- [NEW] `/wp-json/otgs/installer/v1/push/fetch-subscription` → 200 `{"message":"OK"}` UNAUTHENTICATED; documented in OTGS Installer as a route historically registered with missing `permission_callback` (Google Site Kit #1908) — subscription/site-key fetch handler publicly callable
+- [NEW] `/wp-json/wp-abilities/v1/abilities` + `/categories` → 401 rest_forbidden (gated); `/duplicate-post/v1/original/1` → rest_no_route 404
+- [CHANGED] `?url=` param on fetch-subscription toggles 403 (body still `{"message":"OK"}`) — param-gated or WAF-filtered; bare GET stays 200
+
+## STEP 2 — PRIORITIZE
+- [PRIO] devconnect+devaccount staging estate,9.35,attack_surface=9 business_value=10 tech_exposure=10 gate_ease=8 cloud_surface=10 freshness=9
+- [PRIO] www.signl4.com,7.3,attack_surface=7 business_value=7 tech_exposure=8 gate_ease=6 cloud_surface=8 freshness=9
+- [PRIO] api.signl4.com,6.9,attack_surface=6 business_value=8 tech_exposure=7 gate_ease=5 cloud_surface=9 freshness=7
+
+## STEP 3 — HYPOTHESES
+[HYP] dtg devconnect+devaccount staging trust domain = prod trust domain (key, client, FULL scope set incl Enterprise Alert + reseller + mobile)
+class: AUTH
+asset: devconnect.signl4.com/identity + devaccount.signl4.com/manage vs connect.signl4.com/identity + account.signl4.com/manage
+confidence: 85
+reasoning: JWKS deep-equal=True 4th cycle (kid/n/x5t/x5c identical); scopes_supported 12/12 identical incl public_api_ea_manage/alerting, reseller_portal, mobile_api; derdack internal claims (subscription_id, branch_id, is_branch_manager, is_stakeholder) identical; grants 8/8 identical; staging is different build (ID_NET10_0 8.19.2.0 vs prod ID_NET8_0 7.7.3.0) = shared key material, not snapshot; staging direct IP, no WAF
+evidence_needed: staging-minted JWT whose RS256 sig verifies on prod api/connect — needs staging client secret (HUMAN)
+verify_steps: OIDC+JWKS both envs (done, diff=false x4); scopes/claims/grants compare (done, full parity); account/manage both envs (done, same client_id+scopes); POST /identity/connect/token with legit staging creds (HUMAN)
+impact: staging compromise ⇒ tokens with account_portal+public_api_read/write/prov+public_api_ea_manage/alerting+reseller_portal accepted by PROD — ATO chain across SIGNL4 AND Enterprise Alert customer alert data + reseller portal; severity MED-HIGH→HIGH (scope breadth widened)
+testability: AUTH_HELPED
+
+[HYP] www.signl4.com OTGS Installer fetch-subscription unauthenticated handler → subscription/site-key disclosure or outbound-fetch SSRF
+class: SSRF
+asset: www.signl4.com/wp-json/otgs/installer/v1/push/fetch-subscription
+confidence: 50
+reasoning: bare GET → 200 {"message":"OK"} with no auth; this exact route is in the public "missing permission_callback" bug family (OTGS Installer / WPML vendor plugin); handler semantically fetches subscription/repo data server-side; `?url=` alters response class to 403 but body unchanged — handler behavior param-dependent
+evidence_needed: param schema (repository_id/site_key per plugin source) + POST producing fetch artifact or site-key echo — needs source review (RAG) then HUMAN OAST/POST; not provable with GET-only
+verify_steps: GET bare (200, done); RAG the OTGS installer source for this route's register_rest_route args; POST {repository_id, site_key?...} to benign OAST endpoint (HUMAN); never 169.254.169.254 pre-auth
+impact: site-key/subscription disclosure for the domain's WPML licensing or outbound fetch (SSRF to internal WPaaS); severity LOW-MED (gate semantics unproven)
+testability: AUTH_HELPED (unauth 200 proven; exploit needs param schema + handler behavior)
+
+[HYP] api.signl4.com token validation shares the same JWKS trust anchor as staging
+class: AUTH
+asset: api.signl4.com/api/v2
+confidence: 40
+reasoning: single shared RS256 key across prod IdP+staging implies single validation boundary; no passive signal exists for which JWKS api trusts; additive proof for #1
+evidence_needed: Bearer token accepted/rejected on /api/v2/teams (HUMAN)
+verify_steps: GET /api/v2/teams with staging-signed Bearer (HUMAN)
+impact: confirms one trust anchor across prod+staging; same severity family as #1
+testability: HUMAN_ONLY
+
+## STEP 4 — SELF-CRITIQUE
+- [PARKED] AUTH @ www.signl4.com WPML ate/proxy + external-request SSRF: unchanged 45, POST-gated, needs OAST — HUMAN
+- [PARKED] AUTH @ www.signl4.com wp-abilities (abilities/categories 401) + duplicate-post/original/{id} (404 GET): gated/param-locked, no data
+- [PARKED] MISCONFIG @ api.signl4.com read sweep: closed, zero unauth read surface
+- [PARKED] OTHER @ s4dev1-8.enterprisealert.com: inert dead-backend fleet
+- [FINAL] survivors: 1. [85] AUTH devconnect+devaccount ↔ prod key/client/scope/claims reuse (CONFIRMED x4 cycles, scope breadth now covers EA+reseller) 2. [50] SSRF www.signl4.com OTGS fetch-subscription (unauth 200 proven; exploit needs param schema → RAG + HUMAN) 3. [40] AUTH api shared trust anchor (HUMAN, additive)
+
+## STEP 5 — NEXT ACTION
+[NEXT] RAG: pull OTGS Installer plugin source (wordpress.org OTGS Installer / WPML vendor) for `register_rest_route("otgs/installer/v1/push/fetch-subscription", ...)` registration args + handler body to define exact param schema and permission_callback status — converts the confirmed unauth 200 on www.signl4.com into an exact POST test for HUMAN validation (benign OAST target; never 169.254.169.254 pre-auth). Report draft for the [85] cross-env finding stays queued at bugs.olivermaicher.eu.
+
+## STEP 6 — LEARNING
+- [LEARN] ACCEPTED AUTH @ devconnect.signl4.com: scopes_supported/claims_supported/grant_types FULLY idempotent with prod (12/12 scopes incl public_api_ea_manage/alerting, reseller_portal, mobile_api; derdack subscription_id/branch_id claims; 8/8 grants) — shared trust domain spans SIGNL4 + Enterprise Alert + reseller, re-verified deep-equal 4th cycle
+- [LEARN] ACCEPTED SSRF @ www.signl4.com: `/otgs/installer/v1/push/fetch-subscription` returns 200 {"message":"OK"} unauthenticated — matches OTGS Installer's documented "missing permission_callback" route family; handler semantics unknown until plugin source reviewed
+- [LEARN] ACCEPTED AUTH @ www.signl4.com: wp-abilities/v1 (abilities, categories) → 401 rest_forbidden; objectcache/v1 → 403 namespace root; duplicate-post/v1/original/{id} → 404 — all gated
+- [LEARN] ACCEPTED MISCONFIG @ www.signl4.com: OIDC discovery + WP route maps stable; no new unauth read surface beyond OTGS endpoint
+- [LEARN] REJECTED AUTH @ www.signl4.com: `/otgs/...fetch-subscription?url=` 403-with-OK-body is ambiguous, not an exploitable signature without handler source
+
+## STEP 7 — RISK
+[RISK] derdack: 47 (moderate). Confirmed finding strengthened this cycle: prod SIGNL4/EA identity estate (IdP + account + reseller + mobile scopes, Derdack entitlement claims, OAuth client) is trusted byte-identical-by-key on a public un-WAF'd staging IdP on a different software train — 4th independent deep-equal. Exploit remains gated on staging credential compromise (keeps below HIGH). New minor surface: unauthenticated OTGS Installer fetch-subscription on www.signl4.com (immature, needs source+OAST). All other assets gated or inert. Confidence-weighted exposure moderate; top report = cross-env key/client/scope reuse.

@@ -1,197 +1,30 @@
-## 2026-09-05 12:18:46 UTC [target] (model bigpickle)
-[PRIO] signl4.derdack.com,8,7,6,5,6,7
-[PRIO] dev.derdack.com,6,5,8,7,4,8
-[PRIO] signals.derdack.com,5,6,4,5,5,6
-[HYP] SIGNL4 API authentication bypass
-class: AUTH
-asset: signl4.derdack.com
-confidence: 30
-reasoning: SIGNL4 is a SaaS platform with mobile alerting; likely exposes API with OAuth/JWT; auth endpoints common target
-evidence_needed: API documentation, OAuth endpoints, JWT tokens
-verify_steps: GET https://signl4.derdack.com/api/v1/health OR /api/ OR /docs OR /swagger; HEAD https://signl4.derdack.com/.well-known/openid-configuration
-impact: Full account takeover, access to customer alerting data, severity CRITICAL
-testability: AUTH_HELPED
-[HYP] Dev server exposed with debug endpoints
-class: MISCONFIG
-asset: dev.derdack.com
-confidence: 25
-reasoning: Development subdomain often contains staging/test environments with weaker security; debug endpoints may expose internal APIs
-evidence_needed: HTTP status codes, response headers, tech stack identification
-verify_steps: GET https://dev.derdack.com/; OPTIONS https://dev.derdack.com/; GET https://dev.derdack.com/api/ OR /debug OR /test
-impact: Access to internal APIs, test credentials, staging data; severity HIGH
-testability: PASSIVE
-[HYP] SIGNL4 subdomain takeover candidate
-class: MISCONFIG
-asset: signals.derdack.com
-confidence: 20
-reasoning: "signals" subdomain may point to external service (SNS, third-party) but not properly configured; subdomain takeover common on cloud providers
-evidence_needed: DNS CNAME records, HTTP response, cloud provider identification
-verify_steps: dig signals.derdack.com CNAME; GET https://signals.derdack.com/; check if points to AWS/GCP/Azure with dangling CNAME
-impact: Takeover of subdomain for phishing/cookie theft; severity MEDIUM
-testability: PASSIVE
-[PARKED] SIGNL4 API authentication bypass: confidence 30 < 40; no live probing done yet; need to confirm API endpoints exist
-[PARKED] Dev server exposed: confidence 25 < 40; no HTTP status/tech confirmed; speculative
-[PARKED] SIGNL4 subdomain takeover: confidence 20 < 40; no DNS/HTTP evidence; pure speculation
-[FINAL] No hypotheses meet confidence threshold. All require passive probing to validate.
-[NEXT] PROBE: Passive HTTP probing of all 9 inventory hosts to confirm live status, identify technologies, and discover API endpoints. Start with signl4.derdack.com (highest business value) → dev.derdack.com (highest tech exposure) → signals.derdack.com (subdomain takeover check). Exact requests:
-[LEARN] ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
-[LEARN] REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
-[RISK] derdack: 35 (moderate risk). Limited attack surface confirmed; most hosts unresolved. Primary target (SIGNL4) is SaaS with likely API auth; dev/staging subdomains may expose internal tools. Program scope is broad ("all company-owned infrastructure") but discovery is early. Recommend passive probing before any depth testing.
-[NEW] nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
-[CHANGED] Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
-[PRIO] signl4.derdack.com,8,9,8,5,7,6
-[PRIO] dev.derdack.com,7,6,8,6,5,5
-[PRIO] signals.derdack.com,5,5,4,7,6,4
-[HYP] SIGNL4 OIDC/JWKS discovery and token endpoint enumeration
-class: AUTH
-asset: signl4.derdack.com
-confidence: 35
-reasoning: SaaS platform with mobile alerting likely uses OAuth2/OIDC for API auth; OIDC discovery endpoint reveals JWKS URI, token endpoint, supported flows; JWKS may expose alg/kid for JWT confusion testing
-evidence_needed: OIDC discovery response (200 vs 404), JWKS URI response, token endpoint existence
-verify_steps: GET https://signl4.derdack.com/.well-known/openid-configuration; GET https://signl4.derdack.com/.well-known/jwks.json; GET https://signl4.derdack.com/oauth/token (HEAD)
-impact: Reveals auth architecture, JWT signing keys/algorithms, enables targeted alg confusion or token forgery; severity HIGH
-testability: PASSIVE
-[HYP] Dev server Spring Boot actuator and Swagger exposure
-class: MISCONFIG
-asset: dev.derdack.com
-confidence: 30
-reasoning: Dev subdomain likely runs Spring Boot (enterprise Java SaaS pattern); actuator endpoints expose env/heapdump/configprops including secrets; swagger-ui exposes full API surface
-evidence_needed: HTTP 200 on actuator or swagger paths, response content-type, specific actuator beans
-evidence_needed: a staging-minted JWT (any grant) whose signature verifies against prod JWKS / is accepted by api.signl4.com; requires a staging client secret (compromise/leak scenario)
-verify_steps: GET https://devconnect.signl4.com/identity/.well-known/openid-configuration (200, done); GET .../jwks (done); GET https://connect.signl4.com/identity/.well-known/openid-configuration/jwks (done, diff=false); GET https://account.signl4.com/manage (302 to same client_id 692A0A56-... on prod IdP, done); POST /identity/connect/token only with legitimately obtained staging creds (HUMAN)
-impact: compromise of publicly-reachable staging IdP or its client secrets ⇒ forge identity/access tokens carrying prod API scopes (public_api_read/write/prov, account_portal) trusted by production SIGNL4 — full ATO chain; severity MED-HIGH
-testability: PASSIVE (key-reuse+client-reuse verified; token mint requires creds → AUTH_HELPED)
-[HYP] www.signl4.com WPML ATE proxy / external-request unauthorized SSRF
-class: SSRF
-asset: www.signl4.com/wp-json/wpml/ate/v1/ate/proxy (+ /wpml/v1/wpml-ph-make-external-request)
-confidence: 45
-reasoning: both routes registered in public schema; /wpml/ate/v1/ate/proxy GET→401 (route exists, auth callback invoked); /wpml/v1/wpml-ph-make-external-request GET→rest_no_route "matching URL and request method" = route registered for non-GET method (POST), consistent with WPML ATE transports that fetch remote URLs; wpaas/v1/diagnostics same rest_no_route pattern on GET
-evidence_needed: POST to external-request/proxy with URL param producing a fetch artifact (2xx echo or OAST hit) — impossible to prove with GET-only probes
-verify_steps: GET /wpml/ate/v1/ate/proxy?url=https://internal (401 gate confirmed, done); HEAD /wpml/v1/wpml-ph-make-external-request (method check, no mutation); then POST body {"url": OASt} via HUMAN; never point at 169.254.169.254 before auth confirmed (program: pass on customer-data exposure)
-impact: SSRF to 169.254.169.254 cloud metadata or internal WPaaS services if POST is unauth; severity MED (LOW-MED while gate unproven)
-testability: HUMAN_ONLY (POST + OAST required; GET proves authorization exists, not absence)
-[PARKED] OATH @ account.signl4.com redirect_uri/state confusion: PKCE+state+nonce+form_post implemented on both envs; shared client_id but redirect_uris are env-scoped; no demonstrated flaw
-[PARKED] MISCONFIG @ api.signl4.com read-route sweep: registered-route population characterized (alerts POST-only, teams Bearer-401); remaining guesses low-yield
-[PARKED] AUTH @ www.signl4.com user/media enumeration: public blog/marketing only, users/1 no email/PII — not reportable
-[FINAL] survivors ranked: 1. [75] AUTH devconnect↔prod signing-key/client reuse (CONFIRMED data, exploit needs staging creds) 2. [45] SSRF www.signl4.com WPML external-request/proxy (POST-gated, needs OAST)
-[NEXT] PROBE: GET https://www.signl4.com/wp-json/two-factor/user-info (only untested registered REST read left on signl4.com estate; 200 = 2FA-status/user-meta disclosure on the two-factor plugin, 401/403 = gate); then draft the CONFIRMED devconnect↔prod signing-key/client_id reuse finding for bugs.olivermaicher.eu in the next cycle.
-[LEARN] ACCEPTED AUTH @ devconnect.signl4.com: staging IdentityServer live + shares prod RS256 signing key (kid/n/x5t/x5c identical) and account-portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with prod — cross-env identity isolation failure confirmed by direct JWKS + authorize-redirect comparison
-[LEARN] ACCEPTED MISCONFIG @ labconnect/labaccount.signl4.com: Azure AppGW/v2 502 on all probed paths (root, /identity/, /connect/authorize) — unmapped backend, estate inert
-[LEARN] ACCEPTED MISCONFIG @ api.signl4.com: /api/v2 = alerts(405)+teams(401 Bearer) only; no unauth read surface; root 301 → account.signl4.com/manage
-[LEARN] REJECTED AUTH @ www.signl4.com: WP users/media REST is public-blog-only; users/1 no email/PII — same low value as derdack.com
-[LEARN] ACCEPTED MISCONFIG @ www.signl4.com: WPML ate/proxy 401, wpaas activity-logs 401, divitorque settings 401 (gated); wpml-ph-make-external-request + wpaas diagnostics rest_no_route on GET = registered for POST/other methods only
-[RISK] derdack: 45 (moderate). Two discovered exposure vectors: (1) production SIGNL4 IdP shares its token-signing key + OAuth client with a publicly reachable, un-WAF'd staging IdentityServer on a different software train — concrete crypto/client isolation failure, report-worthy, exploit still bound by staging credential compromise; (2) WPML external-request/proxy SSRF candidate POST-gated and unproven. api.signl4.com fully gated, lab estate dead, WP admins gated. Confidence-weighted exposure moderate; top confirmed finding = cross-env key reuse.
-[NEW] devconnect.signl4.com staging IdentityServer LIVE & directly reachable (OIDC discovery 200, no WAF headers, Microsoft-HTTPAPI/2.0)
-[NEW] devconnect.signl4.com and prod connect.signl4.com share byte-identical RS256 signing key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) and account-portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6
-[NEW] www.signl4.com = Network Solutions WPaaS (160.153.0.44) with WPML ate/proxy, wpaas, divitorque, two-factor plugins exposed in REST schema
-[NEW] api.signl4.com /api/v2 population = alerts(405 POST-only) + teams(401 Bearer) only; zero unauth read surface
-[NEW] labconnect/labaccount.signl4.com → uniform 502 Azure AppGW/v2 (backend unmapped, estate inert)
-[PRIO] devconnect.signl4.com,9.75,attack_surface=9 business_value=10 tech_exposure=10 gate_ease=10 cloud_surface=10 freshness=10
-[PRIO] api.signl4.com,7.0,attack_surface=6 business_value=8 tech_exposure=7 gate_ease=5 cloud_surface=9 freshness=8
-[PRIO] www.signl4.com,7.2,attack_surface=7 business_value=7 tech_exposure=8 gate_ease=6 cloud_surface=8 freshness=8
-[HYP] devconnect staging IdP shares prod token-signing key + OAuth client → cross-env token forgery
-class: AUTH
-asset: devconnect.signl4.com/identity vs connect.signl4.com/identity
-confidence: 75
-reasoning: devconnect OIDC discovery 200 issuer=devconnect.signl4.com/identity; JWKS kid/n/x5t/x5c programmatically equal to prod; both grant_types include password, client_credentials, device_code, token-exchange; staging runs DIFFERENT IdentityServer build (ID_NET10_0 8.19.2.0) than prod (ID_NET8_0 7.7.3.0) — separate software train; account portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6 identical on both; staging has no WAF fingerprint
-evidence_needed: a staging-minted JWT (any grant) whose signature verifies against prod JWKS / is accepted by api.signl4.com; requires a staging client secret (compromise/leak scenario)
-verify_steps: GET https://devconnect.signl4.com/identity/.well-known/openid-configuration (200, done); GET .../jwks (done); GET https://connect.signl4.com/identity/.well-known/openid-configuration/jwks (done, diff=false); GET https://account.signl4.com/manage (302 to same client_id 692A0A56-... on prod IdP, done); POST /identity/connect/token only with legitimately obtained staging creds (HUMAN)
-impact: compromise of publicly-reachable staging IdP or its client secrets ⇒ forge identity/access tokens carrying prod API scopes (public_api_read/write/prov, account_portal) trusted by production SIGNL4 — full ATO chain; severity MED-HIGH
-testability: PASSIVE (key-reuse+client-reuse verified; token mint requires creds → AUTH_HELPED)
-[HYP] api.signl4.com /api/ namespace has additional GET-accessible routes beyond alert-ingestion POST
-class: MISCONFIG
-asset: api.signl4.com/api/v2
-confidence: 45
-reasoning: /api/v2/alerts answered 405 Allow:POST (route registered) while equivalents 404 — /api/ base is live; a read/status sibling or unauth webhook-subscription GET in the same namespace would leak config; team-secret auth on POST means response-code diff between valid/invalid secret is a passive oracle
-evidence_needed: any /api/* path returning 200/401/403 (vs 404) describing objects, or error body disclosing schema/keys
-verify_steps: GET https://api.signl4.com/api/v2 ; GET https://api.signl4.com/api/v2/teams ; GET https://api.signl4.com/api/v2/ping ; GET https://api.signl4.com/api/ ; compare 405/401 vs 404 classes
-impact: unauthorized read or config disclosure on SIGNL4 public API; severity MED
-testability: PASSIVE
-[HYP] www.signl4.com WPML ATE proxy / external-request unauthorized SSRF
-class: SSRF
-asset: www.signl4.com/wp-json/wpml/ate/v1/ate/proxy (+ /wpml/v1/wpml-ph-make-external-request)
-confidence: 45
-reasoning: both routes registered in public schema; /wpml/ate/v1/ate/proxy GET→401 (route exists, auth callback invoked); /wpml/v1/wpml-ph-make-external-request GET→rest_no_route "matching URL and request method" = route registered for non-GET method (POST), consistent with WPML ATE transports that fetch remote URLs; wpaas/v1/diagnostics same rest_no_route pattern on GET
-evidence_needed: POST to external-request/proxy with URL param producing a fetch artifact (2xx echo or OAST hit) — impossible to prove with GET-only probes
-verify_steps: GET /wpml/ate/v1/ate/proxy?url=https://internal (401 gate confirmed, done); HEAD /wpml/v1/wpml-ph-make-external-request (method check, no mutation); then POST body {"url": OAST} via HUMAN; never point at 169.254.169.254 before auth confirmed (program: pass on customer-data exposure)
-impact: SSRF to 169.254.169.254 cloud metadata or internal WPaaS services if POST is unauth; severity MED (LOW-MED while gate unproven)
-testability: HUMAN_ONLY (POST + OAST required; GET proves authorization exists, not absence)
-[PARKED] OATH @ account.signl4.com redirect_uri/state confusion: PKCE+state+nonce+form_post implemented on both envs; shared client_id but redirect_uris are env-scoped; no demonstrated flaw
-[PARKED] MISCONFIG @ api.signl4.com read-route sweep: registered-route population characterized (alerts POST-only, teams Bearer-401); remaining guesses low-yield
-[PARKED] AUTH @ www.signl4.com user/media enumeration: public blog/marketing only, users/1 no email/PII — not reportable
-[FINAL] survivors ranked: 1. [75] AUTH devconnect↔prod signing-key/client reuse (CONFIRMED data, exploit needs staging creds) 2. [45] SSRF www.signl4.com WPML external-request/proxy (POST-gated, needs OAST) 3. [45] MISCONFIG api.signl4.com additional GET routes (low yield based on sweep)
-[NEXT] PROBE: GET https://www.signl4.com/wp-json/two-factor/user-info (only untested registered REST read left on signl4.com estate; 200 = 2FA-status/user-meta disclosure on the two-factor plugin, 401/403 = gate); then draft the CONFIRMED devconnect↔prod signing-key/client_id reuse finding for bugs.olivermaicher.eu in the next cycle.
-[LEARN] ACCEPTED AUTH @ devconnect.signl4.com: staging IdentityServer live + shares prod RS256 signing key (kid/n/x5t/x5c identical) and account-portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with prod — cross-env identity isolation failure confirmed by direct JWKS + authorize-redirect comparison
-[LEARN] ACCEPTED MISCONFIG @ labconnect/labaccount.signl4.com: Azure AppGW/v2 502 on all probed paths (root, /identity/, /connect/authorize) — unmapped backend, estate inert
-[LEARN] ACCEPTED MISCONFIG @ api.signl4.com: /api/v2 = alerts(405)+teams(401 Bearer) only; no unauth read surface; root 301 → account.signl4.com/manage
-[LEARN] REJECTED AUTH @ www.signl4.com: WP users/media REST is public-blog-only; users/1 no email/PII — same low value as derdack.com
-[LEARN] ACCEPTED MISCONFIG @ www.signl4.com: WPML ate/proxy 401, wpaas activity-logs 401, divitorque settings 401 (gated); wpml-ph-make-external-request + wpaas diagnostics rest_no_route on GET = registered for POST/other methods only
-[LEARN] ACCEPTED AUTH @ devconnect.signl4.com: SIGNL4 dev/lab OIDC+account staging estate resolves on dedicated IPs (dev 108.143.123.104, lab 13.93.49.201); CSP explicitly references dev/lab Connect+Account hosts — new attack surface
-[LEARN] ACCEPTED MISCONFIG @ api.signl4.com: /api/v2/alerts returns 405 Allow:POST confirming live API namespace; base routes unprobed for GET
-[LEARN] ACCEPTED AUTH @ www.signl4.com: CF-fronted WordPress confirmed via xmlrpc pingback link; same fleet family as derdack.com
-[LEARN] REJECTED IDOR @ www.derdack.com revisions/autosaves: all protected endpoints return 401; capability check intact
-[LEARN] REJECTED IDOR @ www.derdack.com users/{id} PII: collection exposes no email; single endpoint unlikely to differ
-[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews; passive probe cost near-zero
-[LEARN] ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
-[LEARN] ACCEPTED MISCONFIG @ www.derdack.com: Missing HSTS, CSP, X-Frame-Options on primary domain
-[LEARN] ACCEPTED AUTH @ www.derdack.com: WP REST API auth gates intact on settings/users/me/oembed-proxy/drafts/CF7/Yoast admin (401/403/400)
-[RISK] derdack: 45 (moderate). Two discovered exposure vectors: (1) production SIGNL4 IdP shares its token-signing key + OAuth client with a publicly reachable, un-WAF'd staging IdentityServer on a different software train — concrete crypto/client isolation failure, report-worthy, exploit still bound by staging credential compromise; (2) WPML external-request/proxy SSRF candidate POST-gated and unproven. api.signl4.com fully gated, lab estate dead, WP admins gated. Confidence-weighted exposure moderate; top confirmed finding = cross-env key reuse.
-[NEW] devaccount.signl4.com/manage LIVE (Microsoft-HTTPAPI/2.0) → 302 to devconnect authorize with SAME client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + identical scopes (openid profile account_portal public_api_read/write/prov offline_access) + PKCE S256 + nonce + form_post, redirect_uri env-scoped — client+scope reuse spans OIDC AND account estate, not just connect host
-[NEW] devconnect OIDC discovery: grant_types = authorization_code, client_credentials, refresh_token, implicit, password, device_code, CIBA, token-exchange (prod-parity); algs=['RS256'] ONLY — no alg-confusion surface; deviceauthorization GET→400 (route registered, live)
-[NEW] s4dev1..s4dev8.enterprisealert.com ALL resolve 4.207.244.99 (Azure): 404 root, 504 on /identity, /webhook, /api, /api/v2/alerts, 404 on /swagger — CSP-referenced staging alert fleet = live front + dead/unmapped backend (same inert class as labconnect/labaccount)
-[NEW] api.signl4.com registered-route population EXTENDED: /api/v2/webhooks(401 Bearer), /api/v2/subscriptions(401 Bearer), /api/v2/csp/report(405 Allow:POST sink); base /api/v2, ping, version, status, /api/v1, swagger, openapi.json, docs, .well-known/* → all 404
-[NEW] www.signl4.com/wp-json/two-factor/user-info → 401 rest_forbidden (gate active); two-factor/user/1 + wpaas/v1/domain + wpaas/v1/siteinfo → 404
-[CHANGED] api.signl4.com read-route hypothesis CLOSED: extended sweep confirms every registered route Bearer-gated or POST-sink; zero unauth read surface
-[CHANGED] cross-env JWKS key-reuse RE-VERIFIED programmatic deep-equal=True this cycle (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n-sha 138f432b…, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com) — third independent fetch cycle
-[PRIO] devconnect+devaccount staging identity estate,9.25,attack_surface=9 business_value=10 tech_exposure=10 gate_ease=8 cloud_surface=10 freshness=8
-[PRIO] api.signl4.com,6.9,attack_surface=6 business_value=8 tech_exposure=7 gate_ease=5 cloud_surface=9 freshness=7
-[PRIO] s4dev1-8.enterprisealert.com,6.35,attack_surface=5 business_value=6 tech_exposure=6 gate_ease=6 cloud_surface=9 freshness=9
-[HYP] devconnect+devaccount staging IdP+Account estate shares prod token-signing key + OAuth client → cross-env token forgery
+## 2026-09-05 15:21:43 UTC [target] (model bigpickle)
+[HYP] dtg devconnect+devaccount staging trust domain = prod trust domain (key, client, FULL scope set incl Enterprise Alert + reseller + mobile)
 class: AUTH
 asset: devconnect.signl4.com/identity + devaccount.signl4.com/manage vs connect.signl4.com/identity + account.signl4.com/manage
 confidence: 85
-reasoning: JWKS deep-equal=True across 3 fetch cycles (kid/n/x5t/x5c identical, same x5c CN=*.signl4.com); authorize redirects on BOTH account portals use identical client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + identical scope list incl public_api_read/write/prov; grant request types identical incl password/client_credentials/device_code/token-exchange/CIBA; staging software train DIFFERENT (ID_NET10_0 8.19.2.0 vs prod ID_NET8_0 7.7.3.0) proving shared key material, not infra snapshot; staging hosts no WAF headers (direct 108.143.123.104)
-evidence_needed: staging-minted JWT (any grant) whose RS256 signature verifies against prod API validation — requires staging client secret (compromise/leak scenario) = HUMAN
-verify_steps: GET devconnect/connect OIDC+JWKS (done, diff=false); GET devaccount/account manage (done, same client_id/scope, env-scoped redirect_uri); POST /identity/connect/token w/ legit staging creds (HUMAN only)
-impact: staging secret/key compromise ⇒ mint tokens w/ account_portal+public_api_read/write/prov scopes accepted by PROD api.signl4.com + account portal — cross-env ATO chain to customer alert data; severity MED-HIGH
-testability: AUTH_HELPED (isolation failure proven passively; minting needs creds)
-[HYP] api.signl4.com /api/v2 token validation reuses shared issuer key from devconnect — unauth-cross-env probe of key rotation
-class: AUTH
-asset: api.signl4.com/api/v2 vs devconnect.signl4.com/identity
-confidence: 40
-reasoning: prod API and staging IdP share the same RS256 key; if api.signl4.com validates access tokens with that JWKS, a token signed by staging key (kid 91EE4F3C…) passes; key rotation on one env without the other would strand validation — no evidence yet of which JWKS api validates against, only that the key is common
-evidence_needed: live API token (any env) to introspect issuer/kid against api response — HUMAN
-verify_steps: GET https://api.signl4.com/api/v2/teams w/ Bearer staging token (HUMAN); otherwise no passive signal exists
-impact: confirms identical validation boundary = single trust anchor across prod/staging; severity MED-HIGH (same finding as #1, additive evidence)
-testability: HUMAN_ONLY
-[PARKED] OTHER @ s4dev1-8.enterprisealert.com: staging alert fleet CSP-referenced but 404/504-only (dead backends) — same inert class as labconnect/labaccount, not reportable until backend answers
-[PARKED] MISCONFIG @ api.signl4.com additional read routes: sweep closed (webhooks/subscriptions 401, csp/report POST sink, everything else 404) — zero unauth read surface
-[PARKED] AUTH @ www.signl4.com two-factor user-info: 401 rest_forbidden gate active — no disclosure
-[FINAL] survivors ranked: 1. [85] AUTH devconnect+devaccount ↔ prod signing-key/client/scope reuse (CONFIRMED data, re-verified 3 cycles) 2. [45] SSRF www.signl4.com WPML external-request/proxy (POST-gated, needs OAST) 3. [40] AUTH api token-validation shared-key (extension of #1, HUMAN to prove)
-[NEXT] DRAFT(REPORT): write confirmed cross-env signing-key+OAuth-client+scope reuse finding (see FINDING-DRAFT below) for bugs.olivermaicher.eu; remaining PASSIVE probes exhausted — next surfaces require HUMAN (staging token mint, WPML SSRF OAST).
-[LEARN] ACCEPTED AUTH @ devaccount.signl4.com: staging account portal live → devconnect authorize w/ SAME client_id 692A0A56- + scopes (account_portal, public_api_read/write/prov, offline_access), PKCE S256+nonce+form_post, env-scoped redirect_uri — client/scope reuse spans OIDC and Account estate
-[LEARN] ACCEPTED MISCONFIG @ api.signl4.com: registered route population = alerts(405 POST), teams/webhooks/subscriptions(401 Bearer), csp/report(405 POST sink); all other paths incl /api/v1, swagger, openapi.json 404 — zero unauth read surface
-[LEARN] ACCEPTED OTHER @ s4dev1-8.enterprisealert.com: CSP-referenced staging alert fleet resolves 4.207.244.99, 404 root / 504 on identity+webhook+api paths (live front, dead backend) — same inert class as lab estate
-[LEARN] ACCEPTED AUTH @ www.signl4.com: two-factor/user-info 401 rest_forbidden — gated, no 2FA-status disclosure
-[LEARN] REJECTED MISCONFIG @ devconnect.signl4.com: algs=['RS256'] only + no JWT alg-confusion surface on staging IdP
-[RISK] derdack: 45 (moderate). Top confirmed finding unchanged and re-verified 3×: prod SIGNL4 IdP + account portal share signing key, client_id, and scope set with a publicly reachable, un-WAF'd staging estate on a different software train — concrete identity-isolation failure, report-worthy; exploit still bound by staging credential compromise. api.signl4.com fully gated (sweep closed), lab + s4dev fleets dead-backend, WP estates gated. Confidence-weighted exposure moderate; no new high-value unauth surface found this cycle.
-[HYP] devconnect+devaccount staging IdP+Account share prod signing key + OAuth client → cross-env token forgery
-class: AUTH
-asset: devconnect.signl4.com/identity + devaccount.signl4.com/manage vs prod connect/account
-confidence: 85
-reasoning: JWKS deep-equal=True x3 cycles (kid, n, x5t, x5c identical); both account portals authorize with identical client_id 692A0A56-… + identical scopes; staging runs DIFFERENT build (ID_NET10_0 8.19.2.0 vs prod ID_NET8_0 7.7.3.0) = shared key material, not snapshot; staging un-WAF'd direct IP
-evidence_needed: staging-minted JWT accepted by prod api — needs staging client secret (HUMAN)
-verify_steps: OIDC/JWKS both envs (diff=false, done); account/manage both envs (same client/scope, done); POST /identity/connect/token w/ legit staging creds (HUMAN)
-impact: staging compromise ⇒ prod-valid tokens (account_portal+public_api_read/write/prov) → ATO to customer alert data; sever MED-HIGH
+reasoning: JWKS deep-equal=True 4th cycle (kid/n/x5t/x5c identical); scopes_supported 12/12 identical incl public_api_ea_manage/alerting, reseller_portal, mobile_api; derdack internal claims (subscription_id, branch_id, is_branch_manager, is_stakeholder) identical; grants 8/8 identical; staging is different build (ID_NET10_0 8.19.2.0 vs prod ID_NET8_0 7.7.3.0) = shared key material, not snapshot; staging direct IP, no WAF
+evidence_needed: staging-minted JWT whose RS256 sig verifies on prod api/connect — needs staging client secret (HUMAN)
+verify_steps: OIDC+JWKS both envs (done, diff=false x4); scopes/claims/grants compare (done, full parity); account/manage both envs (done, same client_id+scopes); POST /identity/connect/token with legit staging creds (HUMAN)
+impact: staging compromise ⇒ tokens with account_portal+public_api_read/write/prov+public_api_ea_manage/alerting+reseller_portal accepted by PROD — ATO chain across SIGNL4 AND Enterprise Alert customer alert data + reseller portal; severity MED-HIGH→HIGH (scope breadth widened)
 testability: AUTH_HELPED
-[HYP] api.signl4.com token validation shares the same JWKS trust anchor across envs
+[HYP] www.signl4.com OTGS Installer fetch-subscription unauthenticated handler → subscription/site-key disclosure or outbound-fetch SSRF
+class: SSRF
+asset: www.signl4.com/wp-json/otgs/installer/v1/push/fetch-subscription
+confidence: 50
+reasoning: bare GET → 200 {"message":"OK"} with no auth; this exact route is in the public "missing permission_callback" bug family (OTGS Installer / WPML vendor plugin); handler semantically fetches subscription/repo data server-side; `?url=` alters response class to 403 but body unchanged — handler behavior param-dependent
+evidence_needed: param schema (repository_id/site_key per plugin source) + POST producing fetch artifact or site-key echo — needs source review (RAG) then HUMAN OAST/POST; not provable with GET-only
+verify_steps: GET bare (200, done); RAG the OTGS installer source for this route's register_rest_route args; POST {repository_id, site_key?...} to benign OAST endpoint (HUMAN); never 169.254.169.254 pre-auth
+impact: site-key/subscription disclosure for the domain's WPML licensing or outbound fetch (SSRF to internal WPaaS); severity LOW-MED (gate semantics unproven)
+testability: AUTH_HELPED (unauth 200 proven; exploit needs param schema + handler behavior)
+[HYP] api.signl4.com token validation shares the same JWKS trust anchor as staging
 class: AUTH
 asset: api.signl4.com/api/v2
 confidence: 40
-reasoning: shared RS256 key implies single validation boundary; no passive signal exists for which JWKS api trusts — additive to #1
-evidence_needed: any Bearer token accepted on /api/v2/teams (HUMAN)
-verify_steps: GET /api/v2/teams w/ staging-signed Bearer (HUMAN)
-impact: confirms single trust anchor; same severity family as #1
+reasoning: single shared RS256 key across prod IdP+staging implies single validation boundary; no passive signal exists for which JWKS api trusts; additive proof for #1
+evidence_needed: Bearer token accepted/rejected on /api/v2/teams (HUMAN)
+verify_steps: GET /api/v2/teams with staging-signed Bearer (HUMAN)
+impact: confirms one trust anchor across prod+staging; same severity family as #1
 testability: HUMAN_ONLY
-[NEXT] DRAFT(REPORT): submit confirmed cross-env signing-key + OAuth client/scope reuse finding (written to leads/lead-bigpickle.md [FINDING-DRAFT]) for bugs.olivermaicher.eu; passive probes exhausted — any further live work requires HUMAN (staging token mint, WPML OAST POST).
-[RISK] derdack: 45 (moderate). Confirmed finding re-verified 3×: prod SIGNL4 IdP+account share signing key, OAuth client, and prod API scopes with an un-WAF'd public staging estate on a different software train — report-worthy identity-isolation failure; exploit remains bound to staging credential compromise. api.signl4.com sweep now fully closed (all gated), lab/s4dev fleets dead-backend, WP admins gated. No new unauth high-value surface this cycle.
+[NEXT] RAG: pull OTGS Installer plugin source (wordpress.org OTGS Installer / WPML vendor) for `register_rest_route("otgs/installer/v1/push/fetch-subscription", ...)` registration args + handler body to define exact param schema and permission_callback status — converts the confirmed unauth 200 on www.signl4.com into an exact POST test for HUMAN validation (benign OAST target; never 169.254.169.254 pre-auth). Report draft for the [85] cross-env finding stays queued at bugs.olivermaicher.eu.
+[RISK] derdack: 47 (moderate). Confirmed finding strengthened this cycle: prod SIGNL4/EA identity estate (IdP + account + reseller + mobile scopes, Derdack entitlement claims, OAuth client) is trusted byte-identical-by-key on a public un-WAF'd staging IdP on a different software train — 4th independent deep-equal. Exploit remains gated on staging credential compromise (keeps below HIGH). New minor surface: unauthenticated OTGS Installer fetch-subscription on www.signl4.com (immature, needs source+OAST). All other assets gated or inert. Confidence-weighted exposure moderate; top report = cross-env key/client/scope reuse.

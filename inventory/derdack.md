@@ -165,3 +165,11 @@ www.derdack.com
 - NEW www.signl4.com/wp-json/two-factor/user-info → 401 rest_forbidden (gate active); two-factor/user/1 + wpaas/v1/domain + wpaas/v1/siteinfo → 404
 - CHANGED api.signl4.com read-route hypothesis CLOSED: extended sweep confirms every registered route Bearer-gated or POST-sink; zero unauth read surface
 - CHANGED cross-env JWKS key-reuse RE-VERIFIED programmatic deep-equal=True this cycle (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n-sha 138f432b…, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com) 
+
+## 2026-09-05 15:27:21 UTC
+- NEW devconnect.signl4.com OIDC discovery confirms `password` grant type enabled (resource owner password credentials) alongside authorization_code, client_credentials, refresh_token, implicit, device_code
+- NEW devconnect.signl4.com & connect.signl4.com JWKS byte-identical: kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, modulus `n`, x5t `ke5PPOlOtRevZrJU90l-yw4x7ic`, x5c `CN=*.signl4.com` — cross-env R
+- NEW api.signl4.com/api/v2/alerts returns 405 Allow:POST (Microsoft-HTTPAPI/2.0, HSTS, CSP, X-Frame-Options: DENY) — POST-only alert ingestion route confirmed live, zero unauth GET surface
+- NEW www.derdack.com/de/xmlrpc.php returns 405 Allow:POST with `x-ws-origin: available` + `x-ws-ratelimit-*` headers — XML-RPC POST endpoint exposed on /de/ multisite while root blocked at LB
+- CHANGED api.signl4.com read-route hypothesis CLOSED: extended sweep confirms every registered route Bearer-gated or POST-sink; zero unauth read surface
+- CHANGED Cross-env JWKS key-reuse RE-VERIFIED programmatic deep-equal=True this cycle (kid/n/x5t/x5c identical)

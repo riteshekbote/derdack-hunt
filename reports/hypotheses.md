@@ -333,3 +333,15 @@
 - LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
 - LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
 - LEARN: REJECTED OTHER @ signl4.derdack.com: permanently unreachable across 8+ probe cycles (all TCP timeout); all attack surface value = 0
+
+## RANKED HYPOTHESES 2026-09-05 15:27:21 UTC
+- [85] devconnect.signl4.com/identity: dtg devconnect+devaccount staging trust domain = prod trust domain (key, client, FULL scope set incl Enterprise Alert + reseller + mobile) (from art/lead_bigpickle.txt)
+- [65] api.signl4.com/api/v2/alerts: api.signl4.com/api/v2/alerts POST-only alert ingestion accepts unauthenticated malicious payloads via mass assignment or schema bypass (from art/lead_nemotron3.txt)
+- NEXT(hypotheses-bigpickle.txt): RAG: pull OTGS Installer plugin source (wordpress.org OTGS Installer / WPML vendor) for `register_rest_route("otgs/installer/v1/push/fetch-subscription", ...)` 
+- NEXT(hypotheses-nemotron3.txt): PROBE: POST https://api.signl4.com/api/v2/alerts Content-Type:application/json {"title":"probe","message":"test","external_id":"poc-001"} — observe status, erro
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com: OIDC discovery 200, grant_types includes password + RS256 key byte-identical to prod (kid 91EE4F3CE94EB517AF66B254F7497EC
+- LEARN: ACCEPTED MISCONFIG @ api.signl4.com/api/v2: /alerts 405 Allow:POST, /teams /webhooks /subscriptions 401 Bearer, /csp/report 405 POST sink — zero unauth read sur
+- LEARN: ACCEPTED AUTH @ www.derdack.com/de/: xmlrpc.php POST 405 Allow:POST with full method list (wp.uploadFile, metaWeblog.newMediaObject) — legacy XML-RPC exposed on
+- LEARN: REJECTED MISCONFIG @ devconnect.signl4.com: algs=['RS256'] only — no JWT alg-confusion surface on staging IdP
+- LEARN: ACCEPTED MISCONFIG @ s4dev1-8.enterprisealert.com: all resolve 4.207.244.99, 404 root / 504 on identity+webhook+api — inert staging fleet
+- LEARN: ACCEPTED AUTH @ www.signl4.com: two-factor/user-info 401 rest_forbidden — gated, no 2FA-status disclosure

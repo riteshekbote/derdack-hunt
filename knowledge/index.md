@@ -88,3 +88,8 @@
 - 2026-09-05 ACCEPTED OTHER @ s4dev1-8.enterprisealert.com: CSP-referenced staging alert fleet resolves 4.207.244.99, 404 root / 504 on identity+webhook+api paths (live front, dead backend) — same inert class as lab estate
 - 2026-09-05 ACCEPTED AUTH @ www.signl4.com: two-factor/user-info 401 rest_forbidden — gated, no 2FA-status disclosure
 - 2026-09-05 REJECTED MISCONFIG @ devconnect.signl4.com: algs=['RS256'] only + no JWT alg-confusion surface on staging IdP
+- 2026-09-05 ACCEPTED AUTH @ devconnect.signl4.com: OIDC discovery 200, grant_types includes password + RS256 key byte-identical to prod (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — cross-env identity isolation failure confirmed
+- 2026-09-05 ACCEPTED MISCONFIG @ api.signl4.com/api/v2: /alerts 405 Allow:POST, /teams /webhooks /subscriptions 401 Bearer, /csp/report 405 POST sink — zero unauth read surface, POST-only write surface
+- 2026-09-05 ACCEPTED AUTH @ www.derdack.com/de/: xmlrpc.php POST 405 Allow:POST with full method list (wp.uploadFile, metaWeblog.newMediaObject) — legacy XML-RPC exposed on multisite subsite while root blocked
+- 2026-09-05 REJECTED MISCONFIG @ devconnect.signl4.com: algs=['RS256'] only — no JWT alg-confusion surface on staging IdP
+- 2026-09-05 ACCEPTED MISCONFIG @ s4dev1-8.enterprisealert.com: all resolve 4.207.244.99, 404 root / 504 on identity+webhook+api — inert staging fleet
