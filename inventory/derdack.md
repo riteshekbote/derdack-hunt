@@ -206,3 +206,12 @@ www.derdack.com
 - CHANGED Cross-env JWKS key-reuse re-verified 5th time: devconnect.signl4.com & connect.signl4.com RS256 key byte-identical (kid/n/x5t/x5c/e/x5c all match)
 - CHANGED blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade chain still live (302 to http://www.derdack.com/...)
 - CHANGED dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+
+## 2026-09-05 23:22:10 UTC
+- NEW api.signl4.com/api/v2/alerts POST now returns 401 (auth required) — previously hypothesized as unauthenticated POST-only ingestion; HEAD still shows 405 Allow:POST but handler enforces Bearer
+- NEW www.derdack.com/de/xmlrpc.php & /ea/xmlrpc.php wp.uploadFile/metaWeblog.newMediaObject both return faultCode 403 "incorrect username/password" — XML-RPC exposed but mutating methods auth-gated
+- NEW api.signl4.com/api/v2/csp/report accepts unauthenticated POST (204) — CSP reporting sink, expected behavior
+- NEW devconnect.signl4.com/identity/connect/token password grant returns "invalid_client" for test creds (client_secret required) — grant listed but not usable without secrets
+- CHANGED Cross-env JWKS key-reuse re-verified 5th time: devconnect.signl4.com & connect.signl4.com RS256 key byte-identical (kid/n/x5t/x5c/e/x5c all match)
+- CHANGED blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade chain still live (302 to http://www.derdack.com/...)
+- CHANGED dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404

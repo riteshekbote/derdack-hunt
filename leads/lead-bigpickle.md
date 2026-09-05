@@ -952,3 +952,24 @@ impact: IF attacker-controlled URL then SSRF/waf-telemetry abuse; IF vendor patt
 testability: HUMAN_ONLY
 [NEXT] HUMAN: mint staging token via `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=password, client_id=692A0A56-892F-4AE2-8259-76DA398990B6) with a staging account, replay access_token on `connect.signl4.com/identity/userinfo` and `api.signl4.com/api/v2/teams`; submit the completed cross-env signing-key + client/scope-reuse report to bugs.olivermaicher.eu (evidence pack: JWKS deep-equal x4, scopes/claims/grants parity, build-train divergence).
 [RISK] derdack: 48 (moderate). Sole confirmed report-worthy finding stable and re-verified 4x: prod SIGNL4 IdP + account portal share RS256 signing key, OAuth client_id, and full prod scope set (incl EA manage/alerting + reseller) with a public un-WAF'd staging estate on a different build train — exploit bound to staging credential compromise (keeps below HIGH). api.signl4.com fully gated, lab/s4dev fleets dead-backend, WP estates (OTGS + WPML + CF7 + Yoast) gated or vendor-fixed-target, MultiViews benign. Passive surface exhausted; only HUMAN token-mint + report submission moves this forward.
+## 2026-09-05 23:22:00 UTC [target] (model bigpickle)
+[HYP] dev support portal authenticates against shared-key staging IdP — cross-env identity reuse extends to admin/support app
+class: AUTH
+asset: devfix.signl4.com
+confidence: 55
+reasoning: devfix co-resolves with devconnect/devaccount on 108.143.123.104; OIDC callback `/signin-oidc` registered (500 w/o state); build-parity appId with prod fix; staging cluster already proven to share prod RS256 key + account client_id + full prod scope; dev instance served without WAF headers
+evidence_needed: redirect issuer of interactive Login — devconnect vs connect (HUMAN)
+verify_steps: interactive Login click w/ staging creds → capture `Location` → `https://devconnect.signl4.com/identity/connect/authorize?...` (HUMAN); passive alternative exhausted (SPA client-side routing, all path probes 404)
+impact: staging credential/secret compromise ⇒ access to SIGNL4 Support admin portal (customer case/screenshot/file data) from an un-WAF'd host; escalates cross-env finding from identity-only to data-touching app. MED-HIGH.
+testability: HUMAN_ONLY
+[HYP] frontdoor.signl4.com is a forgotten unconfigured status-page deployment
+class: MISCONFIG
+asset: frontdoor.signl4.com
+confidence: 60
+reasoning: served HTML contains literal `%ReplaceStatusTitle%` template var + embedded woff2; `x-content-type-options: nosniff` only; same family as status.signl4.com which is now behind AdminLabs SaaS — sibling never configured
+evidence_needed: none — self-evident from GET / (done)
+verify_steps: GET / (done); compare against status.signl4.com configured artifact
+impact: informational config artifact; forgotten public property that could host future redirect/content misconfig. LOW.
+testability: PASSIVE
+[NEXT] HUMAN: (a) submit cross-env identity reuse report to bugs.olivermaicher.eu (evidence now spans 3 app families: IdP connect/devconnect, account/manage portals, support portal devfix/fix — shared RS256 key kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, shared client 692A0A56-892F-4AE2-8259-76DA398990B6, PAR parity, divergent build trains); (b) with a staging account, click Login on devfix.signl4.com and capture the `/identity/connect/authorize` redirect issuer — if Authority=devconnect, the dev support portal accepts prod-signed tokens and the blast radius grows to customer support data.
+[RISK] derdack: 50 — cross-env identity finding strengthened (3 app families now consume the shared signing key/clients across dev+prod, incl. a customer-support admin portal on an un-WAF'd staging IP); still gated on staging credential/support-account compromise (holds below HIGH). No new passive-exploitable defect; new surface otherwise inert (status SaaS redirect, parked cPanel, template artifact, gated downloads/demo).

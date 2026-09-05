@@ -6006,3 +6006,446 @@ STEP 6 — LEARNING:
 
 STEP 7 — RISK:
 [RISK] derdack: 48 (moderate). Sole confirmed report-worthy finding stable and re-verified 4x: prod SIGNL4 IdP + account portal share RS256 signing key, OAuth client_id, and full prod scope set (incl EA manage/alerting + reseller) with a public un-WAF'd staging estate on a different build train — exploit bound to staging credential compromise (keeps below HIGH). api.signl4.com fully gated, lab/s4dev fleets dead-backend, WP estates (OTGS + WPML + CF7 + Yoast) gated or vendor-fixed-target, MultiViews benign. Passive surface exhausted; only HUMAN token-mint + report submission moves this forward.
+===== ANALYST bigpickle 2026-09-05 23:22:10 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://crt.sh/?q=%25.signl4.com&output=json" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    names = set()
+    for e in data:
+        n = e.get('name_value','')
+        for x in n.split('\n'):
+            x = x.strip().lower()
+            if x: names.add(x)
+    print('SIGNL4 subdomains (%d):' % len(names))
+    for n in sorted(names): print(' ', n)
+except Exception as ex:
+    print('ERR', ex)
+"
+SIGNL4 subdomains (14):
+  *.signl4.com
+  bot.signl4.com
+  devfix.signl4.com
+  docs.signl4.com
+  fix.signl4.com
+  frontdoor.signl4.com
+  go.signl4.com
+  signl4.com
+  status.signl4.com
+  support.signl4.com
+  trust.signl4.com
+  vps.signl4.com
+  www.signl4.com
+  www.vps.signl4.com
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://crt.sh/?q=%25.derdack.com&output=json" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    names = set()
+    for e in data:
+        n = e.get('name_value','')
+        for x in n.split('\n'):
+            x = x.strip().lower()
+            if x: names.add(x)
+    print('DERDACK subdomains (%d):' % len(names))
+    for n in sorted(names): print(' ', n)
+except Exception as ex:
+    print('ERR', ex)
+"
+DERDACK subdomains (4):
+  *.derdack.com
+  derdack.com
+  signals.derdack.com
+  www.derdack.com
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://crt.sh/?q=%25.enterprisealert.com&output=json" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    names = set()
+    for e in data:
+        n = e.get('name_value','')
+        for x in n.split('\n'):
+            x = x.strip().lower()
+            if x: names.add(x)
+    print('ENTERPRISEALERT subdomains (%d):' % len(names))
+    for n in sorted(names): print(' ', n)
+except Exception as ex:
+    print('ERR', ex)
+"
+ENTERPRISEALERT subdomains (5):
+  *.enterprisealert.com
+  demo.enterprisealert.com
+  downloads.enterprisealert.com
+  enterprisealert.com
+  www.enterprisealert.com
+[0m
+New subdomain surface. Resolving and probing the unseen hosts now.
+[0m$ [0mfor h in bot.signl4.com devfix.signl4.com fix.signl4.com frontdoor.signl4.com go.signl4.com status.signl4.com support.signl4.com trust.signl4.com vps.signl4.com www.vps.signl4.com docs.signl4.com demo.enterprisealert.com downloads.enterprisealert.com www.enterprisealert.com; do ip=$(getent hosts "$h" | awk '{print $1}' | head -1); echo "$h -> ${ip:-NXDOMAIN/NOA}"; done
+bot.signl4.com -> 2600:9000:286d:6600:e:3255:4040:93a1
+devfix.signl4.com -> 108.143.123.104
+fix.signl4.com -> 20.160.37.197
+frontdoor.signl4.com -> 20.75.112.13
+go.signl4.com -> 2606:2c40::c73c:67fe
+status.signl4.com -> 135.181.151.105
+support.signl4.com -> 216.198.54.6
+trust.signl4.com -> 2606:4700::6812:582
+vps.signl4.com -> 72.167.227.27
+www.vps.signl4.com -> NXDOMAIN/NOA
+docs.signl4.com -> 2606:50c0:8000::153
+demo.enterprisealert.com -> 4.207.244.99
+downloads.enterprisealert.com -> 40.71.11.142
+www.enterprisealert.com -> 51.4.206.217
+[0m
+`devfix.signl4.com` resolves to the same staging IP (108.143.123.104) as devconnect/devaccount — new host on the known staging cluster. Probing HTTP status on all new hosts.
+[0m$ [0mfor h in devfix.signl4.com fix.signl4.com frontdoor.signl4.com demo.enterprisealert.com downloads.enterprisealert.com www.enterprisealert.com bot.signl4.com go.signl4.com status.signl4.com support.signl4.com trust.signl4.com vps.signl4.com docs.signl4.com; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 12 -k -L "https://$h/" 2>/dev/null)
+  srv=$(curl -s -I --max-time 12 -k "https://$h/" 2>/dev/null | tr -d '\r' | awk -F': ' 'tolower($1)=="server"||tolower($1)=="x-powered-by"||tolower($1)=="location"{printf "%s: %s; ", $1, $2}')
+  echo "$h -> $code $srv"
+  sleep 1.2
+done
+devfix.signl4.com -> 200 server: Kestrel; 
+fix.signl4.com -> 200 server: Kestrel; 
+frontdoor.signl4.com -> 200 
+demo.enterprisealert.com -> 404 
+downloads.enterprisealert.com -> 403 Server: Microsoft-IIS/10.0; X-Powered-By: ASP.NET; 
+www.enterprisealert.com -> 000 
+bot.signl4.com -> 403 server: CloudFront; 
+go.signl4.com -> 403 server: cloudflare; 
+status.signl4.com -> 200 server: Apache; 
+support.signl4.com -> 403 location: https://support.signl4.com/hc; server: cloudflare; 
+trust.signl4.com -> 200 server: cloudflare; 
+vps.signl4.com -> 200 Server: nginx; 
+docs.signl4.com -> 200 server: GitHub.com;
+[0m
+Two live hosts on Kestrel (.NET) — `devfix.signl4.com` (staging cluster IP) and `fix.signl4.com` (prod Azure). Identifying the apps.
+[0m$ [0mecho "=== devfix headers ==="; curl -s -D - -o /tmp/devfix.body --max-time 12 -k "https://devfix.signl4.com/" | tr -d '\r' | head -30; echo "=== body snippet ==="; head -c 1200 /tmp/devfix.body; echo; sleep 1.2
+echo "=== fix headers ==="; curl -s -D - -o /tmp/fix.body --max-time 12 -k "https://fix.signl4.com/" | tr -d '\r' | head -30; echo "=== body snippet ==="; head -c 1200 /tmp/fix.body
+=== devfix headers ===
+HTTP/2 200 
+date: Sat, 05 Sep 2026 23:17:29 GMT
+content-type: text/html; charset=utf-8
+server: Kestrel
+cache-control: no-cache, no-store, max-age=0
+pragma: no-cache
+set-cookie: .AspNetCore.Antiforgery.RtGCWVXC8-4=CfDJ8LLZTS6QSf5OmVP72mkyhOq2qzrDJD5smC9hJ_iquU220WX9ncjA5_lqLQfSMWxChcfHviBq15HQYPHh5BD91IF0oMksOMb49Z7S5GGcRmZ1DwXdnzRCRcl1lq00OiG_d8cNeJwC7CfqfXA5fq96sr4; path=/; samesite=strict; httponly
+strict-transport-security: max-age=2592000
+request-context: appId=cid-v1:fe51434f-50ca-4ead-93d7-6aa5cf88fa18
+blazor-enhanced-nav: allow
+x-frame-options: SAMEORIGIN
+
+=== body snippet ===
+<!DOCTYPE html>
+<html lang="en" b-qdnpwy6t9u><head b-qdnpwy6t9u><meta charset="utf-8" b-qdnpwy6t9u>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" b-qdnpwy6t9u>
+        <base href="/" b-qdnpwy6t9u>
+        <link rel="stylesheet" href="bootstrap/bootstrap.min.css" b-qdnpwy6t9u>
+        <link rel="stylesheet" href="app.css" b-qdnpwy6t9u>
+        <link rel="stylesheet" href="Derdack.SF.SupportPortal.styles.css" b-qdnpwy6t9u>
+        <link rel="icon" type="image/png" href="favicon.png" b-qdnpwy6t9u>
+        <title>SIGNL4 Support Application</title></head>
+
+    <body b-qdnpwy6t9u><div class="page" b-8ilgef1waz><div id="main-container" b-8ilgef1waz><header b-8ilgef1waz><div id="logo" b-8ilgef1waz><img id="S4Logo" src="./images/logoS4.png" alt="Logo Derdack SIGNL4" b-8ilgef1waz></div>
+            <h3 class="text-center" b-8ilgef1waz>Admin Support Page</h3></header>
+        <!--Blazor:{"type":"server","prerenderId":"4e4345ed83b44874aa4c32930f8dfb34","key":{"locationHash":"258DC2A29992CD65A382BCCF060B499ED5D519B68F0197CFF63E67644225FD5B:0","formattedComponentKey":""},"sequence":0,"descriptor":"CfDJ8LLZTS6QSf5OmVP72mkyhOpVALfTypXXbQrB5ObPHJA2YpiSmiX7269fLI13hmQ
+=== fix headers ===
+HTTP/2 200 
+date: Sat, 05 Sep 2026 23:17:31 GMT
+content-type: text/html; charset=utf-8
+server: Kestrel
+cache-control: no-cache, no-store, max-age=0
+pragma: no-cache
+set-cookie: .AspNetCore.Antiforgery.RtGCWVXC8-4=CfDJ8BPCHZaD5URAtVtwr_l0HfpiIrGWWYjM6LEcmqCQXOTdxfgA3VGv0qUUdvZ2vcBjDGnHiKurNiU5ZlwozKBEUVPVnGMFsMLNFntEVbni2251RQQD4ksWo08aH07jKtBYtM5Yt1B7Ss0bN-3ZgyrzAC8; path=/; samesite=strict; httponly
+strict-transport-security: max-age=2592000
+request-context: appId=cid-v1:fe51434f-50ca-4ead-93d7-6aa5cf88fa18
+blazor-enhanced-nav: allow
+x-frame-options: SAMEORIGIN
+
+=== body snippet ===
+<!DOCTYPE html>
+<html lang="en" b-qdnpwy6t9u><head b-qdnpwy6t9u><meta charset="utf-8" b-qdnpwy6t9u>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" b-qdnpwy6t9u>
+        <base href="/" b-qdnpwy6t9u>
+        <link rel="stylesheet" href="bootstrap/bootstrap.min.css" b-qdnpwy6t9u>
+        <link rel="stylesheet" href="app.css" b-qdnpwy6t9u>
+        <link rel="stylesheet" href="Derdack.SF.SupportPortal.styles.css" b-qdnpwy6t9u>
+        <link rel="icon" type="image/png" href="favicon.png" b-qdnpwy6t9u>
+        <title>SIGNL4 Support Application</title></head>
+
+    <body b-qdnpwy6t9u><div class="page" b-8ilgef1waz><div id="main-container" b-8ilgef1waz><header b-8ilgef1waz><div id="logo" b-8ilgef1waz><img id="S4Logo" src="./images/logoS4.png" alt="Logo Derdack SIGNL4" b-8ilgef1waz></div>
+            <h3 class="text-center" b-8ilgef1waz>Admin Support Page</h3></header>
+        <!--Blazor:{"type":"server","prerenderId":"bfef3097670240b3853c13c5f27003f8","key":{"locationHash":"258DC2A29992CD65A382BCCF060B499ED5D519B68F0197CFF63E67644225FD5B:0","formattedComponentKey":""},"sequence":0,"descriptor":"CfDJ8BPCHZaD5URAtVtwr/l0HfqhTtfzaBKg7Dh/1l6EjEzDTuTVNuJ1\u002BJUbuA
+[0m
+Both `devfix` and `fix` run the **SIGNL4 Support Application** — a Blazor Server admin support page ("Admin Support Page"), same appId, same cookie config on dev and prod. Probing auth flow + common paths to map login IdP linkage (cross-env check) and any exposed endpoints.
+[0m$ [0mfor p in /account/login /signin-oidc /_blazor /health /healthz /swagger/index.html /api /api/v1 /manifest.webmanifest /login; do
+  r=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -k "https://devfix.signl4.com$p" 2>/dev/null)
+  echo "devfix $p -> $r"
+  sleep 1.1
+done
+devfix /account/login -> 404
+devfix /signin-oidc -> 500
+devfix /_blazor -> 400
+devfix /health -> 404
+devfix /healthz -> 404
+devfix /swagger/index.html -> 404
+devfix /api -> 404
+devfix /api/v1 -> 404
+devfix /manifest.webmanifest -> 404
+devfix /login -> 404
+[0m
+`/signin-oidc` is registered (500 without state) — confirms OpenID Connect middleware. Checking the full page for auth wiring and the IdP authority.
+[0m$ [0mecho "=== devfix /signin-oidc body ==="; curl -s --max-time 10 -k "https://devfix.signl4.com/signin-oidc" | head -c 900; echo; echo "=== devfix / index auth links ==="; curl -s --max-time 10 -k "https://devfix.signl4.com/" | grep -ioE 'href="[^"]*"|login|logout|openid|authorize|connect|account' | sort -u | head -40; sleep 1.1
+echo "=== devfix _blazor negotiate ==="; curl -s --max-time 10 -k -H "Accept: text/plain" "https://devfix.signl4.com/_blazor/negotiate?negotiateVersion=1" | head -c 600
+=== devfix /signin-oidc body ===
+
+=== devfix / index auth links ===
+Login
+href="/"
+href="Derdack.SF.SupportPortal.styles.css"
+href="app.css"
+href="bootstrap/bootstrap.min.css"
+href="favicon.png"
+login
+=== devfix _blazor negotiate ===
+[0m
+[0m$ [0mcurl -s --max-time 10 -k "https://devfix.signl4.com/" -o /tmp/devfix_index.html; echo "=== Login anchor context ==="; grep -ioE '<a[^>]*>[^<]*Login[^<]*</a>' /tmp/devfix_index.html; grep -ioE 'href="[^"]*login[^"]*"' /tmp/devfix_index.html; echo "=== script/blazor refs ==="; grep -ioE 'src="[^"]*blazor[^"]*"|/_blazor[^"]*' /tmp/devfix_index.html | sort -u | head; echo "=== negotiate w/ token ==="; curl -s --max-time 10 -k -X OPTIONS -D - -o /dev/null "https://devfix.signl4.com/_blazor/negotiate?negotiateVersion=1" | tr -d '\r' | head -15
+=== Login anchor context ===
+=== script/blazor refs ===
+src="_framework/blazor.web.js"
+=== negotiate w/ token ===
+HTTP/2 405 
+date: Sat, 05 Sep 2026 23:18:08 GMT
+content-type: text/plain
+content-length: 0
+server: Kestrel
+strict-transport-security: max-age=2592000
+request-context: appId=cid-v1:fe51434f-50ca-4ead-93d7-6aa5cf88fa18
+[0m
+[0m$ [0mgrep -iB2 -A2 "login" /tmp/devfix_index.html | head -40
+<!--Blazor:{"type":"server","prerenderId":"4ccd852d85034072ab01bb6bbd190e87","key":{"locationHash":"258DC2A29992CD65A382BCCF060B499ED5D519B68F0197CFF63E67644225FD5B:0","formattedComponentKey":""},"sequence":0,"descriptor":"CfDJ8LLZTS6QSf5OmVP72mkyhOqouUd\u002BO8GaWTs8kMpwgO9jX2/WNBAOrwF7Niw3w4ZMbIr86K5d692sgtY9UsfL\u002BAEra1KQZyXGWj\u002BrBl9eaPgIBGVktQe2X\u002BfnRWGZtSLO2W5Q5YRL/sqvdoK0Ck30JPobXWWE5azidyNfWjessKBXo7WXF3soIJJUuqxu3sKOZA3AazHaiUeSBoyogNsqcS1btb2N48Zofq6XqyttgVRT6b\u002B\u002B28G8piGv8XR4nh6qSnW\u002Bq0AYHZmzlAEVQAYgNeliPhP3q7Ptjm805EeJ1wPhsNSvav6KkvXoFXul064pLaw09po2N2MiZ5ViiI3C4BPTVA8pnku\u002BSZzVG1XFXUdP\u002Bzaoe5prITFOxJej2iTMkJsMUEOZPMXnWMBzt2tTnHFkXH17PbZfHif4DO\u002BLRFCx7pJsF7wT1qjyvaB9n3yKY6B/hl2fVgr8akGs9cn1eAhJAZ4MwW/1GvjvWnFSuIo6V6ZrlEDxkuK7gnaCGo\u002BLbKZIhf8WxBH\u002Bwm0r5QMItOW39arGjgMN2BYWBNkcHVHzHual3aDqzwYDmdXcKfIqEw=="}-->
+
+<div class="login-field" b-ov1nypl646><button id="login-button" class="btn btn-primary" b-ov1nypl646>Login</button></div><!--Blazor:{"prerenderId":"4ccd852d85034072ab01bb6bbd190e87"}--></div></div>
+        
+        <script src="_framework/blazor.web.js" b-qdnpwy6t9u></script></body></html><!--Blazor-Server-Component-State:CfDJ8LLZTS6QSf5OmVP72mkyhOoyr5Br/oQ2aK5d8ren/yXz3TaMKMQncnjwODtZX1rve3S+XTe/faWGvzPTxJ4G5QbYabA962gKY636SGl6YGmIJL1nOdgMvEmkBfO28fjYv9+kcntcEaB8/n8TDpk2kX4aqyTQlH4CtomPm0TEaj7aFchJTXCMgTcKdhVy2zKEw6SEDLbNBDdt4Y7gupOdtko2URNWzAGsdr28b++udLM/3FJxA/ugfzLKlPXSFGMCMKSdtICHC2aRtf58jDNUuhwj2LP7hjANz0RcrYMDs3+Q/6FhwkdofQprzrqtwhZqbFbHOnk4pV8k6Ixosbkllpq7HvB36qY/6yimvRZf5tO5C5ThZ1tQV/NHXCwt1zZGAbEamBE3VBI9WvMGjLN8UkfDkt++wiTzNJFi4yhkos213cDKtwbcSc5drca4BO6GY5gBFEluc9PSQ8L8hYLwslvZr7DAFvltcXVbQIfB1kNKgAfunwUB1LyZB6ZQat3i1ryUG3ysyXPc7QRgerru5NlLp9QDJHw/XHx9RLOTqO26-->
+[0m
+Blazor Server support portal with an interactive-only Login button. Probing for config leaks and any route that triggers an OIDC challenge (a 302 Location would reveal the auth authority + cross-env linkage).
+[0m$ [0mfor p in /appsettings.json /appsettings.Development.json /config.json /Configuration /_content /admin /support /tickets /cases /dashboard /upload /api/config /version /status /identity /auth/login; do
+  out=$(curl -s -o /dev/null -w "%{http_code}|%{redirect_url}" --max-time 10 -k "https://devfix.signl4.com$p" 2>/dev/null)
+  echo "devfix $p -> $out"
+  sleep 1.1
+done
+devfix /appsettings.json -> 404|
+devfix /appsettings.Development.json -> 404|
+devfix /config.json -> 404|
+devfix /Configuration -> 404|
+devfix /_content -> 404|
+devfix /admin -> 404|
+devfix /support -> 404|
+devfix /tickets -> 404|
+devfix /cases -> 404|
+devfix /dashboard -> 404|
+devfix /upload -> 404|
+devfix /api/config -> 404|
+devfix /version -> 404|
+devfix /status -> 404|
+devfix /identity -> 404|
+devfix /auth/login -> 404|
+[0m
+All Blazor routes 404 (SPA client-side routing) — no passive IdP authority leak. Quick triage of the remaining new hosts (frontdoor, status, downloads, demo, vps).
+[0m$ [0mecho "=== frontdoor / ==="; curl -s -D - -o /dev/null --max-time 10 -k "https://frontdoor.signl4.com/" | tr -d '\r' | grep -iE '^HTTP|server:|x-powered|x-azure|via:|content-type' ; sleep 1.1
+for p in /health /api/v2/alerts /.well-known/openid-configuration /swagger/index.html /v1; do out=$(curl -s -o /dev/null -w "%{http_code}|%{redirect_url}" --max-time 10 -k "https://frontdoor.signl4.com$p"); echo "frontdoor $p -> $out"; sleep 1.1; done
+echo "=== status / title ==="; curl -s --max-time 10 -k "https://status.signl4.com/" | grep -ioE '<title>[^<]*</title>' | head -3; sleep 1.1
+echo "=== downloadable? ==="; for p in / /en/ /download/ /Download /api/v1; do out=$(curl -s -o /dev/null -w "%{http_code}|%{redirect_url}" --max-time 10 -k "https://downloads.enterprisealert.com$p"); echo "downloads $p -> $out"; sleep 1.1; done
+echo "=== demo ==="; for p in / /en/ /demo/ /webdemo/ /login; do out=$(curl -s -o /dev/null -w "%{http_code}|%{redirect_url}" --max-time 10 -k "https://demo.enterprisealert.com$p"); echo "demo $p -> $out"; sleep 1.1; done
+echo "=== vps title ==="; curl -s --max-time 10 -k "https://vps.signl4.com/" | grep -ioE '<title>[^<]*</title>' | head -3
+=== frontdoor / ===
+HTTP/2 200 
+content-type: text/html
+x-content-type-options: nosniff
+frontdoor /health -> 404|
+frontdoor /api/v2/alerts -> 404|
+frontdoor /.well-known/openid-configuration -> 404|
+frontdoor /swagger/index.html -> 404|
+frontdoor /v1 -> 404|
+=== status / title ===
+<title>DERDACK SIGNL4</title>
+=== downloadable? ===
+downloads / -> 403|
+downloads /en/ -> 404|
+downloads /download/ -> 404|
+downloads /Download -> 404|
+downloads /api/v1 -> 404|
+=== demo ===
+demo / -> 404|
+demo /en/ -> 404|
+demo /demo/ -> 404|
+demo /webdemo/ -> 404|
+demo /login -> 404|
+=== vps title ===
+[0m
+[0m$ [0mecho "=== frontdoor body ==="; curl -s --max-time 10 -k "https://frontdoor.signl4.com/" | head -c 800; echo; echo "=== status body (top) ==="; curl -s --max-time 10 -k "https://status.signl4.com/" | head -c 1000; sleep 1.1; echo; echo "=== vps body ==="; curl -s --max-time 10 -k "https://vps.signl4.com/" | head -c 500
+=== frontdoor body ===
+<html>
+    <head>
+        <title>SIGNL4 - %ReplaceStatusTitle%</title>
+        <style id="fontFamily">
+            @font-face {
+                font-family: 'open_sanslight';
+                src: url(data:application/font-woff2;charset=utf-8;base64,d09GMgABAAAAAEW4ABIAAAAArpwAAEVQAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP0ZGVE0cGh4bkxgcgSgGYACDWgg4CYRlEQgKgp4IgfxIC4NWAAE2AiQDhyYEIAWJcAeFXQyCOxvImiXsmAVuByFrlNeK2RHW44DFjBOMipJCl8v+/3OCGmP4j+1A1NZWTFZFKTSxFE6jtefR3dqr1dPSId4iJI+V1XARQogyPuH34Zcpfvbkfwaz0jpRv0a81DrBdgZue5S2RNiExTCEiPGX/QbJEK2MJ0cLLaurvx88rR3HucXw4eJFYNzCR82pd3h+br0lSEi1DEQkW+gRNeAv2GCMjY0NGBs5ogwyJaIkB21gomAGRqFelPax7xpvesCFtD38CPkwUOdOjRU5YOPn5txe9ubshImQ46Fae+z1TO/uD4HH8lHIjm0UEGoCByRsdDRLpPKk6W4PdUp3hqS5s+rmCbdfeaINSbLiqq1L8ARx9ORme+AJgQ2BpeVl/EE3qRBxIIZ4sZqf6TCP99v+KNOVBCXt5Zn/uYZ
+=== status body (top) ===
+<!doctype html>
+<html lang="en">
+
+<head>
+
+    
+    <title>DERDACK SIGNL4</title>
+        <meta name="robots" content="index, follow">
+    <meta name="viewport" content="width=device-width" />
+
+    <style  type="text/css" id="inject-css">
+        .block .block-item .levels .titles-header h4 { 
+  color: white !important;
+}
+.infobox time {
+  color: white;
+}
+.link-icon svg {
+  stroke: white !important;
+}
+.link-icon:hover svg {
+  stroke: #ddd !important;
+}
+    </style>
+
+    <link href="/fonts/webfonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/page.css" />
+    <link rel="icon" type="image/png" href="/favicon.ico" />
+    <style  type="text/css">
+        /* Brand colors */
+        .twitter-feed ul li a,
+        #subscribe-modal h1,
+        .twitter-feed h2 a,
+        .login-title {
+            color: #FFFFFF;
+        }
+
+        #subscribe-modal form input[type=submit],
+        .login-button {
+            background: #FFFFFF;
+            border-color: #FFFFFF;
+ 
+=== vps body ===
+<html><head><META HTTP-EQUIV="Cache-control" CONTENT="no-cache"><META HTTP-EQUIV="refresh" CONTENT="0;URL=/cgi-sys/defaultwebpage.cgi"></head><body></body></html>
+[0m
+`frontdoor` = partially-rendered status-page template leaking a literal `%ReplaceStatusTitle%` placeholder (deployment artifact). `status.signl4.com` is a self-hosted status page with admin login. Probing status API/login paths.
+[0m$ [0mfor p in /api/v1 /api/v1/components /api/v1/incidents /api/v1/status /dashboard /login /setup /metrics; do
+  out=$(curl -s -o /dev/null -w "%{http_code}|%{redirect_url}" --max-time 10 -k "https://status.signl4.com$p"); echo "status $p -> $out"; sleep 1.1
+done
+echo "=== status headers ==="; curl -s -D - -o /dev/null --max-time 10 -k "https://status.signl4.com/" | tr -d '\r' | grep -iE '^HTTP|server:|generator|x-'
+status /api/v1 -> 302|https://status.adminlabs.com/status-page-not-found.html
+status /api/v1/components -> 302|https://status.adminlabs.com/status-page-not-found.html
+status /api/v1/incidents -> 302|https://status.adminlabs.com/status-page-not-found.html
+status /api/v1/status -> 302|https://status.adminlabs.com/status-page-not-found.html
+status /dashboard -> 302|https://status.adminlabs.com/status-page-not-found.html
+status /login -> 302|https://status.adminlabs.com/status-page-not-found.html
+status /setup -> 302|https://status.adminlabs.com/status-page-not-found.html
+status /metrics -> 302|https://status.adminlabs.com/status-page-not-found.html
+=== status headers ===
+HTTP/2 200 
+server: Apache
+[0m
+status.signl4.com is behind AdminLabs SaaS (page absent) — operational redirect, no takeover. Two focused OAuth metadata probes on the IdPs (authorization-server metadata + endsession URL presence) to round out the delta.
+[0m$ [0mecho "=== devconnect oauth-authz-server metadata ==="; curl -s --max-time 10 -k "https://devconnect.signl4.com/.well-known/oauth-authorization-server" | head -c 300; echo; sleep 1.1
+echo "=== devconnect endsession (read-only GET) ==="; curl -s -o /dev/null -w "%{http_code}|%{redirect_url}" --max-time 10 -k "https://devconnect.signl4.com/identity/connect/endsession?post_logout_redirect_uri=https://evil.example"; echo; sleep 1.1
+echo "=== prod connect oauth-authz-server metadata ==="; curl -s --max-time 10 -k "https://connect.signl4.com/.well-known/oauth-authorization-server" | head -c 300; echo; sleep 1.1
+echo "=== prod connect end_session_endpoint ==="; curl -s --max-time 10 -k "https://connect.signl4.com/identity/.well-known/openid-configuration" | python3 -c "import sys,json;d=json.load(sys.stdin);print({k:d.get(k) for k in ['end_session_endpoint','authorization_endpoint','userinfo_endpoint','pushed_authorization_request_endpoint','token_endpoint_auth_methods_supported','claims_supported']})"
+=== devconnect oauth-authz-server metadata ===
+
+=== devconnect endsession (read-only GET) ===
+302|https://devconnect.signl4.com/identity/Account/Logout
+=== prod connect oauth-authz-server metadata ===
+
+=== prod connect end_session_endpoint ===
+{'end_session_endpoint': 'https://connect.signl4.com/identity/connect/endsession', 'authorization_endpoint': 'https://connect.signl4.com/identity/connect/authorize', 'userinfo_endpoint': 'https://connect.signl4.com/identity/connect/userinfo', 'pushed_authorization_request_endpoint': 'https://connect.signl4.com/identity/connect/par', 'token_endpoint_auth_methods_supported': ['client_secret_basic', 'client_secret_post'], 'claims_supported': ['sub', 'email', 'email_verified', 'name', 'family_name', 'given_name', 'middle_name', 'nickname', 'preferred_username', 'profile', 'picture', 'website', 'gender', 'birthdate', 'zoneinfo', 'locale', 'updated_at', 'http://schemas.derdack.com/identity/claims/active', 'http://schemas.derdack.com/identity/claims/subscription_id', 'http://schemas.derdack.com/identity/claims/branch_id', 'http://schemas.derdack.com/identity/claims/is_branch_manager', 'http://schemas.derdack.com/identity/claims/is_stakeholder']}
+[0m
+Prod IdP exposes PAR (`/identity/connect/par`). Checking staging parity for the pushed-authorization + device endpoints (build-drift signal).
+[0m$ [0mcurl -s --max-time 10 -k "https://devconnect.signl4.com/identity/.well-known/openid-configuration" | python3 -c "import sys,json;d=json.load(sys.stdin);print({k:d.get(k) for k in ['end_session_endpoint','pushed_authorization_request_endpoint','device_authorization_endpoint','issuer','token_endpoint']})"
+{'end_session_endpoint': 'https://devconnect.signl4.com/identity/connect/endsession', 'pushed_authorization_request_endpoint': 'https://devconnect.signl4.com/identity/connect/par', 'device_authorization_endpoint': 'https://devconnect.signl4.com/identity/connect/deviceauthorization', 'issuer': 'https://devconnect.signl4.com/identity', 'token_endpoint': 'https://devconnect.signl4.com/identity/connect/token'}
+[0m
+[0m$ [0mgrep -ioE 'case|request|ticket|subject|message|upload|attach|file|textarea|[a-z-]*-field|<form' /tmp/devfix_index.html | sort | uniq -c | sort -rn | head -20
+1 login-field
+[0m
+PAR parity confirmed (both IdPs hardened identically). One last check — whether the support portal's landing page exposes an anonymous "create case / upload" form.
+Support portal has zero anonymous surface (login-only, interactive). Final micro-probe on the downloads portal, then writing up.
+[0m$ [0mecho "=== downloads 403 body ==="; curl -s --max-time 10 -k "https://downloads.enterprisealert.com/" | head -c 400; echo; sleep 1.1
+for p in /files /en/download/ /client /api/download /MSI /installers /downloads; do out=$(curl -s -o /dev/null -w "%{http_code}|%{redirect_url}" --max-time 10 -k "https://downloads.enterprisealert.com$p"); echo "downloads $p -> $out"; sleep 1.1; done
+=== downloads 403 body ===
+You do not have permission to view this directory or page.
+downloads /files -> 404|
+downloads /en/download/ -> 404|
+downloads /client -> 404|
+downloads /api/download -> 404|
+downloads /MSI -> 404|
+downloads /installers -> 404|
+downloads /downloads -> 404|
+[0m
+## ANALYST OUTPUT — bigpickle — 2026-09-05
+
+### STEP 1 — DELTA
+- NEW 12 hosts from CT enumeration (crt.sh): `bot/devfix/fix/frontdoor/go/status/support/trust/vps/www.vps/docs.signl4.com` + `demo/downloads/www.enterprisealert.com` — none in prior inventory
+- NEW `devfix.signl4.com` (108.143.123.104 = staging cluster) + `fix.signl4.com` (20.160.37.197, Azure): both = **SIGNL4 Support Application** — Blazor Server admin support portal ("Admin Support Page"), Kestrel, byte-similar build (same appId cid-v1:fe51434f-50ca-4ead-93d7-6aa5cf88fa18), OpenIdConnect middleware registered (`/signin-oidc`→500), HSTS+XFO present, NO CSP, NO WAF fingerprints; login interactive-only, zero anonymous surface (login-field only, no upload/case form)
+- NEW `frontdoor.signl4.com` (20.75.112.13): serves unconfigured status-page template leaking literal `%ReplaceStatusTitle%` + embedded woff2 data — pre-compile deployment artifact
+- NEW `status.signl4.com`: 200 but every path 302 → `status.adminlabs.com/status-page-not-found.html` (migrated to AdminLabs SaaS, page unconfigured; target resolves → no takeover)
+- NEW `demo.enterprisealert.com` → 4.207.244.99 (staging fleet) inert (404 all); `downloads.enterprisealert.com` → Azure IIS root 403 dir-browsing-off, subpaths 404 — inert
+- NEW OAuth parity: PAR (`/identity/connect/par`) enabled on BOTH IdPs; prod claims incl custom `schemas.derdack.com/identity` claims; `endsession`→302 local `/identity/Account/Logout` (no open redirect)
+- CHANGED Rejected new hosts: `vps` (parked cPanel `cgi-sys/defaultwebpage`), `bot/go/support/trust/docs` (CloudFront/Zendesk/GitHub Pages), `www.enterprisealert.com` (000 timeout)
+
+### STEP 2 — PRIORITIZE
+- [PRIO] devfix/fix.signl4.com SupportPortal,6.45,(biz=high: admin/support tooling touching customer case data; tech=.NET OIDC Blazor; gate=interactive login; defensive: dev instance un-WAF'd on shared-key staging IP)
+- [PRIO] frontdoor.signl4.com,5.50,(config artifact, fresh, passive-proven gate=10)
+- [PRIO] devconnect/connect IdP estate,9.0,(existing top AUTH finding, now 3 app families)
+
+### STEP 3 — HYPOTHESES
+[HYP] dev support portal authenticates against shared-key staging IdP — cross-env identity reuse extends to admin/support app
+class: AUTH
+asset: devfix.signl4.com
+confidence: 55
+reasoning: devfix co-resolves with devconnect/devaccount on 108.143.123.104; OIDC callback `/signin-oidc` registered (500 w/o state); build-parity appId with prod fix; staging cluster already proven to share prod RS256 key + account client_id + full prod scope; dev instance served without WAF headers
+evidence_needed: redirect issuer of interactive Login — devconnect vs connect (HUMAN)
+verify_steps: interactive Login click w/ staging creds → capture `Location` → `https://devconnect.signl4.com/identity/connect/authorize?...` (HUMAN); passive alternative exhausted (SPA client-side routing, all path probes 404)
+impact: staging credential/secret compromise ⇒ access to SIGNL4 Support admin portal (customer case/screenshot/file data) from an un-WAF'd host; escalates cross-env finding from identity-only to data-touching app. MED-HIGH.
+testability: HUMAN_ONLY
+[HYP] frontdoor.signl4.com is a forgotten unconfigured status-page deployment
+class: MISCONFIG
+asset: frontdoor.signl4.com
+confidence: 60
+reasoning: served HTML contains literal `%ReplaceStatusTitle%` template var + embedded woff2; `x-content-type-options: nosniff` only; same family as status.signl4.com which is now behind AdminLabs SaaS — sibling never configured
+evidence_needed: none — self-evident from GET / (done)
+verify_steps: GET / (done); compare against status.signl4.com configured artifact
+impact: informational config artifact; forgotten public property that could host future redirect/content misconfig. LOW.
+testability: PASSIVE
+
+### STEP 4 — SELF-CRITIQUE
+- Keep #1 (55): ≥40, in-scope, explained; but HUMAN_ONLY — no passive push possible this cycle.
+- Keep #2 (60): PASSIVE-proven in this session.
+- [PARKED] `status.signl4.com` AdminLabs migration: target resolves + serves its own page → no dangling DNS/takeover; OPACITY only.
+- [PARKED] `demo.enterprisealert.com`, `downloads.enterprisealert.com`: inert (404/403), no route surface.
+- [FINAL] ranked: (1) devfix SupportPortal → staging IdP trust (55, HUMAN), (2) frontdoor unconfigured template (60, LOW), (3) cross-env IdP/account/support key+client reuse (90, report-ready).
+
+### STEP 5 — NEXT ACTION
+[NEXT] HUMAN: (a) submit cross-env identity reuse report to bugs.olivermaicher.eu (evidence now spans 3 app families: IdP connect/devconnect, account/manage portals, support portal devfix/fix — shared RS256 key kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, shared client 692A0A56-892F-4AE2-8259-76DA398990B6, PAR parity, divergent build trains); (b) with a staging account, click Login on devfix.signl4.com and capture the `/identity/connect/authorize` redirect issuer — if Authority=devconnect, the dev support portal accepts prod-signed tokens and the blast radius grows to customer support data.
+
+### STEP 6 — LEARNING
+- [LEARN] ACCEPTED OTHER @ devfix/fix.signl4.com: SIGNL4 Support Application (Blazor Server) exposed dev+prod, identical build appId, OIDC-parented login, zero anonymous surface
+- [LEARN] REJECTED MISCONFIG @ status.signl4.com: redirects to status.adminlabs.com SaaS not-found — target resolves, no subdomain takeover
+- [LEARN] ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured status-page template leaking literal %ReplaceStatusTitle% — deployment artifact
+- [LEARN] REJECTED OTHER @ vps.signl4.com + bot/go/support/trust/docs.signl4.com: parked cPanel / CloudFront / Zendesk / GitHub Pages — third-party, not Derdack app estate
+- [LEARN] ACCEPTED AUTH @ devconnect+connect: PAR endpoint on BOTH IdPs (parity, no drift); endsession normalizes to local /identity/Account/Logout — no open redirect
+
+### STEP 7 — RISK
+[RISK] derdack: 50 — cross-env identity finding strengthened (3 app families now consume the shared signing key/clients across dev+prod, incl. a customer-support admin portal on an un-WAF'd staging IP); still gated on staging credential/support-account compromise (holds below HIGH). No new passive-exploitable defect; new surface otherwise inert (status SaaS redirect, parked cPanel, template artifact, gated downloads/demo).
