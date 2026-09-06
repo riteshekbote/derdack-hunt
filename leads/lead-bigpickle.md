@@ -973,3 +973,22 @@ impact: informational config artifact; forgotten public property that could host
 testability: PASSIVE
 [NEXT] HUMAN: (a) submit cross-env identity reuse report to bugs.olivermaicher.eu (evidence now spans 3 app families: IdP connect/devconnect, account/manage portals, support portal devfix/fix — shared RS256 key kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, shared client 692A0A56-892F-4AE2-8259-76DA398990B6, PAR parity, divergent build trains); (b) with a staging account, click Login on devfix.signl4.com and capture the `/identity/connect/authorize` redirect issuer — if Authority=devconnect, the dev support portal accepts prod-signed tokens and the blast radius grows to customer support data.
 [RISK] derdack: 50 — cross-env identity finding strengthened (3 app families now consume the shared signing key/clients across dev+prod, incl. a customer-support admin portal on an un-WAF'd staging IP); still gated on staging credential/support-account compromise (holds below HIGH). No new passive-exploitable defect; new surface otherwise inert (status SaaS redirect, parked cPanel, template artifact, gated downloads/demo).
+## 2026-09-06 01:06:13 UTC [target] (model bigpickle)
+[HYP] api.signl4.com/api/v2 validates Bearer tokens against the same shared RS256 trust anchor served on api/identity
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 50
+reasoning: api host serves both the API (401 `WWW-Authenticate: Bearer`) and the IdP (same backend on s4prodappgw, JWKS kid 91EE4F... byte-identical to staging devconnect); single prod trust boundary implies the api validator and IdP signer share one key — but cross-ENV acceptance (staging-minted → prod API) has no passive signal.
+evidence_needed: staging-minted access_token replayed on api and accepted vs rejected
+verify_steps: HUMAN — POST devconnect /identity/connect/token (grant_type=password, staging account) → GET api.signl4.com/api/v2/teams with that Bearer; compare to 401 baseline
+impact: staging credential or client-secret compromise ⇒ prod API read/write (alerts/teams/subscriptions) + account portal + EA/reseller scopes; additive proof of single cross-env trust anchor. MED-HIGH.
+testability: HUMAN_ONLY
+[HYP] devfix.signl4.com support portal authenticates against the shared-key staging IdP
+class: AUTH
+asset: devfix.signl4.com
+confidence: 55
+reasoning: co-resolves with devconnect/devaccount on 108.143.123.104; `/signin-oidc` callback registered (500 without state); staging cluster proven to share prod RS256 key + client_id 692A0A56 + full prod scope set.
+evidence_needed: interactive Login redirect → `https://devconnect.signl4.com/identity/connect/authorize?...` (authority=staging) vs connect (prod)
+verify_steps: HUMAN — click Login on devfix with staging creds, capture Location issuer
+impact: staging cred/secret compromise ⇒ SIGNL4 support admin portal (cases/files) from un-WAF'd host; escalates cross-env finding to data-touching app. MED-HIGH.
+testability: HUMAN_ONLY

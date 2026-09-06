@@ -6449,3 +6449,268 @@ testability: PASSIVE
 
 ### STEP 7 — RISK
 [RISK] derdack: 50 — cross-env identity finding strengthened (3 app families now consume the shared signing key/clients across dev+prod, incl. a customer-support admin portal on an un-WAF'd staging IP); still gated on staging credential/support-account compromise (holds below HIGH). No new passive-exploitable defect; new surface otherwise inert (status SaaS redirect, parked cPanel, template artifact, gated downloads/demo).
+===== ANALYST bigpickle 2026-09-06 01:06:23 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor p in "/.well-known/apple-app-site-association" "/apple-app-site-association" "/.well-known/assetlinks.json" "/.git/config" "/.env" "/identity" "/identity/.well-known/openid-configuration" "/health" "/healthz" "/version" "/api/v3" "/v2/teams" "/api/v2/teams/" "/.well-known/openid-configuration"; do
+code=$(curl -sS -o /dev/null -k -m 10 -w "%{http_code} %{size_download} %{redirect_url}" "https://api.signl4.com$p" 2>/dev/null)
+echo "api.signl4.com $p => $code"
+sleep 1
+done
+api.signl4.com /.well-known/apple-app-site-association => 200 359 
+api.signl4.com /apple-app-site-association => 404 0 
+api.signl4.com /.well-known/assetlinks.json => 200 566 
+api.signl4.com /.git/config => 403 79088 
+api.signl4.com /.env => 403 79088 
+api.signl4.com /identity => 200 5446 
+api.signl4.com /identity/.well-known/openid-configuration => 200 3413 
+api.signl4.com /health => 404 0 
+api.signl4.com /healthz => 404 0 
+api.signl4.com /version => 404 0 
+api.signl4.com /api/v3 => 404 0 
+api.signl4.com /v2/teams => 404 0 
+api.signl4.com /api/v2/teams/ => 401 0 
+api.signl4.com /.well-known/openid-configuration => 404 0
+[0m
+[0m$ [0mecho "=== AASA ==="; curl -sS -k -m 10 "https://api.signl4.com/.well-known/apple-app-site-association"; sleep 1
+echo; echo "=== assetlinks ==="; curl -sS -k -m 10 "https://api.signl4.com/.well-known/assetlinks.json"; sleep 1
+echo; echo "=== /identity (HEAD-ish first 40 lines) ==="; curl -sS -k -m 10 "https://api.signl4.com/identity" | head -c 2000; echo
+=== AASA ===
+{
+    "applinks": {
+        "apps": [],
+        "details": [
+            {
+                "appID": "F2UW9VUYTE.com.derdack.projectx",
+                "paths": [
+                    "NOT /manage/Signls/NewSignl",
+                    "/manage/Signls",
+                    "/manage/account/signup"
+                ]
+            }
+        ]
+    }
+}
+=== assetlinks ===
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.derdack.signl4",
+      "sha256_cert_fingerprints": [
+        "5C:65:17:CE:9F:F2:FA:EE:33:F7:35:D6:D2:D3:09:CB:61:D8:04:33:DD:1C:66:48:8F:BD:48:FA:C0:59:54:CE",
+        "63:B9:87:8B:74:C2:F1:B2:86:B8:A1:3E:F3:83:1C:A9:88:02:F0:69:D3:08:19:A0:9C:97:AF:B5:8E:74:45:92",
+        "B5:6D:56:46:44:50:2A:72:29:42:08:B6:AC:7E:71:42:F9:3F:41:73:B3:DE:E0:63:19:0A:38:93:A7:FF:50:49"
+      ]
+    }
+  }
+]
+=== /identity (HEAD-ish first 40 lines) ===
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=500" />
+    <title>SIGNL4 - Welcome</title>
+
+    <link rel="icon" type="image/x-icon" href="/identity/images/favicon.ico" />
+    <link rel="shortcut icon" type="image/x-icon" href="/identity/images/favicon.ico" />
+
+    <link rel="preload" as="font" type="font/ttf" crossorigin href="/identity/fonts/open_sans_regular.ttf">
+    <link rel="preload" as="font" type="font/ttf" crossorigin href="/identity/fonts/open_sans_light.ttf">
+
+    
+
+    
+        <link rel="stylesheet" type="text/css" href="/identity/css/main.min.css?v=wGjRXuhcYI_LTQ3O9owg2oH18DhaXmfS5PzYxMx6D0k" />
+        <link rel="stylesheet" type="text/css" href="/identity/css/basics.min.css?v=V4JLhaXVFpGZVM5c6tQDZ76B62hPnEtZXQKkaCwydd4" />
+        <link rel="stylesheet" type="text/css" href="/identity/css/variables.min.css?v=47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU" />
+    
+    
+
+</head>
+<body>
+    <div class="Layout">
+        <div class="Layout__Container">
+            <div class="Layout__Logo"></div>
+            <div class="Layout__Main">
+                <div class="Layout__Background"></div>
+                <div class="Layout__ContentSegments">
+                    <div class="Layout__Welcome">
+                        <div class="Layout__SmallLogo"></div>
+                        <div class="Layout__WelcomeHeader">Turn Alerts Into Action</div>
+                        <div class="Layout__WelcomeText">Ensure the right person responds instantly – anywhere</div>
+                    </div>
+                    <div class="Layout__ContentTileContainer">
+                        <div class="Layout__ContentTile">
+                            <div class="Layout__Content">
+                                
+
+
+<input id="firstContentUrl" type="hidden" value="/identity/Account/SignUp" />
+<input id="pageModel_retur
+[0m
+[0m$ [0mecho "=== api/identity OIDC ==="; curl -sS -k -m 10 "https://api.signl4.com/identity/.well-known/openid-configuration"; sleep 1
+echo; echo "=== api/identity jwks ==="; curl -sS -k -m 10 "https://api.signl4.com/identity/jwks"; sleep 1
+echo; echo "=== api/identity Login page (form action / hidden inputs) ==="; curl -sS -k -m 10 "https://api.signl4.com/identity/Account/Login" | grep -iE "action=|input[^>]*(name|value)=|__RequestVerificationToken|href=\"?" | head -30
+=== api/identity OIDC ===
+{"issuer":"https://connect.signl4.com/identity","jwks_uri":"https://api.signl4.com/identity/.well-known/openid-configuration/jwks","authorization_endpoint":"https://api.signl4.com/identity/connect/authorize","token_endpoint":"https://api.signl4.com/identity/connect/token","userinfo_endpoint":"https://api.signl4.com/identity/connect/userinfo","end_session_endpoint":"https://api.signl4.com/identity/connect/endsession","check_session_iframe":"https://api.signl4.com/identity/connect/checksession","revocation_endpoint":"https://api.signl4.com/identity/connect/revocation","introspection_endpoint":"https://api.signl4.com/identity/connect/introspect","device_authorization_endpoint":"https://api.signl4.com/identity/connect/deviceauthorization","backchannel_authentication_endpoint":"https://api.signl4.com/identity/connect/ciba","pushed_authorization_request_endpoint":"https://api.signl4.com/identity/connect/par","require_pushed_authorization_requests":false,"frontchannel_logout_supported":true,"frontchannel_logout_session_supported":true,"backchannel_logout_supported":true,"backchannel_logout_session_supported":true,"scopes_supported":["openid","email","profile","public_api_read","public_api_write","public_api_prov","mobile_api","account_portal","reseller_portal","public_api_ea_manage","public_api_ea_alerting","offline_access"],"claims_supported":["sub","email","email_verified","name","family_name","given_name","middle_name","nickname","preferred_username","profile","picture","website","gender","birthdate","zoneinfo","locale","updated_at","http://schemas.derdack.com/identity/claims/active","http://schemas.derdack.com/identity/claims/subscription_id","http://schemas.derdack.com/identity/claims/branch_id","http://schemas.derdack.com/identity/claims/is_branch_manager","http://schemas.derdack.com/identity/claims/is_stakeholder"],"grant_types_supported":["authorization_code","client_credentials","refresh_token","implicit","password","urn:ietf:params:oauth:grant-type:device_code","urn:openid:params:grant-type:ciba","urn:ietf:params:oauth:grant-type:token-exchange"],"response_types_supported":["code","token","id_token","id_token token","code id_token","code token","code id_token token"],"response_modes_supported":["form_post","query","fragment"],"token_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"revocation_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"introspection_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"id_token_signing_alg_values_supported":["RS256"],"userinfo_signing_alg_values_supported":["RS256"],"introspection_signing_alg_values_supported":["RS256"],"subject_types_supported":["public"],"code_challenge_methods_supported":["plain","S256"],"request_parameter_supported":true,"request_object_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"],"prompt_values_supported":["none","login","consent","select_account"],"authorization_response_iss_parameter_supported":true,"backchannel_token_delivery_modes_supported":["poll"],"backchannel_user_code_parameter_supported":true,"backchannel_authentication_request_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"],"dpop_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"]}
+=== api/identity jwks ===
+
+=== api/identity Login page (form action / hidden inputs) ===
+    <link rel="icon" type="image/x-icon" href="/identity/images/favicon.ico" />
+    <link rel="shortcut icon" type="image/x-icon" href="/identity/images/favicon.ico" />
+    <link rel="preload" as="font" type="font/ttf" crossorigin href="/identity/fonts/open_sans_regular.ttf">
+    <link rel="preload" as="font" type="font/ttf" crossorigin href="/identity/fonts/open_sans_light.ttf">
+        <link rel="stylesheet" type="text/css" href="/identity/css/main.min.css?v=wGjRXuhcYI_LTQ3O9owg2oH18DhaXmfS5PzYxMx6D0k" />
+        <link rel="stylesheet" type="text/css" href="/identity/css/basics.min.css?v=V4JLhaXVFpGZVM5c6tQDZ76B62hPnEtZXQKkaCwydd4" />
+        <link rel="stylesheet" type="text/css" href="/identity/css/variables.min.css?v=47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU" />
+<input id="firstContentUrl" type="hidden" value="/identity/Account/LoadAuthentication" />
+<input id="pageModel_kiosk" type="hidden" value="false" />
+<input id="pageModel_authenticationAction" type="hidden" value="signin" />
+<input id="pageModel_signupDisabled" type="hidden" value="false" />
+<input id="pageModel_culture" type="hidden" value="en" />
+<input id="pageModel_loadAuthenticationUrl" type="hidden" value="/identity/Account/LoadAuthentication" />
+<input id="pageModel_loginUrl" type="hidden" value="/identity/Account/Login" />
+                            <a class="Layout__FooterItem Link" href="https://trust.signl4.com/" target="_blank">Trust Center</a>
+                            <a class="Layout__FooterItem Link" href="https://www.signl4.com/feedback-we-love-hear-from-you/" target="_blank">Feedback</a>
+                            <a class="Layout__FooterItem Link" href="https://www.signl4.com/imprint-leadership-about/" target="_blank">Imprint</a>
+                            <a class="Layout__FooterItem Link" href="https://www.signl4.com/terms_of_use/" target="_blank">Terms</a>
+                            <a class="Layout__FooterItem Link" href="https://www.signl4.com/privacy-policy/" target="_blank">Privacy</a>
+[0m
+[0m$ [0mfor u in "https://api.signl4.com/identity/jwks" "https://api.signl4.com/identity/.well-known/openid-configuration/jwks" "https://api.signl4.com/identity/.well-known/jwks"; do
+echo "=== $u ==="
+curl -sS -k -m 10 -H "Accept: application/json" -w "\n[codesize %{http_code}/%{size_download}]\n" "$u"
+sleep 1
+done
+echo; echo "=== api /identity/Account/LoadAuthentication ==="
+curl -sS -k -m 10 -H "Accept: application/json" "https://api.signl4.com/identity/Account/LoadAuthentication" -w "\n[codesize %{http_code}/%{size_download}]\n"
+=== https://api.signl4.com/identity/jwks ===
+
+[codesize 404/0]
+=== https://api.signl4.com/identity/.well-known/openid-configuration/jwks ===
+{"keys":[{"kty":"RSA","use":"sig","kid":"91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256","x5t":"ke5PPOlOtRevZrJU90l-yw4x7ic","e":"AQAB","n":"7bx0BWVzmy_EkFubRcyLUVBvdA4XDPMgOYXKqX9uW5Bm1nqYpLEHKkkI9x2lH4_HBD4bmCoeDlR-fu0q4D0_JOB3QEIfnRwhcQKNwnpE33vItXea4hyUGXHoGCR7hasBRN_unkHHYIi6VsV_I_1kJDJQ5Gf9zjQDrwW2X6DEnuNaF3BMSRU8WHHbtps4_OgyoO4DN9PE8Xsu7Ngno3ItGZ2ACi5fradUyIJ6NXfMlyAV4B6A7ZI36yr7Noh1ZrXVkbPYkjcpWKH9PR1toeRJp83wc2vh6z5r77hHMKyKdzCx4uCsN6p-zlsuZoA1xumoydVhzmcG1G7ThgvxHk9NGQ","x5c":["MIIDNDCCAhygAwIBAgIQd2nPiwxkQjSr9WopSTtKgzANBgkqhkiG9w0BAQsFADAXMRUwEwYDVQQDDAwqLnNpZ25sNC5jb20wHhcNMjUxMTIxMDQxMTE5WhcNMjcxMTIxMDQyMTE5WjAXMRUwEwYDVQQDDAwqLnNpZ25sNC5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDtvHQFZXObL8SQW5tFzItRUG90DhcM8yA5hcqpf25bkGbWepiksQcqSQj3HaUfj8cEPhuYKh4OVH5+7SrgPT8k4HdAQh+dHCFxAo3CekTfe8i1d5riHJQZcegYJHuFqwFE3+6eQcdgiLpWxX8j/WQkMlDkZ/3ONAOvBbZfoMSe41oXcExJFTxYcdu2mzj86DKg7gM308Txey7s2Cejci0ZnYAKLl+tp1TIgno1d8yXIBXgHoDtkjfrKvs2iHVmtdWRs9iSNylYof09HW2h5EmnzfBza+HrPmvvuEcwrIp3MLHi4Kw3qn7OWy5mgDXG6ajJ1WHOZwbUbtOGC/EeT00ZAgMBAAGjfDB6MA4GA1UdDwEB/wQEAwIFoDAJBgNVHRMEAjAAMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAfBgNVHSMEGDAWgBTgACj6LFymw2m3Wl7Lsm9PTHwQRzAdBgNVHQ4EFgQU4AAo+ixcpsNpt1pey7JvT0x8EEcwDQYJKoZIhvcNAQELBQADggEBAGfIIqnDl5DewpIn/H3DetX+lLQSnXmozkyVuuLeHdKypfVxudvq03j+tK29zQ7PmD4nRHP9O/jaGrSa78Gq/cLsWqVxSTc4Fnq64RBVaJHH0h9usxJ6MEZCkXHDLMB/OEoJboatDylcgGm7pIIl1O1uHSv1BV/j9IT+Va5w5kc2qj+rCJ9IgF3elzqLLJMK2E6+a69rmD3gqTOYPPAtHzBtDYUdoUmbmyicnRpPtyhEeMdDAZBzUzy3qRiYcR88mdiy4f5atuLnRKhr5Bp3mU26scB6K8Zd8NG+8r+zs6KHhdqoZByu50vY7pOQ9IB+SFP1qgsZ6BuhlRLVfnGsNH0="],"alg":"RS256"}]}
+[codesize 200/1611]
+=== https://api.signl4.com/identity/.well-known/jwks ===
+
+[codesize 404/0]
+
+=== api /identity/Account/LoadAuthentication ===
+{"success":false,"path":null,"data":null,"errorMessage":null}
+[codesize 400/61]
+[0m
+[0m$ [0mecho "=== connect /identity css hashes ==="; curl -sS -k -m 10 "https://connect.signl4.com/identity" | grep -oE 'css/(main|basics|variables)\.min\.css\?v=[A-Za-z0-9_-]+' | head; sleep 1
+echo "=== devconnect /identity css hashes ==="; curl -sS -k -m 10 "https://devconnect.signl4.com/identity" | grep -oE 'css/(main|basics|variables)\.min\.css\?v=[A-Za-z0-9_-]+' | head; sleep 1
+echo "=== authorize no client (baseline) ==="; curl -sS -k -m 10 -w "\n[%{http_code} loc:%{redirect_url}]\n" "https://api.signl4.com/identity/connect/authorize?response_type=code&scope=openid&redirect_uri=https%3A%2F%2Fexample.com%2Fcb&state=s" | head -c 600; sleep 1
+echo "=== authorize w/ prod account-portal client + guessed redirect ==="; curl -sS -k -m 10 -w "\n[%{http_code} loc:%{redirect_url}]\n" "https://api.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&response_type=code&scope=openid%20profile%20account_portal%20offline_access&redirect_uri=https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fauth-callback&state=x" | head -c 900
+=== connect /identity css hashes ===
+css/main.min.css?v=wGjRXuhcYI_LTQ3O9owg2oH18DhaXmfS5PzYxMx6D0k
+css/basics.min.css?v=V4JLhaXVFpGZVM5c6tQDZ76B62hPnEtZXQKkaCwydd4
+css/variables.min.css?v=47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU
+=== devconnect /identity css hashes ===
+css/main.min.css?v=wGjRXuhcYI_LTQ3O9owg2oH18DhaXmfS5PzYxMx6D0k
+css/basics.min.css?v=V4JLhaXVFpGZVM5c6tQDZ76B62hPnEtZXQKkaCwydd4
+css/variables.min.css?v=47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU
+=== authorize no client (baseline) ===
+
+[302 loc:https://api.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqNu6agZkvReVI5ij687uI6iJyEtK_nLBS8s8HbImKm6KCwj4OQplhQZvYsCMt4Cuy0i9NRCfm6SB0g0UutaW_q4Zm-8PMvyyAoTxNNv8lAQNCu7OkgpIBZccpkgmLXKTYRnxV7BGeMOc43qy0pjwahVxgGmvfkdfHnjjACMQ9YO6gZ2tkdCm_jQ5ppK8FcdOFPyKxpl66c501A_V75kwBXaNifymXFbOI405WPja2DlLxb1FhQc7USv53wKsrfkPY8dJL7syAEhYTb_B73ECGk_XPdBZNfi67XiiCfBLGjpbF2teS1FsqpH3DP6vHSL_Tc5m4Jx97kTyz8lsG8TbAEsXoY0ksnkH3VPd7I5XKDPPRqkN5B6ZZZ6dagOep-kPJtwTUYGdW9ntzFUCTkauf6o]
+=== authorize w/ prod account-portal client + guessed redirect ===
+
+[302 loc:https://api.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqMD4yYFWneZVpMfLInPRGMhn3yHWsfDhkmsiDHzA4PmIE2CNavJU8SRQe5I6aHfM01SkHzOpt6HHc-eKu0RLpTjv3jkIdJ1nyG2hX51RZbmY-vUEARAFwS6tlC8jZnWzIHf5mN7isvWu5nLRpYgPAuc-dwiFw54-j64Gdf2x7oR3lHXxh1gQ2eBTYoPD6IOni792zXCblf77LUs5qCD6ayXz3MNuvjjci9dkkRgsb9AugIFiV0YqgJqV1PcaKtTVmXHAq2Yjp1IrQGtM6HlA8e6GL1MpCyfegudTHtqdTCfRZfH0T7FgiZwCFi44ZXh6X5xbhOFSESDX5Ic2sKwfectUXtWx6sr2CBwKQyEwftkEmx6d9TlvVK373i8E8PqFLA38PWF9sVFm3S7wbqr_rMBd3ClkaCFl7OWMPtElD4Nzk4X9tv9-jOjztla3QcExVq4oM9PxVhmED2X-MJ6P307]
+[0m
+[0m$ [0mEID=$(curl -sS -k -m 10 -o /dev/null" "https://api.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&response_type=code&scope=openid%20profile%20account_portal%20offline_access&redirect_uri=https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fauth-callback&state=x" -w "%{redirect_url}" | grep -oE 'errorId=[^&]+')
+echo "errorId=$EID"
+sleep 1
+curl -sS -k -m 10 "https://api.signl4.com/identity/home/error?$EID" | grep -iE "error|invalid|client|redirect|description" | head -20
+/bin/bash: -c: line 4: unexpected EOF while looking for matching `"'
+[0m
+[0m$ [0mEID=$(curl -sS -k -m 10 "https://api.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&response_type=code&scope=openid%20profile%20account_portal%20offline_access&redirect_uri=https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fauth-callback&state=x" -o /dev/null -w "%{redirect_url}" | grep -oE 'errorId=[^&]+')
+echo "errorId=$EID"
+sleep 1
+curl -sS -k -m 10 "https://api.signl4.com/identity/home/error?$EID" | grep -iE "error|invalid|client|redirect|description|message" | head -20
+errorId=errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqPYg0Ip2ROaCnHWL485lmpTIkBKeCAIWV58cGP8jVY18EjCDKb5E6QuRXxwXJEQ1jbkk1HJQZ83m6l3GgIv5bb_i8DyfIXmIx8N_H4OGojSBfyaf4pVkh4pDVzubgDZKMdep0_3xfH-kJxmgzle-GnoQ3KeqLwuvSZlHRSWENySqteMW-9saUYbDG8RzUVt259C1o2QqK7qcPVBIUqAH5JLuDqaFUo9P7UlV9MNviog8luzxSJWu7rcDLCGwIUTo649dUIjrFWRaOxUButImWd3TJwWskLDpbdbsffgjyfmdYyiQC8_-bCdKbeH6MTMT7Yx3SHQA1drV5J9f07KT8YVL4ss7ad21TRBbUP-zcC5dvpkGprRXdV6afEKsDralyA9GPkipyRcQu6fv3jjrkBTN-bp5LBMZrbuoFG00RtnDCX-0uwhhQZ125c9cJGAjgyxxHLoz-1FuRhQvRSDtbov
+    <title>SIGNL4 - Error</title>
+<input id="pageModel_authenticationAction" type="hidden" value="error" />
+<div class="ContentError">
+    <div class="ContentError__Title">
+    <div class="s4TextPanel s4TextPanel--error">
+            <div>invalid_request</div>
+            'CancelButtonText': 'Cancel','ForgotPasswordInvalidEmailError': 'Something went wrong. Please check your email for typos.','EditButtonText': 'Edit','ConfirmButtonText': 'Confirm','ForgotPasswordTooManyRequestError': 'You have tried to reset your password too many times. Please try again later.','ForgotPasswordMissingEmailError': 'To get a new password, please enter your email.','SuccessText': 'Done!','ErrorPageTitle': 'Oops...','UserNotMatchExternalUserErrorMessage': 'Access denied because your Email matches a different account type. Login with the other account instead.','LoadingText': 'Working on it...','DefaultErrorMessage': 'Something went wrong. Try again later.','BackButtonText': 'Back'
+[0m
+[0m$ [0mecho "=== devconnect discovery (fields diff) ==="; curl -sS -k -m 10 "https://devconnect.signl4.com/identity/.well-known/openid-configuration" | python3 -c "import sys,json;d=json.load(sys.stdin);print({k:d[k] for k in ['issuer','grant_types_supported','request_parameter_supported','backchannel_authentication_request_signing_alg_values_supported','dpop_signing_alg_values_supported','authorization_response_iss_parameter_supported','token_endpoint_auth_methods_supported','id_token_signing_alg_values_supported'] if k in d})"; sleep 1
+echo "=== api discovery (same fields) ==="; curl -sS -k -m 10 "https://api.signl4.com/identity/.well-known/openid-configuration" | python3 -c "import sys,json;d=json.load(sys.stdin);print({k:d[k] for k in ['issuer','grant_types_supported','request_parameter_supported','backchannel_authentication_request_signing_alg_values_supported','dpop_signing_alg_values_supported','authorization_response_iss_parameter_supported','token_endpoint_auth_methods_supported','id_token_signing_alg_values_supported'] if k in d})"; sleep 1
+echo "=== connect discovery (same fields) ==="; curl -sS -k -m 10 "https://connect.signl4.com/identity/.well-known/openid-configuration" | python3 -c "import sys,json;d=json.load(sys.stdin);print({k:d[k] for k in ['issuer','grant_types_supported','request_parameter_supported','backchannel_authentication_request_signing_alg_values_supported','dpop_signing_alg_values_supported','authorization_response_iss_parameter_supported','token_endpoint_auth_methods_supported','id_token_signing_alg_values_supported'] if k in d})"
+=== devconnect discovery (fields diff) ===
+{'issuer': 'https://devconnect.signl4.com/identity', 'grant_types_supported': ['authorization_code', 'client_credentials', 'refresh_token', 'implicit', 'password', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:openid:params:grant-type:ciba', 'urn:ietf:params:oauth:grant-type:token-exchange'], 'request_parameter_supported': True, 'backchannel_authentication_request_signing_alg_values_supported': ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512'], 'dpop_signing_alg_values_supported': ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512'], 'authorization_response_iss_parameter_supported': True, 'token_endpoint_auth_methods_supported': ['client_secret_basic', 'client_secret_post'], 'id_token_signing_alg_values_supported': ['RS256']}
+=== api discovery (same fields) ===
+{'issuer': 'https://connect.signl4.com/identity', 'grant_types_supported': ['authorization_code', 'client_credentials', 'refresh_token', 'implicit', 'password', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:openid:params:grant-type:ciba', 'urn:ietf:params:oauth:grant-type:token-exchange'], 'request_parameter_supported': True, 'backchannel_authentication_request_signing_alg_values_supported': ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512'], 'dpop_signing_alg_values_supported': ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512'], 'authorization_response_iss_parameter_supported': True, 'token_endpoint_auth_methods_supported': ['client_secret_basic', 'client_secret_post'], 'id_token_signing_alg_values_supported': ['RS256']}
+=== connect discovery (same fields) ===
+{'issuer': 'https://connect.signl4.com/identity', 'grant_types_supported': ['authorization_code', 'client_credentials', 'refresh_token', 'implicit', 'password', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:openid:params:grant-type:ciba', 'urn:ietf:params:oauth:grant-type:token-exchange'], 'request_parameter_supported': True, 'backchannel_authentication_request_signing_alg_values_supported': ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512'], 'dpop_signing_alg_values_supported': ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512'], 'authorization_response_iss_parameter_supported': True, 'token_endpoint_auth_methods_supported': ['client_secret_basic', 'client_secret_post'], 'id_token_signing_alg_values_supported': ['RS256']}
+[0m
+[0m$ [0mecho "=== DNS ==="; for h in api.signl4.com connect.signl4.com devconnect.signl4.com account.signl4.com; do printf "%s -> " "$h"; dig +short "$h" | tr '\n' ' '; echo; done
+sleep 1
+echo "=== account portal SPA oidc config ==="; curl -sS -k -m 10 "https://account.signl4.com/manage" | grep -oiE '(src|href)="[^"]+\.(js|json)[^"]*"' | head -20
+=== DNS ===
+api.signl4.com -> s4prodappgw.westeurope.cloudapp.azure.com. 20.160.37.197 
+connect.signl4.com -> s4prodappgw.westeurope.cloudapp.azure.com. 20.160.37.197 
+devconnect.signl4.com -> s4devappgw.westeurope.cloudapp.azure.com. 108.143.123.104 
+account.signl4.com -> s4prodappgw.westeurope.cloudapp.azure.com. 20.160.37.197 
+=== account portal SPA oidc config ===
+[0m
+DELTA verified via read-only GET probes this cycle (~30 req, ~1 rps).
+
+STEP 1 — DELTA
+- [NEW] api.signl4.com serves a full interactive IdentityServer at `/identity`: OIDC discovery 200, Welcome/Login/SignUp UI (`pageModel_signupDisabled=false`), issuer `https://connect.signl4.com/identity` while ALL endpoints point to api.signl4.com — JWKS at `/identity/.well-known/openid-configuration/jwks` returns byte-identical kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256` (same n/x5t/x5c CN=*.signl4.com) as connect+devconnect.
+- [NEW] DNS: api/connect/account all resolve `s4prodappgw.westeurope.cloudapp.azure.com` 20.160.37.197; devconnect = 108.143.123.104 → prod `/identity` is the SAME IdentityServer backend reached via AppGW hostname routing, not a separate instance.
+- [NEW] api.signl4.com/.well-known/apple-app-site-association (200) = appID F2UW9VUYTE.com.derdack.projectx, deep links /manage/Signls (+ NOT /manage/Signls/NewSignl), /manage/account/signup; /.well-known/assetlinks.json (200) = com.derdack.signl4 with 3 APK cert fingerprints.
+- [NEW] prod IdP OIDC (now confirmed from all 3 prod hostnames + devconnect): grants incl `password`, `device_code`, `CIBA`, `token-exchange`; `request_parameter_supported=true`, `require_pushed_authorization_requests=false`, request-object/CIBA/DPoP algs incl PS/ES; `id_token_signing_alg_values_supported=['RS256']`.
+- [NEW] `/identity/Account/LoadAuthentication` → 400 `{"success":false,...}` (state-load endpoint, no disclosure); `/identity/jwks` → 404 (doc-attached path only).
+
+STEP 2 — PRIORITIZE
+- [PRIO] api.signl4.com/identity,7.1,a=7,b=9,t=8,g=4,c=3,f=10 — full prod IdP+OAuth OIDC reachable on the API host: signup-enabled, password/device/CIBA/token-exchange grants, request-object-JWT support, same trust anchor as dev/staging.
+- [PRIO] devfix.signl4.com,5.4,a=5,b=8,t=6,g=6,c=3,f=5 — un-WAF'd staging support portal, upstream /signin-oidc, same-IP cluster as proven shared-key IdP.
+- [PRIO] account.signl4.com/manage,4.9,a=5,b=7,t=6,g=5,c=3,f=5 — prod account portal; SPA config not extractable read-only, mostly covered by prior devaccount work.
+
+STEP 3 — HYPOTHESES
+[HYP] api.signl4.com/api/v2 validates Bearer tokens against the same shared RS256 trust anchor served on api/identity
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 50
+reasoning: api host serves both the API (401 `WWW-Authenticate: Bearer`) and the IdP (same backend on s4prodappgw, JWKS kid 91EE4F... byte-identical to staging devconnect); single prod trust boundary implies the api validator and IdP signer share one key — but cross-ENV acceptance (staging-minted → prod API) has no passive signal.
+evidence_needed: staging-minted access_token replayed on api and accepted vs rejected
+verify_steps: HUMAN — POST devconnect /identity/connect/token (grant_type=password, staging account) → GET api.signl4.com/api/v2/teams with that Bearer; compare to 401 baseline
+impact: staging credential or client-secret compromise ⇒ prod API read/write (alerts/teams/subscriptions) + account portal + EA/reseller scopes; additive proof of single cross-env trust anchor. MED-HIGH.
+testability: HUMAN_ONLY
+
+[HYP] devfix.signl4.com support portal authenticates against the shared-key staging IdP
+class: AUTH
+asset: devfix.signl4.com
+confidence: 55
+reasoning: co-resolves with devconnect/devaccount on 108.143.123.104; `/signin-oidc` callback registered (500 without state); staging cluster proven to share prod RS256 key + client_id 692A0A56 + full prod scope set.
+evidence_needed: interactive Login redirect → `https://devconnect.signl4.com/identity/connect/authorize?...` (authority=staging) vs connect (prod)
+verify_steps: HUMAN — click Login on devfix with staging creds, capture Location issuer
+impact: staging cred/secret compromise ⇒ SIGNL4 support admin portal (cases/files) from un-WAF'd host; escalates cross-env finding to data-touching app. MED-HIGH.
+testability: HUMAN_ONLY
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] api.signl4.com/identity is a separate or mis-hosted IdP instance: REJECTED by DNS — api/connect/account all s4prodappgw 20.160.37.197, same backend.
+- [PARKED] request-object/JWT alg confusion on prod IdP: id_token alg = RS256 only, no registerable client JWKS observed; all request-object/CIBA/DPoP asym algs require attacker-held private key known to IdP — no public vector, and crafting tokens = auth-bypass class (excluded).
+- [PARKED] anonymous device_code issuance on prod IdP: would require POST (outside probe rules) + victim interaction; phishing prerequisite, no autonomous finding.
+- [FINAL] ranked: devfix authorize-issuer (55) → api/v2 trust anchor (50) → cross-env report submission (HUMAN).
+
+STEP 5 — NEXT ACTION
+- [NEXT] HUMAN: submit the cross-env identity-reuse report to bugs.olivermaicher.eu with evidence now spanning FOUR hostnames: prod connect + api (/identity) on s4prodappgw and staging devconnect (108.143.123.104) all serve the SAME RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256; same n/x5t/x5c), same prod client_id 692A0A56-892F-4AE2-8259-76DA398990B6, full prod scope set + password/device/CIBA/token-exchange grants; prod front-end build artifacts byte-equal across trains (css ?v= hashes identical, incl empty-content hash 47DEQpj...), divergent server builds (ID_NET10_0 vs ID_NET8_0). Then mint staging token (POST devconnect /identity/connect/token grant_type=password) and replay on api/teams.
+
+STEP 6 — LEARNING
+- [LEARN] REJECTED MISCONFIG @ api.signl4.com/identity: NOT a separate/mis-hosted IdP — api/connect/account all resolve s4prodappgw 20.160.37.197 (same AppGW backend, issuer pinned to connect); "new IdP instance" invalidated.
+- [LEARN] ACCEPTED MISCONFIG @ api.signl4.com/identity: prod IdP UI + OIDC (signup-enabled, password/device/CIBA/token-exchange grants, request_parameter_supported, PAR optional) is reachable on the API hostname with the same prod RS256 key — adds a 3rd/4th hostname to the cross-env signing-key evidence but introduces no independent vuln (all paths cred-gated).
+- [LEARN] ACCEPTED OTHER @ api.signl4.com: AASA (F2UW9VUYTE.com.derdack.projectx) + assetlinks (com.derdack.signl4, 3 cert fingerprints) fingerprint the mobile ecosystem consuming this host; informative only.
+
+STEP 7 — RISK
+- [RISK] derdack: 50 — cross-env finding now reproducible from 4 hostnames across 2 environments/2 build trains with byte-identical signing material and full prod grants incl password/CIBA/token-exchange, but still gated on staging credential/secret compromise (holds below HIGH). All other new surface (api/identity signup-allowed, device/request-object grants, mobile AASA) is intended functionality or victim-interaction-bound; api /api/v2 stays Bearer-gated, WP estates gated, lab/s4dev fleet inert. Passive surface on target api is now fully mapped; report submission + HUMAN token-mint are the only productive paths.

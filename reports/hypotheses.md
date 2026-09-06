@@ -409,3 +409,15 @@
 - LEARN: ACCEPTED AUTH @ devconnect.signl4.com: password grant listed but returns invalid_client without client_secret — grant enabled but not exploitable without secret
 - LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 5x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256
 - LEARN: ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CS
+
+## RANKED HYPOTHESES 2026-09-06 01:06:23 UTC
+- [85] devconnect.signl4.com/identity/connect/token: Cross-environment token forgery via shared RS256 key + password grant on staging IdP (from art/lead_nemotron3.txt)
+- [50] api.signl4.com/api/v2/teams: api.signl4.com/api/v2 validates Bearer tokens against the same shared RS256 trust anchor served on api/identity (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://www.derdack.com/wp-login.php -H "Accept: text/html" — observe Set-Cookie headers for wordpress_logged_in_* and wordpress_sec_*; confirm Domai
+- LEARN: REJECTED BUSLOGIC @ api.signl4.com/api/v2/alerts: POST returns 401 (auth required) — unauthenticated alert ingestion hypothesis invalidated; endpoint Bearer-gat
+- LEARN: REJECTED AUTH @ www.derdack.com/de/xmlrpc.php wp.uploadFile: faultCode 403 "incorrect username/password" — XML-RPC mutating methods enforce authentication
+- LEARN: REJECTED AUTH @ www.derdack.com/ea/xmlrpc.php wp.uploadFile: faultCode 403 "Incorrect username or password" — same auth enforcement on /ea/ multisite
+- LEARN: ACCEPTED MISCONFIG @ api.signl4.com/api/v2/csp/report: POST returns 204 unauthenticated — CSP reporting sink, expected, negligible impact
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com: password grant listed but returns invalid_client without client_secret — grant enabled but not exploitable without secret
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 5x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256
+- LEARN: ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CS
