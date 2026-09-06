@@ -1096,3 +1096,33 @@ impact: financial/billing artifact exposure via staging-issued creds. MED
 testability: HUMAN_ONLY
 [NEXT] HUMAN: mint staging token via `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope `public_api_read offline_access`) → replay Bearer on prod `GET https://connect.signl4.com/api/v3/teams` (401 baseline confirmed this cycle) and `https://connect.signl4.com/identity/connect/userinfo`; capture devfix Login issuer; then submit cross-env report to bugs.olivermaicher.eu — evidence pack: 9 deep-equal points (api.signl4.com/connect/devconnect identity+JWKS, prod+staging API swagger parity, staging-only e-invoice + tags routes), shared key/scope/client, scopes public_api_read/write/offline_access.
 [RISK] derdack: 55 — API estate corrected: the real product API, prod IdP, account portal and webhook ingestion all share `connect.signl4.com`, and staging `devconnect` mirrors it with the byte-identical RS256 key + client 692A0A56 + scope set (9 observation points incl both API estates); staging compromise now reaches prod V2/V3 API RW with a billing/invoice surface on staging. RCI holds below HIGH (gated on staging credential/client-secret); no new unauth-defect this cycle — all API routes key-gated.
+## 2026-09-06 18:37:48 UTC [target] (model bigpickle)
+[HYP] staging OAuth2 token accepted by prod connect API (api-layer cross-env replay)
+class: AUTH
+asset: connect.signl4.com/api/v3
+confidence: 78
+reasoning: prod connect /api/v3 subscriptions/webhooks/users re-confirmed 401 Bearer this cycle; prod+staging share byte-identical RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) + client_id 692A0A56 + scope set, now at 9+ deep-equal points incl both API estates + api-host identity; authorize redirect_uri validation intact (no independent OAuth redirect flaw).
+evidence_needed: staging-minted access_token (scope public_api_read) accepted vs 401/403 baseline on prod connect /api/v3/*
+verify_steps: HUMAN — POST devconnect /identity/connect/token grant_type=client_credentials (client 692A0A56-892F-4AE2-8259-76DA398990B6, scope public_api_read offline_access) → GET connect.signl4.com/api/v3/teams with Bearer; compare to 401 baseline
+impact: staging credential/client-secret compromise ⇒ full prod V2/V3 API RW (alerts, users, schedules, SCIM, scripts) — MED-HIGH→HIGH
+testability: HUMAN_ONLY
+[HYP] devfix support portal authenticates against shared-key staging IdP
+class: AUTH
+asset: devfix.signl4.com
+confidence: 60
+reasoning: devfix /signin-oidc callback registered on 108.143.123.104 staging cluster; shares RS256 key + client_id 692A0A56 + prod scope set; no WAF headers.
+evidence_needed: interactive Login redirect Location issuer = devconnect vs connect
+verify_steps: HUMAN — Login on devfix with staging creds → capture /identity/connect/authorize redirect authority
+impact: staging cred compromise ⇒ SIGNL4 support admin portal (customer cases/files) from un-WAF'd host — escalates to data-touching app
+testability: HUMAN_ONLY
+[HYP] staging API billing surface reachable under shared-key estate
+class: AUTH
+asset: devconnect.signl4.com/api/v3/subscriptions/{sid}/invoices
+confidence: 60
+reasoning: dev schema exposes /en16931 + /zugferd invoice-export routes; staging estate shares prod trust anchor; direct probes 401/404 unauthenticated (no leak without creds).
+evidence_needed: staging-authenticated GET returns invoice list/XML
+verify_steps: HUMAN — with staging API key/token GET /api/v3/subscriptions, /{sid}/invoices, /{iid}/en16931
+impact: financial/billing artifact exposure via staging-issued creds. MED
+testability: HUMAN_ONLY
+[NEXT] HUMAN: mint staging token via `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope `public_api_read offline_access`) → replay Bearer on prod `GET https://connect.signl4.com/api/v3/teams` (401 baseline re-confirmed this cycle) and `connect.signl4.com/identity/userinfo`; capture devfix Login issuer; then submit cross-env report to bugs.olivermaicher.eu (evidence pack now 9+ deep-equal points incl api-host identity, prod+staging API/scope/client parity, authorize redirect_uri validation intact as control).
+[RISK] derdack: 56 — Cross-env identity finding strongest AUTH lead at 9+ deep-equal observation points (prod api + connect IdP + staging devconnect byte-identical RS256 key, client_id 692A0A56, full prod scope set); prod connect /api/v3 fully re-confirmed Bearer-gated this cycle with no independent OAuth redirect/unauth surface. RCI holds below HIGH — exploit still bound to staging credential/client-secret compromise; no new unauth-defect this cycle. api POC evidence-complete; advances ONLY via HUMAN token-mint + interactive devfix login + report submission. If HUMAN mint fails / credentials unavailable, program stalls at cross-env key-reuse writeup (report-worthy but 0-RCE/low severity absent credentials).
