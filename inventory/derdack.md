@@ -231,3 +231,12 @@ www.derdack.com
 - CHANGED Cross-env JWKS key-reuse re-verified 5th time: devconnect.signl4.com & connect.signl4.com RS256 key byte-identical (kid/n/x5t/x5c/e/x5c all match)
 - CHANGED blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade chain still live (302 to http://www.derdack.com/...)
 - CHANGED dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+
+## 2026-09-06 10:45:38 UTC
+- NEW api.signl4.com/api/v2/teams returns 401 (WWW-Authenticate: Bearer) on unauthenticated GET — confirms Bearer-gated API surface
+- NEW devaccount.signl4.com/manage and account.signl4.com/manage both redirect to their respective IdPs with IDENTICAL client_id `692A0A56-892F-4AE2-8259-76DA398990B6` and scope set — cross-env client reuse
+- NEW devconnect.signl4.com OIDC discovery: grant_types includes `password` + 7 others; algs=['RS256'] only — password grant enabled on staging IdP
+- NEW JWKS byte-identical re-verified 6th time: devconnect.signl4.com & connect.signl4.com RS256 key (kid/n/x5t/x5c/e all match)
+- CHANGED blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- CHANGED dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+- CHANGED api.signl4.com/api/v2/alerts POST returns 401 (auth required) — previously hypothesized unauthenticated ingestion invalidated

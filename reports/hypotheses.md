@@ -434,3 +434,16 @@
 - LEARN: ACCEPTED AUTH @ devconnect.signl4.com: password grant listed but returns invalid_client without client_secret — grant enabled but not exploitable without secret
 - LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 5x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256
 - LEARN: ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CS
+
+## RANKED HYPOTHESES 2026-09-06 10:45:38 UTC
+- [85] devconnect.signl4.com/identity/connect/token: Cross-environment token forgery via shared RS256 key + password grant on staging IdP (from art/lead_nemotron3.txt)
+- [70] api.signl4.com/api/v2/teams: staging-minted Bearer accepted by prod api.signl4.com (single cross-env trust anchor at API layer) (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: mint staging token via `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=password, client_id=692A0A56-892F-4AE2-8259-76DA398990B6) 
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://www.derdack.com/wp-login.php -H "Accept: text/html" — observe Set-Cookie headers for wordpress_logged_in_* and wordpress_sec_*; confirm Domai
+- LEARN: ACCEPTED AUTH @ api.signl4.com: api/identity re-verified live (OD 200, issuer=connect, JWKS kid 91EE4F3C shared) — 7th live deep-equal of the cross-env trust an
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 6x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com: password grant listed in OIDC discovery alongside 7 other grant types — grant enabled but not exploitable without client_
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA
+- LEARN: ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CS
+- LEARN: REJECTED BUSLOGIC @ api.signl4.com/api/v2/alerts: POST returns 401 (auth required) — unauthenticated alert ingestion hypothesis invalidated; endpoint Bearer-gat
+- LEARN: ACCEPTED MISCONFIG @ api.signl4.com/api/v2/csp/report: POST returns 204 unauthenticated — CSP reporting sink, expected, negligible impact

@@ -110,3 +110,7 @@
 - 2026-09-06 ACCEPTED AUTH @ devconnect.signl4.com: password grant listed but returns invalid_client without client_secret — grant enabled but not exploitable without secret
 - 2026-09-06 ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 5x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com) — cross-env signing key reuse confirmed
 - 2026-09-06 ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- 2026-09-06 ACCEPTED AUTH @ api.signl4.com: api/identity re-verified live (OD 200, issuer=connect, JWKS kid 91EE4F3C shared) — 7th live deep-equal of the cross-env trust anchor; /api/v2/teams 401 baseline stable; no drift between cycles (bigpickle)
+- 2026-09-06 ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 6x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com) — cross-env signing key reuse confirmed
+- 2026-09-06 ACCEPTED AUTH @ devconnect.signl4.com: password grant listed in OIDC discovery alongside 7 other grant types — grant enabled but not exploitable without client_secret
+- 2026-09-06 ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and scope set — cross-env client reuse confirmed

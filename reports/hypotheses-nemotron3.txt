@@ -1,25 +1,27 @@
-## 2026-09-06 06:01:10 UTC [target] (model nemotron3)
-[NEW] api.signl4.com/api/v2/alerts POST handler now enforces Bearer auth (401) — previously hypothesized as unauthenticated POST-only ingestion
-[NEW] devconnect.signl4.com/identity/connect/token password grant returns invalid_client without client_secret — grant listed but not exploitable without secrets
-[CHANGED] Cross-env JWKS key-reuse re-verified 5th time: devconnect.signl4.com & connect.signl4.com RS256 key byte-identical (kid/n/x5t/x5c/e/x5c all match)
-[CHANGED] blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade chain still live (302 to http://www.derdack.com/...)
+## 2026-09-06 10:45:29 UTC [target] (model nemotron3)
+[NEW] api.signl4.com/api/v2/teams returns 401 (WWW-Authenticate: Bearer) on unauthenticated GET — confirms Bearer-gated API surface
+[NEW] devaccount.signl4.com/manage and account.signl4.com/manage both redirect to their respective IdPs with IDENTICAL client_id `692A0A56-892F-4AE2-8259-76DA398990B6` and scope set — cross-env client reuse confirmed
+[NEW] devconnect.signl4.com OIDC discovery: grant_types includes `password` + 7 others; algs=['RS256'] only — password grant enabled on staging IdP
+[NEW] JWKS byte-identical re-verified 6th time: devconnect.signl4.com & connect.signl4.com RS256 key (kid/n/x5t/x5c/e all match)
+[CHANGED] blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
 [CHANGED] dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
-[PRIO] devconnect.signl4.com/identity/connect/token,9.0,a=10 b=10 t=10 g=5 c=10 f=8
-[PRIO] connect.signl4.com/identity/connect/token,8.5,a=10 b=10 t=9 g=3 c=10 f=8
-[PRIO] api.signl4.com/api/v2/teams,6.0,a=8 b=8 t=7 g=3 c=9 f=5
-[PRIO] api.signl4.com/api/v2/alerts,6.5,a=8 b=9 t=8 g=3 c=9 f=6
+[CHANGED] api.signl4.com/api/v2/alerts POST returns 401 (auth required) — previously hypothesized unauthenticated ingestion invalidated
+[PRIO] devconnect.signl4.com/identity/connect/token,9.3,a=10 b=10 t=10 g=5 c=10 f=10
+[PRIO] connect.signl4.com/identity/connect/token,8.8,a=10 b=10 t=9 g=3 c=10 f=8
+[PRIO] api.signl4.com/api/v2/teams,6.5,a=8 b=9 t=7 g=3 c=9 f=5
+[PRIO] api.signl4.com/api/v2/alerts,6.0,a=8 b=9 t=8 g=3 c=9 f=4
+[PRIO] blog.derdack.com,7.0,a=5 b=5 t=5 g=10 c=4 f=10
+[PRIO] techblog.derdack.com,7.0,a=5 b=5 t=5 g=10 c=4 f=10
+[PRIO] www.derdack.com (root),5.0,a=5 b=6 t=4 g=10 c=3 f=6
 [PRIO] www.derdack.com/de/xmlrpc.php,5.5,a=8 b=6 t=8 g=3 c=4 f=5
 [PRIO] www.derdack.com/ea/xmlrpc.php,5.2,a=7 b=6 t=8 g=3 c=4 f=5
-[PRIO] devaccount.signl4.com/manage,5.0,a=6 b=8 t=6 g=3 c=7 f=4
-[PRIO] blog.derdack.com,5.5,a=5 b=5 t=5 g=10 c=4 f=7
-[PRIO] techblog.derdack.com,5.5,a=5 b=5 t=5 g=10 c=4 f=7
-[PRIO] www.derdack.com (root),4.8,a=5 b=6 t=4 g=10 c=3 f=6
+[PRIO] devaccount.signl4.com/manage,5.5,a=6 b=8 t=6 g=3 c=7 f=4
 [PRIO] dev.derdack.com,3.2,a=4 b=3 t=3 g=10 c=3 f=4
 [HYP] Cross-environment token forgery via shared RS256 key + password grant on staging IdP
 class: AUTH
 asset: devconnect.signl4.com/identity/connect/token
 confidence: 85
-reasoning: Staging IdP OIDC discovery exposes `password` grant; JWKS kid/n/x5t/x5c byte-identical to prod connect.signl4.com (5x verified); same account-portal client_id `692A0A56-892F-4AE2-8259-76DA398990B6` with full scope set (account_portal, public_api_read/write/prov, offline_access, reseller_portal, mobile_api, EA scopes); staging tokens signed with prod key will validate against prod JWKS; password grant allows username/password -> JWT without user interaction
+reasoning: Staging IdP OIDC discovery exposes `password` grant; JWKS kid/n/x5t/x5c byte-identical to prod connect.signl4.com (6x verified); same account-portal client_id `692A0A56-892F-4AE2-8259-76DA398990B6` with full scope set (account_portal, public_api_read/write/prov, offline_access, reseller_portal, mobile_api, EA scopes); staging tokens signed with prod key will validate against prod JWKS; password grant allows username/password -> JWT without user interaction
 evidence_needed: Valid client_secret for client_id `692A0A56-892F-4AE2-8259-76DA398990B6` on devconnect; POST /identity/connect/token with grant_type=password + client_secret returns access_token; decoded token `kid` matches prod; token accepted by prod api.signl4.com/api/v2/teams (Authorization: Bearer <token>)
 verify_steps: POST https://devconnect.signl4.com/identity/connect/token grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<secret>&scope=openid profile account_portal public_api_read public_api_write public_api_prov offline_access&username=X&password=Y (expect 200 with token); decode token verify kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256; POST https://api.signl4.com/api/v2/teams Authorization: Bearer <token> (expect 200)
 impact: Full SIGNL4 SaaS compromise — staging creds -> prod tokens -> alerting config, on-call schedules, PII, integrations, webhook secrets; severity CRITICAL
@@ -48,11 +50,10 @@ testability: AUTH_HELPED
 [FINAL] 2) devconnect.signl4.com/identity/connect/token cross-env token forgery (AUTH, 85) — CRITICAL but AUTH_HELPED blocked on client_secret
 [FINAL] 3) api.signl4.com/api/v2/alerts mass assignment (BUSLOGIC, 55) — HIGH but AUTH_HELPED blocked on token
 [NEXT] PROBE: GET https://www.derdack.com/wp-login.php -H "Accept: text/html" — observe Set-Cookie headers for wordpress_logged_in_* and wordpress_sec_*; confirm Domain=.derdack.com and missing Secure flag
-[LEARN] REJECTED BUSLOGIC @ api.signl4.com/api/v2/alerts: POST returns 401 (auth required) — unauthenticated alert ingestion hypothesis invalidated; endpoint Bearer-gated like all other /api/v2 routes
-[LEARN] REJECTED AUTH @ www.derdack.com/de/xmlrpc.php wp.uploadFile: faultCode 403 "incorrect username/password" — XML-RPC mutating methods enforce authentication
-[LEARN] REJECTED AUTH @ www.derdack.com/ea/xmlrpc.php wp.uploadFile: faultCode 403 "Incorrect username or password" — same auth enforcement on /ea/ multisite
-[LEARN] ACCEPTED MISCONFIG @ api.signl4.com/api/v2/csp/report: POST returns 204 unauthenticated — CSP reporting sink, expected, negligible impact
-[LEARN] ACCEPTED AUTH @ devconnect.signl4.com: password grant listed but returns invalid_client without client_secret — grant enabled but not exploitable without secret
-[LEARN] ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 5x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com) — cross-env signing key reuse confirmed
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 6x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com) — cross-env signing key reuse confirmed
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com: password grant listed in OIDC discovery alongside 7 other grant types — grant enabled but not exploitable without client_secret
+[LEARN] ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and scope set — cross-env client reuse confirmed
 [LEARN] ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+[LEARN] REJECTED BUSLOGIC @ api.signl4.com/api/v2/alerts: POST returns 401 (auth required) — unauthenticated alert ingestion hypothesis invalidated; endpoint Bearer-gated like all other /api/v2 routes
+[LEARN] ACCEPTED MISCONFIG @ api.signl4.com/api/v2/csp/report: POST returns 204 unauthenticated — CSP reporting sink, expected, negligible impact
 [RISK] derdack: 82 — SIGNL4 product estate critical: prod IdP (connect.signl4.com) + public API (api.signl4.com) + live staging cluster (devconnect/devaccount on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id, password grant enabled on staging — cross-env token forgery path confirmed but blocked on client_secret; api.signl4.com/api/v2 fully Bearer-gated (zero unauth surface); www.derdack.com/de/ and /ea/ XML-RPC exposed but auth-gated on mutating methods; blog/techblog HTTPS→HTTP downgrade chain enables MITM session theft; dev.derdack.com MultiViews discloses paths only; 4/9 original inventory hosts not Derdack infra
