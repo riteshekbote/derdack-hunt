@@ -498,3 +498,21 @@
 - LEARN: ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CS
 - LEARN: REJECTED BUSLOGIC @ api.signl4.com/api/v2/alerts: POST returns 401 (auth required) — unauthenticated alert ingestion hypothesis invalidated; endpoint Bearer-gat
 - LEARN: ACCEPTED MISCONFIG @ api.signl4.com/api/v2/csp/report: POST returns 204 unauthenticated — CSP reporting sink, expected, negligible impact
+
+## RANKED HYPOTHESES 2026-09-06 20:50:13 UTC
+- [85] devconnect.signl4.com/identity/connect/token: Cross-environment token forgery via shared RS256 key + password grant on staging IdP (from art/lead_nemotron3.txt)
+- [78] connect.signl4.com/api/v3/*: staging OAuth2 token accepted by prod connect API (api-layer cross-env replay) (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: mint staging token via `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://www.derdack.com/wp-login.php -H "Accept: text/html" — observe Set-Cookie headers for wordpress_logged_in_* and wordpress_sec_*; confirm Domai
+- LEARN: REJECTED MISCONFIG @ api/connect/devconnect.signl4.com: Swagger/OpenAPI closed on all estates (404 across 9 OAS paths × 3 hosts) — no schema-doc disclosure; pri
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v3: bare 404 vs registered-route 401 Bearer differential — routing is auth-before-route; no anonymous read surface; api h
+- LEARN: ACCEPTED AUTH @ api.signl4.com: api/identity re-verified live (OD 200, issuer=connect, JWKS kid 91EE4F3C shared) — 7th live deep-equal of the cross-env trust an
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 6x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com: password grant listed in OIDC discovery alongside 7 other grant types — grant enabled but not exploitable without client_
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA
+- LEARN: ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CS
+- LEARN: REJECTED BUSLOGIC @ api.signl4.com/api/v2/alerts: POST returns 401 (auth required) — unauthenticated alert ingestion hypothesis invalidated; endpoint Bearer-gat
+- LEARN: ACCEPTED MISCONFIG @ api.signl4.com/api/v2/csp/report: POST returns 204 unauthenticated — CSP reporting sink, expected, negligible impact
+- LEARN: REJECTED OTHER @ api.signl4.com/api/v2/alerts: POST returns 411 (length) — method-routing sink family, not an unauth write surface; no new defect
+- LEARN: ACCEPTED AUTH @ devfix.signl4.com: /signin-oidc 500 + root 200 on 108.143.123.104 staging cluster — support portal OIDC callback registered, corroborates stagin
+- LEARN: ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect at 8th deep-equal observation (kid 91EE4F3CE94EB517AF66B254F7497

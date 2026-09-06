@@ -278,3 +278,18 @@ www.derdack.com
 - CHANGED JWKS byte-identical re-verified 6th time: devconnect.signl4.com & connect.signl4.com RS256 key (kid/n/x5t/x5c/e all match)
 - CHANGED blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
 - CHANGED dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+
+## 2026-09-06 20:50:13 UTC
+- NEW api.signl4.com/api/v3 → 404 and /api/v2/ → 404: api host is V2-only, V3 namespace absent
+- NEW connect.signl4.com/api/v3 bare → 404 while registered subroutes (subscriptions/webhooks/users) 401 Bearer — route-level registration + auth differential re-confirmed, zero anonymous surface
+- CHANGED Swagger/OAS surface CLOSED across api+connect+devconnect (swagger.json, openapi.json, swagger/v1/swagger.json, /api/*/swagger.json all 404) — schema-doc leak hypothesis dead; prior "dev schema exposes
+- NEW api.signl4.com/api/v2/alerts POST returns 411 (Content-Length required) — distinguishes POST-sink routing from auth-gated routes; handler enforces Bearer on actual POST with body
+- NEW devfix.signl4.com confirmed on staging cluster (108.143.123.104) with /signin-oidc 500 (OIDC callback registered) + root 200 — corroborates staging IdP attachment topology
+- NEW api.signl4.com/identity OIDC discovery re-verified live at 8th deep-equal observation with JWKS byte-identical to connect/devconnect (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n_sha 138f432b,
+- CHANGED Cross-env identity finding consolidated: single shared RS256 key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + full scope set (account_portal, public_api_read/write/prov, offline_access, reseller
+- CHANGED api.signl4.com/api/v2/teams confirmed 401 WWW-Authenticate: Bearer on unauthenticated GET — prod API surface fully Bearer-gated, stable baseline
+- CHANGED devaccount.signl4.com/manage & account.signl4.com/manage redirect to respective IdPs with IDENTICAL client_id 692A0A56 + scope set — cross-env client reuse confirmed
+- CHANGED devconnect.signl4.com OIDC discovery: grant_types includes password + 7 others; algs=['RS256'] only — password grant enabled on staging IdP
+- CHANGED JWKS byte-identical re-verified 6th time: devconnect.signl4.com & connect.signl4.com RS256 key (kid/n/x5t/x5c/e all match)
+- CHANGED blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- CHANGED dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404

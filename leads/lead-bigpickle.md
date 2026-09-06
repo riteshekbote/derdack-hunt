@@ -1126,3 +1126,35 @@ impact: financial/billing artifact exposure via staging-issued creds. MED
 testability: HUMAN_ONLY
 [NEXT] HUMAN: mint staging token via `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope `public_api_read offline_access`) → replay Bearer on prod `GET https://connect.signl4.com/api/v3/teams` (401 baseline re-confirmed this cycle) and `connect.signl4.com/identity/userinfo`; capture devfix Login issuer; then submit cross-env report to bugs.olivermaicher.eu (evidence pack now 9+ deep-equal points incl api-host identity, prod+staging API/scope/client parity, authorize redirect_uri validation intact as control).
 [RISK] derdack: 56 — Cross-env identity finding strongest AUTH lead at 9+ deep-equal observation points (prod api + connect IdP + staging devconnect byte-identical RS256 key, client_id 692A0A56, full prod scope set); prod connect /api/v3 fully re-confirmed Bearer-gated this cycle with no independent OAuth redirect/unauth surface. RCI holds below HIGH — exploit still bound to staging credential/client-secret compromise; no new unauth-defect this cycle. api POC evidence-complete; advances ONLY via HUMAN token-mint + interactive devfix login + report submission. If HUMAN mint fails / credentials unavailable, program stalls at cross-env key-reuse writeup (report-worthy but 0-RCE/low severity absent credentials).
+## 2026-09-06 20:48:46 UTC [target] (model bigpickle)
+[NEW] api.signl4.com/api/v3 → 404 and /api/v2/ → 404: api host is V2-only, V3 namespace absent
+[NEW] connect.signl4.com/api/v3 bare → 404 while registered subroutes (subscriptions/webhooks/users) 401 Bearer — route-level registration + auth differential re-confirmed, zero anonymous surface
+[CHANGED] Swagger/OAS surface CLOSED across api+connect+devconnect (swagger.json, openapi.json, swagger/v1/swagger.json, /api/*/swagger.json all 404) — schema-doc leak hypothesis dead; prior "dev schema exposes /en16931+/zugferd" sub-claim not reproducible, withdrawn from evidence pack
+[PRIO] devconnect.signl4.com/identity,5.9,axis=OAuth-password-grant-on-staging-IdP-shared-key
+[PRIO] connect.signl4.com/api/v3,5.7,axis=prod-core-API-Bearer-replay-boundary
+[PRIO] devfix.signl4.com,5.05,axis=support-portal-attached-to-staging-IdP
+[HYP] staging OAuth2 token accepted by prod connect API (api-layer cross-env replay)
+class: AUTH
+asset: connect.signl4.com/api/v3/*
+confidence: 78
+reasoning: prod connect /api/v3 registered routes re-confirmed 401 Bearer this cycle, bare path 404 (auth before route); prod api+connect+staging devconnect serve byte-identical RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + full prod scope set across 8 deep-equal identity observations; no env-scoped claim validation is documented; swagger surface now closed on all estates so schema-derived staging-only routes are no longer a side-channel.
+evidence_needed: staging-minted access_token (scope public_api_read) accepted vs 401 baseline on prod connect /api/v3/*
+verify_steps: HUMAN — POST https://devconnect.signl4.com/identity/connect/token grant_type=client_credentials (client 692A0A56-892F-4AE2-8259-76DA398990B6, scope public_api_read offline_access) → GET https://connect.signl4.com/api/v3/teams with Bearer; compare to 401 baseline.
+impact: staging credential/client-secret compromise ⇒ full prod V2/V3 API RW (alerts, users, schedules, SCIM, scripts) — MED-HIGH→HIGH
+testability: HUMAN_ONLY
+[HYP] devfix support portal authenticates against shared-key staging IdP
+class: AUTH
+asset: devfix.signl4.com
+confidence: 60
+reasoning: devfix /signin-oidc 500 callback registered on 108.143.123.104 staging cluster; cluster shares RS256 key + client 692A0A56 + scope set with prod; no WAF headers.
+evidence_needed: interactive Login redirect Location authority = devconnect vs connect
+verify_steps: HUMAN — Login on devfix with staging creds → capture /identity/connect/authorize redirect issuer
+impact: staging cred compromise ⇒ SIGNL4 support admin portal (customer cases/files) from un-WAF'd host
+testability: HUMAN_ONLY
+[PARKED] staging API billing/e-invoice surface: /en16931+/zugferd route claim traced to a swagger that is now 404 on devconnect — sub-claim withdrawn, requires HUMAN-auth'd recon to resurrect
+[PARKED] devfix portal redirect-capture: HUMAN-only, no passive confirmation possible
+[FINAL] 1. [78] staging Bearer accepted by prod connect/api (HUMAN) 2. [60] devfix portal on staging IdP (HUMAN) — both consolidate to the same cross-env AUTH primitive; no new passive-only vector found; swagger purge removes the strongest competing passive lead.
+[NEXT] HUMAN: mint staging token via `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope `public_api_read offline_access`) → replay Bearer on prod `GET https://connect.signl4.com/api/v3/teams` (401 baseline) and `connect.signl4.com/identity/userinfo`; capture devfix Login issuer; then submit cross-env report to bugs.olivermaicher.eu — evidence pack now trimmed to 8 deep-equal identity points (key kid/n/x5t/x5c, client 692A0A56, scopes/grants parity, ID_NET10_0 vs ID_NET8_0 divergence), e-invoice sub-claim dropped.
+[LEARN] REJECTED MISCONFIG @ api/connect/devconnect.signl4.com: Swagger/OpenAPI closed on all estates (404 across 9 OAS paths × 3 hosts) — no schema-doc disclosure; prior /en16931+ZUGFeRD staging-route claim invalidated (schema no longer reachable).
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3: bare 404 vs registered-route 401 Bearer differential — routing is auth-before-route; no anonymous read surface; api host confirmed V2-only (/api/v3 404).
+[RISK] derdack: 54 — Cross-env identity finding stands at 8 deep-equal observation points (prod api+connect IdP vs staging devconnect: byte-identical RS256 key kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com, client 692A0A56, full scope set) and remains the only report-worthy lead; swagger purge cost one evidence item but no core claim. RCI holds below HIGH — exploit bound to staging credential/client-secret compromise; no new unauth defect this cycle. api POC evidence-complete; forward motion requires only the HUMAN token-mint + devfix login + report submission.

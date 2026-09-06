@@ -117,3 +117,5 @@
 - 2026-09-06 ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect at 8th deep-equal observation (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n_sha 138f432b, x5t ke5PPOlOtRevZrJU90l-yw4x7ic) — cross-env trust anchor re-confirmed stable; /api/v2/teams 401 + alerts 411(route) baselines stabilized.
 - 2026-09-06 ACCEPTED AUTH @ devfix.signl4.com: /signin-oidc 500 + root 200 on 108.143.123.104 staging cluster — support portal OIDC callback registered, corroborates staging-IdP attachment.
 - 2026-09-06 REJECTED OTHER @ api.signl4.com/api/v2/alerts: POST returns 411 (length) — method-routing sink family, not an unauth write surface; no new defect.
+- 2026-09-06 REJECTED MISCONFIG @ api/connect/devconnect.signl4.com: Swagger/OpenAPI closed on all estates (404 across 9 OAS paths × 3 hosts) — no schema-doc disclosure; prior /en16931+ZUGFeRD staging-route claim invalidated (schema no longer reachable).
+- 2026-09-06 ACCEPTED AUTH @ connect.signl4.com/api/v3: bare 404 vs registered-route 401 Bearer differential — routing is auth-before-route; no anonymous read surface; api host confirmed V2-only (/api/v3 404).
