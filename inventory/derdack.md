@@ -293,3 +293,7 @@ www.derdack.com
 - CHANGED JWKS byte-identical re-verified 6th time: devconnect.signl4.com & connect.signl4.com RS256 key (kid/n/x5t/x5c/e all match)
 - CHANGED blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
 - CHANGED dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+
+## 2026-09-06 22:37:49 UTC
+- CHANGED api.signl4.com/api/v2/teams returns 405 Allow: GET,POST on unauthenticated GET (not 401) — method routing response, no auth challenge at routing layer
+- CHANGED api.signl4.com/api/v2/teams returns 405 even with invalid Bearer token — auth validation not enforced at route entry

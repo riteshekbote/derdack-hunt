@@ -1158,3 +1158,33 @@ testability: HUMAN_ONLY
 [LEARN] REJECTED MISCONFIG @ api/connect/devconnect.signl4.com: Swagger/OpenAPI closed on all estates (404 across 9 OAS paths × 3 hosts) — no schema-doc disclosure; prior /en16931+ZUGFeRD staging-route claim invalidated (schema no longer reachable).
 [LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3: bare 404 vs registered-route 401 Bearer differential — routing is auth-before-route; no anonymous read surface; api host confirmed V2-only (/api/v3 404).
 [RISK] derdack: 54 — Cross-env identity finding stands at 8 deep-equal observation points (prod api+connect IdP vs staging devconnect: byte-identical RS256 key kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com, client 692A0A56, full scope set) and remains the only report-worthy lead; swagger purge cost one evidence item but no core claim. RCI holds below HIGH — exploit bound to staging credential/client-secret compromise; no new unauth defect this cycle. api POC evidence-complete; forward motion requires only the HUMAN token-mint + devfix login + report submission.
+## 2026-09-06 22:36:17 UTC [target] (model bigpickle)
+[HYP] staging-minted Bearer accepted by prod connect V3 API despite issuer divergence (api-layer cross-env replay)
+class: AUTH
+asset: connect.signl4.com/api/v3/*
+confidence: 60
+reasoning: prod connect/api/account identity ingresses all report issuer=connect; devconnect/devaccount report issuer=devconnect; yet all share byte-identical RS256 signing key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), client_id 692A0A56-892F-4AE2-8259-76DA398990B6, full prod scope set, and grants incl client_credentials+password+token-exchange; /connect/register 404 removes self-registered-client path; client auth secret-only.
+evidence_needed: devconnect-issued access_token (scope public_api_read) returning 200/403 vs 401 baseline at prod /api/v3/teams — outcome decides issuer enforcement.
+verify_steps: HUMAN — POST devconnect/identity/connect/token (grant_type=client_credentials, client 692A0A56, scope public_api_read offline_access, secret required) → GET connect.signl4.com/api/v3/teams with Bearer + GET connect.signl4.com/identity/connect/userinfo; compare to established 401 baseline.
+impact: staging client_secret/user credential or key disclosure ⇒ prod API RW across V2/V3 (alerts, users, schedules, SCIM) IF iss-validation absent — MED-HIGH, credential-gated.
+testability: HUMAN_ONLY
+[HYP] devfix support portal login bound to shared-key staging IdP (un-WAF'd pivot into support data)
+class: AUTH
+asset: devfix.signl4.com
+confidence: 60
+reasoning: /identity discovery 404 (RP, not IdP) + /signin-oidc 500 callback registered on 108.143.123.104 staging cluster which hosts shared-key devconnect; no WAF headers previously observed.
+evidence_needed: interactive Login redirect authority = devconnect.connect/authorize.
+verify_steps: HUMAN — device-less: test Login page form action + capture authorize redirect Location during staging-cred login.
+impact: staging credential compromise ⇒ customer support cases/files through an un-WAF'd app host. MED.
+testability: HUMAN_ONLY
+[HYP] token-exchange grant on staging IdP synthesizes prod-compatible tokens via shared key (grant-level cross-env primitive)
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token
+confidence: 55
+reasoning: `urn:ietf:params:oauth:grant-type:token-exchange` enabled on both envs (discovery parity); combined with shared signing key + shared client_ids, an exchange on staging yields a token signed by the prod trust anchor; block remains issuer divergence + need for a base credential.
+evidence_needed: staging token-exchange succeeds w/ known actor token + is accepted at prod resource.
+verify_steps: HUMAN — POST devconnect /identity/connect/token grant_type=token-exchange (requires base creds) → replay result on prod /api/v3.
+impact: token overflow across environments without key compromise — MED, credential-gated.
+testability: HUMAN_ONLY
+[NEXT] HUMAN: mint staging token `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope `public_api_read offline_access`, client_secret required) → replay Bearer on prod `GET https://connect.signl4.com/api/v3/teams` and `connect.signl4.com/identity/connect/userinfo` (401 baseline); outcome classifies prod issuer enforcement and either confirms or closes the [60] replay. Capture devfix login redirect authority in same session; then submit cross-env report to bugs.olivermaicher.eu (evidence pack now includes full 5-ingress issuer/scopes/grants parity map + /connect/register 404 control). All passive vectors exhausted — no further PROBE yields material evidence.
+[RISK] derdack: 52 — Cross-env shared RS256 key + client 692A0A56 + full prod scope/grants parity (now at 9+ deep-equal points incl full discovery diff) remains the sole report-worthy finding; this cycle's issuer-dichotomy datapoint caps severity below simple-replay (staging tokens carry iss=devconnect vs prod iss=connect — acceptance conditional on prod issuer-claim validation) and moves RCI down from 54. Swagger closure + /connect/register 404 removed both competing and enabling angles; all remaining motion is HUMAN token-mint + login-capture + report submission. Exploit fully gated on staging secret/credential material; no unauth defect found in a further sweep of the API estate.

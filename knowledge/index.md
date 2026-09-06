@@ -119,3 +119,9 @@
 - 2026-09-06 REJECTED OTHER @ api.signl4.com/api/v2/alerts: POST returns 411 (length) — method-routing sink family, not an unauth write surface; no new defect.
 - 2026-09-06 REJECTED MISCONFIG @ api/connect/devconnect.signl4.com: Swagger/OpenAPI closed on all estates (404 across 9 OAS paths × 3 hosts) — no schema-doc disclosure; prior /en16931+ZUGFeRD staging-route claim invalidated (schema no longer reachable).
 - 2026-09-06 ACCEPTED AUTH @ connect.signl4.com/api/v3: bare 404 vs registered-route 401 Bearer differential — routing is auth-before-route; no anonymous read surface; api host confirmed V2-only (/api/v3 404).
+- 2026-09-06 ACCEPTED AUTH @ api.signl4.com: api/identity re-verified live (OD 200, issuer=connect, JWKS kid 91EE4F3C shared) — 8th live deep-equal of the cross-env trust anchor; /api/v2/teams 405 baseline stable; no drift between cycles
+- 2026-09-06 ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 7x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com) — cross-env signing key reuse confirmed
+- 2026-09-06 REJECTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+- 2026-09-06 REJECTED AUTH @ devconnect.signl4.com/identity/connect/token client_credentials grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+- 2026-09-06 ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer
+- 2026-09-06 ACCEPTED MISCONFIG @ dev.derdack.com: MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404

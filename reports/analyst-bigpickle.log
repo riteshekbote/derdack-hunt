@@ -7961,3 +7961,176 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 [RISK] derdack: 54 — Cross-env identity finding stands at 8 deep-equal observation points (prod api+connect IdP vs staging devconnect: byte-identical RS256 key kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com, client 692A0A56, full scope set) and remains the only report-worthy lead; swagger purge cost one evidence item but no core claim. RCI holds below HIGH — exploit bound to staging credential/client-secret compromise; no new unauth defect this cycle. api POC evidence-complete; forward motion requires only the HUMAN token-mint + devfix login + report submission.
+===== ANALYST bigpickle 2026-09-06 22:37:49 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor h in api.signl4.com connect.signl4.com devconnect.signl4.com; do echo "=== $h ==="; curl -s -m 25 "https://$h/identity/.well-known/openid-configuration" | tr ',' '\n' | grep -iE '"issuer"|endpoint|authorization_endpoint|token_endpoint|registration_endpoint|userinfo_endpoint|end_session|claim_types_supported|scopes_supported' ; done
+=== api.signl4.com ===
+{"issuer":"https://connect.signl4.com/identity"
+"authorization_endpoint":"https://api.signl4.com/identity/connect/authorize"
+"token_endpoint":"https://api.signl4.com/identity/connect/token"
+"userinfo_endpoint":"https://api.signl4.com/identity/connect/userinfo"
+"end_session_endpoint":"https://api.signl4.com/identity/connect/endsession"
+"revocation_endpoint":"https://api.signl4.com/identity/connect/revocation"
+"introspection_endpoint":"https://api.signl4.com/identity/connect/introspect"
+"device_authorization_endpoint":"https://api.signl4.com/identity/connect/deviceauthorization"
+"backchannel_authentication_endpoint":"https://api.signl4.com/identity/connect/ciba"
+"pushed_authorization_request_endpoint":"https://api.signl4.com/identity/connect/par"
+"scopes_supported":["openid"
+"token_endpoint_auth_methods_supported":["client_secret_basic"
+"revocation_endpoint_auth_methods_supported":["client_secret_basic"
+"introspection_endpoint_auth_methods_supported":["client_secret_basic"
+=== connect.signl4.com ===
+{"issuer":"https://connect.signl4.com/identity"
+"authorization_endpoint":"https://connect.signl4.com/identity/connect/authorize"
+"token_endpoint":"https://connect.signl4.com/identity/connect/token"
+"userinfo_endpoint":"https://connect.signl4.com/identity/connect/userinfo"
+"end_session_endpoint":"https://connect.signl4.com/identity/connect/endsession"
+"revocation_endpoint":"https://connect.signl4.com/identity/connect/revocation"
+"introspection_endpoint":"https://connect.signl4.com/identity/connect/introspect"
+"device_authorization_endpoint":"https://connect.signl4.com/identity/connect/deviceauthorization"
+"backchannel_authentication_endpoint":"https://connect.signl4.com/identity/connect/ciba"
+"pushed_authorization_request_endpoint":"https://connect.signl4.com/identity/connect/par"
+"scopes_supported":["openid"
+"token_endpoint_auth_methods_supported":["client_secret_basic"
+"revocation_endpoint_auth_methods_supported":["client_secret_basic"
+"introspection_endpoint_auth_methods_supported":["client_secret_basic"
+=== devconnect.signl4.com ===
+{"issuer":"https://devconnect.signl4.com/identity"
+"authorization_endpoint":"https://devconnect.signl4.com/identity/connect/authorize"
+"token_endpoint":"https://devconnect.signl4.com/identity/connect/token"
+"userinfo_endpoint":"https://devconnect.signl4.com/identity/connect/userinfo"
+"end_session_endpoint":"https://devconnect.signl4.com/identity/connect/endsession"
+"revocation_endpoint":"https://devconnect.signl4.com/identity/connect/revocation"
+"introspection_endpoint":"https://devconnect.signl4.com/identity/connect/introspect"
+"device_authorization_endpoint":"https://devconnect.signl4.com/identity/connect/deviceauthorization"
+"backchannel_authentication_endpoint":"https://devconnect.signl4.com/identity/connect/ciba"
+"pushed_authorization_request_endpoint":"https://devconnect.signl4.com/identity/connect/par"
+"scopes_supported":["openid"
+"token_endpoint_auth_methods_supported":["client_secret_basic"
+"revocation_endpoint_auth_methods_supported":["client_secret_basic"
+"introspection_endpoint_auth_methods_supported":["client_secret_basic"
+[0m
+[0m$ [0mfor h in connect.signl4.com devconnect.signl4.com; do echo "=== $h scopes/grants/claims ==="; curl -s -m 25 "https://$h/identity/.well-known/openid-configuration" | tr ',' '\n' | grep -iE 'scopes_supported|grant_types_supported|claims_supported|registration_endpoint|subject_types|response_types|id_token_signing_alg' ; done; echo "=== devconnect /connect/register ==="; curl -s -m 25 -o /dev/null -w "code=%{http_code}\n" "https://devconnect.signl4.com/identity/connect/register"; echo "=== devfix identity discovery ==="; curl -s -m 25 -o /dev/null -w "code=%{http_code} url=%{url_effective}\n" "https://devfix.signl4.com/identity/.well-known/openid-configuration"
+=== connect.signl4.com scopes/grants/claims ===
+"scopes_supported":["openid"
+"claims_supported":["sub"
+"grant_types_supported":["authorization_code"
+"response_types_supported":["code"
+"id_token_signing_alg_values_supported":["RS256"]
+"subject_types_supported":["public"]
+=== devconnect.signl4.com scopes/grants/claims ===
+"scopes_supported":["openid"
+"claims_supported":["sub"
+"grant_types_supported":["authorization_code"
+"response_types_supported":["code"
+"id_token_signing_alg_values_supported":["RS256"]
+"subject_types_supported":["public"]
+=== devconnect /connect/register ===
+code=404
+=== devfix identity discovery ===
+code=404 url=https://devfix.signl4.com/identity/.well-known/openid-configuration
+[0m
+[0m$ [0mpython3 -c "
+import json,urllib.request,ssl
+ctx=ssl.create_default_context()
+for h in ['api.signl4.com','connect.signl4.com','devconnect.signl4.com']:
+    d=json.load(urllib.request.urlopen(f'https://{h}/identity/.well-known/openid-configuration',timeout=25,context=ctx))
+    print(h)
+    print('  issuer:',d.get('issuer'))
+    print('  scopes:',' '.join(d.get('scopes_supported',[]) or []))
+    print('  grants:',' '.join(d.get('grant_types_supported',[]) or []))
+    print('  claims:',' '.join(d.get('claims_supported',[]) or []))
+    print('  par:',d.get('pushed_authorization_request_endpoint'),'ciba:',d.get('backchannel_authentication_endpoint'))
+    print('  alg:',d.get('id_token_signing_alg_values_supported'),'resp:',d.get('response_types_supported'))
+"
+api.signl4.com
+  issuer: https://connect.signl4.com/identity
+  scopes: openid email profile public_api_read public_api_write public_api_prov mobile_api account_portal reseller_portal public_api_ea_manage public_api_ea_alerting offline_access
+  grants: authorization_code client_credentials refresh_token implicit password urn:ietf:params:oauth:grant-type:device_code urn:openid:params:grant-type:ciba urn:ietf:params:oauth:grant-type:token-exchange
+  claims: sub email email_verified name family_name given_name middle_name nickname preferred_username profile picture website gender birthdate zoneinfo locale updated_at http://schemas.derdack.com/identity/claims/active http://schemas.derdack.com/identity/claims/subscription_id http://schemas.derdack.com/identity/claims/branch_id http://schemas.derdack.com/identity/claims/is_branch_manager http://schemas.derdack.com/identity/claims/is_stakeholder
+  par: https://api.signl4.com/identity/connect/par ciba: https://api.signl4.com/identity/connect/ciba
+  alg: ['RS256'] resp: ['code', 'token', 'id_token', 'id_token token', 'code id_token', 'code token', 'code id_token token']
+connect.signl4.com
+  issuer: https://connect.signl4.com/identity
+  scopes: openid email profile public_api_read public_api_write public_api_prov mobile_api account_portal reseller_portal public_api_ea_manage public_api_ea_alerting offline_access
+  grants: authorization_code client_credentials refresh_token implicit password urn:ietf:params:oauth:grant-type:device_code urn:openid:params:grant-type:ciba urn:ietf:params:oauth:grant-type:token-exchange
+  claims: sub email email_verified name family_name given_name middle_name nickname preferred_username profile picture website gender birthdate zoneinfo locale updated_at http://schemas.derdack.com/identity/claims/active http://schemas.derdack.com/identity/claims/subscription_id http://schemas.derdack.com/identity/claims/branch_id http://schemas.derdack.com/identity/claims/is_branch_manager http://schemas.derdack.com/identity/claims/is_stakeholder
+  par: https://connect.signl4.com/identity/connect/par ciba: https://connect.signl4.com/identity/connect/ciba
+  alg: ['RS256'] resp: ['code', 'token', 'id_token', 'id_token token', 'code id_token', 'code token', 'code id_token token']
+devconnect.signl4.com
+  issuer: https://devconnect.signl4.com/identity
+  scopes: openid email profile public_api_read public_api_write public_api_prov mobile_api account_portal reseller_portal public_api_ea_manage public_api_ea_alerting offline_access
+  grants: authorization_code client_credentials refresh_token implicit password urn:ietf:params:oauth:grant-type:device_code urn:openid:params:grant-type:ciba urn:ietf:params:oauth:grant-type:token-exchange
+  claims: sub email email_verified name family_name given_name middle_name nickname preferred_username profile picture website gender birthdate zoneinfo locale updated_at http://schemas.derdack.com/identity/claims/active http://schemas.derdack.com/identity/claims/subscription_id http://schemas.derdack.com/identity/claims/branch_id http://schemas.derdack.com/identity/claims/is_branch_manager http://schemas.derdack.com/identity/claims/is_stakeholder
+  par: https://devconnect.signl4.com/identity/connect/par ciba: https://devconnect.signl4.com/identity/connect/ciba
+  alg: ['RS256'] resp: ['code', 'token', 'id_token', 'id_token token', 'code id_token', 'code token', 'code id_token token']
+[0m
+[0m$ [0mfor h in account.signl4.com devaccount.signl4.com; do echo "=== $h/identity ==="; curl -s -m 20 -o /dev/null -w "code=%{http_code}\n" "https://$h/identity/.well-known/openid-configuration"; done; echo "=== devconnect token auth methods ==="; curl -s -m 20 "https://devconnect.signl4.com/identity/.well-known/openid-configuration" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('token_endpoint_auth_methods_supported'))"
+=== account.signl4.com/identity ===
+code=200
+=== devaccount.signl4.com/identity ===
+code=200
+=== devconnect token auth methods ===
+['client_secret_basic', 'client_secret_post']
+[0m
+[0m$ [0mfor h in account.signl4.com devaccount.signl4.com; do curl -s -m 20 "https://$h/identity/.well-known/openid-configuration" | python3 -c "import json,sys; d=json.load(sys.stdin); print('$h issuer:',d.get('issuer'),'| token_ep:',d.get('token_endpoint'))"; done
+account.signl4.com issuer: https://connect.signl4.com/identity | token_ep: https://account.signl4.com/identity/connect/token
+devaccount.signl4.com issuer: https://devconnect.signl4.com/identity | token_ep: https://devaccount.signl4.com/identity/connect/token
+[0m
+STEP 1 — DELTA
+- [NEW] Full OIDC discovery diff (5 ingresses): prod IdP issuer=`https://connect.signl4.com/identity` served via connect, api, account hosts; staging IdP issuer=`https://devconnect.signl4.com/identity` via devconnect, devaccount — issuer claims DIFFER across envs while scopes/grants/claims are byte-parity (11 scopes incl public_api_read/write/prov/mobile/EA-manage, 8 grants incl password+token-exchange+device_code+CIBA+PAR, custom derdack claims). Cross-env replay now conditional on prod issuer-claim validation — passively unobservable.
+- [NEW] devconnect `/identity/connect/register` → 404: no RFC7591 dynamic client registration; client auth = `client_secret_basic|client_secret_post` (secret-only) on both estates.
+- [NEW] devfix `https://devfix.signl4.com/identity/.well-known/openid-configuration` → 404 (RPs don't host discovery) — corroborates devfix as OIDC relying-party on staging IdP, not an IdP node.
+
+STEP 2 — PRIORITIZE
+- [PRIO] devconnect.signl4.com/identity,5.9,axis=shared-key-staging-IdP-with-password+token-exchange-grants-secret-only-client-auth
+- [PRIO] connect.signl4.com/api/v3,5.7,axis=prod-core-API-Bearer-replay-boundary-iss-validation-unknown
+- [PRIO] devfix.signl4.com,5.05,axis=support-portal-RP-attached-to-staging-IdP
+
+STEP 3 — HYPOTHESES
+[HYP] staging-minted Bearer accepted by prod connect V3 API despite issuer divergence (api-layer cross-env replay)
+class: AUTH
+asset: connect.signl4.com/api/v3/*
+confidence: 60
+reasoning: prod connect/api/account identity ingresses all report issuer=connect; devconnect/devaccount report issuer=devconnect; yet all share byte-identical RS256 signing key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), client_id 692A0A56-892F-4AE2-8259-76DA398990B6, full prod scope set, and grants incl client_credentials+password+token-exchange; /connect/register 404 removes self-registered-client path; client auth secret-only.
+evidence_needed: devconnect-issued access_token (scope public_api_read) returning 200/403 vs 401 baseline at prod /api/v3/teams — outcome decides issuer enforcement.
+verify_steps: HUMAN — POST devconnect/identity/connect/token (grant_type=client_credentials, client 692A0A56, scope public_api_read offline_access, secret required) → GET connect.signl4.com/api/v3/teams with Bearer + GET connect.signl4.com/identity/connect/userinfo; compare to established 401 baseline.
+impact: staging client_secret/user credential or key disclosure ⇒ prod API RW across V2/V3 (alerts, users, schedules, SCIM) IF iss-validation absent — MED-HIGH, credential-gated.
+testability: HUMAN_ONLY
+[HYP] devfix support portal login bound to shared-key staging IdP (un-WAF'd pivot into support data)
+class: AUTH
+asset: devfix.signl4.com
+confidence: 60
+reasoning: /identity discovery 404 (RP, not IdP) + /signin-oidc 500 callback registered on 108.143.123.104 staging cluster which hosts shared-key devconnect; no WAF headers previously observed.
+evidence_needed: interactive Login redirect authority = devconnect.connect/authorize.
+verify_steps: HUMAN — device-less: test Login page form action + capture authorize redirect Location during staging-cred login.
+impact: staging credential compromise ⇒ customer support cases/files through an un-WAF'd app host. MED.
+testability: HUMAN_ONLY
+[HYP] token-exchange grant on staging IdP synthesizes prod-compatible tokens via shared key (grant-level cross-env primitive)
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token
+confidence: 55
+reasoning: `urn:ietf:params:oauth:grant-type:token-exchange` enabled on both envs (discovery parity); combined with shared signing key + shared client_ids, an exchange on staging yields a token signed by the prod trust anchor; block remains issuer divergence + need for a base credential.
+evidence_needed: staging token-exchange succeeds w/ known actor token + is accepted at prod resource.
+verify_steps: HUMAN — POST devconnect /identity/connect/token grant_type=token-exchange (requires base creds) → replay result on prod /api/v3.
+impact: token overflow across environments without key compromise — MED, credential-gated.
+testability: HUMAN_ONLY
+
+STEP 4 — SELF-CRITIQUE
+- Dropped from prior cycle: [78]→[60] replay — issuer-dichotomy datapoint is a hard control; replay certainty now hinges on prod iss-validation which I cannot observe passively. No REJECTED-class items this cycle.
+- [PARKED] dynamic-client-registration angle: /connect/register 404, self-register path closed.
+- [PARKED] swagger/e-invoice sub-claim: schema purge already withdrew it; no resurrection path without auth'd recon.
+- [FINAL] 1. [60] staging Bearer→prod connect/api replay (HUMAN, gated on iss-validation + secret) 2. [60] devfix RP on staging IdP (HUMAN login capture) 3. [55] token-exchange cross-env synthesis (HUMAN). All three reduce to the same primitive: shared key+client across split-issuer envs, worst case MED until a credential/key materializes.
+
+STEP 5 — NEXT ACTION
+[NEXT] HUMAN: mint staging token `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope `public_api_read offline_access`, client_secret required) → replay Bearer on prod `GET https://connect.signl4.com/api/v3/teams` and `connect.signl4.com/identity/connect/userinfo` (401 baseline); outcome classifies prod issuer enforcement and either confirms or closes the [60] replay. Capture devfix login redirect authority in same session; then submit cross-env report to bugs.olivermaicher.eu (evidence pack now includes full 5-ingress issuer/scopes/grants parity map + /connect/register 404 control). All passive vectors exhausted — no further PROBE yields material evidence.
+
+STEP 6 — LEARNING
+- [LEARN] ACCEPTED AUTH @ connect/devconnect/account/devaccount.signl4.com/identity: 5-ingress discovery map complete — prod IdP (issuer connect) via connect/api/account, staging IdP (issuer devconnect) via devconnect/devaccount; scopes/grants/claims byte-parity, issuers nominally divergent; replay risk now precisely scoped to prod iss-validation (new control, HUMAN-verify).
+- [LEARN] REJECTED MISCONFIG @ devconnect.signl4.com: /connect/register → 404 — dynamic client registration off; self-registered-client exploitation path for key reuse closed.
+- [LEARN] ACCEPTED AUTH @ devfix.signl4.com: identity discovery 404 + /signin-oidc 500 — devfix is OIDC relying-party on staging IdP, corroborates staging attachment without new exploitation surface.
+
+STEP 7 — RISK
+[RISK] derdack: 52 — Cross-env shared RS256 key + client 692A0A56 + full prod scope/grants parity (now at 9+ deep-equal points incl full discovery diff) remains the sole report-worthy finding; this cycle's issuer-dichotomy datapoint caps severity below simple-replay (staging tokens carry iss=devconnect vs prod iss=connect — acceptance conditional on prod issuer-claim validation) and moves RCI down from 54. Swagger closure + /connect/register 404 removed both competing and enabling angles; all remaining motion is HUMAN token-mint + login-capture + report submission. Exploit fully gated on staging secret/credential material; no unauth defect found in a further sweep of the API estate.
