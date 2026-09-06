@@ -1,19 +1,30 @@
-## 2026-09-06 01:06:13 UTC [target] (model bigpickle)
-[HYP] api.signl4.com/api/v2 validates Bearer tokens against the same shared RS256 trust anchor served on api/identity
+## 2026-09-06 06:02:50 UTC [target] (model bigpickle)
+[HYP] staging-minted Bearer token accepted by prod api.signl4.com (single cross-env trust anchor at the API layer)
 class: AUTH
 asset: api.signl4.com/api/v2/teams
-confidence: 50
-reasoning: api host serves both the API (401 `WWW-Authenticate: Bearer`) and the IdP (same backend on s4prodappgw, JWKS kid 91EE4F... byte-identical to staging devconnect); single prod trust boundary implies the api validator and IdP signer share one key — but cross-ENV acceptance (staging-minted → prod API) has no passive signal.
-evidence_needed: staging-minted access_token replayed on api and accepted vs rejected
-verify_steps: HUMAN — POST devconnect /identity/connect/token (grant_type=password, staging account) → GET api.signl4.com/api/v2/teams with that Bearer; compare to 401 baseline
-impact: staging credential or client-secret compromise ⇒ prod API read/write (alerts/teams/subscriptions) + account portal + EA/reseller scopes; additive proof of single cross-env trust anchor. MED-HIGH.
+confidence: 65
+reasoning: api host serves OIDC discovery (issuer=connect.signl4.com/identity) + jwks with shared kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, byte-identical to connect (prod) and devconnect (staging) — 6th independent observation of the same key; /api/v2 Bearer gate returns 401 invalid_token baseline; validator and IdP share one IdentityServer trust boundary on s4prodappgw.
+evidence_needed: staging-minted access_token accepted (vs 401 baseline) on /api/v2/teams
+verify_steps: HUMAN — POST devconnect /identity/connect/token (grant_type=password, staging creds, client 692A0A56-892F-4AE2-8259-76DA398990B6) → GET api.signl4.com/api/v2/teams with that Bearer; compare to confirmed 401 baseline
+impact: staging credential/client-secret compromise ⇒ prod API read/write (alerts/teams/webhooks/subscriptions) + account_portal + EA/reseller scopes; closes one trust boundary across envs. MED-HIGH.
 testability: HUMAN_ONLY
-[HYP] devfix.signl4.com support portal authenticates against the shared-key staging IdP
+[HYP] devfix.signl4.com support portal authenticates against shared-key staging IdP
 class: AUTH
 asset: devfix.signl4.com
 confidence: 55
-reasoning: co-resolves with devconnect/devaccount on 108.143.123.104; `/signin-oidc` callback registered (500 without state); staging cluster proven to share prod RS256 key + client_id 692A0A56 + full prod scope set.
-evidence_needed: interactive Login redirect → `https://devconnect.signl4.com/identity/connect/authorize?...` (authority=staging) vs connect (prod)
-verify_steps: HUMAN — click Login on devfix with staging creds, capture Location issuer
-impact: staging cred/secret compromise ⇒ SIGNL4 support admin portal (cases/files) from un-WAF'd host; escalates cross-env finding to data-touching app. MED-HIGH.
+reasoning: devfix co-resolves with devconnect/devaccount on 108.143.123.104 (re-confirmed this cycle); /signin-oidc callback registered (500 w/o state); staging cluster proven to share prod RS256 key + client_id 692A0A56 + full prod scope; no WAF headers on staging IP.
+evidence_needed: interactive Login Location issuer = devconnect vs connect
+verify_steps: HUMAN — Login on devfix w/ staging creds → capture `/identity/connect/authorize` redirect authority
+impact: staging cred compromise ⇒ SIGNL4 support admin portal (customer cases/files) from un-WAF'd host — escalates cross-env finding to data-touching app. MED-HIGH.
 testability: HUMAN_ONLY
+[HYP] devconnect staging IdP token forgery for prod trust domain
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token → connect.signl4.com + api.signl4.com
+confidence: 85
+reasoning: aggregated — JWKS deep-equal x5 (kid/n/x5t/x5c), NEW 6th = api-host identity/JWKS; scopes 12/12, grants 8/8 incl password, client 692A0A56 shared, divergent build trains (ID_NET10_0 vs ID_NET8_0).
+evidence_needed: prod-accepted token minted from staging creds
+verify_steps: HUMAN — POST token endpoint grant_type=password → replay on connect /identity/userinfo + api /api/v2/teams
+impact: staging compromise ⇒ ATO chain across SIGNL4 + Enterprise Alert customer data + reseller. MED-HIGH→HIGH (scope breadth widened).
+testability: AUTH_HELPED
+[NEXT] HUMAN: mint staging token via `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=password, client_id=692A0A56-892F-4AE2-8259-76DA398990B6) with a staging account; replay access_token on `connect.signl4.com/identity/userinfo` and `api.signl4.com/api/v2/teams` (401 baseline confirmed this cycle); capture `Location` on devfix Login to confirm Authority=devconnect; then submit the cross-env signing-key/client/scope reuse report to bugs.olivermaicher.eu — evidence pack now includes the api-host OIDC+JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) as the 6th deep-equal confirmation.
+[RISK] derdack: 52. Cross-env identity finding strengthened again: prod trust anchor now corroborated at 6 independent observation points incl the API host itself (`api.signl4.com/identity` discovery+JWKS), so the blast radius of a staging credential compromise is a single shared validation boundary across api/connect/account. Still gated on staging credential/client-secret compromise (holds below HIGH). No new unauth-exploitable defect; docs/support estates legitimate, api fully Bearer-gated, WP estates gated, lab/s4dev inert. POC phase on `api` is evidence-complete; only HUMAN token-mint + report submission moves this forward.
