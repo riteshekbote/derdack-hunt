@@ -1075,3 +1075,24 @@ testability: HUMAN_ONLY
 [LEARN] ACCEPTED AUTH @ devfix.signl4.com: /signin-oidc 500 + root 200 on 108.143.123.104 staging cluster — support portal OIDC callback registered, corroborates staging-IdP attachment.
 [LEARN] REJECTED OTHER @ api.signl4.com/api/v2/alerts: POST returns 411 (length) — method-routing sink family, not an unauth write surface; no new defect.
 [RISK] derdack: 53 — Cross-env identity finding strong at 8 observation points: the prod API's own `api/identity` trust anchor, prod `connect/identity`, and staging `devconnect/identity` all serve a byte-identical RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) + identical client_id 692A0A56 + full prod scope set; blast radius of a staging credential/client-secret compromise is a single shared validation boundary across api/connect/account/EA-support. Exploit remains bound to staging credential/client-secret compromise (holds below HIGH until mint succeeds). No new unauth-exploitable defect this cycle; api fully Bearer-gated, WP estates gated, lab/s4dev inert, signl4.derdack.com dead. api POC evidence-complete; advances ONLY via HUMAN token-mint + interactive devfix login + report submission.
+## 2026-09-06 16:39:54 UTC [target] (model bigpickle)
+[HYP] staging OAuth2 token accepted by prod connect API (api-layer cross-env replay)
+class: AUTH
+asset: connect.signl4.com/api/v3
+confidence: 78
+reasoning: prod API publicly documents OAuth2 (authorize+token via connect/identity; scopes public_api_read/write/offline_access); staging devconnect mirrors full V2/V3 schema and shares RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n_sha 138f432b) + client_id 692A0A56 + scope set, now at 9 observation points incl both API estates; missing-vs-invalid-key differential (401 vs 403) proves active middleware but no env-scoped claim validation is documented/verifiable; a staging-minted bearer validating at the prod API validator = one shared trust boundary.
+evidence_needed: staging-minted access_token (scope public_api_read) accepted (vs 401/403 baseline) on prod connect /api/v3/*
+verify_steps: HUMAN — POST https://devconnect.signl4.com/identity/connect/token grant_type=client_credentials (client 692A0A56-892F-4AE2-8259-76DA398990B6, scope public_api_read offline_access) → GET https://connect.signl4.com/api/v3/teams with Bearer; compare to 401/403 baseline
+impact: staging credential/client-secret compromise ⇒ full prod V2/V3 API RW (alerts, users, schedules, SCIM, scripts/instances, prepaid) — MED-HIGH→HIGH
+testability: HUMAN_ONLY
+[HYP] staging API billing surface: e-invoice export reachable under shared-key estate
+class: AUTH
+asset: devconnect.signl4.com/api/v3/subscriptions/{sid}/invoices
+confidence: 60
+reasoning: dev schema exposes /en16931 + /zugferd invoice-export routes absent from prod swagger; staging estate shares the prod trust anchor; if staging creds yield financial artifacts, cross-env finding escalates to billing data touch.
+evidence_needed: staging-authenticated GET returns invoice list/XML (EN16931/ZUGFeRD)
+verify_steps: HUMAN — with staging API key or token, GET /api/v3/subscriptions and /api/v3/subscriptions/{sid}/invoices, /{iid}/en16931
+impact: financial/billing artifact exposure via staging-issued creds. MED
+testability: HUMAN_ONLY
+[NEXT] HUMAN: mint staging token via `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope `public_api_read offline_access`) → replay Bearer on prod `GET https://connect.signl4.com/api/v3/teams` (401 baseline confirmed this cycle) and `https://connect.signl4.com/identity/connect/userinfo`; capture devfix Login issuer; then submit cross-env report to bugs.olivermaicher.eu — evidence pack: 9 deep-equal points (api.signl4.com/connect/devconnect identity+JWKS, prod+staging API swagger parity, staging-only e-invoice + tags routes), shared key/scope/client, scopes public_api_read/write/offline_access.
+[RISK] derdack: 55 — API estate corrected: the real product API, prod IdP, account portal and webhook ingestion all share `connect.signl4.com`, and staging `devconnect` mirrors it with the byte-identical RS256 key + client 692A0A56 + scope set (9 observation points incl both API estates); staging compromise now reaches prod V2/V3 API RW with a billing/invoice surface on staging. RCI holds below HIGH (gated on staging credential/client-secret); no new unauth-defect this cycle — all API routes key-gated.

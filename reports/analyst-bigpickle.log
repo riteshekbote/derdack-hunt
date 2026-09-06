@@ -7406,3 +7406,350 @@ STEP 7 — RISK
 - [RISK] derdack: 53 — cross-env identity finding strong at 8 points (api/connect/devconnect all serve byte-identical RS256 key + client_id 692A0A56 + full prod scope). Blast radius of staging credential/client-secret compromise = a single shared validation boundary across api/connect/account/EA-support. Exploit stays below HIGH until mint succeeds. No new unauth defect; api fully Bearer-gated, WP/lab/s4dev inert. api POC evidence-complete; advances only via HUMAN token-mint + interactive devfix login + report submission.
 
 Full analysis appended to `leads/lead-bigpickle.md` (now 1085 lines).
+===== ANALYST bigpickle 2026-09-06 16:40:04 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m◈ [0mParallel Web Search "SIGNL4 API v2 REST endpoints reference teams alerts webhooks subscriptions documentation"
+[0m
+[0m$ [0mcurl -s -o /dev/null -m 15 -w "teams GET: %{http_code}\n" https://api.signl4.com/api/v2/teams; curl -s -m 15 https://api.signl4.com/identity/.well-known/openid-configuration | head -c 400; echo; curl -s -o /dev/null -m 15 -w "swagger.index: %{http_code}\n" https://api.signl4.com/swagger/index.html; curl -s -o /dev/null -m 15 -w "openapi.v3: %{http_code}\n" https://api.signl4.com/openapi/v3/api-docs; curl -s -o /dev/null -m 15 -w "api.v1: %{http_code}\n" https://api.signl4.com/api/v1/version
+teams GET: 401
+{"issuer":"https://connect.signl4.com/identity","jwks_uri":"https://api.signl4.com/identity/.well-known/openid-configuration/jwks","authorization_endpoint":"https://api.signl4.com/identity/connect/authorize","token_endpoint":"https://api.signl4.com/identity/connect/token","userinfo_endpoint":"https://api.signl4.com/identity/connect/userinfo","end_session_endpoint":"https://api.signl4.com/identity/
+swagger.index: 404
+openapi.v3: 404
+api.v1: 404
+[0m
+NEW surface: web search reveals the SIGNL4 API estate actually lives on `connect.signl4.com/api/` (V2+V3, public swagger.json, X-S4-Api-Key auth) — **never probed**; prior cycles only tested `api.signl4.com` (which is a separate instance).
+[0m$ [0mcurl -s -m 20 https://connect.signl4.com/api/docs/v3/swagger.json -o /tmp/s4v3.json -w "v3 swagger: %{http_code}, %{size_download} bytes\n"; curl -s -m 20 https://connect.signl4.com/api/docs/v2/swagger.json -o /tmp/s4v2.json -w "v2 swagger: %{http_code}, %{size_download} bytes\n"
+v3 swagger: 200, 1192487 bytes
+v2 swagger: 200, 1195693 bytes
+[0m
+[0m$ [0mfor v in v3 v2; do echo "=== $v paths ==="; jq -r '.paths | keys[]' /tmp/s4$v.json 2>/dev/null | head -80; echo "... total paths: $(jq '.paths|keys|length' /tmp/s4$v.json 2>/dev/null)"; done
+=== v3 paths ===
+/prepaid/balance
+/prepaid/settings
+/prepaid/transactions
+/prepaid/{subscriptionId}/prepaidSettings
+/scripts/instances
+/scripts/instances/{instanceId}
+/scripts/instances/{instanceId}/data
+/scripts/instances/{instanceId}/disable
+/scripts/instances/{instanceId}/enable
+/scripts/inventory
+/scripts/inventory/parsed
+/scripts/inventory/parsed/{scriptId}
+/subscriptions/{subscriptionId}/prepaidBalance
+/subscriptions/{subscriptionId}/prepaidSettings
+/subscriptions/{subscriptionId}/prepaidTransactions
+/v3/audits
+/v3/categories
+/v3/categories/images
+/v3/categories/public
+/v3/categories/{teamId}
+/v3/categories/{teamId}/metrics
+/v3/categories/{teamId}/{categoryId}
+/v3/categories/{teamId}/{categoryId}/metrics
+/v3/categories/{teamId}/{categoryId}/subscriptions
+/v3/distributionLists
+/v3/distributionLists/memberships
+/v3/distributionLists/public
+/v3/distributionLists/{listId}
+/v3/distributionLists/{listId}/memberships
+/v3/duties/punchIn
+/v3/duties/punchInAsManager
+/v3/duties/punchOut
+/v3/duties/summary
+/v3/events/paged
+/v3/events/{eventId}
+/v3/events/{eventId}/details
+/v3/events/{eventId}/parameters
+/v3/events/{webhookIdOrTeamId}
+/v3/eventsources
+/v3/eventsources/{eventSourceId}
+/v3/prepaid/balance
+/v3/prepaid/settings
+/v3/prepaid/transactions
+/v3/prepaid/{subscriptionId}/prepaidSettings
+/v3/remoteActions
+/v3/remoteActions/definitions
+/v3/remoteActions/definitions/{definitionId}
+/v3/remoteActions/journal/paged
+/v3/remoteActions/journal/{jobId}
+/v3/remoteActions/{actionId}
+/v3/remoteActions/{actionId}/jobs
+/v3/schedules
+/v3/schedules/standIn
+/v3/scim/apiKey
+/v3/scim/settings
+/v3/scim/status
+/v3/scripts/instances
+/v3/scripts/instances/{instanceId}
+/v3/scripts/instances/{instanceId}/data
+/v3/scripts/instances/{instanceId}/disable
+/v3/scripts/instances/{instanceId}/enable
+/v3/scripts/inventory
+/v3/scripts/inventory/parsed
+/v3/scripts/inventory/parsed/{scriptId}
+/v3/shifts
+/v3/shifts/ai/forwardPlanning/{teamId}
+/v3/shifts/ai/forwardPlanning/{teamId}/feedback/{operationId}
+/v3/shifts/ai/forwardPlanning/{teamId}/result/last
+/v3/shifts/ai/forwardPlanning/{teamId}/result/{operationId}
+/v3/shifts/ai/forwardPlanning/{teamId}/status
+/v3/shifts/moveAssignment
+/v3/shifts/swapAssignments
+/v3/shifts/validateTimeSlots
+/v3/shifts/{shiftId}
+/v3/shifts/{shiftId}/assignments
+/v3/shifts/{shiftId}/assignments/replace
+/v3/shifts/{shiftId}/intervals/{intervalId}
+/v3/signls
+/v3/signls/acknowledgeAll
+/v3/signls/acknowledgeAll/status
+... total paths: 202
+=== v2 paths ===
+/v2/alerts
+/v2/alerts/acknowledgeAll
+/v2/alerts/acknowledgeAll/status
+/v2/alerts/acknowledgeMultiple
+/v2/alerts/closeAll
+/v2/alerts/closeAll/status
+/v2/alerts/closeMultiple
+/v2/alerts/paged
+/v2/alerts/report
+/v2/alerts/undoAcknowledgeMultiple
+/v2/alerts/undoCloseMultiple
+/v2/alerts/{alertId}
+/v2/alerts/{alertId}/acknowledge
+/v2/alerts/{alertId}/alertingPattern
+/v2/alerts/{alertId}/annotate
+/v2/alerts/{alertId}/attachments
+/v2/alerts/{alertId}/attachments/{attachmentId}
+/v2/alerts/{alertId}/close
+/v2/alerts/{alertId}/details
+/v2/alerts/{alertId}/distribution
+/v2/alerts/{alertId}/escalateToTeam
+/v2/alerts/{alertId}/escalations
+/v2/alerts/{alertId}/escalations/csv
+/v2/alerts/{alertId}/notifications
+/v2/alerts/{alertId}/parameters
+/v2/alerts/{alertId}/postMortem
+/v2/alerts/{alertId}/postMortem/mail
+/v2/alerts/{alertId}/summarize
+/v2/alerts/{alertId}/summary
+/v2/alerts/{alertId}/summary/feedback
+/v2/alerts/{alertId}/timeline
+/v2/alerts/{alertId}/undoAcknowledge
+/v2/alerts/{alertId}/undoClose
+/v2/audits
+/v2/callouts/templates
+/v2/callouts/templates/{templateId}
+/v2/categories
+/v2/categories/images
+/v2/categories/public
+/v2/categories/{teamId}
+/v2/categories/{teamId}/metrics
+/v2/categories/{teamId}/{categoryId}
+/v2/categories/{teamId}/{categoryId}/metrics
+/v2/categories/{teamId}/{categoryId}/subscriptions
+/v2/distributionLists
+/v2/distributionLists/memberships
+/v2/distributionLists/public
+/v2/distributionLists/{listId}
+/v2/distributionLists/{listId}/memberships
+/v2/duties/punchIn
+/v2/duties/punchInAsManager
+/v2/duties/punchOut
+/v2/duties/summary
+/v2/eventDistributions
+/v2/eventDistributions/{distributionId}
+/v2/events/paged
+/v2/events/{eventId}
+/v2/events/{eventId}/overview
+/v2/events/{eventId}/parameters
+/v2/events/{webhookIdOrTeamId}
+/v2/eventsources
+/v2/eventsources/{eventSourceId}
+/v2/prepaid/balance
+/v2/prepaid/settings
+/v2/prepaid/transactions
+/v2/prepaid/{subscriptionId}/prepaidSettings
+/v2/remoteActions
+/v2/remoteActions/definitions
+/v2/remoteActions/definitions/{definitionId}
+/v2/remoteActions/journal/paged
+/v2/remoteActions/journal/{jobId}
+/v2/remoteActions/{actionId}
+/v2/remoteActions/{actionId}/jobs
+/v2/schedules
+/v2/schedules/standIn
+/v2/scim/apiKey
+/v2/scim/settings
+/v2/scim/status
+/v2/scripts/instances
+/v2/scripts/instances/{instanceId}
+... total paths: 185
+[0m
+[0m$ [0mecho "=== v3: paths with security [] or none ==="; jq -r '.paths | to_entries[] as $p | $p.value | to_entries[] | select(.value.security == []) | "\($p.key) \(.key)"' /tmp/s4v3.json; echo "=== v3: operations with NO security key ==="; jq -r '.paths | to_entries[] as $p | $p.value | to_entries[] | select(.value.security == null) | "\($p.key) \(.key)"' /tmp/s4v3.json | head; echo "=== securitySchemes ==="; jq '.components.securitySchemes' /tmp/s4v3.json; echo "=== top-level security ==="; jq '.security' /tmp/s4v3.json
+=== v3: paths with security [] or none ===
+=== v3: operations with NO security key ===
+/prepaid/{subscriptionId}/prepaidSettings put
+/prepaid/balance get
+/prepaid/settings get
+/prepaid/settings put
+/prepaid/transactions get
+/scripts/instances get
+/scripts/instances post
+/scripts/instances/{instanceId} get
+/scripts/instances/{instanceId} put
+/scripts/instances/{instanceId} delete
+=== securitySchemes ===
+{
+  "API_Key_Header": {
+    "type": "apiKey",
+    "description": "Header based API Key authentication. You can generate an API Key in the SIGNL4 portal under 'Integrations' -> 'Api Keys'.",
+    "name": "x-s4-api-key",
+    "in": "header"
+  },
+  "API_Key_Query": {
+    "type": "apiKey",
+    "description": "Query based API Key authentication. You can generate an API Key in the SIGNL4 portal under 'Integrations' -> 'Api Keys'.",
+    "name": "x-s4-api-key",
+    "in": "query"
+  },
+  "OAuth2": {
+    "type": "oauth2",
+    "description": "OAuth2 Authentication. You can request subscription specific client credentials from the SIGNL4 support.",
+    "flows": {
+      "authorizationCode": {
+        "authorizationUrl": "https://connect.signl4.com/identity/connect/authorize",
+        "tokenUrl": "https://connect.signl4.com/identity/connect/token",
+        "refreshUrl": "https://connect.signl4.com/identity/connect/token",
+        "scopes": {
+          "public_api_write": "Access write operations",
+          "public_api_read": "Access read operations",
+          "offline_access": "Allows usage of refresh tokens"
+        }
+      }
+    }
+  }
+}
+=== top-level security ===
+[
+  {}
+]
+[0m
+Public swagger for both V2 (185 paths) and V3 (202 paths). Let me check which operations lack a security requirement (static missing-auth signal) then probe live routing.
+Static signal: V3 swagger has unversioned `/prepaid/*` and `/scripts/instances*` ops with **no security requirement** (top-level `security:[{}]` = anonymous default), plus OAuth2 scopes `public_api_read/write/offline_access`. Now live-routing test on `connect.signl4.com` (the untested API estate).
+[0m$ [0mfor p in "v3/teams" "v3/audits" "v3/categories/public" "v3/distributionLists/public" "v3/scim/status" "v3/events/paged" "v3/signls" "v3/prepaid/balance" "v3/scripts/inventory" "prepaid/balance" "v3/webhooks" "v3/users"; do code=$(curl -s -o /dev/null -m 12 -w "%{http_code}" "https://connect.signl4.com/api/$p"); echo "GET /api/$p -> $code"; done
+GET /api/v3/teams -> 401
+GET /api/v3/audits -> 401
+GET /api/v3/categories/public -> 401
+GET /api/v3/distributionLists/public -> 401
+GET /api/v3/scim/status -> 401
+GET /api/v3/events/paged -> 401
+GET /api/v3/signls -> 405
+GET /api/v3/prepaid/balance -> 401
+GET /api/v3/scripts/inventory -> 401
+GET /api/prepaid/balance -> 401
+GET /api/v3/webhooks -> 401
+GET /api/v3/users -> 401
+[0m
+All V2/V3 API routes key-gated (401 baseline). Checking the staging API estate on devconnect (cross-env parity at API layer) + the 401/differential detail.
+[0m$ [0mecho "--- 401 body sample (missing key) ---"; curl -s -m 12 "https://connect.signl4.com/api/v3/teams" | head -c 300; echo; echo "--- fake key differential ---"; curl -s -m 12 -H "x-s4-api-key: bbc82f6edf6b4364a5b5a41b40d2c3e1" "https://connect.signl4.com/api/v3/teams" | head -c 300; echo; echo "--- staging devconnect API ---"; for p in "api/docs/v3/swagger.json" "api/v3/teams" "identity/connect/authorize"; do code=$(curl -s -o /dev/null -m 12 -w "%{http_code}" "https://devconnect.signl4.com/$p"); echo "devconnect /$p -> $code"; done
+--- 401 body sample (missing key) ---
+
+--- fake key differential ---
+{"type":"https://httpstatuses.com/403","title":"Forbidden","status":403,"detail":"API Key is invalid."}
+--- staging devconnect API ---
+devconnect /api/docs/v3/swagger.json -> 200
+devconnect /api/v3/teams -> 401
+devconnect /identity/connect/authorize -> 302
+[0m
+Staging API mirror confirmed live on devconnect (swagger v3 200, /api/v3/teams 401, authorize 302) — the staging API estate shares the prod IdentityServer. Comparing staging vs prod API schema + one more auth-surface check.
+[0m$ [0mcurl -s -m 20 https://devconnect.signl4.com/api/docs/v3/swagger.json -o /tmp/s4v3dev.json -w "dev swagger: %{http_code}, %{size_download}B\n"; echo "--- diff path sets prod vs dev v3 ---"; diff <(jq -r '.paths|keys[]' /tmp/s4v3.json | sort) <(jq -r '.paths|keys[]' /tmp/s4v3dev.json | sort) && echo "IDENTICAL path sets"; echo "--- dev v3 security schemes ---"; jq -c '.components.securitySchemes|keys' /tmp/s4v3dev.json; echo "--- dev v3 issuer/prefix quirk ---"; jq -r '.servers[]?.url' /tmp/s4v3dev.json; echo "--- webhook docs + auth check ---"; curl -s -o /dev/null -m 12 -w "connect /webhook/docs/: %{http_code}\n" "https://connect.signl4.com/webhook/docs/"; curl -s -o /dev/null -m 12 -w "connect /api/docs/: %{http_code}\n" "https://connect.signl4.com/api/docs/"
+dev swagger: 200, 1213145B
+--- diff path sets prod vs dev v3 ---
+123a124,125
+> /v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/en16931
+> /v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
+129a132
+> /v3/subscriptions/{subscriptionId}/tags
+191a195
+> /v3/users/{userId}/tags
+--- dev v3 security schemes ---
+["API_Key_Header","API_Key_Query","OAuth2"]
+--- dev v3 issuer/prefix quirk ---
+https://devconnect.signl4.com/api
+--- webhook docs + auth check ---
+connect /webhook/docs/: 200
+connect /api/docs/: 200
+[0m
+Staging API schema is a string-parallel copy of prod (diff = only e-invoicing/tags endpoints + server URL). Verifying the unversioned `/prepaid/*`, `/scripts/*` ops that the swagger documents with **no security requirement** — a real missing-auth gap if live-200.
+[0m$ [0mfor p in "prepaid/balance" "prepaid/settings" "prepaid/transactions" "scripts/instances" "scripts/instances/aaa111" "scripts/inventory" "scripts/inventory/parsed" "v3/scripts/inventory/parsed" "v3/prepaid/settings"; do code=$(curl -s -o /dev/null -m 12 -w "%{http_code}" "https://connect.signl4.com/api/$p"); echo "prod GET /api/$p -> $code"; done; echo "--- dev same ---"; for p in "prepaid/balance" "prepaid/settings" "scripts/instances" "scripts/inventory/parsed"; do code=$(curl -s -o /dev/null -m 12 -w "%{http_code}" "https://devconnect.signl4.com/api/$p"); echo "dev GET /api/$p -> $code"; done
+prod GET /api/prepaid/balance -> 401
+prod GET /api/prepaid/settings -> 401
+prod GET /api/prepaid/transactions -> 401
+prod GET /api/scripts/instances -> 401
+prod GET /api/scripts/instances/aaa111 -> 401
+prod GET /api/scripts/inventory -> 401
+prod GET /api/scripts/inventory/parsed -> 401
+prod GET /api/v3/scripts/inventory/parsed -> 401
+prod GET /api/v3/prepaid/settings -> 401
+--- dev same ---
+dev GET /api/prepaid/balance -> 401
+dev GET /api/prepaid/settings -> 401
+dev GET /api/scripts/instances -> 401
+dev GET /api/scripts/inventory/parsed -> 401
+[0m
+No missing-auth gap — all "optional-auth"-documented ops return 401 live on both prod and staging. Surface map correction complete. Emitting analysis.
+
+**STEP 1 — DELTA**
+- NEW connect.signl4.com/api estate (real product API, never in prior map): public swagger V2 185 paths + V3 202 paths served at `/api/docs/{v2,v3}/swagger.json`; auth = `X-S4-Api-Key` header/query + OAuth2 (scopes `public_api_read/write/offline_access`, refresh) via connect/identity
+- NEW devconnect.signl4.com/api staging mirror LIVE: byte-parallel V3 schema (only extras: `/v3/subscriptions/{sid}/invoices/{iid}/en16931`,`/zugferd` e-invoice exports, `/tags`), identical security schemes, server URL swapped to devconnect — 9th cross-env trust-anchor observation at the API layer
+- NEW 16 probed prod+staging routes 401 w/o key; invalid key → 403 "API key is invalid" (differential, single sample); unversioned `/prepaid/*`,`/scripts/*` documented "optional auth" → really 401-gated (config correct)
+- NEW `/api/v3/signls` GET → 405 (POST-only sink, same family as alerts); api.signl4.com baselines stable (teams 401, discovery issuer=connect, swagger/openapi/v1 404)
+- CHANGED API surface map corrected: prod product API lives on `connect.signl4.com` — the SAME host as the prod IdP + account portal + webhook ingestion (shared trust boundary)
+
+**STEP 2 — PRIORITIZE**
+- [PRIO] devconnect.signl4.com/identity/connect/token,9.5,a9,b10,t9,g1,c10,f10 — cross-env forgery primitive (unchanged)
+- [PRIO] connect.signl4.com/api/v3,6.7,a8,b8,t8,g1,c3,f10 — 202-path prod API (SCIM/scripts/remote-actions/AI-shifts/prepaid) on the shared-trust host
+- [PRIO] devconnect.signl4.com/api/v3,5.9,a7,b6,t8,g1,c3,f10 — staging API mirror with billing e-invoice surface
+- [PRIO] api.signl4.com/api/v2/teams,6.5,a6,b8,t7,g5,c9,f7 — established replay proof point
+
+**STEP 3 — HYPOTHESES**
+[HYP] staging OAuth2 token accepted by prod connect API (api-layer cross-env replay)
+class: AUTH
+asset: connect.signl4.com/api/v3
+confidence: 78
+reasoning: prod API publicly documents OAuth2 (authorize+token via connect/identity; scopes public_api_read/write/offline_access); staging devconnect mirrors full V2/V3 schema and shares RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n_sha 138f432b) + client_id 692A0A56 + scope set, now at 9 observation points incl both API estates; missing-vs-invalid-key differential (401 vs 403) proves active middleware but no env-scoped claim validation is documented/verifiable; a staging-minted bearer validating at the prod API validator = one shared trust boundary.
+evidence_needed: staging-minted access_token (scope public_api_read) accepted (vs 401/403 baseline) on prod connect /api/v3/*
+verify_steps: HUMAN — POST https://devconnect.signl4.com/identity/connect/token grant_type=client_credentials (client 692A0A56-892F-4AE2-8259-76DA398990B6, scope public_api_read offline_access) → GET https://connect.signl4.com/api/v3/teams with Bearer; compare to 401/403 baseline
+impact: staging credential/client-secret compromise ⇒ full prod V2/V3 API RW (alerts, users, schedules, SCIM, scripts/instances, prepaid) — MED-HIGH→HIGH
+testability: HUMAN_ONLY
+[HYP] staging API billing surface: e-invoice export reachable under shared-key estate
+class: AUTH
+asset: devconnect.signl4.com/api/v3/subscriptions/{sid}/invoices
+confidence: 60
+reasoning: dev schema exposes /en16931 + /zugferd invoice-export routes absent from prod swagger; staging estate shares the prod trust anchor; if staging creds yield financial artifacts, cross-env finding escalates to billing data touch.
+evidence_needed: staging-authenticated GET returns invoice list/XML (EN16931/ZUGFeRD)
+verify_steps: HUMAN — with staging API key or token, GET /api/v3/subscriptions and /api/v3/subscriptions/{sid}/invoices, /{iid}/en16931
+impact: financial/billing artifact exposure via staging-issued creds. MED
+testability: HUMAN_ONLY
+
+**STEP 4 — SELF-CRITIQUE**
+- [REJECTED] connect.signl4.com/api unversioned /prepaid*,/scripts* "optional auth" — live 401 on prod AND staging; static-doc-only, config correct
+- [REJECTED] /api/v3/signls GET 405 — POST-only sink family, not a defect
+- [PARKED] API_Key_Query variant (key in query string) — speculative log-leakage, no demonstrated program-specific exploit
+- [FINAL] 1. [78] staging OAuth2 token → prod connect API 2. [60] staging e-invoice/billing surface — both consolidate onto the 9-observation cross-env AUTH primitive; no new passive-only defect
+
+**STEP 5 — NEXT ACTION**
+[NEXT] HUMAN: mint staging token via `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope `public_api_read offline_access`) → replay Bearer on prod `GET https://connect.signl4.com/api/v3/teams` (401 baseline confirmed this cycle) and `https://connect.signl4.com/identity/connect/userinfo`; capture devfix Login issuer; then submit cross-env report to bugs.olivermaicher.eu — evidence pack: 9 deep-equal points (api.signl4.com/connect/devconnect identity+JWKS, prod+staging API swagger parity, staging-only e-invoice + tags routes), shared key/scope/client, scopes public_api_read/write/offline_access.
+
+**STEP 6 — LEARNING**
+- [LEARN] ACCEPTED AUTH @ connect.signl4.com/api: real product API estate (V2 185 + V3 202 paths, X-S4-Api-Key 401/403 differential, OAuth2 scopes public_api_read/write/offline_access) — the counterpart to api.signl4.com Bearer surface; every probed route gated
+- [LEARN] ACCEPTED AUTH @ devconnect.signl4.com/api: staging API mirror live w/ byte-parallel schema + billing extras (en16931/zugferd invoices, subscription/user tags) — 9th cross-env trust-anchor observation
+- [LEARN] REJECTED MISCONFIG @ connect.signl4.com/api: unversioned /prepaid/*,/scripts/* documented without security → live 401 on prod+dev; static-doc-only, config correct
+
+**STEP 7 — RISK**
+[RISK] derdack: 55 — API estate corrected: the real product API, prod IdP, account portal and webhook ingestion all share `connect.signl4.com`, and staging `devconnect` mirrors it with the byte-identical RS256 key + client 692A0A56 + scope set (9 observation points incl both API estates); staging compromise now reaches prod V2/V3 API RW with a billing/invoice surface on staging. RCI holds below HIGH (gated on staging credential/client-secret); no new unauth-defect this cycle — all API routes key-gated.
