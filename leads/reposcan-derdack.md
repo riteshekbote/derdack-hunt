@@ -81,3 +81,47 @@ reasoning: The provided candidate list contains no Derdack repositories to audit
 impact: N/A
 verify_steps: N/A
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-06 17:07:14 UTC
+class: SECRET
+asset: `derdack-plugin-checkmk/2-way/Main.js:90-94`
+confidence: 95
+reasoning: Hardcoded `username = "cmkadmin"`, `password = "CNlydVqZ"`, and `serverURL = "http://192.168.88.107:8080/cmk/check_mk/api/v0/"` with an internal RFC1918 IP. Credentials are used in Bearer auth headers at lines 317, 360. This is a sample/template but exposes a real internal hostname pattern and valid credential format.
+impact: HIGH — if deployed as-is, exposes Checkmk monitoring admin account; internal IP leaks network topology.
+verify_steps: Check if `192.168.88.107:8080` is reachable from any Derdack-internal network; attempt Checkmk API auth with the listed creds.
+class: SECRET
+asset: `derdack-oncall-holidayimport/HolidayImport.js:16`, `derdack-oncall-holidayimport/HolidayDeleteAll.js:22`
+confidence: 95
+reasoning: `STRING_DB_CONNECTION` contains `Server=sqlserver.derdack-support.local;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017`. The `sa` account with password `Derdack!` is a sysadmin-level DB credential. This is in sample scripts but references an internal hostname (`derdack-support.local`).
+impact: CRITICAL — SA account grants full SQL Server control; `derdack-support.local` is an internal Derdack asset.
+verify_steps: DNS-resolve `sqlserver.derdack-support.local`; check if Enterprise Alert deployments use these scripts with these exact credentials.
+class: MISCONFIG
+asset: `derdack-oncall-holidayimport/HolidayImport.js:65,86,105`, `derdack-oncall-holidayimport/HolidayDeleteAll.js:71,92,111`, `derdack-events-snmp/SNMP-MIB-Importer.js:153,161,169`, `derdack-alert-forwarding/Alert2Team.js:28,72`
+confidence: 90
+reasoning: All SQL queries are built via direct string concatenation with unsanitized variables (e.g., `"SELECT ID FROM OnCallPlanHolidays WHERE OnCallPlanID=" + iTeamId`). The `sTeams` variable in HolidayImport.js line 86 is split from user-controlled `STRING_TEAMS` and injected directly into `IN (...)` clauses. Alert2Team.js line 28 concatenates `sExecutor` into a SQL query without escaping.
+impact: HIGH — allows SQL injection if any parameter originates from user/external input; Enterprise Alert database compromise.
+verify_steps: Trace whether `STRING_TEAMS`, `sExecutor`, or MIB file contents can be influenced by external input in production deployments.
+class: MISCONFIG
+asset: `derdack-alert-augmentation/html-to-text/ps.js:40`
+confidence: 85
+reasoning: `ExecutePowershell()` constructs a shell command by directly interpolating `htmlString` (from an event parameter) into a `powershell.exe` invocation string at line 40: `"powershell.exe \"node.exe '" + SCRIPTING_HOST_DIR + "html_text.js' '" + htmlString + "'\""`. An attacker who controls the `text` event parameter can inject arbitrary OS commands.
+impact: CRITICAL — remote code execution on the Enterprise Alert scripting host.
+verify_steps: Confirm the script is deployed in production ScriptingHost; test with a malicious `text` parameter payload like `'; rm -rf / #`.
+class: MISCONFIG
+asset: `derdack-plugin-checkmk/2-way/Main.js:94`
+confidence: 80
+reasoning: `serverURL = "http://192.168.88.107:8080/cmk/check_mk/api/v0/"` — plaintext HTTP to an internal Checkmk API. Credentials (line 90-91) are sent as Bearer tokens over this unencrypted channel (line 317).
+impact: MEDIUM — credential interception on internal network via passive sniffing; MITM on monitoring API.
+verify_steps: Verify whether production deployments use HTTP or HTTPS for the Checkmk API endpoint.
+class: MISCONFIG
+asset: `derdack-integration-SIGNL4/js/WebhookGateway.js:41,87`
+confidence: 75
+reasoning: The decoded SIGNL4 team secret is written to debug logs at lines 41 and 87: `EAScriptHost.LogDebug("Decoded S4 Team Secret: " + strS4TeamSecret)`. This exposes the secret in EA log files. The secret is also appended to the webhook URL at line 94.
+impact: MEDIUM — team secret exposure in log files; allows unauthorized SIGNL4 webhook calls.
+verify_steps: Check EA log retention and access controls; verify if debug logging is enabled in production.
+class: OTHER
+asset: `derdack-plugin-checkmk/2-way/Main.js:52-68`, `derdack-2wayREST-samples/Dynatrace/Main.js:53-69`, `derdack-2wayREST-samples/Logic Monitor/Main.js:52-68`, `derdack-2wayREST-samples/zendesk/Main.js:52-68`
+confidence: 70
+reasoning: `eval()` is called on `appContext.state.callbackSaveState`, `appContext.runtimeInfo.callbackSetStatusError`, etc. If the EA runtime provides attacker-controllable data in these fields, it enables arbitrary code execution. This appears to be an EA SDK pattern but remains risky.
+impact: MEDIUM — potential code injection if EA context data is tainted.
+verify_steps: Review EA Scripting Host SDK to determine if context fields are sanitized before delivery.
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
