@@ -297,3 +297,7 @@ www.derdack.com
 ## 2026-09-06 22:37:49 UTC
 - CHANGED api.signl4.com/api/v2/teams returns 405 Allow: GET,POST on unauthenticated GET (not 401) — method routing response, no auth challenge at routing layer
 - CHANGED api.signl4.com/api/v2/teams returns 405 even with invalid Bearer token — auth validation not enforced at route entry
+
+## 2026-09-07 00:25:59 UTC
+- CHANGED api.signl4.com/api/v2/teams returns 405 Allow: GET,POST on unauthenticated GET (not 401) — method routing response, no auth challenge at routing layer (live confirmed)
+- CHANGED api.signl4.com/api/v2/teams returns 405 even with invalid Bearer token — auth validation deferred to handler, not route layer (live confirmed)

@@ -1,30 +1,30 @@
-## 2026-09-06 22:36:17 UTC [target] (model bigpickle)
+## 2026-09-07 00:20:43 UTC [target] (model bigpickle)
 [HYP] staging-minted Bearer accepted by prod connect V3 API despite issuer divergence (api-layer cross-env replay)
 class: AUTH
 asset: connect.signl4.com/api/v3/*
 confidence: 60
-reasoning: prod connect/api/account identity ingresses all report issuer=connect; devconnect/devaccount report issuer=devconnect; yet all share byte-identical RS256 signing key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), client_id 692A0A56-892F-4AE2-8259-76DA398990B6, full prod scope set, and grants incl client_credentials+password+token-exchange; /connect/register 404 removes self-registered-client path; client auth secret-only.
-evidence_needed: devconnect-issued access_token (scope public_api_read) returning 200/403 vs 401 baseline at prod /api/v3/teams — outcome decides issuer enforcement.
-verify_steps: HUMAN — POST devconnect/identity/connect/token (grant_type=client_credentials, client 692A0A56, scope public_api_read offline_access, secret required) → GET connect.signl4.com/api/v3/teams with Bearer + GET connect.signl4.com/identity/connect/userinfo; compare to established 401 baseline.
-impact: staging client_secret/user credential or key disclosure ⇒ prod API RW across V2/V3 (alerts, users, schedules, SCIM) IF iss-validation absent — MED-HIGH, credential-gated.
+reasoning: prod connect/api/account all report issuer=connect; devconnect/devaccount report issuer=devconnect; yet all serve byte-identical RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n_sha 138f432b, x5t ke5PPOlOtRevZrJU90l-yw4x7ic) + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + full prod scope set across 8 deep-equal observations; grants incl client_credentials+password+token-exchange; /connect/register 404 removes self-registration; no env-scoped claim validation documented.
+evidence_needed: devconnect-issued access_token (scope public_api_read) returns 200/403 vs 401 baseline at prod connect /api/v3/teams.
+verify_steps: HUMAN — POST https://devconnect.signl4.com/identity/connect/token (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope `public_api_read offline_access`, client_secret required) → GET https://connect.signl4.com/api/v3/teams + connect.signl4.com/identity/connect/userinfo with Bearer; compare to 401 baseline.
+impact: staging credential/client-secret or key disclosure ⇒ prod API RW across V2/V3 (alerts, users, schedules, SCIM, scripts) if iss-validation absent — MED-HIGH, credential-gated.
 testability: HUMAN_ONLY
-[HYP] devfix support portal login bound to shared-key staging IdP (un-WAF'd pivot into support data)
+[HYP] devfix support portal authenticates against shared-key staging IdP (un-WAF'd pivot into support data)
 class: AUTH
 asset: devfix.signl4.com
 confidence: 60
-reasoning: /identity discovery 404 (RP, not IdP) + /signin-oidc 500 callback registered on 108.143.123.104 staging cluster which hosts shared-key devconnect; no WAF headers previously observed.
-evidence_needed: interactive Login redirect authority = devconnect.connect/authorize.
-verify_steps: HUMAN — device-less: test Login page form action + capture authorize redirect Location during staging-cred login.
-impact: staging credential compromise ⇒ customer support cases/files through an un-WAF'd app host. MED.
+reasoning: devfix /signin-oidc 500 callback registered on 108.143.123.104 staging cluster which hosts shared-key devconnect; cluster shares RS256 key + client 692A0A56 + scope set with prod; no WAF headers observed on host.
+evidence_needed: interactive Login redirect Location authority = devconnect vs connect.
+verify_steps: HUMAN — Login on devfix with staging creds → capture /identity/connect/authorize redirect issuer.
+impact: staging cred compromise ⇒ SIGNL4 support admin portal (customer cases/files) from un-WAF'd host. MED.
 testability: HUMAN_ONLY
-[HYP] token-exchange grant on staging IdP synthesizes prod-compatible tokens via shared key (grant-level cross-env primitive)
-class: AUTH
-asset: devconnect.signl4.com/identity/connect/token
-confidence: 55
-reasoning: `urn:ietf:params:oauth:grant-type:token-exchange` enabled on both envs (discovery parity); combined with shared signing key + shared client_ids, an exchange on staging yields a token signed by the prod trust anchor; block remains issuer divergence + need for a base credential.
-evidence_needed: staging token-exchange succeeds w/ known actor token + is accepted at prod resource.
-verify_steps: HUMAN — POST devconnect /identity/connect/token grant_type=token-exchange (requires base creds) → replay result on prod /api/v3.
-impact: token overflow across environments without key compromise — MED, credential-gated.
-testability: HUMAN_ONLY
-[NEXT] HUMAN: mint staging token `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope `public_api_read offline_access`, client_secret required) → replay Bearer on prod `GET https://connect.signl4.com/api/v3/teams` and `connect.signl4.com/identity/connect/userinfo` (401 baseline); outcome classifies prod issuer enforcement and either confirms or closes the [60] replay. Capture devfix login redirect authority in same session; then submit cross-env report to bugs.olivermaicher.eu (evidence pack now includes full 5-ingress issuer/scopes/grants parity map + /connect/register 404 control). All passive vectors exhausted — no further PROBE yields material evidence.
-[RISK] derdack: 52 — Cross-env shared RS256 key + client 692A0A56 + full prod scope/grants parity (now at 9+ deep-equal points incl full discovery diff) remains the sole report-worthy finding; this cycle's issuer-dichotomy datapoint caps severity below simple-replay (staging tokens carry iss=devconnect vs prod iss=connect — acceptance conditional on prod issuer-claim validation) and moves RCI down from 54. Swagger closure + /connect/register 404 removed both competing and enabling angles; all remaining motion is HUMAN token-mint + login-capture + report submission. Exploit fully gated on staging secret/credential material; no unauth defect found in a further sweep of the API estate.
+[HYP] docs.enterprisealert.com Azure blob custom-domain takeover (latent)
+class: MISCONFIG
+asset: docs.enterprisealert.com
+confidence: 40
+reasoning: CNAME → derdackdownloads.z13.web.core.windows.net (live); handshake serves *.web.core.windows.net default cert = custom domain never bound, HTTPS broken; blob root returns 404 (static site exists, empty).
+evidence_needed: future decommission of storage account derdackdownloads (then CNAME dangles to reclaimable globally-unique Azure name) — not controllable/observable passively today.
+verify_steps: none actionable passively — PASSIVE — repeated CNAME+cert recheck only.
+impact: IF account decommissioned, classic Azure blob takeover (hostile content on docs.enterprisealert.com); currently NOT exploitable. LOW (latent).
+testability: PASSIVE
+[NEXT] HUMAN: mint staging token via `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope `public_api_read offline_access`, client_secret required) → replay Bearer on prod `GET https://connect.signl4.com/api/v3/teams` and `connect.signl4.com/identity/connect/userinfo` (401 baseline) to classify prod issuer-validation; capture devfix Login redirect authority in same session; then submit cross-env report to bugs.olivermaicher.eu.
+[RISK] derdack: 50 — New subdomain sweep (7 hosts) surfaced zero exploitable defects: all fresh surfaces are vendor-hosted (Zendesk/AdminLabs/GH Pages), dead-CNAME (unclaimable), or latent Azure configs (docs blob). Cross-env shared RS256 key + client 692A0A56 + full scope/grants parity remains the sole report-worthy finding, unchanged at 8 deep-equal identity points and still gated on a HUMAN token-mint + issuer-validation outcome. Each empty breadth cycle trims P(new passive find) further; RCI holds below HIGH with exploit bound to staging secret/credential material. Submission-ready once HUMAN evidence lands; no new PROBE yields material evidence.
