@@ -1362,3 +1362,31 @@ evidence_needed: Login form post target / OIDC authorize redirect authority = de
 verify_steps: HUMAN — load devfix login, capture form-post target + authorize redirect Location
 impact: staging support-cred compromise ⇒ support cases/files — MED
 testability: HUMAN_ONLY
+## 2026-09-07 22:22:38 UTC [target] (model bigpickle)
+[HYP] staging-minted Bearer accepted by prod despite issuer divergence — widened to 4 signers
+class: AUTH
+asset: connect.signl4.com/api/v3/* + api.signl4.com/api/v3/*
+confidence: 65
+reasoning: all 4 identity hosts (connect/api/devconnect/devapi) serve byte-identical RS256 JWKS (10th deep-equal incl. devapi this cycle); devconnect+devapi declare iss=devconnect and both grant the account client 692A0A56 with client_credentials+password+PAR enabled; prod api/identity issuer=connect; token minted on either staging host carries iss=devconnect — only signature/issuer check separates prod acceptance
+evidence_needed: devconnect- or devapi-issued access_token returning non-401 at prod /api/v3/teams or /identity/connect/userinfo
+verify_steps: HUMAN — POST `devconnect.signl4.com/identity/connect/token` OR `devapi.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope=public_api_read offline_access, client_secret*) → replay Bearer on prod `connect.signl4.com/api/v3/teams` + `/identity/connect/userinfo` vs 401 baseline; if issuer validated strictly, repeat with iss=connect self-signed JWT (shared key) to classify
+impact: staging secret compromise ⇒ prod API RW across PII/billing/schedules/webhooks — MED-HIGH, credential-gated
+testability: HUMAN_ONLY
+[HYP] devfix support portal login authenticates against staging shared-key IdP
+class: AUTH
+asset: devfix.signl4.com
+confidence: 55
+reasoning: Blazor "Admin Support Page" on staging cluster; /signin-oidc 500 = OIDC callback registered; same cluster runs devconnect+devapi IdP with shared RS256 key + client 692A0A56 (+ now PAR)
+evidence_needed: Login form post target / authorize redirect authority = devconnect vs connect/devapi
+verify_steps: HUMAN — load devfix, authenticate, capture anti-forgery post-action and OIDC challenge authority via devtools
+impact: staging support-cred compromise ⇒ support cases/files — MED
+testability: HUMAN_ONLY
+[HYP] api/v2/teams 401↔405 windowed flip = multi-instance auth-middleware skew
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 40
+reasoning: flip 401(19:22)→405(15:41 previous)→401(now, GET+POST); only teams dual-states while sibling routes stable 401; 405 state advertised Allow GET,POST = routing present, handler-auth deferred
+evidence_needed: any accepting (200/JSON) state — never observed across 7+ cycles
+verify_steps: PASSIVE — hourly GET/HEAD sweep ~0.02rps, log status+Allow+WWW-Authenticate+appId per rep; escalate only on data-bearing response
+impact: none demonstrated — both states deny read — LOW
+testability: PASSIVE
