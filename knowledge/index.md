@@ -135,3 +135,7 @@
 - 2026-09-07 ACCEPTED MISCONFIG @ connect.signl4.com/api/v3: bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
 - 2026-09-07 REJECTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without secrets
 - 2026-09-07 REJECTED AUTH @ devconnect.signl4.com/identity/connect/token client_credentials grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+- 2026-09-07 ACCEPTED AUTH @ connect.signl4.com/api/v3/*: full V3 route map confirmed — /users|teams|webhooks|subscriptions Bearer-gated (401), /schedules|devices POST-write-only (405), /csp/report POST-sink (405); scripts|alerts|scim|health 404; no anonymous read surface
+- 2026-09-07 ACCEPTED AUTH @ api.signl4.com/api/v2/*: full V2 route map — /teams|users|webhooks|subscriptions Bearer-gated (401), /alerts|schedules POST-write-only (405), /csp/report POST-sink (204); same backend as connect (shared appId)
+- 2026-09-07 ACCEPTED MISCONFIG @ devfix.signl4.com: Blazor Server app ("Admin Support Page") on staging cluster 108.143.123.104; /_blazor/negotiate 200+connectionId (standard Blazor behavior, not auth bypass); /signin-oidc 500 confirms OIDC callback registered but broken
+- 2026-09-07 ACCEPTED OTHER @ connect.signl4.com + api.signl4.com: shared request-context appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd — same backend infrastructure confirmed
