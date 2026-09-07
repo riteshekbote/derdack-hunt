@@ -8289,3 +8289,122 @@ testability: PASSIVE
 
 ## STEP 7 — RISK
 [RISK] derdack: 50 — New subdomain sweep (7 hosts) surfaced zero exploitable defects: all fresh surfaces are vendor-hosted (Zendesk/AdminLabs/GH Pages), dead-CNAME (unclaimable), or latent Azure configs (docs blob). Cross-env shared RS256 key + client 692A0A56 + full scope/grants parity remains the sole report-worthy finding, unchanged at 8 deep-equal identity points and still gated on a HUMAN token-mint + issuer-validation outcome. Each empty breadth cycle trims P(new passive find) further; RCI holds below HIGH with exploit bound to staging secret/credential material. Submission-ready once HUMAN evidence lands; no new PROBE yields material evidence.
+===== ANALYST bigpickle 2026-09-07 04:55:52 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -s -o /tmp/jwks_dev.json -w "devconnect JWKS HTTP %{http_code}\n" "https://devconnect.signl4.com/identity/.well-known/jwks" --max-time 20; curl -s -o /tmp/jwks_prod.json -w "connect JWKS HTTP %{http_code}\n" "https://connect.signl4.com/identity/.well-known/jwks" --max-time 20
+devconnect JWKS HTTP 404
+connect JWKS HTTP 404
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "api/v2/teams GET=> %{http_code} allow=%header{allow}\n" "https://api.signl4.com/api/v2/teams" --max-time 20; curl -s -o /tmp/oidc_dev.json -w "devconnect OD HTTP %{http_code}\n" "https://devconnect.signl4.com/identity/.well-known/openid-configuration" --max-time 20
+api/v2/teams GET=> 401 allow=
+devconnect OD HTTP 200
+[0m
+[0m$ [0mpython3 -c "
+import json
+d=json.load(open('/tmp/oidc_dev.json'))
+print('issuer:',d.get('issuer'))
+print('jwks_uri:',d.get('jwks_uri'))
+print('grant_types:',d.get('grant_types_supported'))
+print('id_token_signing_alg:',d.get('id_token_signing_alg_values_supported'))
+"
+issuer: https://devconnect.signl4.com/identity
+jwks_uri: https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks
+grant_types: ['authorization_code', 'client_credentials', 'refresh_token', 'implicit', 'password', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:openid:params:grant-type:ciba', 'urn:ietf:params:oauth:grant-type:token-exchange']
+id_token_signing_alg: ['RS256']
+[0m
+[0m$ [0mcurl -s -o /tmp/jwks_dev.json -w "devconnect jwks HTTP %{http_code}\n" "https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks" --max-time 20; curl -s -o /tmp/jwks_prod.json -w "connect jwks HTTP %{http_code}\n" "https://connect.signl4.com/identity/.well-known/openid-configuration/jwks" --max-time 20
+devconnect jwks HTTP 200
+connect jwks HTTP 200
+[0m
+[0m$ [0mcmp -s /tmp/jwks_dev.json /tmp/jwks_prod.json && echo "JWKS BYTE-IDENTICAL (10th deep-equal)" || echo "JWKS DIFFER"; python3 -c "
+import json
+for f in ('/tmp/jwks_dev.json','/tmp/jwks_prod.json'):
+    k=json.load(open(f))['keys'][0]
+    print(f, 'kid=',k['kid'], 'kty=',k['kty'], 'use=',k['use'], 'x5t=',k.get('x5t'), 'n_sha=',__import__('hashlib').sha256(bytes.fromhex(k['n'])).hexdigest()[:8])
+"
+JWKS BYTE-IDENTICAL (10th deep-equal)
+Traceback (most recent call last):
+  File "<string>", line 5, in <module>
+ValueError: non-hexadecimal number found in fromhex() arg at position 2
+[0m
+[0m$ [0mcurl -s -o /tmp/oidc_api.json -w "api OD HTTP %{http_code}\n" "https://api.signl4.com/identity/.well-known/openid-configuration" --max-time 20; python3 -c "
+import json
+d=json.load(open('/tmp/oidc_api.json'))
+print('api issuer:',d.get('issuer'))
+print('api jwks_uri:',d.get('jwks_uri'))
+" 2>/dev/null; curl -s -o /tmp/jwks_api.json -w "api jwks HTTP %{http_code}\n" "https://api.signl4.com/identity/.well-known/openid-configuration/jwks" --max-time 20; cmp -s /tmp/jwks_api.json /tmp/jwks_prod.json && echo "api jwks == prod connect (10th deep-equal incl api)" || echo "api jwks DIFF"
+api OD HTTP 200
+api issuer: https://connect.signl4.com/identity
+api jwks_uri: https://api.signl4.com/identity/.well-known/openid-configuration/jwks
+api jwks HTTP 200
+api jwks == prod connect (10th deep-equal incl api)
+[0m
+## STEP 1 — DELTA
+
+- [CHANGED] api.signl4.com/api/v2/teams unauth GET → **401** this cycle (last cycle 2026-09-07 00:25 observed 405 Allow:GET,POST) — routing/handler auth response is request-shaping dependent; no new defect, but prior "auth deferred to handler, not route layer" conclusion not fully stable.
+- [LEARN] JWKS re-verified **10th byte-identical deep-equal** now across all three ingresses (devconnect/connect/api) — api jwks_uri confirmed live after 404 on the naive `/identity/.well-known/jwks` path (nested `/.well-known/openid-configuration/jwks` is the real IdentityServer4 URI).
+- NO_DELTA on derdack.com estate, www WP surface, devfix, lab/enterprisealert inert fleets.
+
+## STEP 2 — PRIORITIZE
+
+| asset | a | b | t | g | c | f | score |
+|---|---|---|---|---|---|---|---|
+| devconnect/connect/api identity (shared key) | 8 | 9 | 9 | 3 | 8 | 9 | **7.6** |
+| devfix.signl4.com (support portal OIDC RP on staging) | 5 | 8 | 7 | 2 | 7 | 7 | **5.9** |
+| api.signl4.com/api/v2 routes | 7 | 7 | 6 | 2 | 6 | 6 | **5.7** |
+
+[PRIO] devconnect/connect/api.signl4.com identity,7.6,freshness+10th deep-equal of shared RS256 key & client 692A0A56
+
+## STEP 3 — HYPOTHESES
+
+[HYP] staging-minted Bearer accepted by prod connect V3 API despite issuer divergence (api-layer cross-env replay)
+class: AUTH
+asset: connect.signl4.com/api/v3/*
+confidence: 60
+reasoning: prod api/connect identity both issuer=connect; devconnect issuer=devconnect; all three serve byte-identical RS256 JWKS (10th cmp-identical live check, kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), same client_id 692A0A56-892F-4AE2-8259-76DA398990B6, same scope set; staging discovery lists client_credentials+password+token-exchange+device_code+CIBA; /connect/register 404 removes self-reg container; client auth is secret-only.
+evidence_needed: devconnect-issued access_token (scope public_api_read) returning non-401 at prod connect /api/v3/teams or /identity/connect/userinfo.
+verify_steps: HUMAN — POST https://devconnect.signl4.com/identity/connect/token (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope public_api_read offline_access, client_secret required) → replay Bearer on GET connect.signl4.com/api/v3/teams + userinfo; compare to 401 baseline.
+impact: staging secret/credential compromise ⇒ prod API RW (alerts, users, schedules, subscriptions) if iss-validation absent — MED-HIGH, credential-gated.
+testability: HUMAN_ONLY
+
+[HYP] devfix support portal authenticates against shared-key staging IdP (un-WAF'd pivot into support app)
+class: AUTH
+asset: devfix.signl4.com
+confidence: 55
+reasoning: devfix /signin-oidc 500 callback + root 200 on 108.143.123.104 staging cluster hosting shared-key devconnect; cluster shares RS256 key + client 692A0A56 + scope set with prod; /identity discovery 404 = RP not IdP.
+evidence_needed: interactive Login form action / authorize redirect Location authority = devconnect vs connect.
+verify_steps: HUMAN — load devfix login, capture form post target + OIDC authorize redirect during staging-cred login.
+impact: staging support-cred compromise ⇒ customer support cases/files through un-WAF'd app host — MED.
+testability: HUMAN_ONLY
+
+[HYP] api/v2/teams 401↔405 response flip signals per-handler auth ordering exploitable via header/method shaping
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 40
+reasoning: same unauth GET returned 405 Allow:GET,POST at 2026-09-07 00:25 and 401 this cycle; repeated drift across 3 cycles (401→405→401) indicates handler-level auth gated by request shape (Accept/UA/body), not stable routing semantics.
+evidence_needed: no accepting surface demonstrated — endpoint-map artifact only, no data exposed in either state.
+verify_steps: PASSIVE — GET/HEAD/OPTIONS matrix on /api/v2/teams with varied Accept+empty-body headers at <=1rps; observe status stability.
+impact: none demonstrated — both states deny read; informational at best — LOW.
+testability: PASSIVE
+
+## STEP 4 — SELF-CRITIQUE
+
+- [PARKED] api/v2/teams auth-ordering flip: no accepting state ever observed (401 or 405 both deny), zero data-exposure delta — confidence 40, no attacker payoff, endpoint-map-only. Do not chase.
+- [PARKED] devfix: gated on staging credentials + interactive login; only actionable humanly, unchanged from prior cycles.
+- [FINAL] staging-Bearer-replay at prod (conf 60) — only finding with report payoff; all passive evidence now at its 10th confirming deep-equal point; any further passive re-check is information-free.
+
+## STEP 5 — NEXT ACTION
+
+[NEXT] HUMAN: mint staging token `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope `public_api_read offline_access`, client_secret required) → replay Bearer on `GET https://connect.signl4.com/api/v3/teams` + `connect.signl4.com/identity/connect/userinfo` (401 baseline) to classify prod issuer-validation; capture devfix Login authorize redirect issuer in same session; then submit cross-env report (evidence pack: 3-ingress discovery diff, 10x byte-identical JWKS, client_id 692A0A56 scope/grants parity, /connect/register 404 control).
+
+## STEP 6 — LEARNING
+
+- [LEARN] ACCEPTED MISCONFIG @ api.signl4.com/identity/.well-known/openid-configuration/jwks: JWKS byte-identical across api/connect/devconnect at 10th deep-equal (cmp=0; naive /identity/.well-known/jwks is 404, nested URI is IdentityServer4 canonical) — cross-env trust anchor fully stabilized incl 3rd ingress.
+- [LEARN] ACCEPTED AUTH @ devconnect.signl4.com: staging discovery still lists client_credentials+password+token-exchange+device_code+CIBA with RS256-only algs — cross-env grants parity re-confirmed live.
+- [LEARN] REJECTED MISCONFIG @ api.signl4.com/api/v2/teams: 401↔405 response flip across cycles is request-shape-dependent route/auth ordering, both states deny read; no defect, endpoint-map artifact only.
+
+## STEP 7 — RISK
+
+[RISK] derdack: 50 — 10th confirming deep-equal adds zero new information; shared RS256 key + client 692A0A56 + full scope/grants parity across prod and staging remains the sole report-worthy finding, still gated on a HUMAN token-mint whose outcome (prod iss-claim validation on api/connect) alone separates MED-HIGH from negligible. Issuer divergence (staging iss=devconnect vs prod iss=connect) caps the pessimistic severity. Every additional passive cycle shrinks P(new passive find) and RCI; further PROBE is information-free — proceed directly to HUMAN token mint + devfix login capture + report submission.
