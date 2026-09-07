@@ -5856,3 +5856,231 @@ testability: PASSIVE
 
 **STEP 7 — RISK**
 [RISK] derdack: 82 — SIGNL4 product estate critical: prod IdP (connect.signl4.com) + public API (api.signl4.com) + live staging cluster (devconnect/devaccount on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56-892F-4AE2-8259-76DA398990B6, password grant enabled on staging — cross-env token forgery path confirmed but blocked on client_secret; api.signl4.com/api/v2 fully Bearer-gated at handler (zero unauth surface); www.derdack.com/de/ and /ea/ XML-RPC exposed but auth-gated on mutating methods (wp.uploadFile returns faultCode 403); blog/techblog HTTPS→HTTP downgrade chain enables MITM session theft; dev.derdack.com MultiViews discloses paths only (static namespace echo, files 403/404); 4/9 original inventory hosts not Derdack infra
+===== ANALYST nemotron3 2026-09-07 19:42:23 UTC =====
+[0m
+> build · nemotron-3-ultra-free
+[0m
+[0m$ [0mcurl -s -I "https://www.derdack.com/wp-login.php" -H "Accept: text/html" 2>&1 | head -30
+HTTP/2 200 
+content-type: text/html; charset=UTF-8
+x-ws-origin: available
+x-ws-ratelimit-limit: 1000
+x-ws-ratelimit-remaining: 999
+date: Mon, 07 Sep 2026 19:24:20 GMT
+server: Apache
+expires: Wed, 11 Jan 1984 05:00:00 GMT
+cache-control: no-cache, must-revalidate, max-age=0
+x-frame-options: SAMEORIGIN
+set-cookie: wordpress_test_cookie=WP%20Cookie%20check; path=/; secure
+[0m
+[0m$ [0mcurl -s -I "https://blog.derdack.com/" -H "Accept: text/html" 2>&1 | head -20
+HTTP/2 302 
+content-type: text/html; charset=iso-8859-1
+location: http://www.derdack.com/news/
+x-ws-origin: available
+x-ws-ratelimit-limit: 1000
+x-ws-ratelimit-remaining: 999
+date: Mon, 07 Sep 2026 19:25:05 GMT
+server: Apache
+[0m
+[0m$ [0mcurl -s -I "https://techblog.derdack.com/" -H "Accept: text/html" 2>&1 | head -20
+HTTP/2 302 
+content-type: text/html; charset=iso-8859-1
+location: http://www.derdack.com/category/technical-blog/
+x-ws-origin: available
+x-ws-ratelimit-limit: 1000
+x-ws-ratelimit-remaining: 999
+date: Mon, 07 Sep 2026 19:26:24 GMT
+server: Apache
+[0m
+[0m$ [0mcurl -s -I "https://www.derdack.com/" -H "Accept: text/html" 2>&1 | head -30
+HTTP/2 200 
+content-type: text/html; charset=UTF-8
+x-ws-origin: available
+x-ws-ratelimit-limit: 1000
+x-ws-ratelimit-remaining: 999
+date: Mon, 07 Sep 2026 19:27:48 GMT
+server: Apache
+link: <https://www.derdack.com/wp-json/>; rel="https://api.w.org/", <https://www.derdack.com/wp-json/wp/v2/pages/2240>; rel="alternate"; type="application/json", <https://www.derdack.com/>; rel=shortlink, <https://www.derdack.com/de/>; rel="alternate"; hreflang="de-DE", <https://www.derdack.com/>; rel="alternate"; hreflang="en-US"
+[0m
+[0m$ [0mcurl -s -I "https://api.signl4.com/api/v2/teams" -H "Accept: application/json" 2>&1 | head -20
+HTTP/2 405 
+date: Mon, 07 Sep 2026 19:28:28 GMT
+allow: GET, POST
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+[0m
+[0m$ [0mcurl -s -I "https://api.signl4.com/api/v2/teams" -H "Accept: application/json" -H "Authorization: Bearer invalid_token" 2>&1 | head -20
+HTTP/2 405 
+date: Mon, 07 Sep 2026 19:29:06 GMT
+allow: GET, POST
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+[0m
+[0m$ [0mcurl -s "https://devconnect.signl4.com/.well-known/openid-configuration" 2>&1 | head -40
+(no output)
+[0m
+[0m$ [0mcurl -s "https://devconnect.signl4.com/.well-known/openid-configuration" 2>&1
+(no output)
+[0m
+[0m$ [0mcurl -v "https://devconnect.signl4.com/.well-known/openid-configuration" 2>&1 | head -50
+% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* Host devconnect.signl4.com:443 was resolved.
+* IPv6: (none)
+* IPv4: 108.143.123.104
+*   Trying 108.143.123.104:443...
+* Connected to devconnect.signl4.com (108.143.123.104) port 443
+* ALPN: curl offers h2,http/1.1
+} [5 bytes data]
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+} [512 bytes data]
+*  CAfile: /etc/ssl/certs/ca-certificates.crt
+*  CApath: /etc/ssl/certs
+{ [5 bytes data]
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+{ [122 bytes data]
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+{ [19 bytes data]
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+{ [4171 bytes data]
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+{ [520 bytes data]
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+{ [52 bytes data]
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+} [1 bytes data]
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+} [52 bytes data]
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / X25519 / RSASSA-PSS
+* ALPN: server accepted h2
+* Server certificate:
+*  subject: C=DE; ST=Brandenburg; L=Potsdam; O=Derdack GmbH; CN=*.signl4.com
+*  start date: May 20 00:00:00 2026 GMT
+*  expire date: Dec  4 23:59:59 2026 GMT
+*  subjectAltName: host "devconnect.signl4.com" matched cert's "*.signl4.com"
+*  issuer: C=US; O=DigiCert Inc; CN=DigiCert Global G2 TLS RSA SHA256 2020 CA1
+*  SSL certificate verify ok.
+*   Certificate level 0: Public key type RSA (4096/152 Bits/secBits), signed using sha256WithRSAEncryption
+*   Certificate level 1: Public key type RSA (2048/112 Bits/secBits), signed using sha256WithRSAEncryption
+*   Certificate level 2: Public key type RSA (2048/112 Bits/secBits), signed using sha256WithRSAEncryption
+} [5 bytes data]
+* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://devconnect.signl4.com/.well-known/openid-configuration
+* [HTTP/2] [1] [:method: GET]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: devconnect.signl4.com]
+* [HTTP/2] [1] [:path: /.well-known/openid-configuration]
+* [HTTP/2] [1] [user-agent: curl/8.5.0]
+* [HTTP/2] [1] [accept: */*]
+} [5 bytes data]
+[0m
+[0m$ [0mcurl --max-time 10 "https://devconnect.signl4.com/.well-known/openid-configuration" 2>&1
+% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+[0m
+[0m$ [0mcurl --max-time 10 "https://connect.signl4.com/.well-known/openid-configuration" 2>&1
+% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+[0m
+[0m$ [0mcurl --max-time 10 "https://connect.signl4.com/identity/.well-known/openid-configuration" 2>&1
+% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100  3457    0  3457    0     0   6359      0 --:--:-- --:--:-- --:--:--  6366
+{"issuer":"https://connect.signl4.com/identity","jwks_uri":"https://connect.signl4.com/identity/.well-known/openid-configuration/jwks","authorization_endpoint":"https://connect.signl4.com/identity/connect/authorize","token_endpoint":"https://connect.signl4.com/identity/connect/token","userinfo_endpoint":"https://connect.signl4.com/identity/connect/userinfo","end_session_endpoint":"https://connect.signl4.com/identity/connect/endsession","check_session_iframe":"https://connect.signl4.com/identity/connect/checksession","revocation_endpoint":"https://connect.signl4.com/identity/connect/revocation","introspection_endpoint":"https://connect.signl4.com/identity/connect/introspect","device_authorization_endpoint":"https://connect.signl4.com/identity/connect/deviceauthorization","backchannel_authentication_endpoint":"https://connect.signl4.com/identity/connect/ciba","pushed_authorization_request_endpoint":"https://connect.signl4.com/identity/connect/par","require_pushed_authorization_requests":false,"frontchannel_logout_supported":true,"frontchannel_logout_session_supported":true,"backchannel_logout_supported":true,"backchannel_logout_session_supported":true,"scopes_supported":["openid","email","profile","public_api_read","public_api_write","public_api_prov","mobile_api","account_portal","reseller_portal","public_api_ea_manage","public_api_ea_alerting","offline_access"],"claims_supported":["sub","email","email_verified","name","family_name","given_name","middle_name","nickname","preferred_username","profile","picture","website","gender","birthdate","zoneinfo","locale","updated_at","http://schemas.derdack.com/identity/claims/active","http://schemas.derdack.com/identity/claims/subscription_id","http://schemas.derdack.com/identity/claims/branch_id","http://schemas.derdack.com/identity/claims/is_branch_manager","http://schemas.derdack.com/identity/claims/is_stakeholder"],"grant_types_supported":["authorization_code","client_credentials","refresh_token","implicit","password","urn:ietf:params:oauth:grant-type:device_code","urn:openid:params:grant-type:ciba","urn:ietf:params:oauth:grant-type:token-exchange"],"response_types_supported":["code","token","id_token","id_token token","code id_token","code token","code id_token token"],"response_modes_supported":["form_post","query","fragment"],"token_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"revocation_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"introspection_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"id_token_signing_alg_values_supported":["RS256"],"userinfo_signing_alg_values_supported":["RS256"],"introspection_signing_alg_values_supported":["RS256"],"subject_types_supported":["public"],"code_challenge_methods_supported":["plain","S256"],"request_parameter_supported":true,"request_object_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"],"prompt_values_supported":["none","login","consent","select_account"],"authorization_response_iss_parameter_supported":true,"backchannel_token_delivery_modes_supported":["poll"],"backchannel_user_code_parameter_supported":true,"backchannel_authentication_request_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"],"dpop_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"]}
+[0m
+[0m$ [0mcurl --max-time 10 "https://connect.signl4.com/identity/.well-known/openid-configuration/jwks" 2>&1
+% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100  1611    0  1611    0     0   3672      0 --:--:-- --:--:-- --:--:--  3678
+{"keys":[{"kty":"RSA","use":"sig","kid":"91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256","x5t":"ke5PPOlOtRevZrJU90l-yw4x7ic","e":"AQAB","n":"7bx0BWVzmy_EkFubRcyLUVBvdA4XDPMgOYXKqX9uW5Bm1nqYpLEHKkkI9x2lH4_HBD4bmCoeDlR-fu0q4D0_JOB3QEIfnRwhcQKNwnpE33vItXea4hyUGXHoGCR7hasBRN_unkHHYIi6VsV_I_1kJDJQ5Gf9zjQDrwW2X6DEnuNaF3BMSRU8WHHbtps4_OgyoO4DN9PE8Xsu7Ngno3ItGZ2ACi5fradUyIJ6NXfMlyAV4B6A7ZI36yr7Noh1ZrXVkbPYkjcpWKH9PR1toeRJp83wc2vh6z5r77hHMKyKdzCx4uCsN6p-zlsuZoA1xumoydVhzmcG1G7ThgvxHk9NGQ","x5c":["MIIDNDCCAhygAwIBAgIQd2nPiwxkQjSr9WopSTtKgzANBgkqhkiG9w0BAQsFADAXMRUwEwYDVQQDDAwqLnNpZ25sNC5jb20wHhcNMjUxMTIxMDQxMTE5WhcNMjcxMTIxMDQyMTE5WjAXMRUwEwYDVQQDDAwqLnNpZ25sNC5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDtvHQFZXObL8SQW5tFzItRUG90DhcM8yA5hcqpf25bkGbWepiksQcqSQj3HaUfj8cEPhuYKh4OVH5+7SrgPT8k4HdAQh+dHCFxAo3CekTfe8i1d5riHJQZcegYJHuFqwFE3+6eQcdgiLpWxX8j/WQkMlDkZ/3ONAOvBbZfoMSe41oXcExJFTxYcdu2mzj86DKg7gM308Txey7s2Cejci0ZnYAKLl+tp1TIgno1d8yXIBXgHoDtkjfrKvs2iHVmtdWRs9iSNylYof09HW2h5EmnzfBza+HrPmvvuEcwrIp3MLHi4Kw3qn7OWy5mgDXG6ajJ1WHOZwbUbtOGC/EeT00ZAgMBAAGjfDB6MA4GA1UdDwEB/wQEAwIFoDAJBgNVHRMEAjAAMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAfBgNVHSMEGDAWgBTgACj6LFymw2m3Wl7Lsm9PTHwQRzAdBgNVHQ4EFgQU4AAo+ixcpsNpt1pey7JvT0x8EEcwDQYJKoZIhvcNAQELBQADggEBAGfIIqnDl5DewpIn/H3DetX+lLQSnXmozkyVuuLeHdKypfVxudvq03j+tK29zQ7PmD4nRHP9O/jaGrSa78Gq/cLsWqVxSTc4Fnq64RBVaJHH0h9usxJ6MEZCkXHDLMB/OEoJboatDylcgGm7pIIl1O1uHSv1BV/j9IT+Va5w5kc2qj+rCJ9IgF3elzqLLJMK2E6+a69rmD3gqTOYPPAtHzBtDYUdoUmbmyicnRpPtyhEeMdDAZBzUzy3qRiYcR88mdiy4f5atuLnRKhr5Bp3mU26scB6K8Zd8NG+8r+zs6KHhdqoZByu50vY7pOQ9IB+SFP1qgsZ6BuhlRLVfnGsNH0="],"alg":"RS256"}]}
+[0m
+[0m$ [0mcurl --max-time 10 "https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks" 2>&1
+% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100  1611    0  1611    0     0   3576      0 --:--:-- --:--:-- --:--:--  3580
+{"keys":[{"kty":"RSA","use":"sig","kid":"91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256","x5t":"ke5PPOlOtRevZrJU90l-yw4x7ic","e":"AQAB","n":"7bx0BWVzmy_EkFubRcyLUVBvdA4XDPMgOYXKqX9uW5Bm1nqYpLEHKkkI9x2lH4_HBD4bmCoeDlR-fu0q4D0_JOB3QEIfnRwhcQKNwnpE33vItXea4hyUGXHoGCR7hasBRN_unkHHYIi6VsV_I_1kJDJQ5Gf9zjQDrwW2X6DEnuNaF3BMSRU8WHHbtps4_OgyoO4DN9PE8Xsu7Ngno3ItGZ2ACi5fradUyIJ6NXfMlyAV4B6A7ZI36yr7Noh1ZrXVkbPYkjcpWKH9PR1toeRJp83wc2vh6z5r77hHMKyKdzCx4uCsN6p-zlsuZoA1xumoydVhzmcG1G7ThgvxHk9NGQ","x5c":["MIIDNDCCAhygAwIBAgIQd2nPiwxkQjSr9WopSTtKgzANBgkqhkiG9w0BAQsFADAXMRUwEwYDVQQDDAwqLnNpZ25sNC5jb20wHhcNMjUxMTIxMDQxMTE5WhcNMjcxMTIxMDQyMTE5WjAXMRUwEwYDVQQDDAwqLnNpZ25sNC5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDtvHQFZXObL8SQW5tFzItRUG90DhcM8yA5hcqpf25bkGbWepiksQcqSQj3HaUfj8cEPhuYKh4OVH5+7SrgPT8k4HdAQh+dHCFxAo3CekTfe8i1d5riHJQZcegYJHuFqwFE3+6eQcdgiLpWxX8j/WQkMlDkZ/3ONAOvBbZfoMSe41oXcExJFTxYcdu2mzj86DKg7gM308Txey7s2Cejci0ZnYAKLl+tp1TIgno1d8yXIBXgHoDtkjfrKvs2iHVmtdWRs9iSNylYof09HW2h5EmnzfBza+HrPmvvuEcwrIp3MLHi4Kw3qn7OWy5mgDXG6ajJ1WHOZwbUbtOGC/EeT00ZAgMBAAGjfDB6MA4GA1UdDwEB/wQEAwIFoDAJBgNVHRMEAjAAMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAfBgNVHSMEGDAWgBTgACj6LFymw2m3Wl7Lsm9PTHwQRzAdBgNVHQ4EFgQU4AAo+ixcpsNpt1pey7JvT0x8EEcwDQYJKoZIhvcNAQELBQADggEBAGfIIqnDl5DewpIn/H3DetX+lLQSnXmozkyVuuLeHdKypfVxudvq03j+tK29zQ7PmD4nRHP9O/jaGrSa78Gq/cLsWqVxSTc4Fnq64RBVaJHH0h9usxJ6MEZCkXHDLMB/OEoJboatDylcgGm7pIIl1O1uHSv1BV/j9IT+Va5w5kc2qj+rCJ9IgF3elzqLLJMK2E6+a69rmD3gqTOYPPAtHzBtDYUdoUmbmyicnRpPtyhEeMdDAZBzUzy3qRiYcR88mdiy4f5atuLnRKhr5Bp3mU26scB6K8Zd8NG+8r+zs6KHhdqoZByu50vY7pOQ9IB+SFP1qgsZ6BuhlRLVfnGsNH0="],"alg":"RS256"}]}
+[0m
+[0m$ [0mcurl --max-time 10 "https://devconnect.signl4.com/identity/.well-known/openid-configuration" 2>&1
+% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100  3493    0  3493    0     0   7766      0 --:--:-- --:--:-- --:--:--  7779
+{"issuer":"https://devconnect.signl4.com/identity","jwks_uri":"https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks","authorization_endpoint":"https://devconnect.signl4.com/identity/connect/authorize","token_endpoint":"https://devconnect.signl4.com/identity/connect/token","userinfo_endpoint":"https://devconnect.signl4.com/identity/connect/userinfo","end_session_endpoint":"https://devconnect.signl4.com/identity/connect/endsession","check_session_iframe":"https://devconnect.signl4.com/identity/connect/checksession","revocation_endpoint":"https://devconnect.signl4.com/identity/connect/revocation","introspection_endpoint":"https://devconnect.signl4.com/identity/connect/introspect","device_authorization_endpoint":"https://devconnect.signl4.com/identity/connect/deviceauthorization","backchannel_authentication_endpoint":"https://devconnect.signl4.com/identity/connect/ciba","pushed_authorization_request_endpoint":"https://devconnect.signl4.com/identity/connect/par","require_pushed_authorization_requests":false,"frontchannel_logout_supported":true,"frontchannel_logout_session_supported":true,"backchannel_logout_supported":true,"backchannel_logout_session_supported":true,"scopes_supported":["openid","email","profile","public_api_read","public_api_write","public_api_prov","mobile_api","account_portal","reseller_portal","public_api_ea_manage","public_api_ea_alerting","offline_access"],"claims_supported":["sub","email","email_verified","name","family_name","given_name","middle_name","nickname","preferred_username","profile","picture","website","gender","birthdate","zoneinfo","locale","updated_at","http://schemas.derdack.com/identity/claims/active","http://schemas.derdack.com/identity/claims/subscription_id","http://schemas.derdack.com/identity/claims/branch_id","http://schemas.derdack.com/identity/claims/is_branch_manager","http://schemas.derdack.com/identity/claims/is_stakeholder"],"grant_types_supported":["authorization_code","client_credentials","refresh_token","implicit","password","urn:ietf:params:oauth:grant-type:device_code","urn:openid:params:grant-type:ciba","urn:ietf:params:oauth:grant-type:token-exchange"],"response_types_supported":["code","token","id_token","id_token token","code id_token","code token","code id_token token"],"response_modes_supported":["form_post","query","fragment"],"token_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"revocation_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"introspection_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"id_token_signing_alg_values_supported":["RS256"],"userinfo_signing_alg_values_supported":["RS256"],"introspection_signing_alg_values_supported":["RS256"],"subject_types_supported":["public"],"code_challenge_methods_supported":["plain","S256"],"request_parameter_supported":true,"request_object_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"],"prompt_values_supported":["none","login","consent","select_account"],"authorization_response_iss_parameter_supported":true,"backchannel_token_delivery_modes_supported":["poll"],"backchannel_user_code_parameter_supported":true,"backchannel_authentication_request_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"],"dpop_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"]}
+[0m
+[0m$ [0mcurl -s -I "https://devaccount.signl4.com/manage" -H "Accept: text/html" 2>&1 | head -30
+HTTP/2 302 
+date: Mon, 07 Sep 2026 19:37:27 GMT
+location: https://devconnect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Fdevaccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=XnE5G-WZJlnyQO4a2z5ckBXz3MJL12Lb1UJez27cFVo&code_challenge_method=S256&response_mode=form_post&nonce=639244066479485430.NDc1OTIyYzctYmFhNC00OTFlLWE3ODMtZWUxNmZiZGZhZDJkNDMyNGFkMTctZjQ5NS00MmE0LTgyYjktN2UwN2RhMjdlMmRi&state=CfDJ8HRhdHKj5_pDq2dFwl0f4pyrgAQf8JNntBIRWKzm9ZsZv4a3e6v-_RbLCraUUZFHVESqjDIcmkDjUHFS8dZ_ozuohERtpzUXm1VgcMW9kefbPSgQ_H1a9wiuvzhd-pRs3jVYdPOANWHdVFlpmhc0UGiLPzQoaATkTXKdtCqf-AlBCavBxZons5vLOF0k9d3Ko26G_ggLvagHk6lU1mfcf6XyIrmF9junKijk-YigIxNU6j8y_GlqOVsyZ1JBvRTGn9X7Cb2mC1aqEfzbf4p6aONCMVrQj23kplKZBYpFqR7nX1SOrI_tgbsFvFWP0OjK9QARIDV2NW9J6Qi5uCB4_Qwd3wVl2FlU0nQq9hAWsz4TZJfLHx6DcVZMB1nXZFu1-zc4ccmlWcvdujTbpteE8ko&x-client-SKU=ID_NET10_0&x-client-ver=8.19.2.0
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://devconnect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+reporting-endpoints: csp-endpoint="https://devconnect.signl4.com/api/v2/csp/report"
+set-cookie: .AspNetCore.OpenIdConnect.Nonce.CfDJ8HRhdHKj5_pDq2dFwl0f4pxL4qdM9XLbA3s60SBIVdHL-AVes5FG_MQAC-DBPzFdp7xKuGgvbtaANDIC7dQRlhSnaRCnjihX_V2442Hi90IC6wDGKhptBW9S5H_AIeAt29zxPBLzgGV6LmogezFCp_xodIDpKdJcY5xdFTbBTqj-cWcKR7ONWMwVaGtm1oB4ZYIewzz0tIDI_sab_ITYPyvNiCpQ0KpJbtESxgC8jLhbXDM4moRWcMcjXkA2zpysV1LTGfcIaUvNceyycv7CodE=N; expires=Mon, 07 Sep 2026 19:52:27 GMT; path=/manage/signin-oidc; secure; samesite=none; httponly
+set-cookie: .AspNetCore.Correlation.k7AByuNlQUvMgk6huNnkLIDpq8JMFHUhKfBFxqyjVgI=N; expires=Mon, 07 Sep 2026 19:52:27 GMT; path=/manage/signin-oidc; secure; samesite=none; httponly
+[0m
+[0m$ [0mcurl -s -I "https://account.signl4.com/manage" -H "Accept: text/html" 2>&1 | head -30
+HTTP/2 302 
+date: Mon, 07 Sep 2026 19:38:08 GMT
+location: https://connect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=rgCFvFDNr8cDdqf8azWADcQhpPrfqUCEgCwjtJ58U24&code_challenge_method=S256&response_mode=form_post&nonce=639244066886810899.YWYyN2U0YTUtYmI4Mi00OGI5LTkzZjYtNWExMWZlMDBiZmIyYmJjMWRkOTUtODAyYy00MTg0LTlkNjUtZmY2ZWUyZTM3MjRj&state=CfDJ8P0bhSkvNP5HkPto7qc9KqOhOVQFMFIC5GqNy1ywqkrzayNqXKMBsSzt8oG6GonRb0QhffUxAT96ys1mT19FS-s-LJa8aP6k5a6oq2YsMcpaFHrlXYae_wqBHPEDpgaAoauufGUhQDiKSzUXwV0oGQDZ3YaNFD2hO1xyGvuW2wFtk8VUnjfnuu5ZJ2cD1xUI7U85miNsVzToSRiGFKznhwV3vqr1VJIvozlUuUmSc1dflp4wFxBtM4tc_MZ10TT05TJrpIXSGTKFizBijZvwn-rzTSUQButToJbRJovKXoz6IqDPPXEXJBWBPYHPuOq2iNtjL0BrxPtmAN5mfGPjEeJDfKOSvZ0dl9FvDIqUUcicCULqxgruIos8opZIdTZrOe-kuy5Iok3Ag4hrZ3jEKg8&x-client-SKU=ID_NET8_0&x-client-ver=7.7.3.0
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://connect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+reporting-endpoints: csp-endpoint="https://connect.signl4.com/api/v2/csp/report"
+set-cookie: .AspNetCore.OpenIdConnect.Nonce.CfDJ8P0bhSkvNP5HkPto7qc9KqPPV9KVZGBCoRiGUZHpbix8wuRl5vIZHsz1CUsRRF8mlT5ZjNDQN2gXiO6uvt5Xoo1gezMcQx1csmEX09fpmFCkiWw56-4aTzBKzsG90KVXgIhqNVBRkvW9nTk6icbJn2_xkszyxFfqms5ymt59MqdjK0uJO_m_vst8SIiGXPUfXUwKJNFNGBEnVd_AuDlqrhB5HHYjf8kQEfFnq1ZTQvQCiW-W_ZKxOTCKckfaNZeKXQr29jjKO9jDn6To_qiLPTk=N; expires=Mon, 07 Sep 2026 19:53:08 GMT; path=/manage/signin-oidc; secure; samesite=none; httponly
+set-cookie: .AspNetCore.Correlation.YOzZ6UfU_te9tVUkpcoglrH-Ke5d-FVYGs62OxY9wLE=N; expires=Mon, 07 Sep 2026 19:53:08 GMT; path=/manage/signin-oidc; secure; samesite=none; httponly
+[0m
+[0m$ [0mcurl --max-time 10 "https://api.signl4.com/identity/.well-known/openid-configuration" 2>&1
+% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100  3413    0  3413    0     0   6287      0 --:--:-- --:--:-- --:--:--  6285
+{"issuer":"https://connect.signl4.com/identity","jwks_uri":"https://api.signl4.com/identity/.well-known/openid-configuration/jwks","authorization_endpoint":"https://api.signl4.com/identity/connect/authorize","token_endpoint":"https://api.signl4.com/identity/connect/token","userinfo_endpoint":"https://api.signl4.com/identity/connect/userinfo","end_session_endpoint":"https://api.signl4.com/identity/connect/endsession","check_session_iframe":"https://api.signl4.com/identity/connect/checksession","revocation_endpoint":"https://api.signl4.com/identity/connect/revocation","introspection_endpoint":"https://api.signl4.com/identity/connect/introspect","device_authorization_endpoint":"https://api.signl4.com/identity/connect/deviceauthorization","backchannel_authentication_endpoint":"https://api.signl4.com/identity/connect/ciba","pushed_authorization_request_endpoint":"https://api.signl4.com/identity/connect/par","require_pushed_authorization_requests":false,"frontchannel_logout_supported":true,"frontchannel_logout_session_supported":true,"backchannel_logout_supported":true,"backchannel_logout_session_supported":true,"scopes_supported":["openid","email","profile","public_api_read","public_api_write","public_api_prov","mobile_api","account_portal","reseller_portal","public_api_ea_manage","public_api_ea_alerting","offline_access"],"claims_supported":["sub","email","email_verified","name","family_name","given_name","middle_name","nickname","preferred_username","profile","picture","website","gender","birthdate","zoneinfo","locale","updated_at","http://schemas.derdack.com/identity/claims/active","http://schemas.derdack.com/identity/claims/subscription_id","http://schemas.derdack.com/identity/claims/branch_id","http://schemas.derdack.com/identity/claims/is_branch_manager","http://schemas.derdack.com/identity/claims/is_stakeholder"],"grant_types_supported":["authorization_code","client_credentials","refresh_token","implicit","password","urn:ietf:params:oauth:grant-type:device_code","urn:openid:params:grant-type:ciba","urn:ietf:params:oauth:grant-type:token-exchange"],"response_types_supported":["code","token","id_token","id_token token","code id_token","code token","code id_token token"],"response_modes_supported":["form_post","query","fragment"],"token_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"revocation_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"introspection_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"id_token_signing_alg_values_supported":["RS256"],"userinfo_signing_alg_values_supported":["RS256"],"introspection_signing_alg_values_supported":["RS256"],"subject_types_supported":["public"],"code_challenge_methods_supported":["plain","S256"],"request_parameter_supported":true,"request_object_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"],"prompt_values_supported":["none","login","consent","select_account"],"authorization_response_iss_parameter_supported":true,"backchannel_token_delivery_modes_supported":["poll"],"backchannel_user_code_parameter_supported":true,"backchannel_authentication_request_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"],"dpop_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"]}
+[0m
+Now I have all live verification data. Let me compile the structured analysis.
+[0m$ [0mcurl --max-time 10 "https://api.signl4.com/identity/.well-known/openid-configuration/jwks" 2>&1
+% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100  1611    0  1611    0     0   3564      0 --:--:-- --:--:-- --:--:--  3572
+{"keys":[{"kty":"RSA","use":"sig","kid":"91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256","x5t":"ke5PPOlOtRevZrJU90l-yw4x7ic","e":"AQAB","n":"7bx0BWVzmy_EkFubRcyLUVBvdA4XDPMgOYXKqX9uW5Bm1nqYpLEHKkkI9x2lH4_HBD4bmCoeDlR-fu0q4D0_JOB3QEIfnRwhcQKNwnpE33vItXea4hyUGXHoGCR7hasBRN_unkHHYIi6VsV_I_1kJDJQ5Gf9zjQDrwW2X6DEnuNaF3BMSRU8WHHbtps4_OgyoO4DN9PE8Xsu7Ngno3ItGZ2ACi5fradUyIJ6NXfMlyAV4B6A7ZI36yr7Noh1ZrXVkbPYkjcpWKH9PR1toeRJp83wc2vh6z5r77hHMKyKdzCx4uCsN6p-zlsuZoA1xumoydVhzmcG1G7ThgvxHk9NGQ","x5c":["MIIDNDCCAhygAwIBAgIQd2nPiwxkQjSr9WopSTtKgzANBgkqhkiG9w0BAQsFADAXMRUwEwYDVQQDDAwqLnNpZ25sNC5jb20wHhcNMjUxMTIxMDQxMTE5WhcNMjcxMTIxMDQyMTE5WjAXMRUwEwYDVQQDDAwqLnNpZ25sNC5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDtvHQFZXObL8SQW5tFzItRUG90DhcM8yA5hcqpf25bkGbWepiksQcqSQj3HaUfj8cEPhuYKh4OVH5+7SrgPT8k4HdAQh+dHCFxAo3CekTfe8i1d5riHJQZcegYJHuFqwFE3+6eQcdgiLpWxX8j/WQkMlDkZ/3ONAOvBbZfoMSe41oXcExJFTxYcdu2mzj86DKg7gM308Txey7s2Cejci0ZnYAKLl+tp1TIgno1d8yXIBXgHoDtkjfrKvs2iHVmtdWRs9iSNylYof09HW2h5EmnzfBza+HrPmvvuEcwrIp3MLHi4Kw3qn7OWy5mgDXG6ajJ1WHOZwbUbtOGC/EeT00ZAgMBAAGjfDB6MA4GA1UdDwEB/wQEAwIFoDAJBgNVHRMEAjAAMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAfBgNVHSMEGDAWgBTgACj6LFymw2m3Wl7Lsm9PTHwQRzAdBgNVHQ4EFgQU4AAo+ixcpsNpt1pey7JvT0x8EEcwDQYJKoZIhvcNAQELBQADggEBAGfIIqnDl5DewpIn/H3DetX+lLQSnXmozkyVuuLeHdKypfVxudvq03j+tK29zQ7PmD4nRHP9O/jaGrSa78Gq/cLsWqVxSTc4Fnq64RBVaJHH0h9usxJ6MEZCkXHDLMB/OEoJboatDylcgGm7pIIl1O1uHSv1BV/j9IT+Va5w5kc2qj+rCJ9IgF3elzqLLJMK2E6+a69rmD3gqTOYPPAtHzBtDYUdoUmbmyicnRpPtyhEeMdDAZBzUzy3qRiYcR88mdiy4f5atuLnRKhr5Bp3mU26scB6K8Zd8NG+8r+zs6KHhdqoZByu50vY7pOQ9IB+SFP1qgsZ6BuhlRLVfnGsNH0="],"alg":"RS256"}]}
+[0m

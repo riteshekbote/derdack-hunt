@@ -612,3 +612,6 @@
 - LEARN: ACCEPTED MISCONFIG @ connect.signl4.com/api/v3: bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
 - LEARN: REJECTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without 
 - LEARN: REJECTED AUTH @ devconnect.signl4.com/identity/connect/token client_credentials grant: returns invalid_client without client_secret — grant listed but not usabl
+
+## RANKED HYPOTHESES 2026-09-07 19:42:23 UTC
+- [40] api.signl4.com/api/v2/teams: api/v2/teams 401↔405 windowed flip = multi-instance deployment skew in auth middleware (from art/lead_bigpickle.txt)
