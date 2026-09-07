@@ -139,3 +139,12 @@
 - 2026-09-07 ACCEPTED AUTH @ api.signl4.com/api/v2/*: full V2 route map — /teams|users|webhooks|subscriptions Bearer-gated (401), /alerts|schedules POST-write-only (405), /csp/report POST-sink (204); same backend as connect (shared appId)
 - 2026-09-07 ACCEPTED MISCONFIG @ devfix.signl4.com: Blazor Server app ("Admin Support Page") on staging cluster 108.143.123.104; /_blazor/negotiate 200+connectionId (standard Blazor behavior, not auth bypass); /signin-oidc 500 confirms OIDC callback registered but broken
 - 2026-09-07 ACCEPTED OTHER @ connect.signl4.com + api.signl4.com: shared request-context appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd — same backend infrastructure confirmed
+- 2026-09-07 ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect at 9th deep-equal observation — cross-env trust anchor re-confirmed stable
+- 2026-09-07 ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 9x verified — cross-env signing key reuse confirmed
+- 2026-09-07 ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56 — cross-env client reuse confirmed
+- 2026-09-07 ACCEPTED MISCONFIG @ dev.derdack.com: MultiViews 300 stable — static namespace echo, files 403/404
+- 2026-09-07 ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler
+- 2026-09-07 ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- 2026-09-07 ACCEPTED AUTH @ connect.signl4.com/api/v3/*: full V3 route map — /users|teams|webhooks|subscriptions Bearer-gated (401), /schedules|devices POST-write-only (405), /csp/report POST-sink (405)
+- 2026-09-07 ACCEPTED AUTH @ api.signl4.com/api/v2/*: full V2 route map — same backend as connect (shared appId)
+- 2026-09-07 ACCEPTED MISCONFIG @ devfix.signl4.com: Blazor Server app; /signin-oidc 500 confirms OIDC callback registered but broken

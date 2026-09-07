@@ -1,37 +1,48 @@
-## 2026-09-07 09:54:34 UTC [target] (model bigpickle)
-[PRIO] devconnect.signl4.com/identity,8.30,attack=8 business=9 tech=8 gate=5 cloud=6 fresh=9
+## 2026-09-07 15:24:25 UTC [target] (model bigpickle)
 [PRIO] connect.signl4.com/api/v3/*,7.40,attack=8 business=9 tech=8 gate=4 cloud=7 fresh=9
-[PRIO] devfix.signl4.com,6.70,attack=7 business=8 tech=6 gate=5 cloud=5 fresh=9
-[HYP] staging-minted Bearer accepted by prod connect V3 API despite issuer divergence (api-layer cross-env replay)
+[PRIO] api.signl4.com/api/v2/*,7.40,attack=8 business=9 tech=8 gate=4 cloud=7 fresh=9
+[PRIO] devconnect.signl4.com/identity,8.30,attack=8 business=9 tech=8 gate=5 cloud=6 fresh=9
+[HYP] staging-minted Bearer accepted by prod connect V3 API despite issuer divergence
 class: AUTH
 asset: connect.signl4.com/api/v3/*
 confidence: 60
-reasoning: prod api/connect identity both issuer=connect; devconnect issuer=devconnect; all three serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) across 10 deep-equal live observations; same client_id 692A0A56-892F-4AE2-8259-76DA398990B6, same scope set (account_portal, public_api_read/write/prov, offline_access); staging discovery lists client_credentials+password+token-exchange+device_code+CIBA; /connect/register 404 removes self-registration; client auth is secret-only. V3 route map now confirmed: /users|teams|webhooks|subscriptions (401 Bearer), /schedules|devices (405 POST-write), /csp/report (405 POST-sink).
-evidence_needed: devconnect-issued access_token (scope public_api_read) returning non-401 at prod connect /api/v3/teams or /identity/connect/userinfo
-verify_steps: HUMAN — POST https://devconnect.signl4.com/identity/connect/token (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope public_api_read offline_access, client_secret required) → replay Bearer on GET connect.signl4.com/api/v3/teams + connect.signl4.com/identity/connect/userinfo; compare to 401 baseline
+reasoning: prod api/connect both issuer=connect; devconnect issuer=devconnect; all three serve byte-identical RS256 JWKS across 9 live deep-equal observations (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); same client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + identical scope set across environments; staging discovery lists client_credentials+password+7 grants; /connect/register 404 removes self-registration; V3 routes all Bearer-gated
+evidence_needed: devconnect-issued access_token returning non-401 at prod connect /api/v3/teams or /identity/connect/userinfo
+verify_steps: HUMAN — POST https://devconnect.signl4.com/identity/connect/token (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope=public_api_read offline_access, client_secret required) → replay Bearer on GET https://connect.signl4.com/api/v3/teams + connect.signl4.com/identity/connect/userinfo; compare to 401 baseline
 impact: staging secret/credential compromise ⇒ prod API RW (alerts, users, schedules, subscriptions, webhooks) if iss-validation absent — MED-HIGH, credential-gated
 testability: HUMAN_ONLY
-[HYP] devfix support portal authenticates against shared-key staging IdP (un-WAF'd pivot into support app)
+[HYP] devfix support portal authenticates against shared-key staging IdP
 class: AUTH
 asset: devfix.signl4.com
 confidence: 55
-reasoning: devfix is Blazor Server app ("Admin Support Page" / SIGNL4 Support Application) on staging cluster 108.143.123.104; /signin-oidc 500 confirms OIDC callback registered but broken; _blazor/negotiate POST 200+connectionId confirms live SignalR hub; same cluster hosts shared-key devconnect IdP (RS256 key + client 692A0A56 + scope set byte-identical to prod); no WAF headers observed on host (HSTS max-age=2592000 only)
-evidence_needed: interactive Login redirect Location authority = devconnect vs connect
-verify_steps: HUMAN — load devfix login, capture form post target + OIDC authorize redirect during staging-cred login
-impact: staging support-cred compromise ⇒ customer support cases/files through un-WAF'd app host — MED
+reasoning: devfix is Blazor Server app ("Admin Support Page") on staging cluster 108.143.123.104; /signin-oidc 500 confirms OIDC callback registered; same cluster hosts devconnect IdP with shared RS256 key + client 692A0A56 + scope set; no WAF headers observed on host
+evidence_needed: interactive Login form action / OIDC authorize redirect Location authority = devconnect vs connect
+verify_steps: HUMAN — load devfix login, capture form post target + OIDC authorize redirect
+impact: staging support-cred compromise ⇒ customer support cases/files — MED
 testability: HUMAN_ONLY
-[HYP] api/v2/teams 401↔405 response flip signals per-handler auth ordering exploitable via header/method shaping
+[HYP] api/v2/teams 401↔405 response flip exploitable via header/method shaping
 class: AUTH
 asset: api.signl4.com/api/v2/teams
 confidence: 40
-reasoning: unauth GET returned 405 at 2026-09-07 00:25 and 401 this cycle; repeated drift across 3+ cycles (401→405→401) indicates handler-level auth gated by request shape (Accept/UA/body/timing), not stable routing semantics; same endpoint on connect V3 returns 401 consistently
-evidence_needed: no accepting surface demonstrated — endpoint-map artifact only, no data exposed in either state
-verify_steps: PASSIVE — GET/HEAD/OPTIONS matrix on /api/v2/teams with varied Accept+empty-body headers at <=1rps; observe status stability
-impact: none demonstrated — both states deny read; informational at best — LOW
+reasoning: unauth GET returned 405 at 2026-09-07 00:25 and 401 this cycle; repeated drift across 3+ cycles; same endpoint on connect V3 returns 401 consistently
+evidence_needed: no accepting surface demonstrated — endpoint-map artifact only
+verify_steps: PASSIVE — GET/HEAD/OPTIONS matrix with varied Accept headers at <=1rps; observe status stability
+impact: none demonstrated — LOW
 testability: PASSIVE
-[NEXT] HUMAN: mint staging token POST https://devconnect.signl4.com/identity/connect/token (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope public_api_read offline_access, client_secret required) → replay Bearer on GET https://connect.signl4.com/api/v3/teams + connect.signl4.com/identity/connect/userinfo (401 baseline) to classify prod issuer-validation; capture devfix Login redirect authority in same session; then submit cross-env report (evidence pack: 3-ingress discovery diff, 10x byte-identical JWKS, client_id 692A0A56 scope/grants parity, /connect/register 404 control) to bugs.olivermaicher.eu.
-[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/*: full V3 route map confirmed — /users|teams|webhooks|subscriptions Bearer-gated (401), /schedules|devices POST-write-only (405), /csp/report POST-sink (405); scripts|alerts|scim|health 404; no anonymous read surface
-[LEARN] ACCEPTED AUTH @ api.signl4.com/api/v2/*: full V2 route map — /teams|users|webhooks|subscriptions Bearer-gated (401), /alerts|schedules POST-write-only (405), /csp/report POST-sink (204); same backend as connect (shared appId)
-[LEARN] ACCEPTED MISCONFIG @ devfix.signl4.com: Blazor Server app ("Admin Support Page") on staging cluster 108.143.123.104; /_blazor/negotiate 200+connectionId (standard Blazor behavior, not auth bypass); /signin-oidc 500 confirms OIDC callback registered but broken
-[LEARN] ACCEPTED OTHER @ connect.signl4.com + api.signl4.com: shared request-context appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd — same backend infrastructure confirmed
-[RISK] derdack: 50 — 10th deep-equal confirms cross-env RS256 key + client 692A0A56 + full scope/grants parity; still gated on HUMAN token mint whose outcome (prod issuer-validation) alone separates MED-HIGH from negligible. V2/V3 route maps now complete — zero anonymous read surface across both API versions. Passive discovery has exhausted all reachable endpoints; every additional cycle is information-free. RCI holds below HIGH with exploit bound to staging secret/credential material. Proceed directly to HUMAN token mint + devfix login capture + report submission.
+[PARKED] api/v2/teams response flip: 40 < threshold; no accepting surface demonstrated across 3+ cycles; both states deny read — informational at best.
+[FINAL] Survivors ranked:
+[NEXT] HUMAN: mint staging token `POST https://devconnect.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope=public_api_read offline_access, client_secret required) → replay Bearer on `GET https://connect.signl4.com/api/v3/teams` + `connect.signl4.com/identity/connect/userinfo` (401 baseline) to classify prod issuer-validation; capture devfix Login redirect authority in same session; then submit cross-env report.
+[LEARN] ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect at 9th deep-equal observation — cross-env trust anchor re-confirmed stable
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 9x verified — cross-env signing key reuse confirmed
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com: password grant listed in OIDC discovery alongside 7 other grant types — grant enabled but not exploitable without client_secret
+[LEARN] ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56 — cross-env client reuse confirmed
+[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: MultiViews 300 stable — static namespace echo, files 403/404
+[LEARN] ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler
+[LEARN] ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/*: full V3 route map — /users|teams|webhooks|subscriptions Bearer-gated (401), /schedules|devices POST-write-only (405), /csp/report POST-sink (405)
+[LEARN] ACCEPTED AUTH @ api.signl4.com/api/v2/*: full V2 route map — same backend as connect (shared appId)
+[LEARN] ACCEPTED MISCONFIG @ devfix.signl4.com: Blazor Server app; /signin-oidc 500 confirms OIDC callback registered but broken
+[LEARN] ACCEPTED OTHER @ connect.signl4.com + api.signl4.com: shared request-context appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+[LEARN] REJECTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable
+[LEARN] REJECTED AUTH @ devconnect.signl4.com/identity/connect/token client_credentials grant: returns invalid_client without client_secret — grant listed but not usable
+[RISK] derdack: 50 — 9th+ deep-equal confirms cross-env RS256 key + client 692A0A56 + full scope/grants parity; still gated on HUMAN token mint whose outcome (prod issuer-validation) alone separates MED-HIGH from negligible. V2/V3 route maps now complete — zero anonymous read surface across both API versions. Passive discovery has exhausted all reachable endpoints; every additional cycle is information-free. RCI holds below HIGH with exploit bound to staging secret/credential material.
