@@ -428,3 +428,10 @@ www.derdack.com
 - CHANGED Cross-env JWKS key-reuse: 10th deep-equal verification across connect/api/devconnect/devapi (bigpickle cycle) — all 4 identity hosts serve byte-identical RS256 key
 - CHANGED api.signl4.com/api/v2/teams: stable 405 Allow:GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer (10th+ live confirmation)
 - CHANGED devconnect.signl4.com OIDC discovery: password grant + client_credentials + device_code + PAR enabled; token endpoint returns invalid_client without client_secret
+
+## 2026-09-08 22:59:26 UTC
+- NEW Four identity hosts (devconnect.signl4.com, connect.signl4.com, api.signl4.com, devapi.signl4.com) serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — 10th live deep-
+- NEW devconnect.signl4.com OIDC discovery: NO `registration_endpoint` field; `token_endpoint_auth_methods_supported` only `client_secret_basic`/`client_secret_post` (no `none`) — dynamic client registratio
+- NEW api.signl4.com/api/v2/teams: unauth GET returns 405 Allow:GET,POST (not 401); invalid Bearer also 405 — auth validation deferred to handler, not route layer (10th+ live confirmation)
+- NEW devconnect.signl4.com/identity/connect/token password grant: returns `invalid_client` without client_secret — grant listed but not usable without secrets (live re-verified)
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade: session-theft mechanism permanently invalidated (wp-login.php sets `wordpress_test_cookie` with `secure` flag + host-only scope); residual =

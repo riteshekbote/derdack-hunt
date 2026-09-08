@@ -761,3 +761,16 @@
 - LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without 
 - LEARN: ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler, not route layer
 - LEARN: ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect/devapi at 10th deep-equal observation — cross-env trust anchor r
+
+## RANKED HYPOTHESES 2026-09-08 22:59:26 UTC
+- [85] devconnect.signl4.com/identity/connect/token: Cross-environment token forgery via shared RS256 key + staging password grant (from art/lead_bigpickle.txt)
+- [80] api.signl4.com/api/v2/teams: Staging-to-prod API token acceptance via handler-deferred auth (from art/lead_nemotron3.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: GET https://connect.signl4.com/identity/.well-known/openid-configuration — diff grant_types + token_endpoint_auth_methods vs devconnect to confirm/deny p
+- NEXT(hypotheses-nemotron3.txt): PROBE: POST https://www.derdack.com/de/xmlrpc.php Content-Type: text/xml body=<methodCall><methodName>wp.getUsers</methodName><params><param><value><string></st
+- LEARN: ACCEPTED AUTH @ connect/api/devconnect/devapi.signl4.com: 10th deep-equal of byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — sha
+- LEARN: REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect /
+- LEARN: REJECTED AUTH @ devconnect.signl4.com: no registration_endpoint + auth_methods only client_secret_basic/post — RFC7591 dynamic client registration unsupported; 
+- LEARN: REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie w
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without 
+- LEARN: ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler, not route layer
+- LEARN: ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect/devapi at 10th deep-equal observation — cross-env trust anchor r

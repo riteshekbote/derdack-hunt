@@ -167,3 +167,6 @@
 - 2026-09-08 ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/deviceauthorization: endpoint live (400 invalid_client w/o secret) + device_code grant confirmed; still client_secret-gated (no public client)
 - 2026-09-08 ACCEPTED MISCONFIG @ www.derdack.com/wp-login.php: sets only `wordpress_test_cookie` `secure` flag, host-only (no Domain attr) — confirms no logged-in cookie traverses HTTPS→HTTP downgrade; session-theft mechanism permanently invalidated, residual missing-HSTS only, LOW
 - 2026-09-08 ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect/devapi at 10th deep-equal observation — cross-env trust anchor re-confirmed stable across 4 identity hosts
+- 2026-09-08 ACCEPTED AUTH @ connect/api/devconnect/devapi.signl4.com: 10th deep-equal of byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — shared prod signing key confirmed across 4 identity hosts; stable, no drift
+- 2026-09-08 REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect / OAuth code-theft primitive
+- 2026-09-08 REJECTED AUTH @ devconnect.signl4.com: no registration_endpoint + auth_methods only client_secret_basic/post — RFC7591 dynamic client registration unsupported; public-client path permanently closed
