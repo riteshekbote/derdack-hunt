@@ -1642,3 +1642,41 @@ testability: AUTH_HELPED
 [LEARN] REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.derdack.com); WP auth cookies host-scoped to www.derdack.com, cannot traverse 302→301 HTTP redirect; residual = missing HSTS header only on non-sensitive pages; LOW
 [LEARN] ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler, not route layer
 [RISK] derdack: 82 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra
+## 2026-09-08 20:31:56 UTC [target] (model bigpickle)
+[PRIO] devconnect.signl4.com,9.2,a=10,b=10,t=10,g=3,c=8,f=9
+[PRIO] api.signl4.com,8.4,a=9,b=10,t=9,g=5,c=8,f=8
+[PRIO] connect.signl4.com,8.0,a=8,b=10,t=9,g=4,c=8,f=8
+[PRIO] www.derdack.com,5.8,a=6,b=7,t=5,g=5,c=3,f=7
+[HYP] Cross-environment token forgery via shared RS256 key + password grant on staging IdP
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token
+confidence: 85
+reasoning: Staging IdP OIDC exposes password grant + device_code + CIBA + token-exchange; JWKS kid/n/x5t/x5c byte-identical to prod connect.signl4.com and api.signl4.com (verified 9x); staging and prod share client_id 692A0A56 with full scope set incl public_api_read/write/prov, reseller_portal, mobile_api; auth_methods only client_secret_basic/post (no public clients) confirmed this cycle
+evidence_needed: Valid client_secret for 692A0A56 on devconnect (token endpoint, not registration)
+verify_steps: POST /identity/connect/token grant_type=password (AUTH_HELPED, needs secret); decode token kid must match 91EE4F3C; GET api.signl4.com/api/v2/teams with token
+impact: Staging creds → prod-signing-key tokens → prod SIGNL4 API access (alerting config, schedules, PII, integrations); CRITICAL
+testability: AUTH_HELPED
+[HYP] Cross-env token acceptance via handler-deferred auth on prod API
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 80
+reasoning: /api/v2/teams returns 405 Allow:GET,POST (not 401) on unauth and invalid-Bearer GET — auth validated at handler not route layer; prod+staging share byte-identical RS256 key, so any valid staging token validates at prod JWKS; scopes include public_api_read/write/prov, reseller_portal
+evidence_needed: Valid staging access_token accepted by prod /teams → 200
+verify_steps: GET /api/v2/teams Authorization: Bearer <staging_token> (AUTH_HELPED)
+impact: Staging compromise = prod tenant CRUD via Bearer token; CRITICAL
+testability: AUTH_HELPED
+[HYP] Device-code flow token issuance bypassing interactive login
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/deviceauthorization
+confidence: 45
+reasoning: device_code grant is enabled in discovery + deviceauthorization endpoint live (400 on POST w/o secret); device flow can mint tokens via user_code confirmation; require_par=False and /par registered at 405 — flow fully wired on staging
+evidence_needed: deviceauthorization POST returns device_code+user_code (would need valid client_secret)
+verify_steps: POST /identity/connect/deviceauthorization client_id=692A0A56 (AUTH_HELPED, currently invalid_client w/o secret)
+impact: If secret/creds leak, device flow permits token issuance w/o username/password at token endpoint; still secret-gated
+testability: AUTH_HELPED
+[NEXT] PROBE: GET https://connect.signl4.com/identity/.well-known/openid-configuration + apply same endpoint/scope comparison vs devconnect to confirm prod token endpoint auth_methods parity (only read-only check of prod vs staging identity perimeter for any env-specific divergence)
+[LEARN] REJECTED AUTH @ devconnect.signl4.com: no `registration_endpoint` in OIDC discovery + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration not supported; public-client registration hypothesis closed
+[LEARN] REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed to attacker URI — no open redirect / OAuth code-theft primitive
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/deviceauthorization: endpoint live (400 invalid_client w/o secret) + device_code grant confirmed; still client_secret-gated (no public client)
+[LEARN] ACCEPTED MISCONFIG @ www.derdack.com/wp-login.php: sets only `wordpress_test_cookie` `secure` flag, host-only (no Domain attr) — confirms no logged-in cookie traverses HTTPS→HTTP downgrade; session-theft mechanism permanently invalidated, residual missing-HSTS only, LOW
+[RISK] derdack: 83 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + staging cluster (devconnect/devaccount/devfix on 108.143.123.104) share PROD RS256 signing key, same OAuth client_id 692A0A56, password+device_code grants on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret (reg+public-client now permanently excluded); api/v2 fully Bearer/handler-gated (zero unauth surface); blog/techblog downgrade retired (secure host-only cookies, missing-HSTS only); www XML-RPC on /de+/ea auth-gated; dev MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra

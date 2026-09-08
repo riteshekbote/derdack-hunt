@@ -266,3 +266,8 @@ https://www.derdack.com/wp-login.php -> 200 len=?
 
 ## 2026-09-08 18:10:29 UTC
 
+
+## 2026-09-08 20:36:14 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405

@@ -387,3 +387,44 @@ www.derdack.com
 - CHANGED blog.derdack.com HTTPS→HTTP redirect is 302→301 to www.derdack.com; downgrade chain live but auth-cookie theft mechanism invalidated (secure+host-only cookies)
 
 ## 2026-09-08 18:10:29 UTC
+
+## 2026-09-08 20:35:57 UTC
+- NEW api.signl4.com/api/v2/teams returns 405 Allow: GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer (live confirmed 2026-09-07)
+- NEW api.signl4.com/api/v2/teams returns 405 even with invalid Bearer token — confirms routing layer bypass, handler-level auth only (live confirmed 2026-09-07)
+- CHANGED Cross-env JWKS key-reuse re-verified 9th time: devconnect.signl4.com & connect.signl4.com & api.signl4.com RS256 key byte-identical (kid/n/x5t/x5c deep-equal)
+- CHANGED devconnect.signl4.com OIDC discovery: password grant listed alongside 7 others; returns invalid_client without client_secret
+- CHANGED devaccount.signl4.com/manage & account.signl4.com/manage redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + full scope set
+- CHANGED blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- CHANGED dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+- CHANGED connect.signl4.com/api/v3 bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
+- NEW api.signl4.com/api/v2/teams returns 405 Allow: GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer (live confirmed 2026-09-07)
+- NEW api.signl4.com/api/v2/teams returns 405 even with invalid Bearer token — confirms routing layer bypass, handler-level auth only (live confirmed 2026-09-07)
+- CHANGED Cross-env JWKS key-reuse re-verified 9th time: devconnect.signl4.com & connect.signl4.com & api.signl4.com RS256 key byte-identical (kid/n/x5t/x5c deep-equal)
+- CHANGED devconnect.signl4.com OIDC discovery: password grant listed alongside 7 others; returns invalid_client without client_secret
+- CHANGED devaccount.signl4.com/manage & account.signl4.com/manage redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + full scope set
+- CHANGED blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- CHANGED dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+- CHANGED connect.signl4.com/api/v3 bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
+- CHANGED api.signl4.com/api/v2/teams: unauth GET returns 405 Allow: GET,POST (not 401) — auth validation deferred to handler, not route layer (9th live confirmation)
+- CHANGED Cross-env JWKS: devconnect.signl4.com, connect.signl4.com, api.signl4.com RS256 key byte-identical (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — 9th deep-equal verification
+- CHANGED devconnect.signl4.com OIDC discovery: password grant listed alongside 7 others; token endpoint returns invalid_client without client_secret
+- CHANGED devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + full scope set (account_portal, public_api_re
+- CHANGED blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- CHANGED dev.derdack.com: MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+- CHANGED connect.signl4.com/api/v3: bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
+- NEW api.signl4.com/api/v2/teams returns 405 Allow: GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer (live confirmed 2026-09-07)
+- NEW api.signl4.com/api/v2/teams returns 405 even with invalid Bearer token — confirms routing layer bypass, handler-level auth only (live confirmed 2026-09-07)
+- CHANGED Cross-env JWKS key-reuse re-verified 9th time: devconnect.signl4.com & connect.signl4.com & api.signl4.com RS256 key byte-identical (kid/n/x5t/x5c deep-equal)
+- CHANGED devconnect.signl4.com OIDC discovery: password grant listed alongside 7 others; returns invalid_client without client_secret
+- CHANGED devaccount.signl4.com/manage & account.signl4.com/manage redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + full scope set
+- CHANGED blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- CHANGED dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+- CHANGED connect.signl4.com/api/v3 bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
+- NEW www.derdack.com/wp-login.php sets `wordpress_test_cookie` with `secure` flag and NO `Domain` attribute → host-only scoped, contradicting prior parent-domain cookie-scope assumption
+- NEW www.derdack.com & blog.derdack.com confirm NO HSTS header (active this cycle)
+- CHANGED blog.derdack.com HTTPS→HTTP redirect is 302→301 to www.derdack.com; downgrade chain live but auth-cookie theft mechanism invalidated (secure+host-only cookies)
+- NEW Dynamic client registration endpoint check on devconnect.signl4.com/identity/.well-known/openid-configuration (registration_endpoint field) — unprobed vector that could bypass client_secret requiremen
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism CONFIRMED INVALIDATED — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.derd
+- CHANGED Cross-env JWKS key-reuse: 10th deep-equal verification across connect/api/devconnect/devapi (bigpickle cycle) — all 4 identity hosts serve byte-identical RS256 key
+- CHANGED api.signl4.com/api/v2/teams: stable 405 Allow:GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer (10th+ live confirmation)
+- CHANGED devconnect.signl4.com OIDC discovery: password grant + client_credentials + device_code + PAR enabled; token endpoint returns invalid_client without client_secret

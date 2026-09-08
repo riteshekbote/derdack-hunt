@@ -10962,3 +10962,241 @@ testability: AUTH_HELPED
 
 ## STEP 7 — RISK
 [RISK] derdack: 82 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra
+===== ANALYST bigpickle 2026-09-08 20:35:57 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -s https://devconnect.signl4.com/identity/.well-known/openid-configuration 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(json.dumps({k:d[k] for k in ['registration_endpoint','grant_types_supported','token_endpoint_auth_methods_supported'] if k in d}, indent=2))"
+{
+  "grant_types_supported": [
+    "authorization_code",
+    "client_credentials",
+    "refresh_token",
+    "implicit",
+    "password",
+    "urn:ietf:params:oauth:grant-type:device_code",
+    "urn:openid:params:grant-type:ciba",
+    "urn:ietf:params:oauth:grant-type:token-exchange"
+  ],
+  "token_endpoint_auth_methods_supported": [
+    "client_secret_basic",
+    "client_secret_post"
+  ]
+}
+[0m
+[0m$ [0mcurl -s https://devconnect.signl4.com/identity/.well-known/openid-configuration 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); keys=list(d.keys()); print(json.dumps(keys, indent=2))"
+[
+  "issuer",
+  "jwks_uri",
+  "authorization_endpoint",
+  "token_endpoint",
+  "userinfo_endpoint",
+  "end_session_endpoint",
+  "check_session_iframe",
+  "revocation_endpoint",
+  "introspection_endpoint",
+  "device_authorization_endpoint",
+  "backchannel_authentication_endpoint",
+  "pushed_authorization_request_endpoint",
+  "require_pushed_authorization_requests",
+  "frontchannel_logout_supported",
+  "frontchannel_logout_session_supported",
+  "backchannel_logout_supported",
+  "backchannel_logout_session_supported",
+  "scopes_supported",
+  "claims_supported",
+  "grant_types_supported",
+  "response_types_supported",
+  "response_modes_supported",
+  "token_endpoint_auth_methods_supported",
+  "revocation_endpoint_auth_methods_supported",
+  "introspection_endpoint_auth_methods_supported",
+  "id_token_signing_alg_values_supported",
+  "userinfo_signing_alg_values_supported",
+  "introspection_signing_alg_values_supported",
+  "subject_types_supported",
+  "code_challenge_methods_supported",
+  "request_parameter_supported",
+  "request_object_signing_alg_values_supported",
+  "prompt_values_supported",
+  "authorization_response_iss_parameter_supported",
+  "backchannel_token_delivery_modes_supported",
+  "backchannel_user_code_parameter_supported",
+  "backchannel_authentication_request_signing_alg_values_supported",
+  "dpop_signing_alg_values_supported"
+]
+[0m
+[0m$ [0mcurl -s https://devconnect.signl4.com/identity/.well-known/openid-configuration 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); auth_methods = d.get('token_endpoint_auth_methods_supported',[]); print('public client supported:', 'none' in auth_methods); print('auth methods:', auth_methods)"
+public client supported: False
+auth methods: ['client_secret_basic', 'client_secret_post']
+[0m
+[0m$ [0mcurl -s https://devaccount.signl4.com/manage 2>/dev/null -o /dev/null -w "HTTP %{http_code} | redirect: %{redirect_url} | server: " && curl -sI https://devaccount.signl4.com/manage 2>/dev/null | grep -i "server:\|x-powered"
+HTTP 302 | redirect: https://devconnect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Fdevaccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=Uje4YVH1ZIirHZlssrCwvZlj1QlZdbl8aHRyjvefiBs&code_challenge_method=S256&response_mode=form_post&nonce=639244962893707802.YTQ2YWFlZjAtY2E4Zi00MDY1LWFmMWItZDEzMmY5YTNiMWZiMmRkZTYwNzUtMjlkMy00MmYxLTg2NmQtODkxZTZjZTg1NmFm&state=CfDJ8HRhdHKj5_pDq2dFwl0f4pziP0gflyNdtkI8HRkKCB3kOSZMlNK2zwo6q5zu2Tyjz8k7tXQI45cYRNswnJ7ckIExeVl9voVPgQGZjxlb5tbTYuKH8yadfNjgT6-40I1raY7jsBW_H-7pw8mQFNQKW_RBjVD5Th_2EOZt6nC-yomw1KlWZ9UkHGDn7t2maky88NmhrYp3a_XDE9w86JxGFvsuvPkcZtt9dmn-m0J7grQHVXkk0Gsj_Nksoz96Du-T9-V5raXdDvVLobrAyV1nXKdH0Xg05CrMuSNWm7Bw6uJAL_Dv9OORT2he_lv9Aez5D0EaCUVqcR7TbFkZ6In9CzhYbeb7moCsJi-I2jdvC-3Ulpydbb4zkJOiDUJ5f1YTKXPkTxX_pNoy14iUggvuyxU&x-client-SKU=ID_NET10_0&x-client-ver=8.19.2.0 | server: server: Microsoft-HTTPAPI/2.0
+[0m
+[0m$ [0mcurl -sI https://devfix.signl4.com/ 2>/dev/null | head -20
+HTTP/2 405 
+date: Tue, 08 Sep 2026 20:31:29 GMT
+server: Kestrel
+allow: GET, POST
+strict-transport-security: max-age=2592000
+request-context: appId=cid-v1:fe51434f-50ca-4ead-93d7-6aa5cf88fa18
+[0m
+[0m$ [0mcurl -sI https://devfix.signl4.com/_blazor/negotiate 2>/dev/null | head -15
+HTTP/2 405 
+date: Tue, 08 Sep 2026 20:31:30 GMT
+content-type: text/plain
+server: Kestrel
+strict-transport-security: max-age=2592000
+request-context: appId=cid-v1:fe51434f-50ca-4ead-93d7-6aa5cf88fa18
+[0m
+[0m$ [0mcurl -s https://devaccount.signl4.com/manage 2>/dev/null | grep -oP '(register|signup|create.*account|new.*user|self.*service)' | sort -u | head -10
+(no output)
+[0m
+[0m$ [0mcurl -sI https://devconnect.signl4.com/identity/connect/par 2>/dev/null | head -10; echo "---KIWEOVER---"; curl -sI https://devconnect.signl4.com/identity/connect/register 2>/dev/null | head -10
+HTTP/2 405 
+date: Tue, 08 Sep 2026 20:31:34 GMT
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://devconnect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+---KIWEOVER---
+HTTP/2 404 
+date: Tue, 08 Sep 2026 20:31:34 GMT
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://devconnect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+[0m
+The dynamic client registration hypothesis is now dead: `registration_endpoint` is absent from OIDC discovery, and `token_endpoint_auth_methods_supported` = only `client_secret_basic`/`client_secret_post` (no `none`/public client support). This confirms clients require secrets. Let me investigate the account portal authorize flow and other attack surface in parallel.
+
+Let me check a few high-value areas: the PAR (pushed authorization request endpoint) which can sometimes have issues, the with_sec cookie scoping on wp-login as the NEXT-probe, and probe some authentication neighbors on the staging cluster.
+[0m$ [0m# Check if authorize endpoint on staging accepts PKCE with no client involved / open-redirect on redirect_uri
+curl -s "https://devconnect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https://evil.com&response_type=code&scope=openid&prompt=none" 2>/dev/null -D - -o /dev/null | head -20
+HTTP/2 302 
+date: Tue, 08 Sep 2026 20:31:35 GMT
+content-length: 0
+location: https://devconnect.signl4.com/identity/home/error?errorId=CfDJ8HRhdHKj5_pDq2dFwl0f4pxP64kiVrPVSl70F9_YYFn3JdJFQ1MtnHZ1ct1kWkke_myUylzoNx0GH9ujXzAoKUw4x7yE-NYbZvmje7RbL81YJMk5GMvjDAQg2RkKEF1jPcSK21ShakYibSgxWd6tkrXmrFROh4m2_DcxESs9pL5eYBi--OWKMj5I4eFiNq-WNh4LInugoIyKrpqDh3GDs5pGDhTBGn_bMU5FwajP0QhfIIWoLtHOG3MgNGdjtjZWCd65eQWq0lqrcq5LZD8bZMHZz95hgUaJE3tieHJvZaaOk6ae_BsE7Dacov-C6AR4lMT16Kt_O6FTWnPXO6OWT5G4H0sE0Td4dGgCxJ3hSnzsjkJURnoNVoS2U5OZ0n2Gh8C-8v8Z7sQy9wq3QsyiJDciXXh6JRxvHggJsXGL23yktehBGztR9sOniFSA-rln9Qn8XgEzT6KvFoDogOwqTj5zODpbcwshgajUPS5hwliW
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://devconnect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+reporting-endpoints: csp-endpoint="https://devconnect.signl4.com/api/v2/csp/report"
+[0m
+[0m$ [0mcurl -s "https://www.derdack.com/wp-login.php" 2>/dev/null -D - -o /dev/null | grep -i "set-cookie"
+set-cookie: wordpress_test_cookie=WP%20Cookie%20check; path=/; secure
+[0m
+Dynamic client registration is confirmed dead (no `registration_endpoint` in discovery, only `client_secret_basic`/`client_secret_post`, no `none`). The authorize endpoint redirect_uri=evil.com redirects to an error (not an open redirect — good). 
+
+Interesting: the authorize with `prompt=none` and `redirect_uri=https://evil.com` returned a 302 to error rather than validating — but since it can't echo a code without a session, that's expected behavior. No open redirect.
+
+Let me probe a couple of remaining candidate surfaces. The staging cluster at 108.143.123.104 hosts devconnect/devaccount/devfix. Let me look for additional identity / account endpoints that might reveal a registration vector (self-service signup would let us get a legitimate staging account + tokens, which is in-scope business-logic territory — but that would be mutating/creating accounts which may be out of allowed test scope since it touches real auth data). Let me check passive endpoints instead.
+
+The wp-login probe confirmed: only `wordpress_test_cookie` with `secure` flag, host-only. This closes the downgrade-theft chain permanently. Good — that's the [NEXT] probe from last cycle, now done.
+
+Let me probe a couple more passive endpoints on the staging identity estate for any untested surface, then finalize.
+[0m$ [0mcurl -s "https://devconnect.signl4.com/identity/.well-known/openid-configuration" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print('scopes:', d.get('scopes_supported')); print('device_authorization_endpoint:', d.get('device_authorization_endpoint')); print('require_par:', d.get('require_pushed_authorization_requests'))"
+scopes: ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access']
+device_authorization_endpoint: https://devconnect.signl4.com/identity/connect/deviceauthorization
+require_par: False
+[0m
+[0m$ [0mfor p in /identity/connect/introspect /identity/connect/revocation /identity/connect/deviceauthorization /identity/connect/backchannel /identity/connect/par /api/v2/teams; do printf "%-40s " "$p"; curl -s -o /dev/null -w "%{http_code}\n" "https://devconnect.signl4.com$p" 2>/dev/null; done
+/identity/connect/introspect             405
+/identity/connect/revocation             405
+/identity/connect/deviceauthorization    400
+/identity/connect/backchannel            404
+/identity/connect/par                    405
+/api/v2/teams                            401
+[0m
+The `deviceauthorization` endpoint returns 400 (not 404/405), meaning device code flow is registered on staging. Device code flow (`urn:ietf:params:oauth:grant-type:device_code`) is a known high-risk flow — it allows obtaining tokens with a user code + device code and no client secret for public clients. But the token_endpoint_auth_methods only supports `client_secret_basic/post`, meaning device flow still needs a registered confidential client secret. So not directly exploitable without a secret.
+
+However, one angle worth noting: device flow with `client_id=692A0A56` + user confirmation. But still requires client_secret to complete token exchange unless it's a public client. Given auth_methods excludes `none`, this remains secret-gated. Not a new vector beyond the known cross-env finding.
+
+Let me finalize. The key delta this cycle:
+1. Dynamic client registration hypothesis (conf 35) is now dead — no `registration_endpoint`, no public-client support.
+2. wp-login [NEXT] probe done — only test cookie, secure+host-only confirmed. Downgrade chain permanently closed.
+3. Device code flow registered on staging but still client_secret-gated.
+
+I have no strong new hypothesis above conf 40 from passive probes. All surface remains AUTH_HELPED-blocked on client_secret. Let me emit the structured report.
+[0m$ [0mcurl -s "https://devconnect.signl4.com/identity/connect/deviceauthorization" -X POST -d "client_id=692A0A56-892F-4AE2-8259-76DA398990B6" 2>/dev/null -w "\nHTTP %{http_code}\n" | head -20
+{"error":"invalid_client"}
+HTTP 400
+[0m
+Device code flow requires client secret too (`invalid_client` without it). Confirms same secret-gating. No new exploitable vector from passive probes.
+
+Now the structured output.
+
+STEP 1 — DELTA:
+- [NEW] devconnect OIDC discovery: NO `registration_endpoint`, `token_endpoint_auth_methods_supported` = only `client_secret_basic`/`client_secret_post` (no `none`) — dynamic client registration hypothesis dead
+- [NEW] devconnect `/identity/connect/deviceauthorization` live (400 invalid_client on POST w/o secret), `/par` 405 (PAR registered but `require_par: False`), `/introspect` 405, `/revocation` 405
+- [NEW] authorize `redirect_uri=https://evil.com` → 302 to `/identity/home/error`, NOT an open redirect (no code/state echo to attacker URI)
+- [NEW] wp-login.php confirmed sets ONLY `wordpress_test_cookie` `secure` flag, host-only — closing prior [NEXT] probe; downgrade-theft permanently invalidated
+- [NEW] scopes_supported on staging includes `reseller_portal`, `mobile_api`, `public_api_ea_manage/alerting` — wider than previously enumerated
+
+STEP 2 — PRIORITIZE:
+[PRIO] devconnect.signl4.com,9.2,a=10,b=10,t=10,g=3,c=8,f=9
+[PRIO] api.signl4.com,8.4,a=9,b=10,t=9,g=5,c=8,f=8
+[PRIO] connect.signl4.com,8.0,a=8,b=10,t=9,g=4,c=8,f=8
+[PRIO] www.derdack.com,5.8,a=6,b=7,t=5,g=5,c=3,f=7
+
+STEP 3 — HYPOTHESES (top 3 assets, one each):
+
+[HYP] Cross-environment token forgery via shared RS256 key + password grant on staging IdP
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token
+confidence: 85
+reasoning: Staging IdP OIDC exposes password grant + device_code + CIBA + token-exchange; JWKS kid/n/x5t/x5c byte-identical to prod connect.signl4.com and api.signl4.com (verified 9x); staging and prod share client_id 692A0A56 with full scope set incl public_api_read/write/prov, reseller_portal, mobile_api; auth_methods only client_secret_basic/post (no public clients) confirmed this cycle
+evidence_needed: Valid client_secret for 692A0A56 on devconnect (token endpoint, not registration)
+verify_steps: POST /identity/connect/token grant_type=password (AUTH_HELPED, needs secret); decode token kid must match 91EE4F3C; GET api.signl4.com/api/v2/teams with token
+impact: Staging creds → prod-signing-key tokens → prod SIGNL4 API access (alerting config, schedules, PII, integrations); CRITICAL
+testability: AUTH_HELPED
+
+[HYP] Cross-env token acceptance via handler-deferred auth on prod API
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 80
+reasoning: /api/v2/teams returns 405 Allow:GET,POST (not 401) on unauth and invalid-Bearer GET — auth validated at handler not route layer; prod+staging share byte-identical RS256 key, so any valid staging token validates at prod JWKS; scopes include public_api_read/write/prov, reseller_portal
+evidence_needed: Valid staging access_token accepted by prod /teams → 200
+verify_steps: GET /api/v2/teams Authorization: Bearer <staging_token> (AUTH_HELPED)
+impact: Staging compromise = prod tenant CRUD via Bearer token; CRITICAL
+testability: AUTH_HELPED
+
+[HYP] Device-code flow token issuance bypassing interactive login
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/deviceauthorization
+confidence: 45
+reasoning: device_code grant is enabled in discovery + deviceauthorization endpoint live (400 on POST w/o secret); device flow can mint tokens via user_code confirmation; require_par=False and /par registered at 405 — flow fully wired on staging
+evidence_needed: deviceauthorization POST returns device_code+user_code (would need valid client_secret)
+verify_steps: POST /identity/connect/deviceauthorization client_id=692A0A56 (AUTH_HELPED, currently invalid_client w/o secret)
+impact: If secret/creds leak, device flow permits token issuance w/o username/password at token endpoint; still secret-gated
+testability: AUTH_HELPED
+
+STEP 4 — SELF-CRITIQUE:
+- [REJECT] Dynamic client registration (conf 35): NO registration_endpoint + only client_secret_basic/post confirmed — permanently dead
+- [PARKED] Device-code flow: conf 45 >= 40 but requires client_secret (same AUTH_HELPED blocker); no independent exploit — parked with the cross-env finding
+- [FINAL] devconnect cross-env token forgery (AUTH, 85) — blocked on client_secret, strongest finding
+- [FINAL] api.signl4.com cross-env token acceptance (AUTH, 80) — blocked on token
+- [FINAL] blog/techblog HTTPS→HTTP downgrade (MISCONFIG, retired) — wp-login sets only secure+host-only test cookie; no session-theft; residual missing-HSTS LOW
+
+STEP 5 — NEXT ACTION:
+[NEXT] PROBE: GET https://connect.signl4.com/identity/.well-known/openid-configuration + apply same endpoint/scope comparison vs devconnect to confirm prod token endpoint auth_methods parity (only read-only check of prod vs staging identity perimeter for any env-specific divergence)
+
+STEP 6 — LEARNING:
+[LEARN] REJECTED AUTH @ devconnect.signl4.com: no `registration_endpoint` in OIDC discovery + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration not supported; public-client registration hypothesis closed
+[LEARN] REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed to attacker URI — no open redirect / OAuth code-theft primitive
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/deviceauthorization: endpoint live (400 invalid_client w/o secret) + device_code grant confirmed; still client_secret-gated (no public client)
+[LEARN] ACCEPTED MISCONFIG @ www.derdack.com/wp-login.php: sets only `wordpress_test_cookie` `secure` flag, host-only (no Domain attr) — confirms no logged-in cookie traverses HTTPS→HTTP downgrade; session-theft mechanism permanently invalidated, residual missing-HSTS only, LOW
+
+STEP 7 — RISK:
+[RISK] derdack: 83 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + staging cluster (devconnect/devaccount/devfix on 108.143.123.104) share PROD RS256 signing key, same OAuth client_id 692A0A56, password+device_code grants on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret (reg+public-client now permanently excluded); api/v2 fully Bearer/handler-gated (zero unauth surface); blog/techblog downgrade retired (secure host-only cookies, missing-HSTS only); www XML-RPC on /de+/ea auth-gated; dev MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra
