@@ -151,3 +151,35 @@ TARGET_ORG not configured for derdack; skipping public-org deep scan.
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
 ## REPOSCAN 2026-09-08 14:45:06 UTC
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-08 18:10:44 UTC
+class: SECRET
+asset: derdack-plugin-checkmk/2-way/Main.js:90-94
+confidence: 95
+reasoning: Hardcoded `username = "cmkadmin"` and `password = "CNlydVqZ"` with internal IP `http://192.168.88.107:8080/cmk/check_mk/api/v0/`. Credentials are used in Authorization header at lines 317, 361. Appears to be a developer's personal/test Checkmk instance credentials left in a sample file.
+impact: HIGH — Credential reuse risk; admin-level Checkmk access; internal network disclosure
+verify_steps: Check if 192.168.88.107 is/was reachable from any Derdack network; check git history for when this was committed; verify if "CNlydVqZ" appears in any breach database
+class: SECRET
+asset: derdack-oncall-holidayimport/HolidayImport.js:16
+confidence: 95
+reasoning: Connection string `Server=sqlserver.derdack-support.local;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017` — exposes internal hostname, SQL Server `sa` (sysadmin) account, and plaintext password.
+impact: HIGH — Full SQL Server sysadmin access; internal host disclosure; credential reuse risk
+verify_steps: Check if sqlserver.derdack-support.local resolves publicly; check if "Derdack!" appears in credential stuffing lists; verify git history
+class: OTHER
+asset: derdack-alert-forwarding/Alert2Team.js:28,72
+confidence: 85
+reasoning: Line 28 concatenates `sExecutor` directly into SQL: `WHERE RemoteJobsHistory.ProfileName='" + sExecutor + "'"`. Line 72 concatenates `sTeamnames` into UPDATE statement. Parameters are not parameterized.
+impact: MEDIUM — SQL injection via Remote Action executor name or team name parameters
+verify_steps: Confirm whether EA's Remote Action parameter input allows special characters; test with `' OR 1=1 --` payload
+class: OTHER
+asset: derdack-alert-augmentation/html-to-text/ps.js:40
+confidence: 90
+reasoning: Line 40: `var strCommand = "powershell.exe \"node.exe '" + SCRIPTING_HOST_DIR + "html_text.js' '" + htmlString + "'\""` — `htmlString` comes from event parameter `PARAMETER_WITH_HTML` and is injected directly into a powershell command without sanitization.
+impact: HIGH — Remote code execution via crafted event parameter containing shell metacharacters
+verify_steps: Test with event parameter containing `'; rm -rf / #` or similar payload
+class: OTHER
+asset: derdack-plugin-checkmk/2-way/Main.js:52-68 (also in derdack-2wayREST-samples/LogicMonitor/Main.js:52-68, zendesk/Main.js:52-68, Dynatrace/Main.js:52-68)
+confidence: 75
+reasoning: `appContext.state.callbackSaveState = eval(appContext.state.callbackSaveState)` — if an attacker can influence `appContext.state`, they achieve arbitrary code execution. This pattern is repeated identically in 4 repos.
+impact: MEDIUM — Code execution if app context can be tampered with
+verify_steps: Determine if appContext is user-controllable or only set by EA platform; review EA SDK documentation for trust boundary
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
