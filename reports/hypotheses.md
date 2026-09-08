@@ -671,3 +671,17 @@
 - LEARN: ACCEPTED MISCONFIG @ connect.signl4.com/api/v3: bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
 - LEARN: REJECTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without 
 - LEARN: REJECTED AUTH @ devconnect.signl4.com/identity/connect/token client_credentials grant: returns invalid_client without client_secret — grant listed but not usabl
+
+## RANKED HYPOTHESES 2026-09-08 09:47:18 UTC
+- [85] devconnect.signl4.com/identity/connect/token: Cross-environment token forgery via shared RS256 key + password grant on staging IdP (from art/lead_nemotron3.txt)
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://www.derdack.com/wp-login.php -H "Accept: text/html" — observe Set-Cookie headers for wordpress_logged_in_* and wordpress_sec_*; confirm Domai
+- LEARN: ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect at 9th deep-equal observation (kid 91EE4F3CE94EB517AF66B254F7497
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 9x verified (kid/n/x5t/x5c deep-equal) — cross-env signing key
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com: password grant listed in OIDC discovery alongside 7 other grant types — grant enabled but not exploitable without client_
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA
+- LEARN: ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CS
+- LEARN: ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+- LEARN: ACCEPTED MISCONFIG @ connect.signl4.com/api/v3: bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
+- LEARN: REJECTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without 
+- LEARN: REJECTED AUTH @ devconnect.signl4.com/identity/connect/token client_credentials grant: returns invalid_client without client_secret — grant listed but not usabl
