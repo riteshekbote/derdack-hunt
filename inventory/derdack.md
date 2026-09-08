@@ -361,3 +361,13 @@ www.derdack.com
 - CHANGED blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
 - CHANGED dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
 - CHANGED connect.signl4.com/api/v3 bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
+
+## 2026-09-08 05:12:26 UTC
+- NEW api.signl4.com/api/v2/teams returns 405 Allow: GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer (live confirmed 2026-09-07)
+- NEW api.signl4.com/api/v2/teams returns 405 even with invalid Bearer token — confirms routing layer bypass, handler-level auth only (live confirmed 2026-09-07)
+- CHANGED Cross-env JWKS key-reuse re-verified 9th time: devconnect.signl4.com & connect.signl4.com & api.signl4.com RS256 key byte-identical (kid/n/x5t/x5c deep-equal)
+- CHANGED devconnect.signl4.com OIDC discovery: password grant listed alongside 7 others; returns invalid_client without client_secret
+- CHANGED devaccount.signl4.com/manage & account.signl4.com/manage redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + full scope set
+- CHANGED blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- CHANGED dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+- CHANGED connect.signl4.com/api/v3 bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface

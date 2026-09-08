@@ -10451,3 +10451,326 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 - [RISK] derdack: 50 — strongest finding remains cross-env RS256 key + client 692A0A56 + scope/grants parity, still gated on HUMAN token mint whose outcome alone separates MED-HIGH from negligible; V2/V3 anonymous read surface = zero (stable 401/405/404); teams flip produced no accepting state; devfix adds only credential-gated exposure; passive discovery is information-free at this point — no new defect emerged to move RCI.
+===== ANALYST bigpickle 2026-09-08 05:12:26 UTC =====
+[0m
+> build · big-pickle
+[0m
+I'll analyze the current state and focus on actionable hypotheses. Let me first verify what's accessible.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && ls -la && cat scope.yml 2>/dev/null | head -50
+total 268
+drwxr-xr-x 12 runner runner  4096 Sep  8 05:09 .
+drwxr-xr-x  3 runner runner  4096 Sep  8 05:08 ..
+drwxr-xr-x  7 runner runner  4096 Sep  8 05:09 .git
+drwxr-xr-x  3 runner runner  4096 Sep  8 05:08 .github
+-rw-r--r--  1 runner runner  1831 Sep  8 05:08 README.md
+-rw-r--r--  1 runner runner   138 Sep  8 05:09 analyst-out.txt
+-rw-r--r--  1 runner runner 87129 Sep  8 05:09 analyst-prompt.txt
+-rw-r--r--  1 runner runner 83250 Sep  8 05:09 ctx.txt
+drwxr-xr-x  2 runner runner  4096 Sep  8 05:08 inventory
+drwxr-xr-x  2 runner runner  4096 Sep  8 05:08 knowledge
+drwxr-xr-x  2 runner runner  4096 Sep  8 05:08 leads
+-rw-r--r--  1 runner runner 10455 Sep  8 05:08 probe-results.md
+drwxr-xr-x  2 runner runner  4096 Sep  8 05:08 recon-notes
+drwxr-xr-x  2 runner runner  4096 Sep  8 05:08 reports
+drwxr-xr-x  2 runner runner  4096 Sep  8 05:08 reposcan-raw
+-rw-r--r--  1 runner runner  3292 Sep  8 05:08 scope.yml
+drwxr-xr-x  2 runner runner  4096 Sep  8 05:08 scripts
+-rw-r--r--  1 runner runner    33 Sep  8 05:08 state_bigpickle.json
+-rw-r--r--  1 runner runner    33 Sep  8 05:08 state_laguna.json
+-rw-r--r--  1 runner runner    33 Sep  8 05:08 state_ling3.json
+-rw-r--r--  1 runner runner    33 Sep  8 05:08 state_longcat.json
+-rw-r--r--  1 runner runner    33 Sep  8 05:08 state_mimo.json
+-rw-r--r--  1 runner runner    33 Sep  8 05:08 state_nemotron3.json
+drwxr-xr-x  2 runner runner  4096 Sep  8 05:08 triage
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+  passive_first: false          # deep-hunt agent: active probes allowed when scoped
+  max_requests_per_second: 1    # never hammer live infra
+  no_doom: true                 # no DoS/DDoS, no account-lockout attacks
+  account_creation: restricted  # only on test/sandbox assets, never live customer data
+  no_data_modification: true    # no writes/deletes on live customer data
+  no_pre_disclosure: true       # never disclose before program response
+  poc_required: true            # scanner output alone is REJECTED
+  redact_secrets_in_commits: true
+
+models:
+[0m
+Let me examine the current leads and hypothesis files more closely.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && ls -la leads/ && cat state_bigpickle.json && echo "---" && ls -la art/ 2>/dev/null && ls -la leads/*.txt 2>/dev/null
+total 496
+drwxr-xr-x  2 runner runner   4096 Sep  8 05:08 .
+drwxr-xr-x 12 runner runner   4096 Sep  8 05:09 ..
+-rw-r--r--  1 runner runner 184642 Sep  8 05:08 lead-bigpickle.md
+-rw-r--r--  1 runner runner   1785 Sep  8 05:08 lead-laguna.md
+-rw-r--r--  1 runner runner   1750 Sep  8 05:08 lead-ling3.md
+-rw-r--r--  1 runner runner   1768 Sep  8 05:08 lead-longcat.md
+-rw-r--r--  1 runner runner     18 Sep  8 05:08 lead-mimo.md
+-rw-r--r--  1 runner runner 276000 Sep  8 05:08 lead-nemotron3.md
+-rw-r--r--  1 runner runner  12805 Sep  8 05:08 reposcan-derdack.md
+{"phase": "POC", "target": "api"}---
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && tail -80 leads/lead-bigpickle.md
+confidence: 40
+reasoning: windowed (not per-request) flip 401(19:22)→405(15:41)→401 earlier; only teams dual-states while sibling read routes stable 401; 405 state advertises Allow: GET,POST = routing present but auth deferred to handler
+evidence_needed: any accepting state (200/JSON) — never observed in either state across 5+ cycles
+verify_steps: PASSIVE — hourly GET sweep of /api/v2/teams for 24h at <=0.02rps; log status + request-context header per rep; stop on data-bearing response and classify instance skew
+impact: none demonstrated — both states deny read; only a future accepting-state observation would justify escalation — LOW
+testability: PASSIVE
+[HYP] staging-minted Bearer accepted by prod connect V3 despite issuer divergence
+class: AUTH
+asset: connect.signl4.com/api/v3/*
+confidence: 60
+reasoning: prod api/connect issuer=connect, devconnect issuer=devconnect, all 3 serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, 9x deep-equal); same client_id 692A0A56 + scope set cross-env; staging lists client_credentials+password grants; /connect/register 404 removes self-registration
+evidence_needed: devconnect-issued access_token returning non-401 at prod /api/v3/teams or /identity/connect/userinfo
+verify_steps: HUMAN — POST https://devconnect.signl4.com/identity/connect/token (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope=public_api_read offline_access, client_secret required) → replay Bearer on GET https://connect.signl4.com/api/v3/teams + /identity/connect/userinfo vs 401 baseline
+impact: staging secret compromise ⇒ prod API RW (alerts/users/schedules/subscriptions/webhooks) if issuer-validation absent — MED-HIGH, credential-gated
+testability: HUMAN_ONLY
+[HYP] devfix support portal authenticates against shared-key staging IdP
+class: AUTH
+asset: devfix.signl4.com
+confidence: 55
+reasoning: Blazor Server "Admin Support Page" on staging cluster 108.143.123.104; /signin-oidc 500 = OIDC callback registered; same cluster hosts devconnect IdP with shared RS256 key + client 692A0A56 + scope set
+evidence_needed: Login form post target / OIDC authorize redirect authority = devconnect vs connect
+verify_steps: HUMAN — load devfix login, capture form-post target + authorize redirect Location
+impact: staging support-cred compromise ⇒ support cases/files — MED
+testability: HUMAN_ONLY
+## 2026-09-07 22:22:38 UTC [target] (model bigpickle)
+[HYP] staging-minted Bearer accepted by prod despite issuer divergence — widened to 4 signers
+class: AUTH
+asset: connect.signl4.com/api/v3/* + api.signl4.com/api/v3/*
+confidence: 65
+reasoning: all 4 identity hosts (connect/api/devconnect/devapi) serve byte-identical RS256 JWKS (10th deep-equal incl. devapi this cycle); devconnect+devapi declare iss=devconnect and both grant the account client 692A0A56 with client_credentials+password+PAR enabled; prod api/identity issuer=connect; token minted on either staging host carries iss=devconnect — only signature/issuer check separates prod acceptance
+evidence_needed: devconnect- or devapi-issued access_token returning non-401 at prod /api/v3/teams or /identity/connect/userinfo
+verify_steps: HUMAN — POST `devconnect.signl4.com/identity/connect/token` OR `devapi.signl4.com/identity/connect/token` (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope=public_api_read offline_access, client_secret*) → replay Bearer on prod `connect.signl4.com/api/v3/teams` + `/identity/connect/userinfo` vs 401 baseline; if issuer validated strictly, repeat with iss=connect self-signed JWT (shared key) to classify
+impact: staging secret compromise ⇒ prod API RW across PII/billing/schedules/webhooks — MED-HIGH, credential-gated
+testability: HUMAN_ONLY
+[HYP] devfix support portal login authenticates against staging shared-key IdP
+class: AUTH
+asset: devfix.signl4.com
+confidence: 55
+reasoning: Blazor "Admin Support Page" on staging cluster; /signin-oidc 500 = OIDC callback registered; same cluster runs devconnect+devapi IdP with shared RS256 key + client 692A0A56 (+ now PAR)
+evidence_needed: Login form post target / authorize redirect authority = devconnect vs connect/devapi
+verify_steps: HUMAN — load devfix, authenticate, capture anti-forgery post-action and OIDC challenge authority via devtools
+impact: staging support-cred compromise ⇒ support cases/files — MED
+testability: HUMAN_ONLY
+[HYP] api/v2/teams 401↔405 windowed flip = multi-instance auth-middleware skew
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 40
+reasoning: flip 401(19:22)→405(15:41 previous)→401(now, GET+POST); only teams dual-states while sibling routes stable 401; 405 state advertised Allow GET,POST = routing present, handler-auth deferred
+evidence_needed: any accepting (200/JSON) state — never observed across 7+ cycles
+verify_steps: PASSIVE — hourly GET/HEAD sweep ~0.02rps, log status+Allow+WWW-Authenticate+appId per rep; escalate only on data-bearing response
+impact: none demonstrated — both states deny read — LOW
+testability: PASSIVE
+## 2026-09-08 00:28:44 UTC [target] (model bigpickle)
+[HYP] Cross-env token forgery via shared RS256 key + staging grants
+class: AUTH
+asset: connect.signl4.com/api/v3/*
+confidence: 85
+reasoning: 4 identity hosts (connect/api/devconnect/devapi) serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, 10x deep-equal); devconnect+devapi declare iss=devconnect with client_credentials+password grants for client 692A0A56; prod issuer=connect; only signature/issuer check separates staging token from prod acceptance; /connect/register 404 removes self-registration
+evidence_needed: devconnect- or devapi-issued Bearer returning non-401 at prod /api/v3/teams or /identity/connect/userinfo
+verify_steps: HUMAN — POST devconnect|devapi .signl4.com/identity/connect/token (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope=public_api_read offline_access, client_secret) → replay on prod /api/v3/teams + userinfo vs 401 baseline
+impact: staging secret compromise ⇒ prod API RW across alerts/users/schedules/subscriptions/webhooks — MED-HIGH, credential-gated
+testability: HUMAN_ONLY
+[HYP] api/v2/teams windowed 401↔405 flip = deployment-wide auth-middleware window
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 45
+reasoning: flip 405(22:22 prev cycle)→401(now, 6/6 reps api+v3); api & connect never diverge (3/3 paired lockstep) — rules out instance-skew, implies fleet-wide config window where auth deferred to handler (405 Allow:GET,POST), sibling reads stable 401
+evidence_needed: any data-bearing (200/JSON) state — never observed in any phase across 9+ cycles
+verify_steps: PASSIVE — hourly GET sweep ~0.01rps for 24h, log status+Allow+WWW+appId; escalate only on 200
+impact: both phases deny read; only future accepting-state observation justifies escalation — LOW
+testability: PASSIVE
+[HYP] devfix support portal authenticates against shared-key staging IdP (devconnect/devapi)
+class: AUTH
+asset: devfix.signl4.com
+confidence: 55
+reasoning: Blazor Server "SIGNL4 Support Application" shell on staging cluster 108.143.123.104; /signin-oidc 500 = OIDC callback registered on this host; no route-level login (all 404) → Challenge issued inside circuit; co-resident devconnect+devapi IdPs share RS256 key + client 692A0A56
+evidence_needed: authorize redirect authority on login = devconnect vs connect/devapi
+verify_steps: HUMAN — start Blazor circuit, submit Login, capture challenge Location authority via browser devtools
+impact: staging support-cred compromise ⇒ support cases/files — MED
+testability: HUMAN_ONLY
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && ls knowledge/ leads/ triage/ reports/ 2>/dev/null && echo "=== tail nemotron3 ===" && tail -60 leads/lead-nemotron3.md
+knowledge/:
+index.md
+
+leads/:
+lead-bigpickle.md
+lead-laguna.md
+lead-ling3.md
+lead-longcat.md
+lead-mimo.md
+lead-nemotron3.md
+reposcan-derdack.md
+
+reports/:
+analyst-bigpickle.log
+analyst-laguna.log
+analyst-ling3.log
+analyst-longcat.log
+analyst-nemotron3.log
+hypotheses-bigpickle.txt
+hypotheses-laguna.txt
+hypotheses-ling3.txt
+hypotheses-longcat.txt
+hypotheses-nemotron3.txt
+hypotheses.md
+valid-bugs.md
+
+triage/:
+run-2026-09-02-21-25.md
+run-2026-09-02-23-31.md
+run-2026-09-03-01-23.md
+run-2026-09-03-06-25.md
+run-2026-09-03-11-39.md
+run-2026-09-03-15-10.md
+run-2026-09-03-18-39.md
+run-2026-09-03-21-19.md
+run-2026-09-03-23-20.md
+run-2026-09-04-01-02.md
+run-2026-09-04-05-54.md
+run-2026-09-04-10-01.md
+run-2026-09-04-14-22.md
+run-2026-09-04-17-46.md
+run-2026-09-04-19-58.md
+run-2026-09-04-21-58.md
+run-2026-09-04-23-38.md
+run-2026-09-05-01-22.md
+run-2026-09-05-06-16.md
+run-2026-09-05-10-37.md
+run-2026-09-05-13-31.md
+run-2026-09-05-16-13.md
+run-2026-09-05-18-18.md
+run-2026-09-05-20-26.md
+run-2026-09-05-22-13.md
+run-2026-09-05-23-54.md
+run-2026-09-06-01-28.md
+run-2026-09-06-06-28.md
+run-2026-09-06-11-17.md
+run-2026-09-06-14-12.md
+run-2026-09-06-17-03.md
+run-2026-09-06-19-11.md
+run-2026-09-06-21-21.md
+run-2026-09-06-23-04.md
+run-2026-09-07-01-02.md
+run-2026-09-07-06-07.md
+run-2026-09-07-12-33.md
+run-2026-09-07-17-53.md
+run-2026-09-07-20-50.md
+run-2026-09-07-23-04.md
+run-2026-09-08-01-12.md
+=== tail nemotron3 ===
+verify_steps: POST https://devconnect.signl4.com/identity/connect/token grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<secret>&scope=openid profile account_portal public_api_read public_api_write public_api_prov offline_access&username=X&password=Y (expect 200 with token); decode token verify kid=91EE4F3CE94EB51[0m
+[NEW] api.signl4.com/api/v2/teams returns 405 Allow: GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer (live confirmed 2026-09-07)
+[NEW] api.signl4.com/api/v2/teams returns 405 even with invalid Bearer token — confirms routing layer bypass, handler-level auth only (live confirmed 2026-09-07)
+[CHANGED] Cross-env JWKS key-reuse re-verified 9th time: devconnect.signl4.com & connect.signl4.com & api.signl4.com RS256 key byte-identical (kid/n/x5t/x5c deep-equal)
+[CHANGED] devconnect.signl4.com OIDC discovery: password grant listed alongside 7 others; returns invalid_client without client_secret
+[CHANGED] devaccount.signl4.com/manage & account.signl4.com/manage redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + full scope set
+[CHANGED] blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+[CHANGED] dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+[CHANGED] connect.signl4.com/api/v3 bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
+[PRIO] devconnect.signl4.com/identity/connect/token,8.7,a=10,b=10,t=10,g=1,c=10,f=10
+[PRIO] api.signl4.com/api/v2/teams,7.7,a=9,b=10,t=8,g=2,c=9,f=5
+[PRIO] connect.signl4.com/api/v3/teams,7.2,a=8,b=9,t=8,g=2,c=9,f=5
+[PRIO] blog.derdack.com,6.7,a=6,b=6,t=5,g=10,c=4,f=10
+[PRIO] techblog.derdack.com,6.7,a=6,b=6,t=5,g=10,c=4,f=10
+[PRIO] www.derdack.com/de/xmlrpc.php,6.1,a=8,b=6,t=8,g=3,c=4,f=5
+[PRIO] www.derdack.com/ea/xmlrpc.php,5.8,a=7,b=6,t=8,g=3,c=4,f=5
+[HYP] Cross-environment token forgery via shared RS256 key + password grant on staging IdP
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token
+confidence: 85
+reasoning: Staging IdP OIDC discovery exposes password grant; JWKS kid/n/x5t/x5c byte-identical to prod connect.signl4.com and api.signl4.com (verified 9x live); same account-portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with full scope set (account_portal, public_api_read/write/prov, offline_access, reseller_portal, mobile_api, EA scopes); staging tokens signed with prod key will validate against prod JWKS; password grant allows username/password -> JWT without user interaction
+evidence_needed: Valid client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 on devconnect; POST /identity/connect/token with grant_type=password + client_secret returns access_token; decoded token kid matches prod; token accepted by prod api.signl4.com/api/v2/teams
+verify_steps: POST https://devconnect.signl4.com/identity/connect/token grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<secret>&scope=openid profile account_portal public_api_read public_api_write public_api_prov offline_access&username=X&password=Y (expect 200 with token); decode token verify kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256; GET https://api.signl4.com/api/v2/teams Authorization: Bearer <token> (expect 200)
+impact: Full SIGNL4 SaaS compromise — staging creds -> prod tokens -> alerting config, on-call schedules, PII, integrations, webhook secrets; severity CRITICAL
+testability: AUTH_HELPED
+[HYP] Staging-to-prod token acceptance via handler-deferred auth on api.signl4.com/api/v2/teams
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 80
+reasoning: api.signl4.com/api/v2/teams returns 405 (method routing) not 401 on unauth GET; invalid Bearer also returns 405 — auth validation occurs at handler level, not route layer. devconnect.signl4.com & connect.signl4.com share byte-identical RS256 signing key (verified 9x). devconnect OIDC discovery exposes password grant. devaccount/account share identical client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with full scopes. Any valid token from staging IdP validates at prod API JWKS.
+evidence_needed: Valid access_token from devconnect.signl4.com (any grant) accepted by api.signl4.com/api/v2/teams returning 200
+verify_steps: GET https://api.signl4.com/api/v2/teams Authorization: Bearer <staging_token> (expect 200); decode token verify kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256
+impact: Cross-environment token acceptance — staging compromise = prod API access to teams, alerts, webhooks, subscriptions; severity CRITICAL
+testability: AUTH_HELPED
+[HYP] HTTPS→HTTP downgrade on blog/techblog enables MITM session cookie theft via parent-domain cookie scope
+class: MISCONFIG
+asset: blog.derdack.com, techblog.derdack.com
+confidence: 70
+reasoning: Both subdomains redirect HTTPS→HTTP (302 to http://www.derdack.com/...); www.derdack.com lacks HSTS/CSP/X-Frame-Options; WordPress auth cookies (wordpress_logged_in_*, wordpress_sec_*) likely scoped to .derdack.com (parent domain); HTTPS request to blog/techblog leaks secure cookies over HTTP redirect; attacker in MITM position captures session cookies
+evidence_needed: Confirm WordPress auth cookie domain scope (Set-Cookie Domain=.derdack.com); verify cookies sent on HTTP redirect request; demonstrate cookie capture via network intercept
+verify_steps: GET https://blog.derdack.com -H "Cookie: wordpress_logged_in_xxx=value" - observe redirect to HTTP with Cookie header present; GET https://www.derdack.com/wp-login.php - observe Set-Cookie Domain attribute; passive: check if Secure flag missing on auth cookies
+impact: Session hijacking for any user visiting blog/techblog over HTTPS; lateral to www.derdack.com/wp-admin; severity HIGH
+testability: PASSIVE
+[PARKED] Cross-environment token forgery via shared RS256 key + password grant on staging IdP: confidence 85 but requires valid client_secret (AUTH_HELPED); program excludes credential brute-force; no client_secret disclosure vector identified
+[PARKED] Staging-to-prod token acceptance via handler-deferred auth on api.signl4.com/api/v2/teams: confidence 80 but requires valid access_token (AUTH_HELPED); no token disclosure vector identified
+[FINAL] 1) blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade (MISCONFIG, 70) — MITM session cookie theft, passive verifiable, HIGH
+[FINAL] 2) devconnect.signl4.com/identity/connect/token cross-env token forgery (AUTH, 85) — CRITICAL but AUTH_HELPED blocked on client_secret
+[FINAL] 3) api.signl4.com/api/v2/teams cross-env token acceptance (AUTH, 80) — CRITICAL but AUTH_HELPED blocked on token
+[NEXT] PROBE: GET https://www.derdack.com/wp-login.php -H "Accept: text/html" — observe Set-Cookie headers for wordpress_logged_in_* and wordpress_sec_*; confirm Domain=.derdack.com and missing Secure flag
+[LEARN] ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect at 9th deep-equal observation (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — cross-env trust anchor re-confirmed stable
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 9x verified (kid/n/x5t/x5c deep-equal) — cross-env signing key reuse confirmed
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com: password grant listed in OIDC discovery alongside 7 other grant types — grant enabled but not exploitable without client_secret
+[LEARN] ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and scope set — cross-env client reuse confirmed
+[LEARN] ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+[LEARN] ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer
+[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/v3: bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
+[LEARN] REJECTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+[LEARN] REJECTED AUTH @ devconnect.signl4.com/identity/connect/token client_credentials grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+[RISK] derdack: 82 — SIGNL4 product estate critical: prod IdP (connect.signl4.com) + public API (api.signl4.com) + live staging cluster (devconnect/devaccount on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56-892F-4AE2-8259-76DA398990B6, password grant enabled on staging — cross-env token forgery path confirmed but blocked on client_secret; api.signl4.com/api/v2 fully Bearer-gated at handler (zero unauth surface); www.derdack.com/de/ and /ea/ XML-RPC exposed but auth-gated on mutating methods (wp.uploadFile returns faultCode 403); blog/techblog HTTPS→HTTP downgrade chain enables MITM session theft; dev.derdack.com MultiViews discloses paths only (static namespace echo, files 403/404); 4/9 original inventory hosts not Derdack infra
+[0m
+Now let me run focused read-only probes on fresh surface — the devapi host (mentioned as a 4th signer but never surface-swept) and OAuth authorize redirect_uri validation.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && getent hosts devapi.signl4.com connect.signl4.com api.signl4.com devconnect.signl4.com 2>/dev/null; echo "---devapi OIDC---"; curl -s -m 12 -o /tmp/devapi_od.txt -w "OD:%{http_code}\n" https://devapi.signl4.com/identity/.well-known/openid-configuration; head -c 600 /tmp/devapi_od.txt; echo
+108.143.123.104 s4devappgw.westeurope.cloudapp.azure.com devapi.signl4.com
+20.160.37.197   s4prodappgw.westeurope.cloudapp.azure.com connect.signl4.com
+20.160.37.197   s4prodappgw.westeurope.cloudapp.azure.com api.signl4.com
+108.143.123.104 s4devappgw.westeurope.cloudapp.azure.com devconnect.signl4.com
+---devapi OIDC---
+OD:200
+{"issuer":"https://devconnect.signl4.com/identity","jwks_uri":"https://devapi.signl4.com/identity/.well-known/openid-configuration/jwks","authorization_endpoint":"https://devapi.signl4.com/identity/connect/authorize","token_endpoint":"https://devapi.signl4.com/identity/connect/token","userinfo_endpoint":"https://devapi.signl4.com/identity/connect/userinfo","end_session_endpoint":"https://devapi.signl4.com/identity/connect/endsession","check_session_iframe":"https://devapi.signl4.com/identity/connect/checksession","revocation_endpoint":"https://devapi.signl4.com/identity/connect/revocation","in
+[0m
+[93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
+[0m✗ [0mcd /tmp && for p in "api/v2/teams" "api/v2/" "api/v2" "api/v3/teams" "api/v1" "api" "identity/connect/token" "swagger" "swagger/index.html" "health" "status" "api/v2/alerts" "api/v2/users"; do code=$(curl -s -m 12 -o /tmp/dapi_out.txt -w "%{http_code}" "https://devapi.signl4.com/$p" 2>/dev/null); body=$(head -c 120 /tmp/dapi_out.txt | tr -d '\r\n'); echo "$p -> $code | $body"; sleep 1.2; done failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.
+devapi OIDC live (issuer=devconnect, same staging cluster). This is the never-surface-swept host. Probing its API namespace now.
