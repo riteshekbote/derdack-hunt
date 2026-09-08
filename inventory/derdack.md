@@ -380,3 +380,8 @@ www.derdack.com
 - CHANGED blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
 - CHANGED dev.derdack.com: MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
 - CHANGED connect.signl4.com/api/v3: bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
+
+## 2026-09-08 14:20:23 UTC
+- NEW www.derdack.com/wp-login.php sets `wordpress_test_cookie` with `secure` flag and NO `Domain` attribute → host-only scoped, contradicting prior parent-domain cookie-scope assumption
+- NEW www.derdack.com & blog.derdack.com confirm NO HSTS header (active this cycle)
+- CHANGED blog.derdack.com HTTPS→HTTP redirect is 302→301 to www.derdack.com; downgrade chain live but auth-cookie theft mechanism invalidated (secure+host-only cookies)

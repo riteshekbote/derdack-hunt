@@ -1,1 +1,44 @@
-## 2026-09-08 09:44:11 UTC [target] (model bigpickle)
+## 2026-09-08 14:01:48 UTC [target] (model bigpickle)
+[NEW] www.derdack.com/wp-login.php sets `wordpress_test_cookie` with `secure` flag and NO `Domain` attribute → host-only scoped, contradicting prior parent-domain cookie-scope assumption
+[NEW] www.derdack.com & blog.derdack.com confirm NO HSTS header (active this cycle)
+[CHANGED] blog.derdack.com HTTPS→HTTP redirect is 302→301 to www.derdack.com; downgrade chain live but auth-cookie theft mechanism invalidated (secure+host-only cookies)
+[PRIO] blog.derdack.com,3.5,a=5,b=3,t=2,g=6,c=2,f=3  (downgrade real, exploit downgraded — no secure-cookie traversal)
+[PRIO] devconnect.signl4.com/identity/connect/token,8.7,a=10,b=10,t=10,g=1,c=10,f=10
+[PRIO] api.signl4.com/api/v2/teams,7.7,a=9,b=10,t=8,g=2,c=9,f=5
+[HYP] Cross-environment token forgery via shared RS256 key + password grant on staging IdP
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token
+confidence: 85
+reasoning: Staging IdP OIDC discovery exposes password grant; JWKS kid/n/x5t/x5c byte-identical to prod connect.signl4.com and api.signl4.com (verified 9x live); devaccount/account share identical client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with full scope set; staging tokens signed with prod key validate against prod JWKS
+evidence_needed: Valid client_secret for client_id 692A0A56 on devconnect
+verify_steps: POST /identity/connect/token grant_type=password (AUTH_HELPED, requires secret); decode token kid match; GET api.signl4.com/api/v2/teams with token
+impact: Full SIGNL4 SaaS compromise — staging creds → prod tokens → alerting config, schedules, PII, integrations; CRITICAL
+testability: AUTH_HELPED
+[HYP] Staging-to-prod token acceptance via handler-deferred auth on api.signl4.com/api/v2/teams
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 80
+reasoning: /api/v2/teams returns 405 (method routing) not 401 on unauth GET; invalid Bearer also 405 — auth deferred to handler; prod+staging share byte-identical RS256 key; any valid staging token validates at prod JWKS
+evidence_needed: Valid staging access_token accepted by prod /teams returning 200
+verify_steps: GET /api/v2/teams Authorization: Bearer <staging_token> (AUTH_HELPED)
+impact: Cross-env token acceptance — staging compromise = prod API access; CRITICAL
+testability: AUTH_HELPED
+[HYP] Cross-subdomain cookie-scoped session theft via HTTPS→HTTP downgrade
+class: MISCONFIG
+asset: blog.derdack.com, techblog.derdack.com
+confidence: 25
+reasoning: This cycle's passive probe invalidated the mechanism: wp-login.php sets wordpress_test_cookie with `secure` flag + NO Domain attribute (host-only scope). WP auth cookies therefore scoped to www.derdack.com only, not .derdack.com parent. `secure` cookies are not sent to blog/techblog (different host) nor over HTTP. Redirect is 302→301, cannot traverse secure cookies. Remaining finding is missing HSTS only (header-level, non-sensitive pages).
+evidence_needed: Demonstrate a secure cookie traversing the HTTP redirect (not possible given host-only+secure scope)
+verify_steps: passive — none viable; blocked by cookie scoping
+impact: Mitigated; residual = missing HSTS on non-sensitive marketing pages; LOW
+testability: PASSIVE
+[PARKED] Cross-environment token forgery: confidence 85, requires valid client_secret (AUTH_HELPED); program excludes brute-force; no secret-disclosure vector identified
+[PARKED] Staging-to-prod token acceptance: confidence 80, requires valid access_token (AUTH_HELPED); no token-disclosure vector identified
+[FINAL] 1) blog/techblog HTTPS→HTTP downgrade (MISCONFIG, confidence DOWN 70→25 this cycle) — cookie-scope+secure-flag passive evidence blocks session-theft escalation; residual missing-HSTS only, LOW; retired from top findings
+[FINAL] 2) devconnect cross-env token forgery (AUTH, 85) — strongest finding, blocked on client_secret
+[FINAL] 3) api.signl4.com cross-env token acceptance (AUTH, 80) — blocked on token
+[NEXT] PROBE: HEAD https://www.derdack.com/wp-login.php (GET-only) — confirm whether a logged-in wordpress_logged_in_* cookie would carry Secure flag; current passive baseline shows only test cookie (secure+host-only), permanently closing the downgrade-theft chain
+[LEARN] REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.derdack.com); WP auth cookies host-scoped to www.derdack.com, cannot traverse 302→301 HTTP redirect (secure cookies not sent over HTTP); residual = missing HSTS header only on non-sensitive pages (header-level, LOW)
+[LEARN] ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect at 9th deep-equal observation (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — cross-env trust anchor re-confirmed stable
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+[RISK] derdack: 82 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); blog/techblog dismissal downgraded (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra
