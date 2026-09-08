@@ -1,4 +1,26 @@
-## 2026-09-07 22:19:37 UTC [target] (model nemotron3)
+## 2026-09-08 00:38:14 UTC [target] (model nemotron3)
+[NEW] api.signl4.com/api/v2/teams returns 405 Allow: GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer (live confirmed 2026-09-07)
+[NEW] api.signl4.com/api/v2/teams returns 405 even with invalid Bearer token — confirms routing layer bypass, handler-level auth only (live confirmed 2026-09-07)
+[CHANGED] Cross-env JWKS key-reuse re-verified 9th time: devconnect.signl4.com & connect.signl4.com & api.signl4.com RS256 key byte-identical (kid/n/x5t/x5c deep-equal)
+[CHANGED] devconnect.signl4.com OIDC discovery: password grant listed alongside 7 others; returns invalid_client without client_secret
+[CHANGED] devaccount.signl4.com/manage & account.signl4.com/manage redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + full scope set
+[CHANGED] blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+[CHANGED] dev.derdack.com MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+[CHANGED] connect.signl4.com/api/v3 bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
+[PRIO] devconnect.signl4.com/identity/connect/token,8.7,a=10,b=10,t=10,g=1,c=10,f=10
+[PRIO] api.signl4.com/api/v2/teams,7.7,a=9,b=10,t=8,g=2,c=9,f=5
+[PRIO] connect.signl4.com/api/v3/teams,7.2,a=8,b=9,t=8,g=2,c=9,f=5
+[PRIO] blog.derdack.com,6.7,a=6,b=6,t=5,g=10,c=4,f=10
+[PRIO] techblog.derdack.com,6.7,a=6,b=6,t=5,g=10,c=4,f=10
+[PRIO] www.derdack.com/de/xmlrpc.php,6.1,a=8,b=6,t=8,g=3,c=4,f=5
+[PRIO] www.derdack.com/ea/xmlrpc.php,5.8,a=7,b=6,t=8,g=3,c=4,f=5
+[HYP] Cross-environment token forgery via shared RS256 key + password grant on staging IdP
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token
+confidence: 85
+reasoning: Staging IdP OIDC discovery exposes password grant; JWKS kid/n/x5t/x5c byte-identical to prod connect.signl4.com and api.signl4.com (verified 9x live); same account-portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with full scope set (account_portal, public_api_read/write/prov, offline_access, reseller_portal, mobile_api, EA scopes); staging tokens signed with prod key will validate against prod JWKS; password grant allows username/password -> JWT without user interaction
+evidence_needed: Valid client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 on devconnect; POST /identity/connect/token with grant_type=password + client_secret returns access_token; decoded token kid matches prod; token accepted by prod api.signl4.com/api/v2/teams
+verify_steps: POST https://devconnect.signl4.com/identity/connect/token grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<secret>&scope=openid profile account_portal public_api_read public_api_write public_api_prov offline_access&username=X&password=Y (expect 200 with token); decode token verify kid=91EE4F3CE94EB51[0m
 [NEW] api.signl4.com/api/v2/teams returns 405 Allow: GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer (live confirmed 2026-09-07)
 [NEW] api.signl4.com/api/v2/teams returns 405 even with invalid Bearer token — confirms routing layer bypass, handler-level auth only (live confirmed 2026-09-07)
 [CHANGED] Cross-env JWKS key-reuse re-verified 9th time: devconnect.signl4.com & connect.signl4.com & api.signl4.com RS256 key byte-identical (kid/n/x5t/x5c deep-equal)
@@ -36,7 +58,7 @@ testability: AUTH_HELPED
 class: MISCONFIG
 asset: blog.derdack.com, techblog.derdack.com
 confidence: 70
-reasoning: Both subdomains redirect HTTPS→HTTP (302 to http://www.derdack.com/...); www.derdack.com lacks HSTS/CSP/X-Frame-Options; WordPress auth cookies (wordpress_logged_in_*, wordpress_sec_*) likely scoped to .derdack.com (parent domain) in multisite; HTTPS request to blog/techblog leaks secure cookies over HTTP redirect; attacker in MITM position captures session cookies
+reasoning: Both subdomains redirect HTTPS→HTTP (302 to http://www.derdack.com/...); www.derdack.com lacks HSTS/CSP/X-Frame-Options; WordPress auth cookies (wordpress_logged_in_*, wordpress_sec_*) likely scoped to .derdack.com (parent domain); HTTPS request to blog/techblog leaks secure cookies over HTTP redirect; attacker in MITM position captures session cookies
 evidence_needed: Confirm WordPress auth cookie domain scope (Set-Cookie Domain=.derdack.com); verify cookies sent on HTTP redirect request; demonstrate cookie capture via network intercept
 verify_steps: GET https://blog.derdack.com -H "Cookie: wordpress_logged_in_xxx=value" - observe redirect to HTTP with Cookie header present; GET https://www.derdack.com/wp-login.php - observe Set-Cookie Domain attribute; passive: check if Secure flag missing on auth cookies
 impact: Session hijacking for any user visiting blog/techblog over HTTPS; lateral to www.derdack.com/wp-admin; severity HIGH

@@ -1390,3 +1390,31 @@ evidence_needed: any accepting (200/JSON) state — never observed across 7+ cyc
 verify_steps: PASSIVE — hourly GET/HEAD sweep ~0.02rps, log status+Allow+WWW-Authenticate+appId per rep; escalate only on data-bearing response
 impact: none demonstrated — both states deny read — LOW
 testability: PASSIVE
+## 2026-09-08 00:28:44 UTC [target] (model bigpickle)
+[HYP] Cross-env token forgery via shared RS256 key + staging grants
+class: AUTH
+asset: connect.signl4.com/api/v3/*
+confidence: 85
+reasoning: 4 identity hosts (connect/api/devconnect/devapi) serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, 10x deep-equal); devconnect+devapi declare iss=devconnect with client_credentials+password grants for client 692A0A56; prod issuer=connect; only signature/issuer check separates staging token from prod acceptance; /connect/register 404 removes self-registration
+evidence_needed: devconnect- or devapi-issued Bearer returning non-401 at prod /api/v3/teams or /identity/connect/userinfo
+verify_steps: HUMAN — POST devconnect|devapi .signl4.com/identity/connect/token (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope=public_api_read offline_access, client_secret) → replay on prod /api/v3/teams + userinfo vs 401 baseline
+impact: staging secret compromise ⇒ prod API RW across alerts/users/schedules/subscriptions/webhooks — MED-HIGH, credential-gated
+testability: HUMAN_ONLY
+[HYP] api/v2/teams windowed 401↔405 flip = deployment-wide auth-middleware window
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 45
+reasoning: flip 405(22:22 prev cycle)→401(now, 6/6 reps api+v3); api & connect never diverge (3/3 paired lockstep) — rules out instance-skew, implies fleet-wide config window where auth deferred to handler (405 Allow:GET,POST), sibling reads stable 401
+evidence_needed: any data-bearing (200/JSON) state — never observed in any phase across 9+ cycles
+verify_steps: PASSIVE — hourly GET sweep ~0.01rps for 24h, log status+Allow+WWW+appId; escalate only on 200
+impact: both phases deny read; only future accepting-state observation justifies escalation — LOW
+testability: PASSIVE
+[HYP] devfix support portal authenticates against shared-key staging IdP (devconnect/devapi)
+class: AUTH
+asset: devfix.signl4.com
+confidence: 55
+reasoning: Blazor Server "SIGNL4 Support Application" shell on staging cluster 108.143.123.104; /signin-oidc 500 = OIDC callback registered on this host; no route-level login (all 404) → Challenge issued inside circuit; co-resident devconnect+devapi IdPs share RS256 key + client 692A0A56
+evidence_needed: authorize redirect authority on login = devconnect vs connect/devapi
+verify_steps: HUMAN — start Blazor circuit, submit Login, capture challenge Location authority via browser devtools
+impact: staging support-cred compromise ⇒ support cases/files — MED
+testability: HUMAN_ONLY

@@ -10336,3 +10336,118 @@ testability: PASSIVE
 
 ## STEP 7 — RISK
 - [RISK] derdack: 55 — cross-env chain strengthened (4 shared-key signers incl. new devapi twin, staging client_credentials+password+PAR, complete schemas); still gated on HUMAN token mint whose outcome alone separates MED-HIGH from negligible; all passive surfaces now exhausted and uniformly auth-before-route — no additional anonymous surface exists after full schema-driven sweep.
+===== ANALYST bigpickle 2026-09-08 00:38:24 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "teams:%{http_code}\n" --max-time 20 https://api.signl4.com/api/v2/teams; sleep 1; curl -s --max-time 20 https://api.signl4.com/identity/.well-known/openid-configuration | head -c 600; echo
+teams:401
+{"issuer":"https://connect.signl4.com/identity","jwks_uri":"https://api.signl4.com/identity/.well-known/openid-configuration/jwks","authorization_endpoint":"https://api.signl4.com/identity/connect/authorize","token_endpoint":"https://api.signl4.com/identity/connect/token","userinfo_endpoint":"https://api.signl4.com/identity/connect/userinfo","end_session_endpoint":"https://api.signl4.com/identity/connect/endsession","check_session_iframe":"https://api.signl4.com/identity/connect/checksession","revocation_endpoint":"https://api.signl4.com/identity/connect/revocation","introspection_endpoint":"h
+[0m
+[0m$ [0mfor i in 1 2 3; do curl -s -o /dev/null -w "teams_rep$i:%{http_code} allow=%header{allow} www=%header{WWW-Authenticate}\n" --max-time 20 https://api.signl4.com/api/v2/teams; sleep 2; done
+teams_rep1:401 allow= www=Bearer
+teams_rep2:401 allow= www=Bearer
+teams_rep3:401 allow= www=Bearer
+[0m
+[0m$ [0mecho "== api v2 =="; for p in /api/v2/users /api/v2/webhooks /api/v2/subscriptions /api/v2/alerts; do curl -s -o /dev/null -w "$p %{http_code} allow=%header{allow} www=%header{WWW-Authenticate}\n" --max-time 20 "https://api.signl4.com$p"; sleep 1.5; done; echo "== connect v3 =="; for p in /api/v3/users /api/v3/teams /api/v3/webhooks /api/v3/subscriptions; do curl -s -o /dev/null -w "$p %{http_code} allow=%header{allow} www=%header{WWW-Authenticate}\n" --max-time 20 "https://connect.signl4.com$p"; sleep 1.5; done
+== api v2 ==
+/api/v2/users 401 allow= www=Bearer
+/api/v2/webhooks 401 allow= www=Bearer
+/api/v2/subscriptions 401 allow= www=Bearer
+/api/v2/alerts 405 allow=POST www=
+== connect v3 ==
+/api/v3/users 401 allow= www=Bearer
+/api/v3/teams 401 allow= www=Bearer
+/api/v3/webhooks 401 allow= www=Bearer
+/api/v3/subscriptions 401 allow= www=Bearer
+[0m
+[0m$ [0mecho "== dev cluster =="; curl -s -o /dev/null -w "devconnect-od %{http_code}\n" --max-time 20 https://devconnect.signl4.com/identity/.well-known/openid-configuration; sleep 1.5; curl -s -o /dev/null -w "devapi-od %{http_code}\n" --max-time 20 https://devapi.signl4.com/identity/.well-known/openid-configuration; sleep 1.5; curl -s -o /dev/null -w "devfix-root %{http_code}\n" --max-time 20 https://devfix.signl4.com/; sleep 1.5; curl -s -o /dev/null -w "devfix-signinoidc %{http_code}\n" --max-time 20 https://devfix.signl4.com/signin-oidc; echo "== jwks kids =="; curl -s --max-time 20 https://api.signl4.com/identity/.well-known/openid-configuration/jwks | grep -o '"kid":"[^"]*"' | head -1
+== dev cluster ==
+devconnect-od 200
+devapi-od 200
+devfix-root 200
+devfix-signinoidc 500
+== jwks kids ==
+"kid":"91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256"
+[0m
+[0m$ [0mcurl -s --max-time 25 https://devfix.signl4.com/ | grep -oiE '(href="[^"]*"|action="[^"]*"|src="[^"]*"|<title>[^<]*</title>|authorize|login|oidc)' | sort -u | head -40
+<title>SIGNL4 Support Application</title>
+Login
+href="/"
+href="Derdack.SF.SupportPortal.styles.css"
+href="app.css"
+href="bootstrap/bootstrap.min.css"
+href="favicon.png"
+login
+src="./images/logoS4.png"
+src="_framework/blazor.web.js"
+[0m
+[0m$ [0mfor p in /login /Account/Login /authentication/login /authentication/logout; do curl -s -o /dev/null -w "$p %{http_code} loc=%{redirect_url}\n" --max-time 20 "https://devfix.signl4.com$p"; sleep 1.5; done; echo "== blazor fs =="; for p in /_blazor/negotiate /_blazor; do curl -s -o /dev/null -w "$p %{http_code}\n" --max-time 20 "https://devfix.signl4.com$p"; sleep 1; done
+/login 404 loc=
+/Account/Login 404 loc=
+/authentication/login 404 loc=
+/authentication/logout 404 loc=
+== blazor fs ==
+/_blazor/negotiate 405
+/_blazor 400
+[0m
+[0m$ [0mfor i in 1 2 3; do a=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 https://api.signl4.com/api/v2/teams); sleep 1; c=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 https://connect.signl4.com/api/v3/teams); echo "rep$i api=$a connect=$c"; sleep 2; done
+rep1 api=401 connect=401
+rep2 api=401 connect=401
+rep3 api=401 connect=401
+[0m
+STEP 1 — DELTA
+- [NEW] `/api/v2/teams` + `/api/v3/teams` both in 401 phase this cycle (last cycle 405) — flip reconfirmed, but paired api+connect stayed in-phase 3/3 reps (no divergence) → deployment-wide window, not load-balanced instance skew
+- [NEW] devfix has no route-level login surface (`/login`, `/Account/Login`, `/authentication/login` all 404) — OIDC Challenge is Blazor-circuit-triggered, static probing exhausted
+- [NEW] stable baselines re-verified: api/v2 users/webhooks/subscriptions 401 Bearer, alerts 405 Allow:POST sink; all V3 routes 401; devconect/devapi OD 200, devfix /signin-oidc still 500, shared JWKS kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`
+
+STEP 2 — PRIORITIZE
+- [PRIO] connect.signl4.com/api/v3*,5.65,auth-gated prod API
+- [PRIO] devconnect.signl4.com/identity,5.85,shared-key staging IdP anchor
+- [PRIO] devfix.signl4.com,5.00,Blazor support portal w/ broken OIDC
+- [PRIO] api.signl4.com/api/v2/teams,4.60,flip anomaly
+
+STEP 3 — HYPOTHESES
+[HYP] Cross-env token forgery via shared RS256 key + staging grants
+class: AUTH
+asset: connect.signl4.com/api/v3/*
+confidence: 85
+reasoning: 4 identity hosts (connect/api/devconnect/devapi) serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, 10x deep-equal); devconnect+devapi declare iss=devconnect with client_credentials+password grants for client 692A0A56; prod issuer=connect; only signature/issuer check separates staging token from prod acceptance; /connect/register 404 removes self-registration
+evidence_needed: devconnect- or devapi-issued Bearer returning non-401 at prod /api/v3/teams or /identity/connect/userinfo
+verify_steps: HUMAN — POST devconnect|devapi .signl4.com/identity/connect/token (grant_type=client_credentials, client_id=692A0A56-892F-4AE2-8259-76DA398990B6, scope=public_api_read offline_access, client_secret) → replay on prod /api/v3/teams + userinfo vs 401 baseline
+impact: staging secret compromise ⇒ prod API RW across alerts/users/schedules/subscriptions/webhooks — MED-HIGH, credential-gated
+testability: HUMAN_ONLY
+[HYP] api/v2/teams windowed 401↔405 flip = deployment-wide auth-middleware window
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 45
+reasoning: flip 405(22:22 prev cycle)→401(now, 6/6 reps api+v3); api & connect never diverge (3/3 paired lockstep) — rules out instance-skew, implies fleet-wide config window where auth deferred to handler (405 Allow:GET,POST), sibling reads stable 401
+evidence_needed: any data-bearing (200/JSON) state — never observed in any phase across 9+ cycles
+verify_steps: PASSIVE — hourly GET sweep ~0.01rps for 24h, log status+Allow+WWW+appId; escalate only on 200
+impact: both phases deny read; only future accepting-state observation justifies escalation — LOW
+testability: PASSIVE
+[HYP] devfix support portal authenticates against shared-key staging IdP (devconnect/devapi)
+class: AUTH
+asset: devfix.signl4.com
+confidence: 55
+reasoning: Blazor Server "SIGNL4 Support Application" shell on staging cluster 108.143.123.104; /signin-oidc 500 = OIDC callback registered on this host; no route-level login (all 404) → Challenge issued inside circuit; co-resident devconnect+devapi IdPs share RS256 key + client 692A0A56
+evidence_needed: authorize redirect authority on login = devconnect vs connect/devapi
+verify_steps: HUMAN — start Blazor circuit, submit Login, capture challenge Location authority via browser devtools
+impact: staging support-cred compromise ⇒ support cases/files — MED
+testability: HUMAN_ONLY
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] devfix 404-login-scan: route guessing exhausted, Blazor circuit required — full reliance on HUMAN step; parked pending token-data
+- [PARKED] teams flip: both phases deny; info-free unless 200 appears; kept at 45 for the hourly sweep only
+- [FINAL] 1) cross-env token forgery (85, HUMAN) 2) teams flip sweep (45, PASSIVE) 3) devfix IdP attachment (55, HUMAN)
+
+STEP 5 — NEXT ACTION
+- [NEXT] PROBE: hourly GET https://api.signl4.com/api/v2/teams (and paired connect V3) ~0.01rps, log status/Allow/WWW/appId to classify flip window; escalate on any data-bearing response; fork to HUMAN token-mint on [85] hypothesis in parallel
+
+STEP 6 — LEARNING
+- [LEARN] ACCEPTED OTHER @ api+connect.signl4.com teams: 401↔405 windowed flip reconfirmed but in-phase 3/3 paired reps — fleet-wide config window, not load-balanced instance skew
+- [LEARN] REJECTED AUTH @ devfix.signl4.com: /login, /Account/Login, /authentication/login all 404 — login is circuit-triggered OIDC Challenge, no static trap
+- [LEARN] ACCEPTED MISCONFIG @ devfix.signl4.com: /signin-oidc 500 persists while root 200 — OIDC callback registered but misconfigured on staging Blazor host
+
+STEP 7 — RISK
+- [RISK] derdack: 50 — strongest finding remains cross-env RS256 key + client 692A0A56 + scope/grants parity, still gated on HUMAN token mint whose outcome alone separates MED-HIGH from negligible; V2/V3 anonymous read surface = zero (stable 401/405/404); teams flip produced no accepting state; devfix adds only credential-gated exposure; passive discovery is information-free at this point — no new defect emerged to move RCI.
