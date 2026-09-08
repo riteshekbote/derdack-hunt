@@ -385,3 +385,5 @@ www.derdack.com
 - NEW www.derdack.com/wp-login.php sets `wordpress_test_cookie` with `secure` flag and NO `Domain` attribute → host-only scoped, contradicting prior parent-domain cookie-scope assumption
 - NEW www.derdack.com & blog.derdack.com confirm NO HSTS header (active this cycle)
 - CHANGED blog.derdack.com HTTPS→HTTP redirect is 302→301 to www.derdack.com; downgrade chain live but auth-cookie theft mechanism invalidated (secure+host-only cookies)
+
+## 2026-09-08 18:10:29 UTC

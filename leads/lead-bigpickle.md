@@ -1602,3 +1602,43 @@ testability: PASSIVE
 [LEARN] ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect at 9th deep-equal observation (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — cross-env trust anchor re-confirmed stable
 [LEARN] ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without secrets
 [RISK] derdack: 82 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); blog/techblog dismissal downgraded (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra
+## 2026-09-08 17:52:52 UTC [target] (model bigpickle)
+[PRIO] devconnect.signl4.com,9.2,a=10,b=10,t=10,g=3,c=8,f=9
+[PRIO] api.signl4.com,8.4,a=9,b=10,t=9,g=5,c=8,f=8
+[PRIO] connect.signl4.com,8.0,a=8,b=10,t=9,g=4,c=8,f=8
+[PRIO] www.derdack.com,5.8,a=6,b=7,t=5,g=5,c=3,f=7
+[HYP] Cross-environment token forgery via shared RS256 key + password grant on staging IdP
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token
+confidence: 85
+reasoning: Staging IdP OIDC discovery exposes password grant; JWKS kid/n/x5t/x5c byte-identical to prod connect.signl4.com and api.signl4.com (verified 9x live); devaccount/account share identical client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with full scope set; staging tokens signed with prod key validate against prod JWKS
+evidence_needed: Valid client_secret for client_id 692A0A56 on devconnect
+verify_steps: POST /identity/connect/token grant_type=password (AUTH_HELPED, requires secret); decode token kid match; GET api.signl4.com/api/v2/teams with token
+impact: Full SIGNL4 SaaS compromise — staging creds → prod tokens → alerting config, schedules, PII, integrations; CRITICAL
+testability: AUTH_HELPED
+[HYP] Dynamic client registration on staging IdP enabling public client token issuance
+class: AUTH
+asset: devconnect.signl4.com/connect/register
+confidence: 35
+reasoning: IdentityServer implementations sometimes enable RFC 7591 dynamic client registration; if registration_endpoint is exposed in OIDC discovery, we could register a public client with required scopes and use password grant without client_secret; password grant already listed enabled on staging
+evidence_needed: 200/201 response from registration endpoint or registration_endpoint in OIDC discovery JSON
+verify_steps: GET devconnect.signl4.com/identity/.well-known/openid-configuration (check registration_endpoint field); if present: POST to registration endpoint with client_name=test&grant_types=password,token_exchange&redirect_uri=https://example.com
+impact: Public client registration → bypass client_secret requirement → staging token issuance → cross-env API access; HIGH
+testability: PASSIVE (check discovery) + PROBE (POST register)
+[HYP] Staging-to-prod API token acceptance via handler-deferred auth
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 80
+reasoning: /api/v2/teams returns 405 (method routing) not 401 on unauth GET; invalid Bearer also 405 — auth deferred to handler; prod+staging share byte-identical RS256 key; any valid staging token validates at prod JWKS
+evidence_needed: Valid staging access_token accepted by prod /teams returning 200
+verify_steps: GET /api/v2/teams Authorization: Bearer <staging_token> (AUTH_HELPED)
+impact: Cross-env token acceptance — staging compromise = prod API access; CRITICAL
+testability: AUTH_HELPED
+[PARKED] Dynamic client registration on staging IdP: confidence 35 < 40; IdentityServer does NOT enable dynamic registration by default — requires explicit admin config; probability on staging environment is low; single passive probe to discovery can confirm or kill.
+[FINAL] 1) devconnect cross-env token forgery (AUTH, 85) — strongest finding, blocked on client_secret
+[FINAL] 2) api.signl4.com cross-env token acceptance (AUTH, 80) — blocked on token
+[FINAL] 3) blog/techblog HTTPS→HTTP downgrade (MISCONFIG, 25) — cookie-scope invalidated, residual = missing HSTS only, LOW
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+[LEARN] REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.derdack.com); WP auth cookies host-scoped to www.derdack.com, cannot traverse 302→301 HTTP redirect; residual = missing HSTS header only on non-sensitive pages; LOW
+[LEARN] ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler, not route layer
+[RISK] derdack: 82 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra
