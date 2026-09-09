@@ -1,8 +1,11 @@
-## 2026-09-09 14:50:03 UTC [target] (model nemotron3)
+## 2026-09-09 18:15:31 UTC [target] (model nemotron3)
 [NEW] devapi.signl4.com confirmed as 4th identity host serving byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — 10th live deep-equal across connect/api/devconnect/devapi
 [NEW] connect.signl4.com OIDC discovery byte-identical to devconnect (password/device_code/ciba/token-exchange grants, secret-only auth methods, no registration_endpoint, RS256-only) — prod is parametric twin of staging
 [NEW] api.signl4.com swagger.json declares OAuth2 authorizationCode flow targeting connect.signl4.com/identity/connect endpoints + API_Key_Query scheme (x-s4-api-key in query param)
 [NEW] api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycles confirmed
+[NEW] API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational
+[NEW] Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json` — distinct auth pipelines with different error responses confirm independent validation paths
+[NEW] connect.signl4.com/api/v2/* shares backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
 [CHANGED] Dynamic client registration hypothesis permanently REJECTED — RFC 7591 unsupported on staging IdentityServer (no registration_endpoint, no `none` auth method)
 [CHANGED] blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism permanently INVALIDATED — wp-login.php sets `wordpress_test_cookie` with `secure` flag + host-only scope; WP auth cookies host-scoped to www.derdack.com, cannot traverse 302→301 HTTP redirect; residual = missing HSTS only (LOW)
 [CHANGED] api.signl4.com/api/v2/teams unauth GET returns 405 Allow:GET,POST (not 401) confirmed 10th+ cycles — stable auth-deferred-to-handler behavior
@@ -43,6 +46,7 @@ testability: PASSIVE
 [PARKED] Device-code flow token issuance bypassing interactive login: confidence 45; deviceauthorization endpoint live (400 invalid_client w/o secret) but still client_secret-gated — same blocker as password grant; only actionable post-secret-leak
 [PARKED] Prod IdP config drift vs staging (grant/auth_methods parity check): confidence 45; no standalone exploit path; evidence-only for cross-env AUTH finding
 [PARKED] CIBA grant reachable without client_secret: confidence 40; /identity/connect/ciba returns 400 on bare GET across prod+staging — handler reached but auth_methods exclude `none`; speculative without secret-free client
+[PARKED] API spec-vs-implementation drift: real but LOW impact — doesn't bypass auth, just confuses consumers
 [FINAL] 1) devconnect.signl4.com/identity/connect/token cross-env token forgery (AUTH, 85) — strongest finding, blocked on client_secret (AUTH_HELPED)
 [FINAL] 2) api.signl4.com/api/v2/teams cross-env token acceptance (AUTH, 80) — blocked on token acquisition (AUTH_HELPED)
 [FINAL] 3) www.derdack.com/de/xmlrpc.php XML-RPC unauthenticated read methods (AUTH, 60) — passive verifiable, MEDIUM
@@ -55,4 +59,4 @@ testability: PASSIVE
 [LEARN] REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect / OAuth code-theft primitive
 [LEARN] ACCEPTED AUTH @ connect/api/devconnect/devapi.signl4.com: 10th deep-equal of byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — shared prod signing key confirmed across 4 identity hosts; stable, no drift
 [LEARN] ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and scope set — cross-env client reuse confirmed
-[RISK] derdack: 82 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devapi/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant + client_credentials + PAR on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra
+[RISK] derdack: 86 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devapi/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant + client_credentials + PAR on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra

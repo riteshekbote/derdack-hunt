@@ -1,37 +1,44 @@
-## 2026-09-09 14:48:23 UTC [target] (model bigpickle)
-[HYP] API key transmitted via query parameter enables referrer-based credential leakage
-class: AUTH
-asset: api.signl4.com/api/v2/* and connect.signl4.com/api/v2/*
-confidence: 78
-reasoning: Query parameter `?x-s4-api-key=<key>` confirmed LIVE (403 "API Key is invalid" vs 401 when no key provided); any external link, referrer header, browser history, proxy access log, or CDN log that includes a URL with the query-param key exposes the API credential; the swagger spec explicitly declares `API_Key_Query` as an accepted scheme alongside `API_Key_Header`, confirming this is intentional design; if any SIGNL4 integration or documentation page links to an API endpoint with a key in the query string, the key is leaked
-evidence_needed: (1) any integration page / sample URL / documentation that includes `?x-s4-api-key=` with a real key; (2) CDN/proxy log exposure; (3) browser referrer leakage during cross-origin navigation from a signl4.com page to an API endpoint
-verify_steps: PASSIVE — search for public URLs containing `x-s4-api-key` query parameter; check referrer-policy header on API responses (already confirmed: `strict-origin-when-cross-origin` — only leaks to same-origin, no cross-origin referrer leakage)
-impact: API key leakage via referrer/logs if query-param auth used; enables full API CRUD (alerts/teams/webhooks/subscriptions/schedules/users) for any affected tenant; MEDIUM severity (requires existing key to be in a leaked URL)
+## 2026-09-09 18:12:46 UTC [target] (model bigpickle)
+[NEW] No new probes executed since last cycle (2026-09-09 14:50:14 UTC)  
+[CHANGED] Cross-env token forgery chain fully documented: shared RS256 key + shared client_id + swagger-confirmed OAuth2 API access + staging password grant + prod twin; blocked on client_secret  
+[CHANGED] API key query-param auth confirmed live on both api.signl4.com and connect.signl4.com (403 "API Key is invalid" vs 401 when absent); dual auth pipeline established  
+[CHANGED] API spec empty security requirement confirmed (LOW impact; spec-vs-implementation mismatch)
+[PRIO] api.signl4.com/api/v2/*,8.5,a=8,b=9,t=9,g=3,c=8,f=9  
+[PRIO] connect.signl4.com/api/v2/*,8.25,a=7,b=9,t=9,g=3,c=8,f=9  
+[PRIO] devconnect.signl4.com/identity/connect/token,8.25,a=7,b=9,t=9,g=5,c=8,f=9
+[HYP] API key transmitted via query parameter enables referrer-based credential leakage  
+class: AUTH  
+asset: api.signl4.com/api/v2/* and connect.signl4.com/api/v2/*  
+confidence: 78  
+reasoning: Query parameter `?x-s4-api-key=<key>` confirmed LIVE (403 "API Key is invalid" vs 401 when no key provided); any external link, referrer header, browser history, proxy access log, or CDN log that includes a URL with the query-param key exposes the API credential; the swagger spec explicitly declares `API_Key_Query` as an accepted scheme alongside `API_Key_Header`, confirming this is intentional design; if any SIGNL4 integration or documentation page links to an API endpoint with a key in the query string, the key is leaked  
+evidence_needed: (1) any integration page / sample URL / documentation that includes `?x-s4-api-key=` with a real key; (2) CDN/proxy log exposure; (3) browser referrer leakage during cross-origin navigation from a signl4.com page to an API endpoint  
+verify_steps: PASSIVE — search for public URLs containing `x-s4-api-key` query parameter; check referrer-policy header on API responses (already confirmed: `strict-origin-when-cross-origin` — only leaks to same-origin, no cross-origin referrer leakage)  
+impact: API key leakage via referrer/logs if query-param auth used; enables full API CRUD (alerts/teams/webhooks/subscriptions/schedules/users) for any affected tenant; MEDIUM severity (requires existing key to be in a leaked URL)  
 testability: AUTH_HELPED
-[HYP] API key accepted at connect.signl4.com (API gateway) bypassing api.signl4.com routing
-class: OTHER
-asset: connect.signl4.com/api/v2/*
-confidence: 82
-reasoning: api.signl4.com/api/v2/* confirmed Bearer-gated (401) while connect.signl4.com/api/v2/teams with query-param API key returns 403 "API Key is invalid" (not 401); the two hosts share the same `request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd` confirming shared backend; connect.signl4.com accepts API keys via query param while api.signl4.com returns 401 for the same unauthenticated request — the API gateway routes both Bearer and API key auth through the same backend; swagger.json served from connect.signl4.com/api/docs/v2/swagger.json confirms the API is documented and routable through the connect host
-evidence_needed: (1) valid API key accepted at connect.signl4.com/api/v2/teams (200 vs 403); (2) confirmation that connect.host API key auth and api.host API key auth return the same tenant data
-verify_steps: PASSIVE — swagger confirms API routes are routable through connect host; shared appId proves backend identity; already confirmed API key validation pipeline active on both hosts
-impact: Two separate entry points to the same API backend with different auth-error responses (403 on connect, 401 on api) — attack surface doubled for credential-stuffing/brute-force against API keys (though excluded from scope); MEDIUM
+[HYP] API key accepted at connect.signl4.com (API gateway) bypassing api.signl4.com routing  
+class: OTHER  
+asset: connect.signl4.com/api/v2/*  
+confidence: 82  
+reasoning: api.signl4.com/api/v2/* confirmed Bearer-gated (401) while connect.signl4.com/api/v2/teams with query-param API key returns 403 "API Key is invalid" (not 401); the two hosts share the same `request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd` confirming shared backend; connect.signl4.com accepts API keys via query param while api.signl4.com returns 401 for the same unauthenticated request — the API gateway routes both Bearer and API key auth through the same backend; swagger.json served from connect.signl4.com/api/docs/v2/swagger.json confirms the API is documented and routable through the connect host  
+evidence_needed: (1) valid API key accepted at connect.signl4.com/api/v2/teams (200 vs 403); (2) confirmation that connect.host API key auth and api.host API key auth return the same tenant data  
+verify_steps: PASSIVE — swagger confirms API routes are routable through connect host; shared appId proves backend identity; already confirmed API key validation pipeline active on both hosts  
+impact: Two separate entry points to the same API backend with different auth-error responses (403 on connect, 401 on api) — attack surface doubled for credential-stuffing/brute-force against API keys (though excluded from scope); MEDIUM  
 testability: PASSIVE
-[HYP] Cross-environment token forgery: staging IdP issues tokens valid at prod API
-class: AUTH
-asset: api.signl4.com/api/v2/*
-confidence: 88
-reasoning: swagger.json confirms API accepts OAuth2 Bearer tokens from connect.signl4.com/identity/connect/token; 4 identity hosts share byte-identical RS256 JWKS (11th deep-equal); shared client_id 692A0A56 on both prod and staging /manage redirects; staging IdP (devconnect) enables password+device_code+CIBA grants alongside authorization_code; prod IdP is parametric twin; a token signed by the shared key would be accepted at prod API with public_api_read+write scopes
-evidence_needed: valid access_token from staging IdP accepted at prod /api/v2/teams (200 vs 401)
-verify_steps: (AUTH_HELPED) POST devconnect.signl4.com/identity/connect/token with client_id=692A0A56&client_secret=<valid>&grant_type=authorization_code; then GET api.signl4.com/api/v2/teams Authorization: Bearer <token>
-impact: staging credential → prod API full CRUD; CRITICAL
+[HYP] Cross-environment token forgery: staging IdP issues tokens valid at prod API  
+class: AUTH  
+asset: api.signl4.com/api/v2/*  
+confidence: 88  
+reasoning: swagger.json confirms API accepts OAuth2 Bearer tokens from connect.signl4.com/identity/connect/token; 4 identity hosts share byte-identical RS256 JWKS (11th deep-equal); shared client_id 692A0A56 on both prod and staging /manage redirects; staging IdP (devconnect) enables password+device_code+CIBA grants alongside authorization_code; prod IdP is parametric twin; a token signed by the shared key would be accepted at prod API with public_api_read+write scopes  
+evidence_needed: valid access_token from staging IdP accepted at prod /api/v2/teams (200 vs 401)  
+verify_steps: (AUTH_HELPED) POST devconnect.signl4.com/identity/connect/token with client_id=692A0A56&client_secret=<valid>&grant_type=authorization_code; then GET api.signl4.com/api/v2/teams Authorization: Bearer <token>  
+impact: staging credential → prod API full CRUD; CRITICAL  
 testability: AUTH_HELPED
-[PARKED] Connect host API key routing: both hosts share same backend (shared appId); API key works on both; not independently exploitable — informational only.
-[FINAL] 1) Cross-env token forgery (AUTH, 88) — full chain documented, blocked on client_secret
-[FINAL] 2) API key via query param (AUTH, 78) — live confirmed, referrer leakage vector exists but mitigated by strict-origin referrer-policy
+[PARKED] API spec empty security (MISCONFIG, 45): real spec defect but LOW impact — doesn't bypass auth, just confuses consumers
+[FINAL] 1) Cross-env token forgery (AUTH, 88) — full chain documented, blocked on client_secret  
+[FINAL] 2) API key via query param (AUTH, 78) — live confirmed, referrer leakage vector exists but mitigated by strict-origin referrer-policy  
 [FINAL] 3) API spec empty security (MISCONFIG, 45) — real spec defect, LOW impact
 [NEXT] RAG: search for any public SIGNL4 integration guides, Zapier/Make/Power Automate templates, or developer documentation that includes sample API URLs with `?x-s4-api-key=` query parameter — would confirm real-world referrer leakage path; also search for any SIGNL4 npm/pip/PyPI client SDKs that default to query-param auth.
-[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational — first live test confirms API key validation pipeline
-[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json` — distinct auth pipelines with different error responses confirm independent validation paths
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational — first live test confirms API key validation pipeline  
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json` — distinct auth pipelines with different error responses confirm independent validation paths  
 [LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
 [RISK] derdack: 86 — SIGNL4 API V2 has two independent auth pipelines (Bearer JWT + API key via header/query); cross-env trust anchor (shared RS256 key across 4 identity hosts) is stable for 7+ days with zero drift; API key query-param auth confirmed live (MEDIUM referrer leakage risk mitigated by strict-origin referrer-policy); prod IdP parametric twin of staging with password/device_code/CIBA grants; all OAuth flows client_secret-gated (AUTH_HELPED); remaining high-value vector is credential-dependent chaining only; the API spec empty security requirement is a real but LOW finding
