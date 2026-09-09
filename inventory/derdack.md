@@ -435,3 +435,11 @@ www.derdack.com
 - NEW api.signl4.com/api/v2/teams: unauth GET returns 405 Allow:GET,POST (not 401); invalid Bearer also 405 — auth validation deferred to handler, not route layer (10th+ live confirmation)
 - NEW devconnect.signl4.com/identity/connect/token password grant: returns `invalid_client` without client_secret — grant listed but not usable without secrets (live re-verified)
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade: session-theft mechanism permanently invalidated (wp-login.php sets `wordpress_test_cookie` with `secure` flag + host-only scope); residual =
+
+## 2026-09-09 01:16:30 UTC
+- NEW devapi.signl4.com confirmed as 4th identity host serving byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — 10th live deep-equal verification across connect/api/devconnect
+- NEW devconnect.signl4.com OIDC discovery: NO `registration_endpoint` field; `token_endpoint_auth_methods_supported` only `client_secret_basic`/`client_secret_post` (no `none`) — dynamic client registratio
+- NEW connect.signl4.com/api/v3 route map fully confirmed: bare 404 vs registered subroutes (users/teams/webhooks/subscriptions/schedules/devices/csp/report) returning 401/405 — auth-before-route at handler
+- CHANGED Dynamic client registration hypothesis permanently REJECTED — RFC 7591 unsupported on staging IdentityServer (no registration_endpoint, no `none` auth method)
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism permanently INVALIDATED — wp-login.php sets `wordpress_test_cookie` with `secure` flag + host-only scope (no Domain=.
+- CHANGED api.signl4.com/api/v2/teams unauth GET returns 405 Allow:GET,POST (not 401) confirmed 10th+ cycles — stable auth-deferred-to-handler behavior

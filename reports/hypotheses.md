@@ -774,3 +774,22 @@
 - LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without 
 - LEARN: ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler, not route layer
 - LEARN: ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect/devapi at 10th deep-equal observation — cross-env trust anchor r
+
+## RANKED HYPOTHESES 2026-09-09 01:16:30 UTC
+- [85] devconnect.signl4.com/identity/connect/token: Cross-environment token forgery via shared RS256 key + staging password grant (from art/lead_nemotron3.txt)
+- [85] devconnect.signl4.com/identity/connect/token: Cross-env token forgery via parametric-twin IdPs (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): RAG: search public SIGNL4/Derdack integration docs, GitHub/hub configs, and helpcenter articles for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and any publi
+- NEXT(hypotheses-nemotron3.txt): PROBE: POST https://www.derdack.com/de/xmlrpc.php Content-Type: text/xml body=<methodCall><methodName>wp.getUsers</methodName><params><param><value><string></st
+- LEARN: REJECTED AUTH @ connect.signl4.com/identity: OIDC discovery byte-identical to devconnect (password/device_code/ciba/token-exchange grants, secret-only auth meth
+- LEARN: REJECTED AUTH @ connect+devconnect /identity/connect/token-exchange: 404 on both hosts — RFC8693 not a standalone endpoint (grant on /connect/token); closed
+- LEARN: ACCEPTED AUTH @ connect+devconnect /identity/connect/ciba + deviceauthorization: both 400 across envs — endpoint twins, all secret-gated
+- LEARN: ACCEPTED MISCONFIG @ devapi.signl4.com: live 1:1 staging API mirror of api.signl4.com (appId cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7), root→devaccount/manag
+- LEARN: ACCEPTED MISCONFIG @ api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycle
+- LEARN: REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie w
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without 
+- LEARN: ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler, not route layer (10th+ live c
+- LEARN: ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect/devapi at 10th deep-equal observation — cross-env trust anchor r
+- LEARN: REJECTED AUTH @ devconnect.signl4.com: no registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client
+- LEARN: REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect /
+- LEARN: ACCEPTED AUTH @ connect/api/devconnect/devapi.signl4.com: 10th deep-equal of byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — sha
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA
