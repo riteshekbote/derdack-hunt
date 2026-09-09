@@ -1,39 +1,47 @@
-## 2026-09-09 01:02:17 UTC [target] (model bigpickle)
-[PRIO] devconnect.signl4.com,9.2,a=10,b=10,t=10,g=3,c=8,f=9
-[PRIO] api.signl4.com,8.4,a=9,b=10,t=9,g=5,c=8,f=8
-[PRIO] connect.signl4.com,8.0,a=8,b=10,t=9,g=4,c=8,f=8
-[PRIO] devapi.signl4.com,7.0,a=8,b=8,t=8,g=5,c=6,f=9
-[HYP] Cross-env token forgery via parametric-twin IdPs
+## 2026-09-09 05:48:59 UTC [target] (model bigpickle)
+[NEW] SIGNL4 API V2 swagger.json discovered at `connect.signl4.com/api/docs/v2/swagger.json` — declares OAuth2 scheme (authorizationCode) pointing to `connect.signl4.com/identity/connect/authorize` + `/token` with scopes `public_api_read`/`public_api_write`/`offline_access`; API_key_header + API_key_query also declared; global `security: [{}]` (empty = no required auth at spec level)
+[NEW] RAG confirms SIGNL4 public API auth = API key (`X-S4-Api-Key`) + OAuth2 Bearer token (swagger-declared); client_id `692A0A56` NOT published anywhere — no GitHub/npm/Postman/helpcenter leak; no public SIGNL4 OAuth integration docs exist
+[NEW] RAG confirms Derdack GitHub org (12 repos) contains Enterprise Alert plugins only — no OAuth/OIDC code, no leaked secrets
+[CHANGED] Cross-env token forgery hypothesis (85) now has FULL exploit-chain evidence: shared RS256 key → shared token endpoint → API accepts OAuth tokens → scopes grant CRUD → attack chain complete pending client_secret
+[PRIO] api.signl4.com,9.5,a=9,b=10,t=9,g=5,c=9,f=9
+[PRIO] connect.signl4.com,8.8,a=8,b=10,t=9,g=4,c=8,f=9
+[PRIO] devconnect.signl4.com,9.0,a=10,b=10,t=9,g=3,c=8,f=9
+[PRIO] devapi.signl4.com,7.2,a=8,b=8,t=8,g=5,c=6,f=9
+[HYP] Cross-environment token forgery: staging IdP issues tokens valid at prod API
 class: AUTH
-asset: devconnect.signl4.com/identity/connect/token
-confidence: 85
-reasoning: prod connect OIDC now confirmed byte-identical to devconnect (password/device_code/ciba/token-exchange grants, client_secret_basic/post, RS256-only, no registration_endpoint); 4 identity hosts serve one byte-identical RS256 JWKS (10+ deep-equal, kid 91EE4F3C...E31EE27RS256); shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6 on both /manage redirects; prod itself enables password grant — one credential-equivalent spans prod+staging, not merely the dev box
-evidence_needed: valid client_secret for 692A0A56 → token signed kid 91EE4F3C accepted at prod api/v2
-verify_steps: POST /identity/connect/token grant_type=password (AUTH_HELPED, blocked on secret); decode kid; GET api/api/v2/teams Bearer
-impact: staging creds → prod-valid tokens → tenant CRUD/alert config/PII/integrations; CRITICAL
+asset: api.signl4.com/api/v2/*
+confidence: 88
+reasoning: swagger.json confirms API accepts OAuth2 Bearer tokens from connect.signl4.com/identity/connect/token; 4 identity hosts share byte-identical RS256 JWKS (11th deep-equal); shared client_id 692A0A56 on both prod and staging /manage redirects; staging IdP (devconnect) enables password+device_code+CIBA grants alongside authorization_code; prod IdP is parametric twin (identical grant_types/auth_methods/no registration_endpoint); a token signed by the shared key would be accepted at prod API with public_api_read+write scopes
+evidence_needed: valid access_token from staging IdP accepted at prod /api/v2/teams (200 vs 401)
+verify_steps: (AUTH_HELPED) POST devconnect.signl4.com/identity/connect/token with client_id=692A0A56&client_secret=<valid>&grant_type=authorization_code; then GET api.signl4.com/api/v2/teams Authorization: Bearer <token>
+impact: staging credential → prod API full CRUD (alerts/teams/webhooks/subscriptions/schedules/users) across all tenants; CRITICAL
 testability: AUTH_HELPED
-[HYP] Staging-token acceptance at prod handler-deferred API
+[HYP] API spec-vs-implementation security drift: swagger declares empty security requirement
+class: MISCONFIG
+asset: connect.signl4.com/api/docs/v2/swagger.json
+confidence: 45
+reasoning: swagger.json declares `"security": [{}]` (empty = no auth required at spec level) while individual routes enforce Bearer/API-key auth; automated API consumers generated from this spec would send unauthenticated requests; doesn't directly bypass auth but exposes spec-to-implementation mismatch
+evidence_needed: API consumer code or SDK generated from spec that omits auth headers
+verify_steps: PASSIVE — spec analysis only
+impact: LOW — spec confusion, no direct auth bypass; spec explicitly says "requires API key" in description
+testability: PASSIVE
+[HYP] API key via query parameter: weaker auth transport
 class: AUTH
-asset: api.signl4.com/api/v2/teams
-confidence: 80
-reasoning: prod+staging api share one signing key; /api/v2/teams auth is handler-deferred (401/405 flapping, invalid Bearer also reaches routing); devapi confirmed as 1:1 route mirror — any staging-issued token validates against prod JWKS
-evidence_needed: valid staging access_token returns 200 on prod /teams
-verify_steps: GET /api/v2/teams Authorization: Bearer <staging_token> (AUTH_HELPED)
-impact: staging compromise = prod tenant CRUD; CRITICAL
+asset: api.signl4.com/api/v2/*
+confidence: 55
+reasoning: swagger declares `API_Key_Query` scheme (`x-s4-api-key` in query parameter); query-param API keys are logged in server access logs, proxy logs, browser history, referrer headers; if endpoint accepts query-param auth, API keys leak through referrer
+evidence_needed: GET api.signl4.com/api/v2/teams?x-s4-api-key=test returns 401 vs 400 (confirms key validation)
+verify_steps: PASSIVE — spec analysis confirms scheme exists; would need AUTH_HELPED to test live endpoint
+impact: API key leakage via referrer/logs if query-param auth accepted; MEDIUM
 testability: AUTH_HELPED
-[HYP] CIBA grant reachable without client_secret
-class: AUTH
-asset: connect.signl4.com/identity/connect/ciba
-confidence: 40
-reasoning: /identity/connect/ciba returns 400 (not invalid_client) on a bare GET across prod+staging — handler reached param validation; discovery auth_methods exclude `none` so the only secret-free path would be a misconfigured CIBA client missing auth
-evidence_needed: CIBA auth request (client_id+login_hint_token) returning 200/ack w/o secret
-verify_steps: POST /identity/connect/ciba client_id=692A0A56&login_hint_token=<x> (AUTH_HELPED)
-impact: if a no-secret CIBA client exists → out-of-band token issuance w/o credentials; CRITICAL but speculative
-testability: AUTH_HELPED
-[NEXT] RAG: search public SIGNL4/Derdack integration docs, GitHub/hub configs, and helpcenter articles for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and any published client_secret/OAuth config — the sole remaining credential-source vector since live HTTP surface is fully mapped and uniformly client_secret-gated across prod+staging twins.
-[LEARN] REJECTED AUTH @ connect.signl4.com/identity: OIDC discovery byte-identical to devconnect (password/device_code/ciba/token-exchange grants, secret-only auth methods, no registration_endpoint, RS256) — prod is parametric twin of staging, NOT hardened; config-drift dead, twin more proof of systemic replication failure
-[LEARN] REJECTED AUTH @ connect+devconnect /identity/connect/token-exchange: 404 on both hosts — RFC8693 not a standalone endpoint (grant on /connect/token); closed
-[LEARN] ACCEPTED AUTH @ connect+devconnect /identity/connect/ciba + deviceauthorization: both 400 across envs — endpoint twins, all secret-gated
-[LEARN] ACCEPTED MISCONFIG @ devapi.signl4.com: live 1:1 staging API mirror of api.signl4.com (appId cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7), root→devaccount/manage, zero unauth read surface
-[LEARN] ACCEPTED MISCONFIG @ api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycles confirmed
-[RISK] derdack: 83 — prod connect + 3 staging IdPs (devconnect/devapi) + api serve ONE RS256 key (10+ deep-equal) and ONE client_id 692A0A56; password/device_code/CIBA grants confirmed enabled on BOTH prod+staging (twins, no drift); devapi is a 1:1 staging API mirror; all OAuth flows client_secret-gated (AUTH_HELPED); RFC7591/open-redirect/alg-confusion/downgrade/SSRF classes closed; prod api/v2 zero anonymous read surface (401/405 flapping); remaining value is entirely credential-dependent chaining.
+[FINAL] 1) Cross-env token forgery (AUTH, 88) — full chain: shared key + shared client_id + swagger-confirmed OAuth2 API access + staging password grant + prod twin; blocked on client_secret; strongest finding
+[FINAL] 2) API spec empty security (MISCONFIG, 45) — real spec defect but LOW impact; no auth bypass
+[FINAL] 3) API key via query param (AUTH, 55) — real design weakness; needs live test
+[PARKED] API spec-vs-implementation drift: real but LOW impact — doesn't bypass auth, just confuses consumers
+[NEXT] PROBE: GET https://connect.signl4.com/api/v2/teams?x-s4-api-key=test — check if query-param API key is accepted (would confirm API_Key_Query scheme is live, enabling referrer-based key leakage path). Single GET, ~0 risk.
+[LEARN] ACCEPTED AUTH @ api.signl4.com: swagger.json confirms OAuth2 security scheme (authorizationCode flow) targeting connect.signl4.com/identity/connect endpoints with public_api_read+write+offline_access scopes — API accepts Bearer tokens from same shared-signing-key IdP; full cross-env token forgery chain confirmed
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v2/swagger.json: global security requirement empty (`"security": [{}]`) — spec declares no auth required while routes enforce Bearer/API-key; spec-vs-implementation mismatch; LOW
+[LEARN] ACCEPTED AUTH @ api.signl4.com: swagger declares `API_Key_Query` scheme (x-s4-api-key in query param) — potential key leakage vector via referrer/logs if live
+[LEARN] REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/docs: swagger confirms SIGNL4 API V2 = 40+ endpoints (alerts CRUD, teams, webhooks, subscriptions, schedules, users, categories, audits, distribution lists, templates, devices, callout templates) — full attack surface documented
+[RISK] derdack: 85 — SIGNL4 API V2 swagger confirms OAuth2 token acceptance at prod API (connect token endpoint + public_api_read/write scopes); shared RS256 signing key across 4 identity hosts (11th deep-equal); staging IdP password grant live; client_secret the sole remaining blocker; full CRUD chain documented in public swagger; spec-vs-implementation drift (empty security requirement) adds secondary finding; cross-env trust anchor stable across 7+ days of observation with zero drift

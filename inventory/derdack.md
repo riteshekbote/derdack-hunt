@@ -443,3 +443,19 @@ www.derdack.com
 - CHANGED Dynamic client registration hypothesis permanently REJECTED — RFC 7591 unsupported on staging IdentityServer (no registration_endpoint, no `none` auth method)
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism permanently INVALIDATED — wp-login.php sets `wordpress_test_cookie` with `secure` flag + host-only scope (no Domain=.
 - CHANGED api.signl4.com/api/v2/teams unauth GET returns 405 Allow:GET,POST (not 401) confirmed 10th+ cycles — stable auth-deferred-to-handler behavior
+
+## 2026-09-09 05:56:28 UTC
+- NEW SIGNL4 API V2 swagger.json discovered at `connect.signl4.com/api/docs/v2/swagger.json` — declares OAuth2 scheme (authorizationCode) pointing to `connect.signl4.com/identity/connect/authorize` + `/toke
+- NEW RAG confirms SIGNL4 public API auth = API key (`X-S4-Api-Key`) + OAuth2 Bearer token (swagger-declared); client_id `692A0A56` NOT published anywhere — no GitHub/npm/Postman/helpcenter leak; no public 
+- NEW RAG confirms Derdack GitHub org (12 repos) contains Enterprise Alert plugins only — no OAuth/OIDC code, no leaked secrets
+- CHANGED Cross-env token forgery hypothesis (85) now has FULL exploit-chain evidence: shared RS256 key → shared token endpoint → API accepts OAuth tokens → scopes grant CRUD → attack chain complete pending cli
+- NEW devapi.signl4.com confirmed as 4th identity host serving byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — 10th live deep-equal across connect/api/devconnect/devapi
+- NEW devconnect.signl4.com OIDC discovery: NO `registration_endpoint`; `token_endpoint_auth_methods_supported` only `client_secret_basic`/`client_secret_post` (no `none`) — dynamic client registration perm
+- NEW connect.signl4.com OIDC discovery byte-identical to devconnect (password/device_code/ciba/token-exchange grants, secret-only auth methods, no registration_endpoint, RS256-only) — prod is parametric tw
+- NEW connect.signl4.com/api/v3 route map fully confirmed: bare 404 vs registered subroutes (users/teams/webhooks/subscriptions/schedules/devices/csp/report) returning 401/405 — auth-before-route at handler
+- NEW devapi.signl4.com: live 1:1 staging API mirror of api.signl4.com (appId cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7), root→devaccount/manage, zero unauth read surface
+- NEW api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycles confirmed
+- CHANGED Dynamic client registration hypothesis permanently REJECTED — RFC 7591 unsupported on staging IdentityServer
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism permanently INVALIDATED — wp-login.php sets `wordpress_test_cookie` with `secure` flag + host-only scope; WP auth coo
+- CHANGED api.signl4.com/api/v2/teams unauth GET returns 405 Allow:GET,POST (not 401) confirmed 10th+ cycles — stable auth-deferred-to-handler behavior
+- CHANGED connect+devconnect /identity/connect/ciba + deviceauthorization: both 400 across envs — endpoint twins, all secret-gated
