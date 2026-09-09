@@ -508,3 +508,5 @@ www.derdack.com
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism permanently INVALIDATED — wp-login.php sets `wordpress_test_cookie` with `secure` flag + host-only scope; WP auth coo
 - CHANGED api.signl4.com/api/v2/teams unauth GET returns 405 Allow:GET,POST (not 401) confirmed 10th+ cycles — stable auth-deferred-to-handler behavior
 - CHANGED Cross-env token forgery chain fully documented: shared RS256 key + shared client_id + swagger-confirmed OAuth2 API access + staging password grant + prod twin; blocked on client_secret
+
+## 2026-09-09 23:14:42 UTC

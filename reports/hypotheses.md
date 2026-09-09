@@ -885,3 +885,5 @@
 - LEARN: REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect /
 - LEARN: ACCEPTED AUTH @ connect/api/devconnect/devapi.signl4.com: 10th deep-equal of byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — sha
 - LEARN: ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA
+
+## RANKED HYPOTHESES 2026-09-09 23:14:42 UTC
