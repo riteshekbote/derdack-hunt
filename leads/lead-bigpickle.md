@@ -1890,3 +1890,44 @@ testability: AUTH_HELPED
 [LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json` — distinct auth pipelines with different error responses confirm independent validation paths  
 [LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
 [RISK] derdack: 86 — SIGNL4 API V2 has two independent auth pipelines (Bearer JWT + API key via header/query); cross-env trust anchor (shared RS256 key across 4 identity hosts) is stable for 7+ days with zero drift; API key query-param auth confirmed live (MEDIUM referrer leakage risk mitigated by strict-origin referrer-policy); prod IdP parametric twin of staging with password/device_code/CIBA grants; all OAuth flows client_secret-gated (AUTH_HELPED); remaining high-value vector is credential-dependent chaining only; the API spec empty security requirement is a real but LOW finding
+## 2026-09-09 21:00:44 UTC [target] (model bigpickle)
+[PRIO] devconnect.signl4.com/identity/connect/token,8.4,a=9,b=9,t=8,g=3,c=9,f=9
+[PRIO] connect.signl4.com/api/v2/*,7.9,a=9,b=9,t=6,g=4,c=9,f=8
+[PRIO] connect.signl4.com/webhook/*,7.6,a=8,b=8,t=5,g=8,c=8,f=8
+[HYP] Staging IdP token accepted at prod API via shared RS256 key + shared client_id
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token → api.signl4.com/api/v2/teams
+confidence: 85
+reasoning: 4 identity hosts byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, 10x deep-equal, zero drift); devaccount+account /manage both redirect with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and full scope set (incl public_api_read/write/prov); prod discovery is byte-parametric twin of staging incl password+device_code+CIBA grants; swagger confirms API accepts OAuth2 authorizationCode Bearer from connect identity; chain complete, gated on client_secret
+evidence_needed: POST staging token endpoint with client_secret + grant → access_token; GET prod api/v2/teams Bearer <token> → 200
+verify_steps: (AUTH_HELPED) POST devconnect.signl4.com/identity/connect/token grant_type=authorization_code&client_id=692A0A56&client_secret=<valid>&code=<code>; GET api.signl4.com/api/v2/teams Authorization: Bearer <token>
+impact: any staging credential → prod API full CRUD (alerts/teams/webhooks/subscriptions/users); CRITICAL
+testability: AUTH_HELPED
+[HYP] URL-embedded webhook team-secret enables alert injection + suppression of genuine alerts if leaked
+class: BUSLOGIC
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 50
+reasoning: 15+ official integrations hardcode secret in URL/path (stored in 3rd-party config DBs, YAML, IoT firmware); webhook can ack/resolve real alerts via X-S4-ExternalID+X-S4-Status (documented) and inject fake critical alerts; secret is static/non-rotatable (delete+recreate); no public leak located this cycle
+evidence_needed: (1) any leaked real secret in public code/config; (2) POST /webhook/<leak> with X-S4-Status=resolved alters a genuine alert
+verify_steps: PASSIVE — grep.app/GitHub code search for `connect.signl4.com/webhook/` once rate-limit clears; if a live secret surfaces, POST read-only-entitled payload is HUMAN decision (program excludes customer-auth-data testing)
+impact: alert spoofing + suppression of real on-call incidents → incident-response integrity loss; HIGH if leak found
+testability: PASSIVE (leak hunt) / AUTH_HELPED (confirmation)
+[HYP] API key accepted via query parameter leaks credential through referrer/logs
+class: AUTH
+asset: api.signl4.com/api/v2/* & connect.signl4.com/api/v2/*
+confidence: 55
+reasoning: `?x-s4-api-key=<key>` live-confirmed (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer header vs problem+json 403) established; swagger declares API_Key_Query scheme; BUT zero public docs/samples/integrations use query-param auth and referrer-policy strict-origin-when-cross-origin mitigates cross-origin leak; swagger/spec inconsistency remains real
+evidence_needed: any real-world URL using `?x-s4-api-key=` with live key, or CDN/log artifact
+verify_steps: PASSIVE — ongoing code-search sweep for `x-s4-api-key` param usage; no live probe needed
+impact: if a key ever rides a query URL into 3rd-party logs/referrer → tenant CRUD compromise; MEDIUM conditional
+testability: PASSIVE
+[PARKED] Query-param referrer leak (AUTH, 55): live-confirmed but RAG proves no real-world query-param usage; impact not demonstrable — swagger/spec defect only.
+[PARKED] Webhook URL-secret design (BUSLOGIC, 50): no leaked live secret found; program excludes customer-auth-data exposure testing; reportable as design-governance observation only.
+[FINAL] 1) Cross-env token forgery (AUTH, 85) — full chain documented, only client_secret-gated verification remains.
+[FINAL] 2) API spec empty security requirement (MISCONFIG, 45) — real spec defect, LOW.
+[FINAL] 3) /api/v2/teams 405↔401 auth-status flapping (MISCONFIG, 40) — handler vs route-layer auth inconsistency, informational.
+[NEXT] PROBE (AUTH_HELPED): POST https://devconnect.signl4.com/identity/connect/token body=`grant_type=authorization_code&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<vendor-provided>&redirect_uri=https://devaccount.signl4.com/callback&code=<code>`, then GET https://api.signl4.com/api/v2/teams `Authorization: Bearer <access_token>` — 200 vs 401 seals the CRITICAL cross-env finding. Requires granted staging creds (blocked on client_secret since 2026-09-05).
+[LEARN] ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → referrer-leak impact not demonstrable.
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated).
+[LEARN] REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content this cycle — credential-leak hypothesis has no current evidence.
+[RISK] derdack: 62 — Mutating/IDOR/BOLA surfaces all gated (XML-RPC 403, API Bearer/API-key 401/403, OAuth client_secret-gated); standout is the cross-env identity-isolation failure (shared RS256 key + client_id 692A0A56 across 4 hosts incl. prod/staging) elevating any staging credential to prod API CRUD; spec-level defects (empty swagger security, query-param key scheme) are real but LOW; no current public credential leak identified; residual unknowns gated on credentials Derdack must supply to close the critical chain.
