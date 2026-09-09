@@ -19,3 +19,9 @@
 - 2 lead(s) marked VALID at 2026-09-08 10:34:26 UTC
   - **VERDICT: VALID**
   - **VERDICT: VALID**
+
+- 4 lead(s) marked VALID at 2026-09-09 06:38:04 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+  - | 1 | Cross-Env JWKS Key + Client/Scope Reuse | **VALID** | 7.4 |
+  - | 6 | Staging IdP Directly Reachable | **VALID** | 6.5 |
