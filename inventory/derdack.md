@@ -471,3 +471,12 @@ www.derdack.com
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism permanently INVALIDATED — wp-login.php sets `wordpress_test_cookie` with `secure` flag + host-only scope; WP auth coo
 - CHANGED api.signl4.com/api/v2/teams unauth GET returns 405 Allow:GET,POST (not 401) confirmed 10th+ cycles — stable auth-deferred-to-handler behavior
 - CHANGED connect+devconnect /identity/connect/ciba + deviceauthorization: both 400 across envs — endpoint twins, all secret-gated
+
+## 2026-09-09 14:50:14 UTC
+- NEW devapi.signl4.com confirmed as 4th identity host serving byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — 10th live deep-equal across connect/api/devconnect/devapi
+- NEW connect.signl4.com OIDC discovery byte-identical to devconnect (password/device_code/ciba/token-exchange grants, secret-only auth methods, no registration_endpoint, RS256-only) — prod is parametric tw
+- NEW api.signl4.com swagger.json declares OAuth2 authorizationCode flow targeting connect.signl4.com/identity/connect endpoints + API_Key_Query scheme (x-s4-api-key in query param)
+- NEW api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycles confirmed
+- CHANGED Dynamic client registration hypothesis permanently REJECTED — RFC 7591 unsupported on staging IdentityServer (no registration_endpoint, no `none` auth method)
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism permanently INVALIDATED — wp-login.php sets `wordpress_test_cookie` with `secure` flag + host-only scope; WP auth coo
+- CHANGED api.signl4.com/api/v2/teams unauth GET returns 405 Allow:GET,POST (not 401) confirmed 10th+ cycles — stable auth-deferred-to-handler behavior
