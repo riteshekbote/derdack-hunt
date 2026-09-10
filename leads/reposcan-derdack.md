@@ -213,3 +213,26 @@ TARGET_ORG not configured for derdack; skipping public-org deep scan.
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
 ## REPOSCAN 2026-09-10 20:08:09 UTC
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-10 22:38:03 UTC
+[HYP] Hardcoded MySQL Credentials in SIGNL4 MariaDB Integration Sample
+class: SECRET
+asset: signl4/signl4-integration-mysql-mariadb/db2signl.php:10-13
+confidence: 75
+reasoning: `STRING_DB_USER = "signl4"` and `STRING_DB_PASS = "signl4"` are hardcoded real credential values (not placeholders like `<password>`). While intended as sample code, users who deploy this without changing credentials expose a local MySQL instance with known username/password pair. The password `signl4` matches the database name, suggesting a default install pattern.
+impact: Low — Sample code only; impact depends on whether any deployment ships with these defaults. No Derdack-internal hostname exposed.
+verify_steps: Passive only: (1) Confirm repo ownership at github.com/signl4/signl4-integration-mysql-mariadb (2) Search GitHub code search for `STRING_DB_PASS = "signl4"` to see if any forks/deployments use this verbatim (3) No live infrastructure to probe — credentials are for localhost MySQL only.
+[HYP] SIGNL4 Team Secret Logged at INFO Level in ioBroker Adapter
+class: SECRET
+asset: signl4/ioBroker.signl4/main.js:40
+confidence: 85
+reasoning: Line 40: `this.log.info('config team_secret: ' + this.config.team_secret);` logs the SIGNL4 team secret to ioBroker's info-level log on adapter ready. This is a different repo from the prior finding in `derdack-integration-SIGNL4/js/WebhookGateway.js:41,87` (which logged at DEBUG level). INFO-level logs are typically retained longer and are more accessible than DEBUG logs in production ioBroker installations.
+impact: Medium — Team secret exposure in ioBroker log files. Any user with access to ioBroker admin/logs can read the secret and send arbitrary alerts to the SIGNL4 team. Impact取决于 whether the ioBroker adapter is deployed in production.
+verify_steps: Passive only: (1) Confirm repo ownership at github.com/signl4/ioBroker.signl4 (2) Check if ioBroker log files are typically stored in a world-readable location (3) Verify if the `this.log.info` call is present in the published npm package version (4) No live infrastructure to probe — this is a code-level finding.
+[HYP] Commented-Out SQL Server SA Credentials with Internal Derdack Hostname
+class: SECRET
+asset: signl4/signl4-integration-sql-server/db2signl.ps1:14
+confidence: 70
+reasoning: Line 14 contains a commented-out connection string: `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=none;Database=EnterpriseAlert2017`. This exposes: (1) internal Derdack hostname `sqlserver.derdack-support.local`, (2) SQL Server SA (sysadmin) account, (3) password `none`. While commented out and in a different file from the prior finding in `derdack-oncall-holidayimport/HolidayImport.js:16` (which had password `Derdack!`), this confirms the internal hostname pattern and shows a second credential variant for the same SA account.
+impact: Low — Commented-out code is not executed. However, it leaks an internal Derdack hostname and a second password variant for the SA account. If `sqlserver.derdack-support.local` resolves on any Derdack-internal network, the hostname disclosure is valuable for lateral movement.
+verify_steps: Passive only: (1) Confirm repo ownership (2) DNS-resolve `sqlserver.derdack-support.local` from external (should fail — internal only) (3) Compare with prior finding: HolidayImport.js has `PWD=Derdack!` while this has `PWD=none` — two password variants for the same SA account suggest credential rotation or multiple test environments.
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
