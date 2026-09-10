@@ -231,3 +231,4 @@
 - 2026-09-10 ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application, /signin-oidc 500 broken OIDC callback — devfix twin; Blazor estate family
 - 2026-09-10 ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, no security scheme, status-keyword query config (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404-invalid vs 201-eventId
 - 2026-09-10 ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: swagger confirms no security scheme, team secret in path, 404 vs 201 oracle — team-secret enumeration vector confirmed
+- 2026-09-10 ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline confirmed; swagger `API_Key_Query` scheme operational

@@ -1,7 +1,7 @@
-## 2026-09-10 14:29:02 UTC [target] (model bigpickle)
-[PRIO] connect.signl4.com/api/v2/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd, 6.2, attack_surface:8, business_value:7, tech_exposure:6, gate_ease:4, cloud_surface:5, freshness:7
-[PRIO] connect.signl4.com/api/prepaid/{subscriptionId}/prepaidSettings, 5.8, attack_surface:7, business_value:7, tech_exposure:6, gate_ease:4, cloud_surface:5, freshness:6
-[PRIO] connect.signl4.com/webhook/{teamSecret}, 5.5, attack_surface:7, business_value:6, tech_exposure:5, gate_ease:6, cloud_surface:4, freshness:5
+## 2026-09-10 17:50:49 UTC [target] (model bigpickle)
+[PRIO] connect.signl4.com/webhook/{teamSecret},5.5,attack_surface:7,business_value:6,tech_exposure:5,gate_ease:6,cloud_surface:4,freshness:5
+[PRIO] connect.signl4.com/api/v2/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd,6.2,attack_surface:8,business_value:7,tech_exposure:6,gate_ease:4,cloud_surface:5,freshness:7
+[PRIO] connect.signl4.com/api/prepaid/{subscriptionId}/prepaidSettings,5.8,attack_surface:7,business_value:7,tech_exposure:6,gate_ease:4,cloud_surface:5,freshness:6
 [HYP] BOLA on subscription invoice download (ZUGFeRD/en16931)
 class: IDOR
 asset: connect.signl4.com/api/v2/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
@@ -29,8 +29,11 @@ evidence_needed: leaked real teamSecret; POST ack/resolve against genuine alert
 verify_steps: PASSIVE grep.app/GitHub sweep for `webhook/` + `/api/v2/events/` + X-S4-Status combos; confirmation = HUMAN gate
 impact: alert spoofing + suppression of genuine incidents; HIGH conditional on leak
 testability: PASSIVE / HUMAN
+[FINAL] 1. Webhook team-secret leak (55) — highest confidence, passive-first, high impact conditional
+[FINAL] 2. BOLA on subscription invoice download (48) — route confirmed, customer billing data
+[FINAL] 3. Prepaid subscription billing settings cross-tenant mutation (45) — billing route, handler-deferred auth
 [NEXT] RAG: sweep docs.signl4.com (integrations/rest-api, samples, account pages) + GitHub signl4/docs for any reference to invoice download (en16931/zugferd), subscriptionId formats, or SCIM apiKey workflows — establish whether invoice routes are customer-facing self-service (raising BOLA probability) and hunt for sample userId/invoiceId patterns to inform an AUTH_HELPED probe plan
-[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline confirmed; swagger `API_Key_Query` scheme operational
 [LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/teams: unauth GET returns 405 Allow: GET,POST — auth validation deferred to handler, not route layer (flapping cycles confirmed)
 [LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, no security scheme, status-keyword query config (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404-invalid vs 201-eventId
 [LEARN] REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content across 3 cycles — credential-leak hypothesis has no current evidence

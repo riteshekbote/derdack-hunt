@@ -537,3 +537,5 @@ www.derdack.com
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism permanently invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.de
 
 ## 2026-09-10 14:36:44 UTC
+
+## 2026-09-10 17:57:53 UTC
