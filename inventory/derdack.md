@@ -518,3 +518,11 @@ www.derdack.com
 - NEW status.signl4.com = StatusLabs (adminlabs.com) page; /index.php → status-page-not-found. support.signl4.com = Zendesk /hc; trust = CF-fronted; docs = GitHub Pages
 - NEW API surface: `PUT /api/prepaid/{subscriptionId}/prepaidSettings` registered (OPTIONS Allow: PUT) — billing route family absent from all prior /api/v2 route maps; `/api/v2/events/{teamSecret}` = GET+PO
 - CHANGED /api/v2/teams baseline flipped to 401 this cycle (was 405) — auth-status flapping re-confirmed
+
+## 2026-09-10 05:31:54 UTC
+- CHANGED /api/v2/teams baseline: 401 Bearer this cycle vs 405 in prior — auth-status flapping re-confirmed (10th+ observation)
+- NEW CT surface expanded by 8 live hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com) — all passively surfaced 2026-09-10, none yet probed for new defects beyond initi
+- NEW /api/v2/events/{teamSecret} = GET+POST Bearer-gated (401) — new registered route family discovered
+- NEW PUT /api/prepaid/{id}/prepaidSettings — billing route, handler-deferred auth (405 OPTIONS before 401/403)
+- NEW frontdoor.signl4.com unconfigured shell with literal %ReplaceStatusTitle% placeholder (static since 2024-09-03)
+- CHANGED Previous hypothesis "webhook secret leak" remains UNSUPPORTED — no public leak found across 3 cycles of grep.app/GitHub/code-search sweeps

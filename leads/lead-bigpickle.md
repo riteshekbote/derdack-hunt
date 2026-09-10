@@ -2096,3 +2096,57 @@ testability: PASSIVE
 [LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, NO security scheme, query-config status keywords (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404-invalid vs 201-eventId
 [LEARN] REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP-dead / CF trust center / Zendesk — third-party or inert, no Derdack defect
 [RISK] derdack: 68 — estate materially larger than recorded (prod fix support portal, frontdoor stub, status/support/trust/docs live, prepaid billing route family, webhook contract fully public); all mutating surfaces remain auth-gated, critical cross-env chain stays client_secret-gated; no new anonymous read/credit path against live customer data; residual new risk is credential-leak-driven (webhook secret / prepaid BOLA) and AUTH_HELPED.
+## 2026-09-10 05:31:10 UTC [target] (model bigpickle)
+[CHANGED] /api/v2/teams baseline: 401 Bearer this cycle vs 405 in prior — auth-status flapping re-confirmed (10th+ observation)
+[NEW] CT surface expanded by 8 live hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com) — all passively surfaced 2026-09-10, none yet probed for new defects beyond initial fingerprinting
+[NEW] /api/v2/events/{teamSecret} = GET+POST Bearer-gated (401) — new registered route family discovered
+[NEW] PUT /api/prepaid/{id}/prepaidSettings — billing route, handler-deferred auth (405 OPTIONS before 401/403)
+[NEW] frontdoor.signl4.com unconfigured shell with literal %ReplaceStatusTitle% placeholder (static since 2024-09-03)
+[CHANGED] Previous hypothesis "webhook secret leak" remains UNSUPPORTED — no public leak found across 3 cycles of grep.app/GitHub/code-search sweeps
+[PRIO] connect.signl4.com/webhook/*,8.05,a=9,b=9,t=5,g=8,c=8,f=8
+[PRIO] connect.signl4.com/api/prepaid/*,7.4,a=8,b=9,t=6,g=3,c=8,f=10
+[PRIO] fix.signl4.com,6.9,a=7,b=8,t=8,g=3,c=5,f=10
+[PRIO] api.signl4.com/api/v2/*,6.8,a=9,b=9,t=6,g=1,c=7,f=9
+[PRIO] devconnect.signl4.com/identity,6.7,a=9,b=9,t=8,g=1,c=8,f=8
+[HYP] Webhook team-secret leak enables alert spoof/suppression via documented status-mapping params
+class: BUSLOGIC
+asset: connect.signl4.com/webhook/{teamSecret} + /api/v2/events/{teamSecret}
+confidence: 55
+reasoning: OpenAPI at /webhook/docs/v1/swagger.json declares NO security scheme (secret-in-URL is the credential); POST /{teamSecret} accepts query-config ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus to align payload status keywords to ack/resolve; validator oracle = 404 invalid-secret vs 201 eventId; secrets are static, embedded in 15+ third-party integration configs; no indexed live leak found
+evidence_needed: real leaked teamSecret repro; POST ack/resolve against a genuine alert
+verify_steps: PASSIVE grep.app/GitHub sweep for `connect.signl4.com/webhook/` + `/api/v2/events/` + X-S4-Status combos; confirmation = HUMAN gate (program excludes customer-auth-data testing)
+impact: alert spoofing + suppression of genuine on-call incidents → incident-response integrity loss; HIGH conditional on leak
+testability: PASSIVE (leak hunt) / HUMAN (confirm)
+[HYP] BOLA on prepaid subscription settings route
+class: IDOR
+asset: connect.signl4.com/api/prepaid/{subscriptionId}/prepaidSettings
+confidence: 45
+reasoning: OPTIONS confirms PUT-only registered route on prod gateway; api/docs lists PUT /prepaid/{subscriptionId}/prepaidSettings; prepaid = reseller/credit billing; route returns 405/OPTIONS Allow before auth (handler-deferred pattern, matches /teams); whether subscriptionId is cross-tenant BOLA-checked vs merely scoped-valid is UNPROBED
+evidence_needed: authenticated PUT own vs other-tenant subscriptionId differential (2xx vs 403/404)
+verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/prepaid/<uuid>/prepaidSettings → 405 Allow: PUT [DONE]; (AUTH_HELPED) staging API key PUT against foreign subscriptionId — HUMAN gate (write, billing)
+impact: cross-tenant prepaid/billing tamper; HIGH if subscriptionId guessable + BOLA check missing
+testability: PASSIVE (route confirm) / AUTH_HELPED (confirm)
+[HYP] frontdoor unconfigured gateway residue
+class: MISCONFIG
+asset: frontdoor.signl4.com
+confidence: 40
+reasoning: 200 shell with literal %ReplaceStatusTitle% placeholder (never substituted) + static ETag + links only to legal/feedback pages and no app assets — deploy/config residue on live Azure infra (20.22.16.164)
+evidence_needed: any route beyond the shell (OIDC/login/api callbacks) that proves it is a functional app, not a stub
+verify_steps: GET https://frontdoor.signl4.com/signin-oidc, /connect/authorize, /.well-known/openid-configuration, /api — diff status/content-type vs shell baseline
+impact: config/deploy artifact exposure; placeholder title on live infra is cosmetic — LOW
+testability: PASSIVE
+[PARKED] frontdoor unconfigured gateway residue (MISCONFIG, 40): below action threshold — cosmetic placeholder on stub SPA, no known functional routes beyond shell; reject unless new probe reveals app assets
+[PARKED] fix.signl4.com broken /signin-oidc 500: devfix twin pattern established; support portal OIDC broken — informational only, no customer-data access chain from this finding
+[PARKED] status/support/trust/docs: third-party (StatusLabs/Zendesk/CF/GH Pages) — no Derdack defect
+[FINAL] 1) Cross-env token forgery / shared trust anchor (AUTH, 85) — triaged VALID; client_secret-gated since 2026-09-05; no credential leak found; no drift on 10th deep-equal
+[FINAL] 2) Webhook team-secret alert spoof/suppression (BUSLOGIC, 55) — full contract documented + oracle confirmed; leak-gated; 3 sweeps with no public hit
+[FINAL] 3) Prepaid subscription settings route family (IDOR, 45) — new billing surface; BOLA verification requires authenticated cross-tenant probe
+[NEXT] RAG: sweep docs.signl4.com for any additional undocumented beta endpoints (prepaid, v3, SMTP email gateway) — extend route map passively; cross-check SIGNL4 integration marketplace for any webhook/API-key sample configs containing live credentials
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/teams: unauth GET returns 405 Allow: GET,POST — auth validation deferred to handler, not route layer (flapping cycles confirmed)
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, no security scheme, status-keyword query config (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404 vs 201
+[LEARN] REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content across 3 cycles — credential-leak hypothesis has no current evidence
+[LEARN] ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured portal shell serves literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — LOW cosmetic, deploy residue
+[LEARN] ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application, /signin-oidc 500 broken OIDC callback — devfix twin; Blazor estate family
+[LEARN] REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP-dead / CF trust center / Zendesk — third-party or inert, no Derdack defect
+[RISK] derdack: 68 — estate materially larger than recorded (prod fix support portal, frontdoor stub, status/support/trust/docs live, prepaid billing route family, webhook contract fully public); all mutating surfaces remain auth-gated; critical cross-env chain (shared RS256 key + client_id across 4 identity hosts) stays client_secret-gated with no credential leak found; no new anonymous read/credit path against live customer data; residual new risk is credential-leak-driven (webhook secret leak → alert spoof, prepaid BOLA → billing tamper) and AUTH_HELPED
