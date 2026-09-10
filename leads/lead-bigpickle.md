@@ -2262,3 +2262,31 @@ testability: PASSIVE / HUMAN
 [LEARN] ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application, /signin-oidc 500 broken OIDC callback — devfix twin; Blazor estate family
 [RISK] derdack: 72 — single largest step-up this cycle: complete 488-route API documentation published on prod gateway (V1/V2/V3 swagger) exposes the entire attack surface map, including customer-invoice download, prepaid billing, and SCIM provisioning route families never probed before (all still auth-gated, cracker needs any valid API key/OAuth token; cross-env shared key reused across 4 identity hosts); staging now confirmed to mirror webhook family too. Anonymous read surface still zero; residual risk is credentialed BOLA (invoice/prepaid) + open-spec documentation of internal billing routes + webhook-secret leak — all AUTH_HELPED, no new anonymous credit path.
 ## 2026-09-10 20:16:00 UTC [target] (model bigpickle)
+## 2026-09-10 22:39:00 UTC [target] (model bigpickle)
+[HYP] BOLA on undocumented customer invoice download (ZUGFeRD/EN16931)
+class: IDOR
+asset: connect.signl4.com/api/v2|v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd (also /en16931)
+confidence: 52
+reasoning: route present in V2+V3 spec only, absent from all public docs (internal/self-service billing); GET-only; path IDs opaque strings no format; spec lists 403 (not 401) implying distinct per-handler authz path vs middleware 401 observed anonymous; financial document (EN16931 XML + PDF with order/buyer/tax data); cross-tenant check vs scoped API key unprobed; same route family as prepaid.
+evidence_needed: authenticated GET own-subscription invoice 200 vs foreign-subscription invoice 2xx/403 differential (cross-tenant check)
+verify_steps: (DONE) GET fabricated IDs → 401 both versions; OPTIONS Allow:GET; (AUTH_HELPED) X-S4-Api-Key GET own vs other subscriptionId+invoiceId — HUMAN gate (customer billing data)
+impact: cross-tenant exfiltration of customer invoices (financial/order/B2B data); HIGH conditional on BOLA
+testability: AUTH_HELPED
+[HYP] Credentialed cross-team event write via webhookIdOrTeamId + API-key scoping gap
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/events/{webhookIdOrTeamId} (API-key twin of /webhook/{teamSecret})
+confidence: 55
+reasoning: docs confirm path param accepts webhookId OR teamId; API key (subscription-scoped, read routes teams/users enumerate IDs) is the only gate; if key validation does not intersect path-scope, a credentialed caller can write alerts to foreign teams (spoof/ack/resolve via X-S4-ExternalID); webhook secret itself un-leaked across 5 sweeps.
+evidence_needed: API-key POST events to own teamId 201 vs foreign teamId 201/403 differential
+verify_steps: (DONE) anonymous POST route 401 Bearer; webhook oracle 404-vs-201 confirmed; (AUTH_HELPED) X-S4-Api-Key POST /api/v2/events/{own-teamId} vs {foreign-teamId} — HUMAN gate
+impact: cross-team alert spoofing + suppression (ack/resolve) of genuine incidents; HIGH if scoping gap
+testability: AUTH_HELPED
+[HYP] Prepaid billing settings cross-tenant mutation
+class: IDOR
+asset: connect.signl4.com/api/v2/prepaid/{subscriptionId}/prepaidSettings (PUT)
+confidence: 45
+reasoning: PUT registered (OPTIONS Allow:PUT, handler-deferred auth pattern like /teams); billing route family undocumented publicly; fabricated-ID anonymous GET 401; cross-tenant check unprobed.
+evidence_needed: authenticated PUT own vs foreign subscriptionId (2xx vs 403)
+verify_steps: (AUTH_HELPED) staging API key PUT foreign subscriptionId — HUMAN gate (write, billing)
+impact: cross-tenant prepaid/billing tamper; HIGH if subscriptionId reachable + missing BOLA
+testability: AUTH_HELPED

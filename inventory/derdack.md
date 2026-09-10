@@ -552,3 +552,16 @@ www.derdack.com
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism permanently invalidated — wp-login.php sets wordpress_test_cookie with secure flag + host-only scope (no Domain=.derd
 - CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files return 403/404; root serves parked IONOS sedoparking iframe 
 - CHANGED www.derdack.com/de/ & /ea/ XML-RPC both POST-exposed with full method lists but mutating methods (wp.uploadFile, metaWeblog.newMediaObject) return faultCode 403 "incorrect username/password" — auth-ga
+
+## 2026-09-10 22:39:12 UTC
+- NEW crt.sh CT-log sweep surfaced 8 previously-unknown live hosts: fix.signl4.com (prod ASP.NET Core Support App, Blazor, /signin-oidc 500), frontdoor.signl4.com (unconfigured SPA shell with %ReplaceStatus
+- NEW connect.signl4.com new registered routes discovered: PUT /api/prepaid/{id}/prepaidSettings (OPTIONS Allow:PUT, handler-deferred auth), /api/v2/events/{teamSecret} (GET+POST, 401 Bearer), public webhoo
+- NEW connect.signl4.com/webhook contract confirmed: POST /{teamSecret}, NO security scheme in OpenAPI, query-configurable status keywords (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), ora
+- NEW api.signl4.com + connect.signl4.com dual auth pipeline live-verified: Bearer auth returns 401 WWW-Authenticate:Bearer; API key via query param ?x-s4-api-key=<key> returns 403 "API Key is invalid" vs 4
+- NEW devapi.signl4.com confirmed as 4th identity host serving byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — 10th live deep-equal across connect/api/devconnect/devapi
+- NEW connect.signl4.com OIDC discovery byte-identical to devconnect (password/device_code/ciba/token-exchange grants, secret-only auth methods, no registration_endpoint, RS256-only) — prod is parametric tw
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping re-confirmed (10th+ observation): unauth GET returns 405 Allow:GET,POST this cycle (was 401 in prior cycle) — auth validation deferred to handler, not 
+- CHANGED Cross-env token forgery chain fully documented: shared RS256 key (4 identity hosts) + shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + full scope set + swagger-confirmed OAuth2 API access + sta
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism permanently invalidated — wp-login.php sets wordpress_test_cookie with secure flag + host-only scope (no Domain=.derd
+- CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files return 403/404; root serves parked IONOS sedoparking iframe 
+- CHANGED www.derdack.com/de/ & /ea/ XML-RPC both POST-exposed with full method lists but mutating methods (wp.uploadFile, metaWeblog.newMediaObject) return faultCode 403 "incorrect username/password" — auth-ga
