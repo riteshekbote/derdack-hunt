@@ -1932,3 +1932,167 @@ testability: PASSIVE
 [LEARN] REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content this cycle — credential-leak hypothesis has no current evidence.
 [RISK] derdack: 62 — Mutating/IDOR/BOLA surfaces all gated (XML-RPC 403, API Bearer/API-key 401/403, OAuth client_secret-gated); standout is the cross-env identity-isolation failure (shared RS256 key + client_id 692A0A56 across 4 hosts incl. prod/staging) elevating any staging credential to prod API CRUD; spec-level defects (empty swagger security, query-param key scheme) are real but LOW; no current public credential leak identified; residual unknowns gated on credentials Derdack must supply to close the critical chain.
 ## 2026-09-09 22:55:02 UTC [target] (model bigpickle)
+## 2026-09-10 00:50:24 UTC [target] (model bigpickle)
+impact: API key leakage via referrer/logs if query-param auth used; enables full API CRUD (alerts/teams/webhooks/subscriptions/schedules/users) for any affected tenant; MEDIUM severity (requires existing key to be in a leaked URL)  
+testability: AUTH_HELPED
+[HYP] API key accepted at connect.signl4.com (API gateway) bypassing api.signl4.com routing  
+class: OTHER  
+asset: connect.signl4.com/api/v2/*  
+confidence: 82  
+reasoning: api.signl4.com/api/v2/* confirmed Bearer-gated (401) while connect.signl4.com/api/v2/teams with query-param API key returns 403 "API Key is invalid" (not 401); the two hosts share the same `request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd` confirming shared backend; connect.signl4.com accepts API keys via query param while api.signl4.com returns 401 for the same unauthenticated request — the API gateway routes both Bearer and API key auth through the same backend; swagger.json served from connect.signl4.com/api/docs/v2/swagger.json confirms the API is documented and routable through the connect host  
+evidence_needed: (1) valid API key accepted at connect.signl4.com/api/v2/teams (200 vs 403); (2) confirmation that connect.host API key auth and api.host API key auth return the same tenant data  
+verify_steps: PASSIVE — swagger confirms API routes are routable through connect host; shared appId proves backend identity; already confirmed API key validation pipeline active on both hosts  
+impact: Two separate entry points to the same API backend with different auth-error responses (403 on connect, 401 on api) — attack surface doubled for credential-stuffing/brute-force against API keys (though excluded from scope); MEDIUM  
+testability: PASSIVE
+[HYP] Cross-environment token forgery: staging IdP issues tokens valid at prod API  
+class: AUTH  
+asset: api.signl4.com/api/v2/*  
+confidence: 88  
+reasoning: swagger.json confirms API accepts OAuth2 Bearer tokens from connect.signl4.com/identity/connect/token; 4 identity hosts share byte-identical RS256 JWKS (11th deep-equal); shared client_id 692A0A56 on both prod and staging /manage redirects; staging IdP (devconnect) enables password+device_code+CIBA grants alongside authorization_code; prod IdP is parametric twin; a token signed by the shared key would be accepted at prod API with public_api_read+write scopes  
+evidence_needed: valid access_token from staging IdP accepted at prod /api/v2/teams (200 vs 401)  
+verify_steps: (AUTH_HELPED) POST devconnect.signl4.com/identity/connect/token with client_id=692A0A56&client_secret=<valid>&grant_type=authorization_code; then GET api.signl4.com/api/v2/teams Authorization: Bearer <token>  
+impact: staging credential → prod API full CRUD; CRITICAL  
+testability: AUTH_HELPED
+[PARKED] API spec empty security (MISCONFIG, 45): real spec defect but LOW impact — doesn't bypass auth, just confuses consumers
+[FINAL] 1) Cross-env token forgery (AUTH, 88) — full chain documented, blocked on client_secret  
+[FINAL] 2) API key via query param (AUTH, 78) — live confirmed, referrer leakage vector exists but mitigated by strict-origin referrer-policy  
+[FINAL] 3) API spec empty security (MISCONFIG, 45) — real spec defect, LOW impact
+[NEXT] RAG: search for any public SIGNL4 integration guides, Zapier/Make/Power Automate templates, or developer documentation that includes sample API URLs with `?x-s4-api-key=` query parameter — would confirm real-world referrer leakage path; also search for any SIGNL4 npm/pip/PyPI client SDKs that default to query-param auth.
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational — first live test confirms API key validation pipeline  
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json` — distinct auth pipelines with different error responses confirm independent validation paths  
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
+[RISK] derdack: 86 — SIGNL4 API V2 has two independent auth pipelines (Bearer JWT + API key via header/query); cross-env trust anchor (shared RS256 key across 4 identity hosts) is stable for 7+ days with zero drift; API key query-param auth confirmed live (MEDIUM referrer leakage risk mitigated by strict-origin referrer-policy); prod IdP parametric twin of staging with password/device_code/CIBA grants; all OAuth flows client_secret-gated (AUTH_HELPED); remaining high-value vector is credential-dependent chaining only; the API spec empty security requirement is a real but LOW finding
+[PRIO] devconnect.signl4.com/identity/connect/token,8.4,a=9,b=9,t=8,g=3,c=9,f=9
+[PRIO] connect.signl4.com/api/v2/*,7.9,a=9,b=9,t=6,g=4,c=9,f=8
+[PRIO] connect.signl4.com/webhook/*,7.6,a=8,b=8,t=5,g=8,c=8,f=8
+[HYP] Staging IdP token accepted at prod API via shared RS256 key + shared client_id
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token → api.signl4.com/api/v2/teams
+confidence: 85
+reasoning: 4 identity hosts byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, 10x deep-equal, zero drift); devaccount+account /manage both redirect with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and full scope set (incl public_api_read/write/prov); prod discovery is byte-parametric twin of staging incl password+device_code+CIBA grants; swagger confirms API accepts OAuth2 authorizationCode Bearer from connect identity; chain complete, gated on client_secret
+evidence_needed: POST staging token endpoint with client_secret + grant → access_token; GET prod api/v2/teams Bearer <token> → 200
+verify_steps: (AUTH_HELPED) POST devconnect.signl4.com/identity/connect/token grant_type=authorization_code&client_id=692A0A56&client_secret=<valid>&code=<code>; GET api.signl4.com/api/v2/teams Authorization: Bearer <token>
+impact: any staging credential → prod API full CRUD (alerts/teams/webhooks/subscriptions/users); CRITICAL
+testability: AUTH_HELPED
+[HYP] URL-embedded webhook team-secret enables alert injection + suppression of genuine alerts if leaked
+class: BUSLOGIC
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 50
+reasoning: 15+ official integrations hardcode secret in URL/path (stored in 3rd-party config DBs, YAML, IoT firmware); webhook can ack/resolve real alerts via X-S4-ExternalID+X-S4-Status (documented) and inject fake critical alerts; secret is static/non-rotatable (delete+recreate); no public leak located this cycle
+evidence_needed: (1) any leaked real secret in public code/config; (2) POST /webhook/<leak> with X-S4-Status=resolved alters a genuine alert
+verify_steps: PASSIVE — grep.app/GitHub code search for `connect.signl4.com/webhook/` once rate-limit clears; if a live secret surfaces, POST read-only-entitled payload is HUMAN decision (program excludes customer-auth-data testing)
+impact: alert spoofing + suppression of real on-call incidents → incident-response integrity loss; HIGH if leak found
+testability: PASSIVE (leak hunt) / AUTH_HELPED (confirmation)
+[HYP] API key accepted via query parameter leaks credential through referrer/logs
+class: AUTH
+asset: api.signl4.com/api/v2/* & connect.signl4.com/api/v2/*
+confidence: 55
+reasoning: `?x-s4-api-key=<key>` live-confirmed (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer header vs problem+json 403) established; swagger declares API_Key_Query scheme; BUT zero public docs/samples/integrations use query-param auth and referrer-policy strict-origin-when-cross-origin mitigates cross-origin leak; swagger/spec inconsistency remains real
+evidence_needed: any real-world URL using `?x-s4-api-key=` with live key, or CDN/log artifact
+verify_steps: PASSIVE — ongoing code-search sweep for `x-s4-api-key` param usage; no live probe needed
+impact: if a key ever rides a query URL into 3rd-party logs/referrer → tenant CRUD compromise; MEDIUM conditional
+testability: PASSIVE
+[PARKED] Query-param referrer leak (AUTH, 55): live-confirmed but RAG proves no real-world query-param usage; impact not demonstrable — swagger/spec defect only.
+[PARKED] Webhook URL-secret design (BUSLOGIC, 50): no leaked live secret found; program excludes customer-auth-data exposure testing; reportable as design-governance observation only.
+[FINAL] 1) Cross-env token forgery (AUTH, 85) — full chain documented, only client_secret-gated verification remains.
+[FINAL] 2) API spec empty security requirement (MISCONFIG, 45) — real spec defect, LOW.
+[FINAL] 3) /api/v2/teams 405↔401 auth-status flapping (MISCONFIG, 40) — handler vs route-layer auth inconsistency, informational.
+[NEXT] PROBE (AUTH_HELPED): POST https://devconnect.signl4.com/identity/connect/token body=`grant_type=authorization_code&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<vendor-provided>&redirect_uri=https://devaccount.signl4.com/callback&code=<code>`, then GET https://api.signl4.com/api/v2/teams `Authorization: Bearer <access_token>` — 200 vs 401 seals the CRITICAL cross-env finding. Requires granted staging creds (blocked on client_secret since 2026-09-05).
+[LEARN] ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → referrer-leak impact not demonstrable.
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated).
+[LEARN] REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content this cycle — credential-leak hypothesis has no current evidence.
+[RISK] derdack: 62 — Mutating/IDOR/BOLA surfaces all gated (XML-RPC 403, API Bearer/API-key 401/403, OAuth client_secret-gated); standout is the cross-env identity-isolation failure (shared RS256 key + client_id 692A0A56 across 4 hosts incl. prod/staging) elevating any staging credential to prod API CRUD; spec-level defects (empty swagger security, query-param key scheme) are real but LOW; no current public credential leak identified; residual unknowns gated on credentials Derdack must supply to close the critical chain.
+[PRIO] connect.signl4.com/webhook/*,8.05,a=9,b=9,t=5,g=8,c=8,f=8
+[PRIO] connect.signl4.com/api/prepaid/*,7.4,a=8,b=9,t=6,g=3,c=8,f=10
+[PRIO] fix.signl4.com,6.9,a=7,b=8,t=8,g=3,c=5,f=10
+[HYP] Webhook team-secret leak enables alert spoof/suppression via documented status-mapping params
+class: BUSLOGIC
+asset: connect.signl4.com/webhook/{teamSecret} + /api/v2/events/{teamSecret}
+confidence: 55
+reasoning: OpenAPI 3.0.4 at /webhook/docs/v1/swagger.json (no security scheme, secret-in-URL = credential); POST /{teamSecret} query-configurable ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus align payload status to ack/resolve; validator oracle 404=invalid secret vs 201=eventId; secrets static + embedded in 15+ third-party configs; no indexed live leak found
+evidence_needed: real leaked teamSecret; POST ack/resolve against genuine alert
+verify_steps: PASSIVE grep.app/GitHub sweep for `connect.signl4.com/webhook/` + `api/v2/events/` + X-S4-Status; confirmation = HUMAN gate (customer-auth-data excluded)
+impact: alert spoofing + suppression of genuine on-call incidents; HIGH conditional on leak
+testability: PASSIVE (leak hunt) / HUMAN (confirm)
+[HYP] BOLA on prepaid subscription settings route
+class: IDOR
+asset: connect.signl4.com/api/prepaid/{subscriptionId}/prepaidSettings
+confidence: 45
+reasoning: OPTIONS confirms PUT-only registered route (Allow: PUT) on prod gateway; api/docs lists PUT /prepaid/{subscriptionId}/prepaidSettings; prepaid = reseller/credit billing; auth-deferred-to-handler pattern (405 before 401) matches teams; whether subscriptionId is BOLA-checked vs scoped-valid is UNPROBED — new route family
+evidence_needed: authed PUT own vs other-tenant subscriptionId differential (2xx vs 403/404)
+verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/prepaid/<uuid>/prepaidSettings → 405 Allow: PUT (done); (AUTH_HELPED) staging API key PUT cross-tenant id — HUMAN gate (write, billing)
+impact: cross-tenant prepaid/billing tamper; HIGH if id guessable + BOLA missing
+testability: PASSIVE (route) / AUTH_HELPED (confirm)
+[HYP] frontdoor template-construction residue / unconfigured gateway
+class: MISCONFIG
+asset: frontdoor.signl4.com
+confidence: 40
+reasoning: 200 shell with literal %ReplaceStatusTitle% placeholder (never substituted), static ETag, mod 2024-09-03, links only to legal/feedback pages; no app assets — stub/deploy residue on live infra
+evidence_needed: any route/asset beyond the 600B shell (login/OAuth/AuthN callbacks) = real, not stub
+verify_steps: GET https://frontdoor.signl4.com/{signin-oidc,connect/authorize,.well-known/openid-configuration,api}; content-type/diff vs shell
+impact: config/deploy artifact exposure; placeholder in live title is cosmetic — LOW
+testability: PASSIVE
+[PARKED] fix.signl4.com broken /signin-oidc 500: estate twin pattern already established (devfix); support data customer-sensitive → no additional chain; informational
+[PARKED] status/support/trust/docs/go/bot/vps: third-party (StatusLabs/Zendesk/CF/GH Pages) or inert/parked — surfaced, LOW
+[FINAL] 1) Cross-env token forgery / shared trust anchor (AUTH, 85) — triaged VALID 7.4; still cred-gated
+[FINAL] 2) Webhook team-secret alert spoof/suppression (BUSLOGIC, 55) — full contract now documented; leak-gated
+[FINAL] 3) Prepaid subscription settings route family (IDOR, 45) — new billing surface, BOLA AUTH_HELPED
+[NEXT] RAG: sweep docs.signl4.com corpus + GitHub/grep.app for real webhook/event URLs (`connect.signl4.com/webhook/`, `/api/v2/events/`, X-S4-Status) for live-secret leak; cross-check SIGNL4 docs for any additional undocumented/beta endpoints (prepaid, v3, SMTP email gateway) to extend route map passively
+[LEARN] ACCEPTED OTHER @ crt.sh: CT surface expansion — 8 previously-unknown live hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com)
+[LEARN] ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured portal shell serves literal %ReplaceStatusTitle% title (static, 2024-09-03) — LOW
+[LEARN] ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application, /signin-oidc 500 broken OIDC (devfix twin); Blazor estate
+[LEARN] ACCEPTED AUTH @ connect.signl4.com: new routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, handler-deferred auth) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + public webhook OpenAPI /webhook/docs/v1/swagger.json
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, no security scheme, status-keyword query config (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404 vs 201
+[LEARN] REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert
+[RISK] derdack: 68 — estate larger than recorded (fix prod support portal, frontdoor stub, status/support/trust/docs live, prepaid billing route family, webhook contract public); all mutating surfaces remain auth-gated and critical cross-env chain cred-gated; no new anon read/credit path on live customer data
+[LEARN] ACCEPTED AUTH @ connect.signl4.com: new routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, handler-deferred auth) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + public webhook OpenAPI /webhook/docs/v1/swagger.json
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, no security scheme, status-keyword query config (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404 vs 201
+[NEW] crt.sh CT-log sweep: 13 signl4.com + 4 enterprisealert.com subdomains; 8 previously-unknown LIVE hosts — fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com
+[NEW] fix.signl4.com (20.160.37.197) = prod ASP.NET Core "SIGNL4 Support Application" (Kestrel); /signin-oidc → 500 (broken OIDC callback, devfix twin); Blazor (`/_blazor/negotiate` 405 on GET)
+[NEW] frontdoor.signl4.com (20.22.16.164) = unconfigured SPA shell serving literal unrendered `<title>SIGNL4 - %ReplaceStatusTitle%</title>` (static ETag, last-modified 2024-09-03)
+[NEW] status.signl4.com = StatusLabs (adminlabs.com) page; /index.php → status-page-not-found. support.signl4.com = Zendesk /hc; trust = CF-fronted; docs = GitHub Pages
+[NEW] API surface: `PUT /api/prepaid/{subscriptionId}/prepaidSettings` registered (OPTIONS Allow: PUT) — billing route family absent from all prior /api/v2 route maps; `/api/v2/events/{teamSecret}` = GET+POST, 401 Bearer; `/webhook/docs/v1/swagger.json` = public OpenAPI 3.0.4
+[CHANGED] /api/v2/teams baseline flipped to 401 this cycle (was 405) — auth-status flapping re-confirmed
+[PRIO] connect.signl4.com/webhook/*,8.05,a=9,b=9,t=5,g=8,c=8,f=8
+[PRIO] connect.signl4.com/api/prepaid/*,7.4,a=8,b=9,t=6,g=3,c=8,f=10
+[PRIO] fix.signl4.com,6.9,a=7,b=8,t=8,g=3,c=5,f=10
+[HYP] Webhook team-secret leak enables alert spoof/suppression via documented status-mapping params
+class: BUSLOGIC
+asset: connect.signl4.com/webhook/{teamSecret} + /api/v2/events/{teamSecret}
+confidence: 55
+reasoning: OpenAPI at /webhook/docs/v1/swagger.json declares NO security scheme (secret-in-URL is the credential); POST /{teamSecret} accepts query-config ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus to align payload status keywords to ack/resolve; validator oracle = 404 invalid-secret vs 201 eventId; secrets are static, embedded in 15+ third-party integration configs; no indexed live leak found
+evidence_needed: real leaked teamSecret repro; POST ack/resolve against a genuine alert
+verify_steps: PASSIVE grep.app/GitHub sweep for `connect.signl4.com/webhook/` + `/api/v2/events/` + X-S4-Status combos; confirmation = HUMAN gate (program excludes customer-auth-data testing)
+impact: alert spoofing + suppression of genuine on-call incidents → incident-response integrity loss; HIGH conditional on leak
+testability: PASSIVE (leak hunt) / HUMAN (confirm)
+[HYP] BOLA on prepaid subscription settings route
+class: IDOR
+asset: connect.signl4.com/api/prepaid/{subscriptionId}/prepaidSettings
+confidence: 45
+reasoning: OPTIONS confirms PUT-only registered route on prod gateway; api/docs lists PUT /prepaid/{subscriptionId}/prepaidSettings; prepaid = reseller/credit billing; route returns 405/OPTIONS Allow before auth (handler-deferred pattern, matches /teams); whether subscriptionId is cross-tenant BOLA-checked vs merely scoped-valid is UNPROBED
+evidence_needed: authenticated PUT own vs other-tenant subscriptionId differential (2xx vs 403/404)
+verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/prepaid/<uuid>/prepaidSettings → 405 Allow: PUT [DONE]; (AUTH_HELPED) staging API key PUT against foreign subscriptionId — HUMAN gate (write, billing data)
+impact: cross-tenant prepaid/billing tamper; HIGH if subscriptionId guessable + BOLA check missing
+testability: PASSIVE (route confirm) / AUTH_HELPED (confirm)
+[HYP] frontdoor unconfigured gateway residue
+class: MISCONFIG
+asset: frontdoor.signl4.com
+confidence: 40
+reasoning: 200 shell with literal %ReplaceStatusTitle% placeholder (never substituted) + static ETag + links only to legal/feedback pages and no app assets — deploy/config residue on live Azure infra
+evidence_needed: any route beyond the shell (OIDC/login/api callbacks) that proves it is a functional app, not a stub
+verify_steps: GET https://frontdoor.signl4.com/signin-oidc, /connect/authorize, /.well-known/openid-configuration, /api — diff status/content-type vs shell baseline
+impact: config/deploy artifact exposure; placeholder title on live infra is cosmetic — LOW
+testability: PASSIVE
+[PARKED] fix.signl4.com broken /signin-oidc 500: estate-twin pattern already established (devfix); support data is customer-sensitive → no new chain; informational only
+[PARKED] status/support/trust/docs/go/bot/vps: third-party (StatusLabs/Zendesk/CF/GitHub-Pages) or inert/parked/WAF'd — surfaced, none exploitable
+[FINAL] 1) Cross-env token forgery / shared trust anchor (AUTH, 85) — triaged VALID at 7.4; still client_secret-gated
+[FINAL] 2) Webhook team-secret alert spoof/suppression (BUSLOGIC, 55) — full contract now public + documented oracle; leak-gated
+[FINAL] 3) Prepaid subscription settings route family (IDOR, 45) — new billing surface, BOLA verification AUTH_HELPED
+[NEXT] RAG: sweep docs.signl4.com corpus + GitHub/grep.app for real-secret patterns `connect.signl4.com/webhook/` and `connect.signl4.com/api/v2/events/` near X-S4-Status (leak hunt), and extract any additional undocumented/beta endpoints from the docs estate (prepaid, /api/v3, SMTP email gateway) to extend the route map passively.
+[LEARN] ACCEPTED OTHER @ crt.sh: CT-log sweep — 8 previously-unknown live hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com)
+[LEARN] ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured portal shell serves literal %ReplaceStatusTitle% placeholder (last-modified 2024-09-03) — LOW
+[LEARN] ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application, /signin-oidc 500 (broken OIDC callback — devfix twin); Blazor estate family
+[LEARN] ACCEPTED AUTH @ connect.signl4.com: new registered routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, auth deferred to handler) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + public webhook OpenAPI at /webhook/docs/v1/swagger.json
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, NO security scheme, query-config status keywords (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404-invalid vs 201-eventId
+[LEARN] REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP-dead / CF trust center / Zendesk — third-party or inert, no Derdack defect
+[RISK] derdack: 68 — estate materially larger than recorded (prod fix support portal, frontdoor stub, status/support/trust/docs live, prepaid billing route family, webhook contract fully public); all mutating surfaces remain auth-gated, critical cross-env chain stays client_secret-gated; no new anonymous read/credit path against live customer data; residual new risk is credential-leak-driven (webhook secret / prepaid BOLA) and AUTH_HELPED.

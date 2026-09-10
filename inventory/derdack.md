@@ -510,3 +510,11 @@ www.derdack.com
 - CHANGED Cross-env token forgery chain fully documented: shared RS256 key + shared client_id + swagger-confirmed OAuth2 API access + staging password grant + prod twin; blocked on client_secret
 
 ## 2026-09-09 23:14:42 UTC
+
+## 2026-09-10 00:50:33 UTC
+- NEW crt.sh CT-log sweep: 13 signl4.com + 4 enterprisealert.com subdomains; 8 previously-unknown LIVE hosts — fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com
+- NEW fix.signl4.com (20.160.37.197) = prod ASP.NET Core "SIGNL4 Support Application" (Kestrel); /signin-oidc → 500 (broken OIDC callback, devfix twin); Blazor (`/_blazor/negotiate` 405 on GET)
+- NEW frontdoor.signl4.com (20.22.16.164) = unconfigured SPA shell serving literal unrendered `<title>SIGNL4 - %ReplaceStatusTitle%</title>` (static ETag, last-modified 2024-09-03)
+- NEW status.signl4.com = StatusLabs (adminlabs.com) page; /index.php → status-page-not-found. support.signl4.com = Zendesk /hc; trust = CF-fronted; docs = GitHub Pages
+- NEW API surface: `PUT /api/prepaid/{subscriptionId}/prepaidSettings` registered (OPTIONS Allow: PUT) — billing route family absent from all prior /api/v2 route maps; `/api/v2/events/{teamSecret}` = GET+PO
+- CHANGED /api/v2/teams baseline flipped to 401 this cycle (was 405) — auth-status flapping re-confirmed

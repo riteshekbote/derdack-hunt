@@ -11881,3 +11881,773 @@ testability: PASSIVE
 I can't help with this. Nothing here verifies that active testing against Derdack/SIGNL4 infrastructure (live API token endpoints, XML-RPC mutating calls, SSRF-to-metadata probes, credential/secret hunting, cross-env token forgery chains) is authorized — there's no program scope document, issued creds, or sanctioned report channel I can confirm, and the described activity targets live third-party systems.
 
 If you do have authorization (scope/creds from the program owner), I'm happy to help with: reviewing code you own, drafting a report from documented evidence, or auditing your own infra.
+===== ANALYST bigpickle 2026-09-10 00:50:33 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && cat scope.yml 2>/dev/null; ls art/ inventory/ 2>/dev/null
+total 332
+drwxr-xr-x 12 runner runner   4096 Sep 10 00:43 .
+drwxr-xr-x  3 runner runner   4096 Sep 10 00:43 ..
+drwxr-xr-x  7 runner runner   4096 Sep 10 00:43 .git
+drwxr-xr-x  3 runner runner   4096 Sep 10 00:43 .github
+-rw-r--r--  1 runner runner   1831 Sep 10 00:43 README.md
+-rw-r--r--  1 runner runner     32 Sep 10 00:43 analyst-out.txt
+-rw-r--r--  1 runner runner 121543 Sep 10 00:43 analyst-prompt.txt
+-rw-r--r--  1 runner runner 117664 Sep 10 00:43 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Sep 10 00:43 inventory
+drwxr-xr-x  2 runner runner   4096 Sep 10 00:43 knowledge
+drwxr-xr-x  2 runner runner   4096 Sep 10 00:43 leads
+-rw-r--r--  1 runner runner  11535 Sep 10 00:43 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Sep 10 00:43 recon-notes
+drwxr-xr-x  2 runner runner   4096 Sep 10 00:43 reports
+drwxr-xr-x  2 runner runner   4096 Sep 10 00:43 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Sep 10 00:43 scope.yml
+drwxr-xr-x  2 runner runner   4096 Sep 10 00:43 scripts
+-rw-r--r--  1 runner runner     33 Sep 10 00:43 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Sep 10 00:43 state_laguna.json
+-rw-r--r--  1 runner runner     33 Sep 10 00:43 state_ling3.json
+-rw-r--r--  1 runner runner     33 Sep 10 00:43 state_longcat.json
+-rw-r--r--  1 runner runner     33 Sep 10 00:43 state_mimo.json
+-rw-r--r--  1 runner runner     33 Sep 10 00:43 state_nemotron3.json
+drwxr-xr-x  2 runner runner   4096 Sep 10 00:43 triage
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+  passive_first: false          # deep-hunt agent: active probes allowed when scoped
+  max_requests_per_second: 1    # never hammer live infra
+  no_doom: true                 # no DoS/DDoS, no account-lockout attacks
+  account_creation: restricted  # only on test/sandbox assets, never live customer data
+  no_data_modification: true    # no writes/deletes on live customer data
+  no_pre_disclosure: true       # never disclose before program response
+  poc_required: true            # scanner output alone is REJECTED
+  redact_secrets_in_commits: true
+
+models:
+  - { id: opencode/big-pickle, name: bigpickle }
+  - { id: opencode/nemotron-3-ultra-free, name: nemotron3 }
+  - { id: opencode/longcat-2.0-free, name: longcat }
+  - { id: opencode/ling-3.0-flash-free, name: ling3 }
+  - { id: opencode/laguna-s-2.1-free, name: laguna }
+inventory/:
+derdack.md
+[0m
+[0m✱ [0mGlob "**/*.md"[90m 68 matches[0m
+[0m
+[0m$ [0mcat leads/lead-bigpickle.md; echo "=== REPORTS ==="; ls reports/; cat reports/valid-bugs.md 2>/dev/null | tail -30; echo "=== STATE ==="; cat state_bigpickle.json
+...output truncated...
+
+Full output saved to: /home/runner/.local/share/opencode/tool-output/tool_088c55da7001b93vp5Hi4cbtac
+
+y leaks to same-origin, no cross-origin referrer leakage)  
+impact: API key leakage via referrer/logs if query-param auth used; enables full API CRUD (alerts/teams/webhooks/subscriptions/schedules/users) for any affected tenant; MEDIUM severity (requires existing key to be in a leaked URL)  
+testability: AUTH_HELPED
+[HYP] API key accepted at connect.signl4.com (API gateway) bypassing api.signl4.com routing  
+class: OTHER  
+asset: connect.signl4.com/api/v2/*  
+confidence: 82  
+reasoning: api.signl4.com/api/v2/* confirmed Bearer-gated (401) while connect.signl4.com/api/v2/teams with query-param API key returns 403 "API Key is invalid" (not 401); the two hosts share the same `request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd` confirming shared backend; connect.signl4.com accepts API keys via query param while api.signl4.com returns 401 for the same unauthenticated request — the API gateway routes both Bearer and API key auth through the same backend; swagger.json served from connect.signl4.com/api/docs/v2/swagger.json confirms the API is documented and routable through the connect host  
+evidence_needed: (1) valid API key accepted at connect.signl4.com/api/v2/teams (200 vs 403); (2) confirmation that connect.host API key auth and api.host API key auth return the same tenant data  
+verify_steps: PASSIVE — swagger confirms API routes are routable through connect host; shared appId proves backend identity; already confirmed API key validation pipeline active on both hosts  
+impact: Two separate entry points to the same API backend with different auth-error responses (403 on connect, 401 on api) — attack surface doubled for credential-stuffing/brute-force against API keys (though excluded from scope); MEDIUM  
+testability: PASSIVE
+[HYP] Cross-environment token forgery: staging IdP issues tokens valid at prod API  
+class: AUTH  
+asset: api.signl4.com/api/v2/*  
+confidence: 88  
+reasoning: swagger.json confirms API accepts OAuth2 Bearer tokens from connect.signl4.com/identity/connect/token; 4 identity hosts share byte-identical RS256 JWKS (11th deep-equal); shared client_id 692A0A56 on both prod and staging /manage redirects; staging IdP (devconnect) enables password+device_code+CIBA grants alongside authorization_code; prod IdP is parametric twin; a token signed by the shared key would be accepted at prod API with public_api_read+write scopes  
+evidence_needed: valid access_token from staging IdP accepted at prod /api/v2/teams (200 vs 401)  
+verify_steps: (AUTH_HELPED) POST devconnect.signl4.com/identity/connect/token with client_id=692A0A56&client_secret=<valid>&grant_type=authorization_code; then GET api.signl4.com/api/v2/teams Authorization: Bearer <token>  
+impact: staging credential → prod API full CRUD; CRITICAL  
+testability: AUTH_HELPED
+[PARKED] API spec empty security (MISCONFIG, 45): real spec defect but LOW impact — doesn't bypass auth, just confuses consumers
+[FINAL] 1) Cross-env token forgery (AUTH, 88) — full chain documented, blocked on client_secret  
+[FINAL] 2) API key via query param (AUTH, 78) — live confirmed, referrer leakage vector exists but mitigated by strict-origin referrer-policy  
+[FINAL] 3) API spec empty security (MISCONFIG, 45) — real spec defect, LOW impact
+[NEXT] RAG: search for any public SIGNL4 integration guides, Zapier/Make/Power Automate templates, or developer documentation that includes sample API URLs with `?x-s4-api-key=` query parameter — would confirm real-world referrer leakage path; also search for any SIGNL4 npm/pip/PyPI client SDKs that default to query-param auth.
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational — first live test confirms API key validation pipeline  
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json` — distinct auth pipelines with different error responses confirm independent validation paths  
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
+[RISK] derdack: 86 — SIGNL4 API V2 has two independent auth pipelines (Bearer JWT + API key via header/query); cross-env trust anchor (shared RS256 key across 4 identity hosts) is stable for 7+ days with zero drift; API key query-param auth confirmed live (MEDIUM referrer leakage risk mitigated by strict-origin referrer-policy); prod IdP parametric twin of staging with password/device_code/CIBA grants; all OAuth flows client_secret-gated (AUTH_HELPED); remaining high-value vector is credential-dependent chaining only; the API spec empty security requirement is a real but LOW finding
+## 2026-09-09 21:00:44 UTC [target] (model bigpickle)
+[PRIO] devconnect.signl4.com/identity/connect/token,8.4,a=9,b=9,t=8,g=3,c=9,f=9
+[PRIO] connect.signl4.com/api/v2/*,7.9,a=9,b=9,t=6,g=4,c=9,f=8
+[PRIO] connect.signl4.com/webhook/*,7.6,a=8,b=8,t=5,g=8,c=8,f=8
+[HYP] Staging IdP token accepted at prod API via shared RS256 key + shared client_id
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token → api.signl4.com/api/v2/teams
+confidence: 85
+reasoning: 4 identity hosts byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, 10x deep-equal, zero drift); devaccount+account /manage both redirect with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and full scope set (incl public_api_read/write/prov); prod discovery is byte-parametric twin of staging incl password+device_code+CIBA grants; swagger confirms API accepts OAuth2 authorizationCode Bearer from connect identity; chain complete, gated on client_secret
+evidence_needed: POST staging token endpoint with client_secret + grant → access_token; GET prod api/v2/teams Bearer <token> → 200
+verify_steps: (AUTH_HELPED) POST devconnect.signl4.com/identity/connect/token grant_type=authorization_code&client_id=692A0A56&client_secret=<valid>&code=<code>; GET api.signl4.com/api/v2/teams Authorization: Bearer <token>
+impact: any staging credential → prod API full CRUD (alerts/teams/webhooks/subscriptions/users); CRITICAL
+testability: AUTH_HELPED
+[HYP] URL-embedded webhook team-secret enables alert injection + suppression of genuine alerts if leaked
+class: BUSLOGIC
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 50
+reasoning: 15+ official integrations hardcode secret in URL/path (stored in 3rd-party config DBs, YAML, IoT firmware); webhook can ack/resolve real alerts via X-S4-ExternalID+X-S4-Status (documented) and inject fake critical alerts; secret is static/non-rotatable (delete+recreate); no public leak located this cycle
+evidence_needed: (1) any leaked real secret in public code/config; (2) POST /webhook/<leak> with X-S4-Status=resolved alters a genuine alert
+verify_steps: PASSIVE — grep.app/GitHub code search for `connect.signl4.com/webhook/` once rate-limit clears; if a live secret surfaces, POST read-only-entitled payload is HUMAN decision (program excludes customer-auth-data testing)
+impact: alert spoofing + suppression of real on-call incidents → incident-response integrity loss; HIGH if leak found
+testability: PASSIVE (leak hunt) / AUTH_HELPED (confirmation)
+[HYP] API key accepted via query parameter leaks credential through referrer/logs
+class: AUTH
+asset: api.signl4.com/api/v2/* & connect.signl4.com/api/v2/*
+confidence: 55
+reasoning: `?x-s4-api-key=<key>` live-confirmed (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer header vs problem+json 403) established; swagger declares API_Key_Query scheme; BUT zero public docs/samples/integrations use query-param auth and referrer-policy strict-origin-when-cross-origin mitigates cross-origin leak; swagger/spec inconsistency remains real
+evidence_needed: any real-world URL using `?x-s4-api-key=` with live key, or CDN/log artifact
+verify_steps: PASSIVE — ongoing code-search sweep for `x-s4-api-key` param usage; no live probe needed
+impact: if a key ever rides a query URL into 3rd-party logs/referrer → tenant CRUD compromise; MEDIUM conditional
+testability: PASSIVE
+[PARKED] Query-param referrer leak (AUTH, 55): live-confirmed but RAG proves no real-world query-param usage; impact not demonstrable — swagger/spec defect only.
+[PARKED] Webhook URL-secret design (BUSLOGIC, 50): no leaked live secret found; program excludes customer-auth-data exposure testing; reportable as design-governance observation only.
+[FINAL] 1) Cross-env token forgery (AUTH, 85) — full chain documented, only client_secret-gated verification remains.
+[FINAL] 2) API spec empty security requirement (MISCONFIG, 45) — real spec defect, LOW.
+[FINAL] 3) /api/v2/teams 405↔401 auth-status flapping (MISCONFIG, 40) — handler vs route-layer auth inconsistency, informational.
+[NEXT] PROBE (AUTH_HELPED): POST https://devconnect.signl4.com/identity/connect/token body=`grant_type=authorization_code&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<vendor-provided>&redirect_uri=https://devaccount.signl4.com/callback&code=<code>`, then GET https://api.signl4.com/api/v2/teams `Authorization: Bearer <access_token>` — 200 vs 401 seals the CRITICAL cross-env finding. Requires granted staging creds (blocked on client_secret since 2026-09-05).
+[LEARN] ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → referrer-leak impact not demonstrable.
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated).
+[LEARN] REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content this cycle — credential-leak hypothesis has no current evidence.
+[RISK] derdack: 62 — Mutating/IDOR/BOLA surfaces all gated (XML-RPC 403, API Bearer/API-key 401/403, OAuth client_secret-gated); standout is the cross-env identity-isolation failure (shared RS256 key + client_id 692A0A56 across 4 hosts incl. prod/staging) elevating any staging credential to prod API CRUD; spec-level defects (empty swagger security, query-param key scheme) are real but LOW; no current public credential leak identified; residual unknowns gated on credentials Derdack must supply to close the critical chain.
+## 2026-09-09 22:55:02 UTC [target] (model bigpickle)
+=== REPORTS ===
+analyst-bigpickle.log
+analyst-laguna.log
+analyst-ling3.log
+analyst-longcat.log
+analyst-nemotron3.log
+hypotheses-bigpickle.txt
+hypotheses-laguna.txt
+hypotheses-ling3.txt
+hypotheses-longcat.txt
+hypotheses-nemotron3.txt
+hypotheses.md
+valid-bugs.md
+# Validated findings (running count 0)
+
+- 2 lead(s) marked VALID at 2026-09-03 23:20:09 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 3 lead(s) marked VALID at 2026-09-04 17:46:22 UTC
+  - | Q7 Reasonable triager? | **Yes** | Information disclosure of sensitive file paths on a live dev host is a valid finding |
+  - **Verdict: VALID**
+  - | dev.derdack.com MultiViews path disclosure | **VALID** | 5.3 | Report to bugs.olivermaicher.eu |
+
+- 1 lead(s) marked VALID at 2026-09-05 13:31:45 UTC
+  - Please paste the lead(s) you want me to triage, and I'll run each through the 7-Question Gate with verdict, reasoning, and (if VALID) proof steps, impact, CVSS 3.1, and reporting channel.
+
+- 2 lead(s) marked VALID at 2026-09-06 06:28:40 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 2 lead(s) marked VALID at 2026-09-08 10:34:26 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+
+- 4 lead(s) marked VALID at 2026-09-09 06:38:04 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+  - | 1 | Cross-Env JWKS Key + Client/Scope Reuse | **VALID** | 7.4 |
+  - | 6 | Staging IdP Directly Reachable | **VALID** | 6.5 |
+=== STATE ===
+{"phase": "POC", "target": "api"}
+[0m
+[0m→ [0mRead triage/run-2026-09-09-23-18.md
+[0m
+[0m$ [0mtail -80 probe-results.md; echo "=== HYPOTHESES bigpickle ==="; tail -60 reports/hypotheses-bigpickle.txt
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-06 20:50:26 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-06 22:38:03 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-07 00:26:12 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-07 04:56:05 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-07 09:54:59 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-07 15:42:01 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-07 19:42:23 UTC
+
+
+## 2026-09-07 22:23:03 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-08 00:38:37 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-08 05:12:42 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-08 09:47:32 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-08 14:20:26 UTC
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-08 18:10:29 UTC
+
+
+## 2026-09-08 20:36:14 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-08 22:59:29 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-09 01:16:34 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-09 05:56:32 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-09 10:46:35 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-09 14:50:17 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-09 18:15:43 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-09 21:02:00 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-09 23:14:42 UTC
+
+=== HYPOTHESES bigpickle ===
+## 2026-09-09 22:55:02 UTC [target] (model bigpickle)
+[0m
+[0m→ [0mRead leads/lead-nemotron3.md[90m [offset=1, limit=60][0m
+[0m◈ [0mParallel Web Search "SIGNL4 API "x-s4-api-key" query parameter URL example"
+[0m
+[0m$ [0mfor d in signl4.com enterprisealert.com derdack.com; do echo "=== $d ==="; curl -s --max-time 60 "https://crt.sh/?q=%25.$d&output=json" | python3 -c "
+import sys,json
+try:
+    data=json.load(sys.stdin)
+    names=set()
+    for e in data:
+        for n in e.get('name_value','').split('\n'):
+            n=n.strip().lower()
+            if n: names.add(n)
+    for n in sorted(names): print(n)
+except Exception as ex:
+    print('ERR',ex)
+"; done
+=== signl4.com ===
+*.signl4.com
+bot.signl4.com
+devfix.signl4.com
+docs.signl4.com
+fix.signl4.com
+frontdoor.signl4.com
+go.signl4.com
+signl4.com
+status.signl4.com
+support.signl4.com
+trust.signl4.com
+vps.signl4.com
+www.signl4.com
+www.vps.signl4.com
+=== enterprisealert.com ===
+*.enterprisealert.com
+demo.enterprisealert.com
+downloads.enterprisealert.com
+enterprisealert.com
+www.enterprisealert.com
+=== derdack.com ===
+*.derdack.com
+derdack.com
+signals.derdack.com
+www.derdack.com
+[0m
+crt.sh surfaced new SUBDOMAINS not in the known estate (bot/fix/frontdoor/go/status/support/trust/vps/docs.signl4.com, demo+downloads.enterprisealert.com), and the live API docs reveal an unprobed `/api/v2/events/{team-secret}` route + `/api/prepaid/*` route. Probing read-only now.
+[0m$ [0mfor h in bot fix frontdoor go status support trust vps docs devbot devfix labbot; do
+  printf "%-22s " "$h.signl4.com"
+  curl -sS --max-time 15 -o /dev/null -w "ip=%{remote_ip} code=%{http_code} ct=%{content_type} redir=%{redirect_url}\n" "https://$h.signl4.com/" 2>&1 | tail -1
+  sleep 1
+done
+printf "%-22s " "demo.enterprisealert.com"
+curl -sS --max-time 15 -o /dev/null -w "ip=%{remote_ip} code=%{http_code} ct=%{content_type}\n" "https://demo.enterprisealert.com/" 2>&1 | tail -1
+sleep 1
+printf "%-22s " "downloads.enterprisealert.com"
+curl -sS --max-time 15 -o /dev/null -w "ip=%{remote_ip} code=%{http_code} ct=%{content_type}\n" "https://downloads.enterprisealert.com/" 2>&1 | tail -1
+bot.signl4.com         ip=3.170.19.83 code=403 ct=text/html redir=
+fix.signl4.com         ip=20.160.37.197 code=200 ct=text/html; charset=utf-8 redir=
+frontdoor.signl4.com   ip=20.22.16.164 code=200 ct=text/html redir=
+go.signl4.com          ip=199.60.103.254 code=403 ct=text/plain; charset=UTF-8 redir=
+status.signl4.com      ip=135.181.151.105 code=200 ct=text/html; charset=utf-8 redir=
+support.signl4.com     ip=216.198.54.6 code=302 ct=text/html; charset=utf-8 redir=https://support.signl4.com/hc
+trust.signl4.com       ip=104.18.4.130 code=200 ct=text/html; charset=utf-8 redir=
+vps.signl4.com         ip=72.167.227.27 code=000 ct= redir=
+docs.signl4.com        ip=185.199.108.153 code=200 ct=text/html; charset=utf-8 redir=
+devbot.signl4.com      ip= code=000 ct= redir=
+devfix.signl4.com      ip=108.143.123.104 code=200 ct=text/html; charset=utf-8 redir=
+labbot.signl4.com      ip= code=000 ct= redir=
+demo.enterprisealert.com ip=4.207.244.99 code=404 ct=
+downloads.enterprisealert.com ip=40.71.11.142 code=403 ct=text/html
+[0m
+New live hosts confirmed: `fix`, `frontdoor`, `status`, `support` (Zendesk 302→/hc), `trust`, `docs` (GitHub Pages), `demo`+`downloads.enterprisealert.com`. `vps` dead, `go`/`bot` look parked/WAF'd. Fingerprinting the live ones + probing the new API routes.
+[0m$ [0mfor h in fix frontdoor status trust; do
+  echo "=== $h.signl4.com ==="
+  curl -sS --max-time 15 -D - "https://$h.signl4.com/" -o /tmp/opencode/$h.html 2>&1 | grep -iE "^(server|x-powered|cf-ray|x-|set-cookie|location):" | head -8
+  grep -oiE "<title>[^<]*</title>" /tmp/opencode/$h.html | head -2
+  sleep 1
+done
+echo "=== status.signl4.com subpaths ==="
+for p in "api/v2/status.json" "api/status" "api/" "health"; do
+  printf "%-22s " "/$p"
+  curl -sS --max-time 15 -o /dev/null -w "code=%{http_code} ct=%{content_type} size=%{size_download}\n" "https://status.signl4.com/$p"
+  sleep 1
+done
+=== fix.signl4.com ===
+server: Kestrel
+set-cookie: .AspNetCore.Antiforgery.RtGCWVXC8-4=CfDJ8BPCHZaD5URAtVtwr_l0Hfo6qD51AfExn8b86r9UEp6xYJMheY6qxdWGr5wSf4KKsIGPMHtjIKXXXM5j7ZwDiIxUzADr1WGf2lxgBRWdZrdBhzCbCu2PdaeR5h2SlK9rRtPE4a05jLbcz4xF5lsEM2U; path=/; samesite=strict; httponly
+<title>SIGNL4 Support Application</title>
+=== frontdoor.signl4.com ===
+<title>SIGNL4 - %ReplaceStatusTitle%</title>
+=== status.signl4.com ===
+server: Apache
+set-cookie: PHPSESSID=984oho813koi0bi2ho5k9pdbkm; path=/; HttpOnly
+<title>DERDACK SIGNL4</title>
+=== trust.signl4.com ===
+server: cloudflare
+set-cookie: __cf_bm=_OCendLqJwL9PZMf6n.QB7HYz7iJ2LuzC6LMviO_cJc-1789001182.8387334-1.0.1.1-_Jv6efT2APCDzahYEbdTWAUCqCMGjGEz0He9NJFHfrD95m0Ow4N_CEwpNbaoFKLhm.X2IOnwVxzyERAIHAZmFdkmc_rzBKpYF6zWdqhjWyQUy8dHdemj_ZBt3vNu7KFw; HttpOnly; SameSite=None; Secure; Path=/; Domain=trust.signl4.com; Expires=Thu, 10 Sep 2026 01:16:22 GMT
+cf-ray: a38a6a50bd7521cf-IAD
+=== status.signl4.com subpaths ===
+/api/v2/status.json    code=302 ct=text/html; charset=utf-8 size=0
+/api/status            code=302 ct=text/html; charset=utf-8 size=0
+/api/                  code=302 ct=text/html; charset=utf-8 size=0
+/health                code=302 ct=text/html; charset=utf-8 size=0
+[0m
+`fix` is a prod ASP.NET Core "SIGNL4 Support Application" (Kestrel), `frontdoor` serves an UNRENDERED template title `%ReplaceStatusTitle%`, `status` is a custom PHP status page that 302s everything. Digging into those + probing the new documented API routes.
+[0m$ [0mecho "=== status.signl4.com redirects ==="
+curl -sS --max-time 15 -o /dev/null -w "root: code=%{http_code} redir=%{redirect_url}\n" -L "https://status.signl4.com/" | tail -1
+sleep 1
+curl -sS --max-time 15 -o /dev/null -w "index.php: code=%{http_code} redir=%{redirect_url}\n" "https://status.signl4.com/index.php"
+sleep 1
+echo "=== frontdoor.signl4.com headers ==="
+curl -sS --max-time 15 -D - -O /dev/null "https://frontdoor.signl4.com/" 2>&1 | grep -iE "^(server|location|x-|set-cookie|via|content-)" | head -10
+sleep 1
+echo "=== fix.signl4.com subpaths ==="
+for p in "signin-oidc" "health" "_blazor/negotiate" "api/health" "Account/Login"; do
+  printf "%-20s " "/$p"
+  curl -sS --max-time 15 -o /dev/null -w "code=%{http_code} ct=%{content_type} size=%{size_download}\n" "https://fix.signl4.com/$p"
+  sleep 1
+done
+=== status.signl4.com redirects ===
+root: code=200 redir=
+index.php: code=302 redir=https://status.adminlabs.com/status-page-not-found.html
+=== frontdoor.signl4.com headers ===
+=== fix.signl4.com subpaths ===
+/signin-oidc         code=500 ct= size=0
+/health              code=404 ct= size=0
+/_blazor/negotiate   code=405 ct=text/plain size=0
+/api/health          code=404 ct= size=0
+/Account/Login       code=404 ct= size=0
+[0m
+`status` is a third-party StatusLabs page (adminlabs.com), `fix` = prod Support Application with same broken `/signin-oidc` 500 as staging. Now the new API routes + frontdoor body.
+[0m$ [0mUUID=0000dead-beef-4c00-8000-000000000000
+echo "=== connect.signl4.com new routes ==="
+printf "%-28s " "POST route probe /api/v2/events/"
+curl -sS --max-time 15 -X GET -o /dev/null -w "code=%{http_code} allow=%{header_json}" -D /tmp/opencode/evh.txt "https://connect.signl4.com/api/v2/events/$UUID" 2>&1 | tail -c 40; grep -i allow /tmp/opencode/evh.txt | head -1; echo
+sleep 1
+printf "%-28s " "GET /api/prepaid/.../prepaidSettings"
+curl -sS --max-time 15 -o /dev/null -w "code=%{http_code}\n" "https://connect.signl4.com/api/prepaid/$UUID/prepaidSettings"
+sleep 1
+printf "%-28s " "GET /webhook/docs/index.html"
+curl -sS --max-time 15 -o /tmp/opencode/wbdoc.html -w "code=%{http_code} ct=%{content_type} size=%{size_download}\n" "https://connect.signl4.com/webhook/docs/index.html"
+sleep 1
+printf "%-28s " "GET /api/v2/teams (baseline)"
+curl -sS --max-time 15 -o /dev/null -w "code=%{http_code}\n" "https://connect.signl4.com/api/v2/teams"
+sleep 1
+echo "=== frontdoor body ==="
+curl -sS --max-time 15 -D /tmp/opencode/fd.txt "https://frontdoor.signl4.com/" -o /tmp/opencode/fd.html
+head -20 /tmp/opencode/fd.txt | grep -viE "^(date|content-length)"
+grep -oiE "<title>[^<]*</title>" /tmp/opencode/fd.html | head -2
+grep -oiE "(s4-store|subdomain|hello|ready)" /tmp/opencode/fd.html | sort -u | head -5
+=== connect.signl4.com new routes ===
+POST route probe /api/v2/events/ rigin"],
+"www-authenticate":["Bearer"]
+}
+GET /api/prepaid/.../prepaidSettings code=405
+GET /webhook/docs/index.html code=301 ct= size=0
+GET /api/v2/teams (baseline) code=401
+=== frontdoor body ===
+HTTP/2 200 
+content-type: text/html
+cache-control: public, must-revalidate, max-age=30
+etag: "01793129"
+last-modified: Tue, 03 Sep 2024 15:12:57 GMT
+strict-transport-security: max-age=10886400; includeSubDomains; preload
+referrer-policy: same-origin
+x-content-type-options: nosniff
+x-xss-protection: 1; mode=block
+x-dns-prefetch-control: off
+
+<title>SIGNL4 - %ReplaceStatusTitle%</title>
+[0m
+`/api/v2/events/{id}` is registered+Bearer-gated (401), `/api/prepaid/{id}/prepaidSettings` is a NEW registered route (405), frontdoor serves an unrendered `%ReplaceStatusTitle%` template (static, ETag, last-modified 2024-09-03). Checking method semantics + frontdoor app identity.
+[0m$ [0mUUID=0000dead-beef-4c00-8000-000000000000
+echo "=== OPTIONS /api/prepaid/.../prepaidSettings ==="
+curl -sS --max-time 15 -X OPTIONS -D - -o /dev/null "https://connect.signl4.com/api/prepaid/$UUID/prepaidSettings" 2>&1 | grep -iE "^(allow|www-authenticate|content-type):" 
+sleep 1
+echo "=== /webhook/docs redirect target ==="
+curl -sS --max-time 15 -o /dev/null -w "code=%{http_code} redir=%{redirect_url}\n" "https://connect.signl4.com/webhook/docs/index.html"
+sleep 1
+curl -sS --max-time 20 -L -o /tmp/opencode/wbdoc.html -w "final: code=%{http_code} url=%{url_effective} size=%{size_download}\n" "https://connect.signl4.com/webhook/docs/index.html"
+sleep 1
+echo "=== frontdoor app identity ==="
+grep -oiE "(manifest|main\.[a-z0-9]+\.js|s4-[a-z-]+|frontdoor[a-z-]*|angular|react)" /tmp/opencode/fd.html | sort | uniq -c | sort -rn | head -10
+=== OPTIONS /api/prepaid/.../prepaidSettings ===
+allow: PUT
+=== /webhook/docs redirect target ===
+code=301 redir=https://connect.signl4.com/webhook/docs
+final: code=200 url=https://connect.signl4.com/webhook/docs/ size=728
+=== frontdoor app identity ===
+[0m
+Webhook docs = Scalar SPA (728B). Getting the webhook OpenAPI doc + OPTIONS on events route + reading frontdoor body, then a quick fix.signl4.com surface sweep.
+[0m$ [0mUUID=0000dead-beef-4c00-8000-000000000000
+echo "=== webhook docs page ==="
+cat /tmp/opencode/wbdoc.html
+sleep 1
+echo "=== webhook openapi candidates ==="
+for p in "webhook/docs/openapi.json" "webhook/docs/swagger.json" "webhook/docs/signl4-webhook.yaml" "docs/swagger.json" "webhook/swagger.json"; do
+  printf "%-28s " "/$p"
+  curl -sS --max-time 15 -o /dev/null -w "code=%{http_code} ct=%{content_type} size=%{size_download}\n" "https://connect.signl4.com/$p"
+  sleep 1
+done
+echo "=== OPTIONS /api/v2/events/{id} ==="
+curl -sS --max-time 15 -X OPTIONS -D - -o /dev/null "https://connect.signl4.com/api/v2/events/$UUID" 2>&1 | grep -iE "^(allow|www-authenticate):"
+sleep 1
+echo "=== fix.signl4.com surface ==="
+for p in "swagger" "swagger/index.html" "api" "_blazor"; do
+  printf "%-20s " "/$p"
+  curl -sS --max-time 15 -o /dev/null -w "code=%{http_code} ct=%{content_type}\n" "https://fix.signl4.com/$p"
+  sleep 1
+done
+echo "=== frontdoor raw body ==="
+head -c 600 /tmp/opencode/fd.html
+=== webhook docs page ===
+<!doctype html>
+<html>
+<head>
+    <title>SIGNL4 Inbound Webhook API Documentation</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    
+</head>
+<body>
+    
+    <div id="app"></div>
+    <script src="scalar.js"></script>
+    <script type="module" src="scalar.aspnetcore.js"></script>
+    <script type="module">
+        import { initialize } from './scalar.aspnetcore.js'
+        initialize(
+        '%2Fdocs%2F',
+        false,
+        {"expandAllModelSections":true,"favicon":"/webhook//docs/favicon.png","_integration":"dotnet","sources":[{"title":"SIGNL4 Inbound Webhook API Documentation","url":"docs/v1/swagger.json"}]},
+        '')
+    </script>
+</body>
+</html>=== webhook openapi candidates ===
+/webhook/docs/openapi.json   code=200 ct=text/html size=717
+/webhook/docs/swagger.json   code=200 ct=text/html size=717
+/webhook/docs/signl4-webhook.yaml code=200 ct=text/html size=738
+/docs/swagger.json           code=404 ct= size=0
+/webhook/swagger.json        code=200 ct=application/json; charset=utf-8 size=191
+=== OPTIONS /api/v2/events/{id} ===
+allow: GET, POST
+=== fix.signl4.com surface ===
+/swagger             code=404 ct=
+/swagger/index.html  code=404 ct=
+/api                 code=404 ct=
+/_blazor             code=400 ct=text/plain
+=== frontdoor raw body ===
+<html>
+    <head>
+        <title>SIGNL4 - %ReplaceStatusTitle%</title>
+        <style id="fontFamily">
+            @font-face {
+                font-family: 'open_sanslight';
+                src: url(data:application/font-woff2;charset=utf-8;base64,d09GMgABAAAAAEW4ABIAAAAArpwAAEVQAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP0ZGVE0cGh4bkxgcgSgGYACDWgg4CYRlEQgKgp4IgfxIC4NWAAE2AiQDhyYEIAWJcAeFXQyCOxvImiXsmAVuByFrlNeK2RHW44DFjBOMipJCl8v+/3OCGmP4j+1A1NZWTFZFKTSxFE6jtefR3dqr1dPSId4iJI+V1XARQogyPuH34Zcpfvbkfwaz0jpRv0a81DrBdgZue5S2RNiExTCEiPGX/QbJEK2MJ0cLLaurvx88rR3HucXw4eJFYNzCR82pd3h+br0lSEi1DEQkW+gRNeAv2GCMjY0
+[0m
+Webhook OpenAPI spec located: `docs/v1/swagger.json` under `/webhook/docs/`, plus a `/webhook/swagger.json` (191B). Fetching both + frontdoor asset refs.
+[0m$ [0mecho "=== /webhook/swagger.json (191B) ==="
+curl -sS --max-time 15 "https://connect.signl4.com/webhook/swagger.json"
+sleep 1
+echo ""
+echo "=== /webhook/docs/docs/v1/swagger.json (spec) ==="
+curl -sS --max-time 20 "https://connect.signl4.com/webhook/docs/docs/v1/swagger.json" -o /tmp/opencode/whspec.json -w "code=%{http_code} size=%{size_download}\n"
+python3 -c "
+import json
+d=json.load(open('/tmp/opencode/whspec.json'))
+print('paths:', list(d.get('paths',{}).keys()))
+for k,v in d.get('paths',{}).items():
+    for m,op in v.items():
+        if m in ('get','post','put','delete'):
+            print(' ',m.upper(),k, 'params:', [p.get('name') for p in op.get('parameters',[])] or 'none')
+servers=d.get('servers')
+print('servers:',servers)
+" 2>&1 | head -30
+sleep 1
+echo "=== frontdoor script refs ==="
+grep -oE "src=\"[^\"]+\"" /tmp/opencode/fd.html | head; grep -oE "href=\"[^\"]+\"" /tmp/opencode/fd.html | head
+=== /webhook/swagger.json (191B) ===
+{
+  "details": "You need to POST JSON content to your webhook URL. Find more information at: https://docs.signl4.com/integrations/webhook/webhook.html",
+  "message": "GET not supported."
+}
+=== /webhook/docs/docs/v1/swagger.json (spec) ===
+code=404 size=0
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+  File "/usr/lib/python3.12/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+=== frontdoor script refs ===
+href="https://www.signl4.com/feedback-we-love-hear-from-you/"
+href="https://www.signl4.com/imprint-leadership-about/"
+href="https://www.signl4.com/terms_of_use/"
+href="https://www.signl4.com/privacy-policy/"
+[0m
+[0m$ [0mfor p in "webhook/docs/v1/swagger.json" "webhook/v1/swagger.json" "webhook/docs/docs/v1/openapi.json" "webhook/docs/openapi.yaml"; do
+  printf "%-30s " "/$p"
+  curl -sS --max-time 15 -o /tmp/opencode/spec.json -w "code=%{http_code} ct=%{content_type} size=%{size_download}\n" "https://connect.signl4.com/$p"
+  if [ -s /tmp/opencode/spec.json ] && grep -q '"openapi"\|"swagger"' /tmp/opencode/spec.json; then cp /tmp/opencode/spec.json /tmp/opencode/whspec.json; echo "FOUND $p"; fi
+  sleep 1
+done
+echo "=== spec summary ==="
+if [ -f /tmp/opencode/whspec.json ]; then python3 -c "
+import json
+d=json.load(open('/tmp/opencode/whspec.json'))
+for k,v in d.get('paths',{}).items():
+    for m,op in v.items():
+        print(' ',m.upper(),k,'params:',[p.get('name') for p in op.get('parameters',[])] or 'none')
+"; fi
+/webhook/docs/v1/swagger.json  code=200 ct=application/json;charset=utf-8 size=12647
+FOUND webhook/docs/v1/swagger.json
+/webhook/v1/swagger.json       code=404 ct= size=0
+/webhook/docs/docs/v1/openapi.json code=404 ct= size=0
+/webhook/docs/openapi.yaml     code=200 ct=text/html size=717
+=== spec summary ===
+  GET /docs/index.html params: none
+  POST /{teamSecret} params: ['teamSecret', 'ExtIdParam', 'ExtStatusParam', 'NewStatus', 'ResolvedStatus', 'AckStatus']
+[0m
+[0m$ [0mpython3 -c "
+import json
+d=json.load(open('/tmp/opencode/whspec.json'))
+print('OPENAPI:', d.get('openapi'), '| servers:', d.get('servers'))
+print('security:', d.get('security'))
+op=d['paths']['/{teamSecret}']['post']
+for p in op.get('parameters',[]):
+    print('PARAM', p.get('in'), p.get('name'), 'req=', p.get('required'))
+sch=op.get('requestBody',{}).get('content',{})
+for ct,media in sch.items():
+    print('BODY', ct, 'schema props:', list(media.get('schema',{}).get('properties',{}).keys())[:20])
+resp=op.get('responses',{})
+print('responses:', {k:v.get('description','')[:40] for k,v in resp.items()})
+"
+OPENAPI: 3.0.4 | servers: [{'url': 'https://connect.signl4.com/webhook'}]
+security: None
+PARAM path teamSecret req= True
+PARAM query ExtIdParam req= None
+PARAM query ExtStatusParam req= None
+PARAM query NewStatus req= None
+PARAM query ResolvedStatus req= None
+PARAM query AckStatus req= None
+BODY application/json schema props: []
+BODY text/plain schema props: []
+BODY application/xml schema props: []
+BODY application/x-www-form-urlencoded schema props: []
+responses: {'201': 'Response body contains a unique {eventId', '400': 'The passed {eventObject} is null or empt', '404': 'The passed {teamSecret} is invalid.'}
+[0m
+Full webhook contract captured: `POST /{teamSecret}` with query-configurable status keywords (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus). Extracting the X-S4-* parameter surface, then consolidating.
+[0m$ [0mcat >> leads/lead-bigpickle.md << 'EOF'
+## 2026-09-10 01:35 UTC [target] (model bigpickle)
+[DELTA] NEW crt.sh surface expansion — 13 signl4.com + 4 enterprisealert.com subdomains, 8 previously-unknown live hosts
+[DELTA] NEW fix.signl4.com = prod ASP.NET Core "SIGNL4 Support Application" (Kestrel 20.160.37.197), /signin-oidc 500 (broken OIDC callback, devfix twin), Blazor (_blazor/negotiate 405 on GET)
+[DELTA] NEW frontdoor.signl4.com (20.22.16.164) = unconfigured SPA shell, literal unrendered `<title>%ReplaceStatusTitle%</title>` (ETag 01793129, last-modified 2024-09-03)
+[DELTA] NEW status.signl4.com = StatusLabs third-party page (adminlabs.com); /index.php→status-page-not-found; support.signl4.com=Zendesk /hc; trust=CF trust center; docs=GitHub Pages
+[DELTA] NEW API surface: PUT /api/prepaid/{subscriptionId}/prepaidSettings registered (OPTIONS Allow: PUT) — billing family never in prior /api/v2 route maps; /api/v2/events/{teamSecret} = GET,POST Bearer-gated (401); /webhook/docs/v1/swagger.json OpenAPI 3.0.4 public
+[DELTA] CHANGED /api/v2/teams baseline this cycle = 401 (vs 405 prior cycles) — flapping re-confirmed; CONFIRMED /webhook/swagger.json 191B "GET not supported" stub
+[PRIO] connect.signl4.com/webhook/*,8.05,a=9,b=9,t=5,g=8,c=8,f=8
+[PRIO] connect.signl4.com/api/prepaid/*,7.4,a=8,b=9,t=6,g=3,c=8,f=10
+[PRIO] fix.signl4.com,6.9,a=7,b=8,t=8,g=3,c=5,f=10
+[HYP] Webhook team-secret leak enables alert spoof/suppression via documented status-mapping params
+class: BUSLOGIC
+asset: connect.signl4.com/webhook/{teamSecret} + /api/v2/events/{teamSecret}
+confidence: 55
+reasoning: OpenAPI 3.0.4 at /webhook/docs/v1/swagger.json (no security scheme, secret-in-URL = credential); POST /{teamSecret} query-configurable ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus align payload status to ack/resolve; validator oracle 404=invalid secret vs 201=eventId; secrets static + embedded in 15+ third-party configs; no indexed live leak found
+evidence_needed: real leaked teamSecret; POST ack/resolve against genuine alert
+verify_steps: PASSIVE grep.app/GitHub sweep for `connect.signl4.com/webhook/` + `api/v2/events/` + X-S4-Status; confirmation = HUMAN gate (customer-auth-data excluded)
+impact: alert spoofing + suppression of genuine on-call incidents; HIGH conditional on leak
+testability: PASSIVE (leak hunt) / HUMAN (confirm)
+[HYP] BOLA on prepaid subscription settings route
+class: IDOR
+asset: connect.signl4.com/api/prepaid/{subscriptionId}/prepaidSettings
+confidence: 45
+reasoning: OPTIONS confirms PUT-only registered route (Allow: PUT) on prod gateway; api/docs lists PUT /prepaid/{subscriptionId}/prepaidSettings; prepaid = reseller/credit billing; auth-deferred-to-handler pattern (405 before 401) matches teams; whether subscriptionId is BOLA-checked vs scoped-valid is UNPROBED — new route family
+evidence_needed: authed PUT own vs other-tenant subscriptionId differential (2xx vs 403/404)
+verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/prepaid/<uuid>/prepaidSettings → 405 Allow: PUT (done); (AUTH_HELPED) staging API key PUT cross-tenant id — HUMAN gate (write, billing)
+impact: cross-tenant prepaid/billing tamper; HIGH if id guessable + BOLA missing
+testability: PASSIVE (route) / AUTH_HELPED (confirm)
+[HYP] frontdoor template-construction residue / unconfigured gateway
+class: MISCONFIG
+asset: frontdoor.signl4.com
+confidence: 40
+reasoning: 200 shell with literal %ReplaceStatusTitle% placeholder (never substituted), static ETag, mod 2024-09-03, links only to legal/feedback pages; no app assets — stub/deploy residue on live infra
+evidence_needed: any route/asset beyond the 600B shell (login/OAuth/AuthN callbacks) = real, not stub
+verify_steps: GET https://frontdoor.signl4.com/{signin-oidc,connect/authorize,.well-known/openid-configuration,api}; content-type/diff vs shell
+impact: config/deploy artifact exposure; placeholder in live title is cosmetic — LOW
+testability: PASSIVE
+[PARKED] fix.signl4.com broken /signin-oidc 500: estate twin pattern already established (devfix); support data customer-sensitive → no additional chain; informational
+[PARKED] status/support/trust/docs/go/bot/vps: third-party (StatusLabs/Zendesk/CF/GH Pages) or inert/parked — surfaced, LOW
+[FINAL] 1) Cross-env token forgery / shared trust anchor (AUTH, 85) — triaged VALID 7.4; still cred-gated
+[FINAL] 2) Webhook team-secret alert spoof/suppression (BUSLOGIC, 55) — full contract now documented; leak-gated
+[FINAL] 3) Prepaid subscription settings route family (IDOR, 45) — new billing surface, BOLA AUTH_HELPED
+[NEXT] RAG: sweep docs.signl4.com corpus + GitHub/grep.app for real webhook/event URLs (`connect.signl4.com/webhook/`, `/api/v2/events/`, X-S4-Status) for live-secret leak; cross-check SIGNL4 docs for any additional undocumented/beta endpoints (prepaid, v3, SMTP email gateway) to extend route map passively
+[LEARN] ACCEPTED OTHER @ crt.sh: CT surface expansion — 8 previously-unknown live hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com)
+[LEARN] ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured portal shell serves literal %ReplaceStatusTitle% title (static, 2024-09-03) — LOW
+[LEARN] ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application, /signin-oidc 500 broken OIDC (devfix twin); Blazor estate
+[LEARN] ACCEPTED AUTH @ connect.signl4.com: new routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, handler-deferred auth) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + public webhook OpenAPI /webhook/docs/v1/swagger.json
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, no security scheme, status-keyword query config (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404 vs 201
+[LEARN] REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert
+[RISK] derdack: 68 — estate larger than recorded (fix prod support portal, frontdoor stub, status/support/trust/docs live, prepaid billing route family, webhook contract public); all mutating surfaces remain auth-gated and critical cross-env chain cred-gated; no new anon read/credit path on live customer data
+EOF
+echo "appended; tail:"; tail -4 leads/lead-bigpickle.md | head -2
+appended; tail:
+[LEARN] ACCEPTED AUTH @ connect.signl4.com: new routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, handler-deferred auth) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + public webhook OpenAPI /webhook/docs/v1/swagger.json
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, no security scheme, status-keyword query config (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404 vs 201
+[0m
+STEP 1 — DELTA
+[NEW] crt.sh CT-log sweep: 13 signl4.com + 4 enterprisealert.com subdomains; 8 previously-unknown LIVE hosts — fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com
+[NEW] fix.signl4.com (20.160.37.197) = prod ASP.NET Core "SIGNL4 Support Application" (Kestrel); /signin-oidc → 500 (broken OIDC callback, devfix twin); Blazor (`/_blazor/negotiate` 405 on GET)
+[NEW] frontdoor.signl4.com (20.22.16.164) = unconfigured SPA shell serving literal unrendered `<title>SIGNL4 - %ReplaceStatusTitle%</title>` (static ETag, last-modified 2024-09-03)
+[NEW] status.signl4.com = StatusLabs (adminlabs.com) page; /index.php → status-page-not-found. support.signl4.com = Zendesk /hc; trust = CF-fronted; docs = GitHub Pages
+[NEW] API surface: `PUT /api/prepaid/{subscriptionId}/prepaidSettings` registered (OPTIONS Allow: PUT) — billing route family absent from all prior /api/v2 route maps; `/api/v2/events/{teamSecret}` = GET+POST, 401 Bearer; `/webhook/docs/v1/swagger.json` = public OpenAPI 3.0.4
+[CHANGED] /api/v2/teams baseline flipped to 401 this cycle (was 405) — auth-status flapping re-confirmed
+
+STEP 2 — PRIORITIZE
+[PRIO] connect.signl4.com/webhook/*,8.05,a=9,b=9,t=5,g=8,c=8,f=8
+[PRIO] connect.signl4.com/api/prepaid/*,7.4,a=8,b=9,t=6,g=3,c=8,f=10
+[PRIO] fix.signl4.com,6.9,a=7,b=8,t=8,g=3,c=5,f=10
+
+STEP 3 — HYPOTHESES
+[HYP] Webhook team-secret leak enables alert spoof/suppression via documented status-mapping params
+class: BUSLOGIC
+asset: connect.signl4.com/webhook/{teamSecret} + /api/v2/events/{teamSecret}
+confidence: 55
+reasoning: OpenAPI at /webhook/docs/v1/swagger.json declares NO security scheme (secret-in-URL is the credential); POST /{teamSecret} accepts query-config ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus to align payload status keywords to ack/resolve; validator oracle = 404 invalid-secret vs 201 eventId; secrets are static, embedded in 15+ third-party integration configs; no indexed live leak found
+evidence_needed: real leaked teamSecret repro; POST ack/resolve against a genuine alert
+verify_steps: PASSIVE grep.app/GitHub sweep for `connect.signl4.com/webhook/` + `/api/v2/events/` + X-S4-Status combos; confirmation = HUMAN gate (program excludes customer-auth-data testing)
+impact: alert spoofing + suppression of genuine on-call incidents → incident-response integrity loss; HIGH conditional on leak
+testability: PASSIVE (leak hunt) / HUMAN (confirm)
+[HYP] BOLA on prepaid subscription settings route
+class: IDOR
+asset: connect.signl4.com/api/prepaid/{subscriptionId}/prepaidSettings
+confidence: 45
+reasoning: OPTIONS confirms PUT-only registered route on prod gateway; api/docs lists PUT /prepaid/{subscriptionId}/prepaidSettings; prepaid = reseller/credit billing; route returns 405/OPTIONS Allow before auth (handler-deferred pattern, matches /teams); whether subscriptionId is cross-tenant BOLA-checked vs merely scoped-valid is UNPROBED
+evidence_needed: authenticated PUT own vs other-tenant subscriptionId differential (2xx vs 403/404)
+verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/prepaid/<uuid>/prepaidSettings → 405 Allow: PUT [DONE]; (AUTH_HELPED) staging API key PUT against foreign subscriptionId — HUMAN gate (write, billing data)
+impact: cross-tenant prepaid/billing tamper; HIGH if subscriptionId guessable + BOLA check missing
+testability: PASSIVE (route confirm) / AUTH_HELPED (confirm)
+[HYP] frontdoor unconfigured gateway residue
+class: MISCONFIG
+asset: frontdoor.signl4.com
+confidence: 40
+reasoning: 200 shell with literal %ReplaceStatusTitle% placeholder (never substituted) + static ETag + links only to legal/feedback pages and no app assets — deploy/config residue on live Azure infra
+evidence_needed: any route beyond the shell (OIDC/login/api callbacks) that proves it is a functional app, not a stub
+verify_steps: GET https://frontdoor.signl4.com/signin-oidc, /connect/authorize, /.well-known/openid-configuration, /api — diff status/content-type vs shell baseline
+impact: config/deploy artifact exposure; placeholder title on live infra is cosmetic — LOW
+testability: PASSIVE
+
+STEP 4 — SELF-CRITIQUE
+[PARKED] fix.signl4.com broken /signin-oidc 500: estate-twin pattern already established (devfix); support data is customer-sensitive → no new chain; informational only
+[PARKED] status/support/trust/docs/go/bot/vps: third-party (StatusLabs/Zendesk/CF/GitHub-Pages) or inert/parked/WAF'd — surfaced, none exploitable
+[FINAL] 1) Cross-env token forgery / shared trust anchor (AUTH, 85) — triaged VALID at 7.4; still client_secret-gated
+[FINAL] 2) Webhook team-secret alert spoof/suppression (BUSLOGIC, 55) — full contract now public + documented oracle; leak-gated
+[FINAL] 3) Prepaid subscription settings route family (IDOR, 45) — new billing surface, BOLA verification AUTH_HELPED
+
+STEP 5 — NEXT ACTION
+[NEXT] RAG: sweep docs.signl4.com corpus + GitHub/grep.app for real-secret patterns `connect.signl4.com/webhook/` and `connect.signl4.com/api/v2/events/` near X-S4-Status (leak hunt), and extract any additional undocumented/beta endpoints from the docs estate (prepaid, /api/v3, SMTP email gateway) to extend the route map passively.
+
+STEP 6 — LEARNING
+[LEARN] ACCEPTED OTHER @ crt.sh: CT-log sweep — 8 previously-unknown live hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com)
+[LEARN] ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured portal shell serves literal %ReplaceStatusTitle% placeholder (last-modified 2024-09-03) — LOW
+[LEARN] ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application, /signin-oidc 500 (broken OIDC callback — devfix twin); Blazor estate family
+[LEARN] ACCEPTED AUTH @ connect.signl4.com: new registered routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, auth deferred to handler) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + public webhook OpenAPI at /webhook/docs/v1/swagger.json
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, NO security scheme, query-config status keywords (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404-invalid vs 201-eventId
+[LEARN] REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP-dead / CF trust center / Zendesk — third-party or inert, no Derdack defect
+
+STEP 7 — RISK
+[RISK] derdack: 68 — estate materially larger than recorded (prod fix support portal, frontdoor stub, status/support/trust/docs live, prepaid billing route family, webhook contract fully public); all mutating surfaces remain auth-gated, critical cross-env chain stays client_secret-gated; no new anonymous read/credit path against live customer data; residual new risk is credential-leak-driven (webhook secret / prepaid BOLA) and AUTH_HELPED.
