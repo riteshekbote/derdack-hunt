@@ -526,3 +526,12 @@ www.derdack.com
 - NEW PUT /api/prepaid/{id}/prepaidSettings — billing route, handler-deferred auth (405 OPTIONS before 401/403)
 - NEW frontdoor.signl4.com unconfigured shell with literal %ReplaceStatusTitle% placeholder (static since 2024-09-03)
 - CHANGED Previous hypothesis "webhook secret leak" remains UNSUPPORTED — no public leak found across 3 cycles of grep.app/GitHub/code-search sweeps
+
+## 2026-09-10 10:12:59 UTC
+- NEW CT surface expansion: 8 previously-unknown live hosts discovered via crt.sh — fix.signl4.com, frontdoor.signl4.com, status.signl4.com, support.signl4.com, trust.signl4.com, docs.signl4.com, demo.enter
+- NEW fix.signl4.com: prod ASP.NET Core "SIGNL4 Support Application" (Kestrel); /signin-oidc → 500 broken OIDC callback; Blazor estate (_blazor/negotiate 405 on GET)
+- NEW frontdoor.signl4.com: unconfigured SPA shell serving literal %ReplaceStatusTitle% placeholder (static ETag, last-modified 2024-09-03)
+- NEW connect.signl4.com new registered routes: PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, handler-deferred auth), /api/v2/events/{teamSecret} (GET+POST, 401 Bearer), public webhook OpenAPI at /webho
+- NEW connect.signl4.com/webhook contract confirmed: POST /{teamSecret}, NO security scheme, query-config status keywords (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404-invalid v
+- CHANGED api.signl4.com/api/v2/teams baseline flapping: 401 WWW-Authenticate:Bearer this cycle vs 405 in prior cycles — auth-status flapping re-confirmed (10th+ observation)
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism permanently invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.de

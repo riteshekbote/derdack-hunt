@@ -2150,3 +2150,33 @@ testability: PASSIVE
 [LEARN] ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application, /signin-oidc 500 broken OIDC callback — devfix twin; Blazor estate family
 [LEARN] REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP-dead / CF trust center / Zendesk — third-party or inert, no Derdack defect
 [RISK] derdack: 68 — estate materially larger than recorded (prod fix support portal, frontdoor stub, status/support/trust/docs live, prepaid billing route family, webhook contract fully public); all mutating surfaces remain auth-gated; critical cross-env chain (shared RS256 key + client_id across 4 identity hosts) stays client_secret-gated with no credential leak found; no new anonymous read/credit path against live customer data; residual new risk is credential-leak-driven (webhook secret leak → alert spoof, prepaid BOLA → billing tamper) and AUTH_HELPED
+## 2026-09-10 10:06:04 UTC [target] (model bigpickle)
+[HYP] BOLA on subscription invoice download (ZUGFeRD/en16931)
+class: IDOR
+asset: connect.signl4.com/api/v2/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd + en16931
+confidence: 48
+reasoning: spec documents GET + path params subscriptionId/invoiceId (both string UUID, no signature/auth-in-URL like webhook); OPTIONS confirms Allow:GET on fabricated-ID path; GET anonymous returns 401 so handler-level auth present; invoice = customer billing document (EN16931 XML / hybrid PDF with SB data); cross-tenant check vs scoped-valid unprobed; analogous prepaid route shares the same route family
+evidence_needed: authenticated GET own-subscription invoice 200 vs foreign-subscription invoice 2xx/403 differential
+verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/v2/subscriptions/<uuid>/invoices/<invId>/zugferd -> 405 Allow:GET [DONE]; (AUTH_HELPED) API-key GET own vs foreign subscriptionId+invoiceId — HUMAN gate (customer billing data)
+impact: cross-tenant exfiltration of customer invoices (financial/order data); HIGH conditional on BOLA
+testability: PASSIVE (route confirm) / AUTH_HELPED (confirm)
+[HYP] Prepaid subscription billing settings cross-tenant mutation
+class: IDOR
+asset: connect.signl4.com/api/v2/v3/prepaid/{subscriptionId}/prepaidSettings
+confidence: 45
+reasoning: OPTIONS Allow:PUT on prod gateway; route family now fully documented (balance/settings/transactions + subscriptions/{id}/prepaidBalance); billing route; same handler-deferred auth pattern as /teams; fabricated-ID GET path 401; BOLA check unprobed
+evidence_needed: authenticated PUT own vs other-tenant subscriptionId (2xx vs 403)
+verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/prepaid/<uuid>/prepaidSettings -> 405 Allow: PUT [DONE]; (AUTH_HELPED) staging API key PUT foreign subscriptionId — HUMAN gate (write, billing)
+impact: cross-tenant prepaid/billing tamper; HIGH if subscriptionId guessable + missing BOLA
+testability: PASSIVE / AUTH_HELPED
+[HYP] Webhook team-secret leak enables alert spoof/suppression
+class: BUSLOGIC
+asset: connect.signl4.com/webhook/{teamSecret} + /api/v2/events/{webhookIdOrTeamId}
+confidence: 55
+reasoning: docs confirm X-S4-Status resolved/acknowledged only for alerts with matching X-S4-ExternalID (suppression primitive); docs also confirm API-key twin endpoint takes webhookIdOrTeamId; secret-in-URL is sole auth; 4th passive sweep (docs corpus + live swagger) found only placeholder {team-secret}/{api-key} — no real leak
+evidence_needed: leaked real teamSecret; POST ack/resolve against genuine alert
+verify_steps: PASSIVE grep.app/GitHub sweep for `webhook/` + `/api/v2/events/` + X-S4-Status combos; confirmation = HUMAN gate
+impact: alert spoofing + suppression of genuine incidents; HIGH conditional on leak
+testability: PASSIVE / HUMAN
+[NEXT] RAG: sweep docs.signl4.com (integrations/rest-api, samples, account pages) + GitHub signl4/docs for any reference to invoice download (en16931/zugferd), subscriptionId formats, or SCIM apiKey workflows — establish whether invoice routes are customer-facing self-service (raising BOLA probability) and hunt for sample userId/invoiceId patterns to inform an AUTH_HELPED probe plan
+[RISK] derdack: 72 — single largest step-up this cycle: complete 488-route API documentation published on prod gateway (V1/V2/V3 swagger) exposes the entire attack surface map, including customer-invoice download, prepaid billing, and SCIM provisioning route families never probed before (all still auth-gated, cracker needs any valid API key/OAuth token; cross-env shared key reused across 4 identity hosts); staging now confirmed to mirror webhook family too. Anonymous read surface still zero; residual risk is credentialed BOLA (invoice/prepaid) + open-spec documentation of internal billing routes + webhook-secret leak — all AUTH_HELPED, no new anonymous credit path.
