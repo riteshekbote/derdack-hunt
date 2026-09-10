@@ -1048,3 +1048,18 @@
 - LEARN: ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → r
 - LEARN: ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resol
 - LEARN: REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content across 3 cycles — credential-leak hypothesis has no c
+
+## RANKED HYPOTHESES 2026-09-10 20:20:47 UTC
+- [75] connect.signl4.com/webhook/{teamSecret}: Webhook team-secret enumeration via status-keyword oracle (from art/lead_nemotron3.txt)
+- NEXT(hypotheses-nemotron3.txt): PROBE: POST https://connect.signl4.com/webhook/test123 Content-Type: application/json body={"Id":"test","X-S4-Status":"acknowledged","X-S4-ExternalID":"test"} —
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: Webhook team-secret enumeration oracle confirmed — POST /{teamSecret} no security scheme, 404 vs 201 or
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token: Cross-env token forgery chain complete — shared RS256 key (10x deep-equal across 4 identity hosts)
+- LEARN: ACCEPTED AUTH @ api.signl4.com/api/v2/teams: Handler-deferred auth confirmed 10th+ cycles — unauth GET returns 405 (not 401), invalid Bearer returns 405; auth v
+- LEARN: ACCEPTED MISCONFIG @ frontdoor.signl4.com: Unconfigured portal shell serves literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — LOW cosmetic de
+- LEARN: ACCEPTED AUTH @ fix.signl4.com: Prod ASP.NET Core Support Application, /signin-oidc 500 broken OIDC callback — devfix twin; Blazor estate family
+- LEARN: ACCEPTED OTHER @ crt.sh: CT surface expansion — 8 previously-unknown live hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.co
+- LEARN: REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie w
+- LEARN: REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no none) — RFC7591 dynamic client r
+- LEARN: REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect /
+- LEARN: REJECTED OTHER @ public internet: No live SIGNL4 webhook secret or API key found in indexed public content across 3 cycles — credential-leak hypothesis has no c
+- LEARN: REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert, no Derdack def

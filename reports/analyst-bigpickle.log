@@ -13677,3 +13677,110 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 [RISK] derdack: 72 — single largest step-up this cycle: complete 488-route API documentation published on prod gateway (V1/V2/V3 swagger) exposes the entire attack surface map, including customer-invoice download, prepaid billing, and SCIM provisioning route families never probed before (all still auth-gated, cracker needs any valid API key/OAuth token; cross-env shared key reused across 4 identity hosts); staging now confirmed to mirror webhook family too. Anonymous read surface still zero; residual risk is credentialed BOLA (invoice/prepaid) + open-spec documentation of internal billing routes + webhook-secret leak — all AUTH_HELPED, no new anonymous credit path.
+===== ANALYST bigpickle 2026-09-10 20:20:47 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m→ [0mRead .
+[0m→ [0mRead state_bigpickle.json
+[0m→ [0mRead leads
+[0m→ [0mRead scope.yml
+[0m→ [0mRead leads/lead-bigpickle.md
+[0m→ [0mRead probe-results.md
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=479][0m
+[0m→ [0mRead leads/lead-nemotron3.md[90m [offset=1, limit=100][0m
+[0m→ [0mRead knowledge
+Let me get the most recent lead entries and knowledge state.
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=821][0m
+[0m→ [0mRead knowledge/index.md
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=1168][0m
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=1583][0m
+## Objective
+- Hunt for exploitable vulnerabilities in Derdack GmbH / Derdack Group bug bounty program scope (SIGNL4 + Enterprise Alert), currently in POC phase targeting the SIGNL4 API surface.
+
+## Important Details
+- Program scope: All company-owned infrastructure for Derdack GmbH products including SIGNL4 and Enterprise Alert
+- Report channel: bugs.olivermaicher.eu
+- Exclusions: brute-force/rate-limit/lockout, OPTIONS/TRACE standalone, descriptive errors only, CSRF on anonymous forms, SSL/TLS best practices, cookie flags on non-sensitive data, username enumeration on login, known-vulnerable libs without PoC
+- Key finding: Cross-env signing key reuse — 4 identity hosts (connect/api/devconnect/devapi.signl4.com) share byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, x5t `ke5PPOlOtRevZrJU90l-yw4x7ic`, x5c `CN=*.signl4.com`), client_id `692A0A56-892F-4AE2-8259-76DA398990B6`, full scope set including `public_api_read/write/prov`, `account_portal`, `reseller_portal`, `mobile_api` — exploit gated on staging client_secret/credential compromise (HUMAN gate)
+- API dual-auth pipeline confirmed: Bearer token (401) + API key via `X-S4-Api-Key` header (403 `application/problem+json`) — both api.signl4.com and connect.signl4.com share backend (appId `cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd`)
+- 488-route API documentation publicly published on prod gateway (V1/V2/V3 swagger)
+- signl4.derdack.com permanently unreachable (8+ cycles TCP timeout)
+- signals.derdack.com NXDOMAIN
+- dev.derdack.com parked with MultiViews misconfig (LOW, static basename echo)
+- www.derdack.com WordPress multisite: /de/ and /ea/ both expose xmlrpc.php (POST full method list); root xmlrpc 503-blocked; wp-login sets `wordpress_test_cookie` with `secure` flag + host-only scope (session-theft via HTTPS→HTTP downgrade invalidated)
+- blog/techblog.derdack.com HTTPS→HTTP downgrade live but LOW (no cookie traversal possible)
+- Dynamic client registration rejected (no `registration_endpoint`, no `none` auth method)
+- Open redirect on devconnect `/authorize` rejected (evil.com → error page, no code echoed)
+- Password/device_code/CIBA grants listed but all return `invalid_client` without client_secret
+- Staging estate: devconnect (108.143.123.104), devaccount, devapi, devfix, labconnect/labaccount (13.93.49.201, 502 inert), s4dev1-8.enterprisealert.com (4.207.244.99, dead backend)
+- Webhook team-secret in URL is documented auth; no public leak found across 3+ grep.app/GitHub sweeps
+- Enterprise risk score: 72 (step-up due to 488-route API surface publication)
+
+## Work State
+### Completed
+- Full SIGNL4 API surface mapped: V2 routes (teams, users, webhooks, subscriptions, alerts, schedules, csp/report) and V3 routes (same family) — all Bearer-gated or POST-sink
+- Cross-env JWKS key-reuse verified 10+ deep-equal observations across 4 identity hosts — stable, no drift
+- cross-env client_id reuse confirmed across devaccount/account portals
+- OIDC discovery fully characterized on devconnect + connect (8 grant types, RS256 only, no registration_endpoint)
+- CT-log sweep completed: 8 new hosts surfaced (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com)
+- frontdoor.signl4.com confirmed unconfigured SPA shell (LOW)
+- fix.signl4.com = prod ASP.NET Core support app, /signin-oidc 500 (broken OIDC)
+- devapi.signl4.com = staging API mirror of api.signl4.com (appId `cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7`)
+- WordPress media library (2170 items), Yoast API, CF7, xmlrpc all probed and characterized on www.derdack.com
+- OTGS Installer SSRF invalidated by source code review (Push.php)
+- API spec empty security requirement noted (LOW)
+- api/v2/teams auth-status flapping confirmed (401 vs 405 across cycles)
+
+### Active
+- POC phase targeting "api" — highest ranked hypotheses:
+  1. **Webhook team-secret enumeration via status-keyword oracle** (confidence 75) — `connect.signl4.com/webhook/{teamSecret}` + `/api/v2/events/{teamSecret}`; 404-invalid vs 201-eventId oracle; secret-in-URL sole auth; 4th passive sweep found no real leak
+  2. **BOLA on subscription invoice download** (confidence 48) — `connect.signl4.com/api/v2/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd`; OPTIONS Allow:GET confirmed; auth-gated (401); cross-tenant check unprobed; requires HUMAN gate (customer billing data)
+  3. **Prepaid billing cross-tenant mutation** (confidence 45) — `connect.signl4.com/api/v2/v3/prepaid/{subscriptionId}/prepaidSettings`; OPTIONS Allow:PUT confirmed; handler-deferred auth pattern; billing route
+
+### Blocked
+- All high-impact paths require valid API key or OAuth Bearer token (HUMAN gate) — no anonymous bypass path exists
+- Webhook secret leak search blocked by grep.app 429 and GitHub code search auth-gating
+- Staging credential/client_secret unknown — cross-env token forgery chain complete except for initial credential
+
+## Next Move
+1. RAG sweep docs.signl4.com (integrations/rest-api, samples, account pages) + GitHub signl4/docs for invoice download references (en16931/zugferd), subscriptionId formats, SCIM apiKey workflows — establish whether invoice routes are customer-facing self-service (raising BOLA probability) and hunt for sample userId/invoiceId patterns
+2. If RAG confirms invoice routes are customer-facing: HUMAN gate to authenticate and test BOLA (own-subscription invoice 200 vs foreign-subscription 2xx/403)
+
+## Relevant Files
+- `/home/runner/work/derdack-hunt/derdack-hunt/state_bigpickle.json`: agent state `{"phase": "POC", "target": "api"}`
+- `/home/runner/work/derdack-hunt/derdack-hunt/leads/lead-bigpickle.md`: full hypothesis history, latest ranked hypotheses (webhook oracle 75, BOLA invoice 48, prepaid mutation 45), risk score 72
+- `/home/runner/work/derdack-hunt/derdack-hunt/leads/lead-nemotron3.md`: parallel agent leads with webhook oracle probe suggestion
+- `/home/runner/work/derdack-hunt/derdack-hunt/knowledge/index.md`: full knowledge base (200+ ACCEPTED/REJECTED entries)
+- `/home/runner/work/derdack-hunt/derdack-hunt/scope.yml`: program scope and exclusions
+- `/home/runner/work/derdack-hunt/derdack-hunt/probe-results.md`: raw HTTP probe results across all cycles
+- `/home/runner/work/derdack-hunt/derdack-hunt/inventory/`: host inventory with passive recon observations
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m→ [0mRead state_bigpickle.json
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=1961][0m
+Read-only mode is active — I can only observe and plan, not execute. Here's what I found in the file:
+
+**File:** `/home/runner/work/derdack-hunt/derdack-hunt/leads/lead-bigpickle.md` (2263 lines)
+
+This is a penetration testing lead tracking file for a Derdack GmbH / SIGNL4 bug bounty hunt. Key state:
+
+**Phase:** POC (target: api)  
+**Risk Score:** 72  
+**Agent:** bigpickle
+
+**Top 3 hypotheses (final):**
+1. **Webhook team-secret leak** (BUSLOGIC, confidence 55) — alert spoof/suppression via leaked URL-embedded secret; 4 passive sweeps with no real leak found
+2. **BOLA on subscription invoice download** (IDOR, confidence 48) — GET `/api/v2/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd` route confirmed; auth-gated, BOLA check unprobed
+3. **Prepaid billing cross-tenant mutation** (IDOR, confidence 45) — PUT `/api/prepaid/{subscriptionId}/prepaidSettings`; billing route, handler-deferred auth
+
+**Key findings:**
+- Cross-env RS256 key reuse across 4 identity hosts (prod+staging) — stable, 10+ deep-equals, zero drift
+- 488-route API spec published publicly on prod gateway
+- All mutating surfaces auth-gated; no anonymous credit path
+- Webhook secret leak hypothesis unsupported after 3+ sweeps
+
+**Blocked on:** valid API key or OAuth Bearer token (HUMAN gate) for all high-impact paths
+
+**Last `[NEXT]` step:** RAG sweep of docs.signl4.com for invoice/subscription/SCIM references to raise BOLA probability
+
+What would you like me to do?
