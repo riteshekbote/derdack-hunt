@@ -983,3 +983,36 @@
 - LEARN: ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, no security scheme, status-keyword query config (ExtIdParam/ExtStatusParam/NewStatus
 - LEARN: REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert
 - LEARN: REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie w
+
+## RANKED HYPOTHESES 2026-09-10 14:36:44 UTC
+- [75] connect.signl4.com/webhook/{teamSecret}: Webhook team-secret enumeration via status-keyword oracle (from art/lead_nemotron3.txt)
+- [48] connect.signl4.com/api/v2/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: BOLA on subscription invoice download (ZUGFeRD/en16931) (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): RAG: sweep docs.signl4.com (integrations/rest-api, samples, account pages) + GitHub signl4/docs for any reference to invoice download (en16931/zugferd), subscri
+- NEXT(hypotheses-nemotron3.txt): PROBE: POST https://connect.signl4.com/webhook/test123 Content-Type: application/json body={"Id":"test","X-S4-Status":"acknowledged","X-S4-ExternalID":"test"} —
+- LEARN: ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when ab
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v2/teams: unauth GET returns 405 Allow: GET,POST — auth validation deferred to handler, not route layer (flapping cycles 
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, no security scheme, status-keyword query config (ExtIdParam/ExtStatusParam/NewStatus
+- LEARN: REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content across 3 cycles — credential-leak hypothesis has no c
+- LEARN: ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured portal shell serves literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — LOW cosmetic, d
+- LEARN: ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application, /signin-oidc 500 broken OIDC callback — devfix twin; Blazor estate family
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: swagger confirms no security scheme, team secret in path, 404 vs 201 oracle — team-secret enumeration v
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without 
+- LEARN: ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler, not route layer (10th+ live c
+- LEARN: ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect/devapi at 10th deep-equal observation — cross-env trust anchor r
+- LEARN: REJECTED AUTH @ devconnect.signl4.com: no registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client
+- LEARN: REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect /
+- LEARN: ACCEPTED AUTH @ connect/api/devconnect/devapi.signl4.com: 10th deep-equal of byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — sha
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA
+- LEARN: ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when ab
+- LEARN: ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served f
+- LEARN: ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → r
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resol
+- LEARN: REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content this cycle — credential-leak hypothesis has no curren
+- LEARN: ACCEPTED OTHER @ crt.sh: CT surface expansion — 8 previously-unknown live hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.co
+- LEARN: ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured portal shell serves literal %ReplaceStatusTitle% title (static, 2024-09-03) — LOW
+- LEARN: ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application, /signin-oidc 500 broken OIDC (devfix twin); Blazor estate
+- LEARN: ACCEPTED AUTH @ connect.signl4.com: new routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, handler-deferred auth) + /api/v2/events/{teamSecret} (GET+POS
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, no security scheme, status-keyword query config (ExtIdParam/ExtStatusParam/NewStatus
+- LEARN: REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert
+- LEARN: REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie w

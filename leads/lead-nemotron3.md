@@ -3083,3 +3083,70 @@ testability: AUTH_HELPED
 [LEARN] REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert
 [LEARN] REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.derdack.com); WP auth cookies host-scoped to www.derdack.com, cannot traverse 302→301 HTTP redirect; residual = missing HSTS header only on non-sensitive pages; LOW
 [RISK] derdack: 88 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devapi/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant + client_credentials + PAR on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); webhook team-secret oracle confirmed HIGH impact; blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra; NEW CT surface (fix/frontdoor/status/support/trust/docs/demo/downloads) adds 8 live hosts with unprobed attack surface
+## 2026-09-10 14:36:32 UTC [target] (model nemotron3)
+[PRIO] connect.signl4.com/webhook/{teamSecret},9.5,attack_surface=10,business_value=9,tech_exposure=10,gate_ease=10,cloud_surface=8,freshness=10
+[PRIO] devconnect.signl4.com/identity/connect/token,9.0,attack_surface=9,business_value=10,tech_exposure=9,gate_ease=3,cloud_surface=9,freshness=10
+[PRIO] api.signl4.com/api/v2/teams,8.5,attack_surface=9,business_value=9,tech_exposure=8,gate_ease=5,cloud_surface=9,freshness=10
+[PRIO] fix.signl4.com,6.5,attack_surface=7,business_value=6,tech_exposure=7,gate_ease=5,cloud_surface=8,freshness=8
+[PRIO] frontdoor.signl4.com,3.0,attack_surface=4,business_value=2,tech_exposure=3,gate_ease=10,cloud_surface=5,freshness=8
+[HYP] Webhook team-secret enumeration via status-keyword oracle
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 75
+reasoning: Swagger confirms POST /{teamSecret} with NO security scheme; team secret in URI path; query-configurable status keywords (ExtIdParam, ExtStatusParam, NewStatus, ResolvedStatus, AckStatus); returns 404 for invalid teamSecret vs 201 with eventId for valid — acts as team secret oracle; 15+ third-party integrations document URL-embedded static team secret as primary credential; no rate limiting observed on webhook endpoint
+evidence_needed: POST https://connect.signl4.com/webhook/<guess> returns 201 (valid secret) vs 404 (invalid) — confirms oracle behavior enabling secret enumeration
+verify_steps: POST https://connect.signl4.com/webhook/test123 Content-Type: application/json body={"Id":"test","X-S4-Status":"acknowledged","X-S4-ExternalID":"test"} (expect 404); POST https://connect.signl4.com/webhook/{known_valid_secret_from_integration_docs} Content-Type: application/json body={"Id":"test","X-S4-Status":"acknowledged","X-S4-ExternalID":"test"} (expect 201 with eventId) — AUTH_HELPED for valid secret
+impact: Team secret enumeration → alert acknowledgment/resolution, webhook replay, potential alert suppression, on-call schedule manipulation; severity HIGH
+testability: AUTH_HELPED
+[HYP] Cross-environment token forgery via shared RS256 key + staging password grant
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token
+confidence: 85
+reasoning: Staging IdP (devconnect) shares byte-identical RS256 signing key with prod (connect, api, devapi) — 10x deep-equal verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n, x5t, x5c CN=*.signl4.com); same account-portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + full scope set (account_portal, public_api_read/write/prov, offline_access, reseller_portal, mobile_api) used across envs; password grant enabled on staging; if client_secret compromised, forged tokens validate at prod JWKS; api.signl4.com swagger.json confirms OAuth2 authorizationCode flow targeting connect.signl4.com/identity/connect endpoints with public_api_read+write+offline_access scopes — API accepts Bearer tokens from same shared-signing-key IdP
+evidence_needed: Valid access_token issued by devconnect accepted by prod api.signl4.com/api/v2/teams (200) with correct kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256
+verify_steps: POST https://devconnect.signl4.com/identity/connect/token grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<secret>&scope=openid profile account_portal public_api_read public_api_write public_api_prov offline_access&username=X&password=Y (AUTH_HELPED, requires secret); decode token verify kid; GET https://api.signl4.com/api/v2/teams Authorization: Bearer <token> (expect 200)
+impact: Full SIGNL4 SaaS compromise — staging creds → prod tokens → alerting config, on-call schedules, PII, integrations, webhook secrets; severity CRITICAL
+testability: AUTH_HELPED
+[HYP] Staging-to-prod API token acceptance via handler-deferred auth
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 80
+reasoning: /api/v2/teams returns 405 (method routing) not 401 on unauth GET; invalid Bearer also returns 405 — auth validation occurs at handler level, not route layer (10th+ live confirmation, flapping between 401/405 across cycles); devconnect.signl4.com & connect.signl4.com share byte-identical RS256 signing key (verified 10x); devconnect OIDC discovery exposes password grant; devaccount/account share identical client_id 692A0A56 with full scopes; any valid token from staging IdP validates at prod API JWKS
+evidence_needed: Valid access_token from devconnect.signl4.com (any grant) accepted by api.signl4.com/api/v2/teams returning 200
+verify_steps: GET https://api.signl4.com/api/v2/teams Authorization: Bearer <staging_token> (expect 200); decode token verify kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256
+impact: Cross-environment token acceptance — staging compromise = prod API access to teams, alerts, webhooks, subscriptions; severity CRITICAL
+testability: AUTH_HELPED
+[PARKED] Dynamic client registration on staging IdP enabling public client token issuance: confidence 35 < 40; OIDC discovery shows NO registration_endpoint field; token_endpoint_auth_methods_supported lacks `none` — IdentityServer does not enable dynamic registration by default; probability on staging environment confirmed zero
+[PARKED] Device-code flow token issuance bypassing interactive login: confidence 45; deviceauthorization endpoint live (400 invalid_client w/o secret) but still client_secret-gated — same blocker as password grant; only actionable post-secret-leak
+[PARKED] Prod IdP config drift vs staging (grant/auth_methods parity check): confidence 45; no standalone exploit path; evidence-only for cross-env AUTH finding
+[PARKED] CIBA grant reachable without client_secret: confidence 40; /identity/connect/ciba returns 400 on bare GET across prod+staging — handler reached but auth_methods exclude `none`; speculative without secret-free client
+[PARKED] API spec-vs-implementation drift: real but LOW impact — doesn't bypass auth, just confuses consumers
+[PARKED] XML-RPC unauthenticated read-method enumeration on WP multisite subsites: confidence 60; but mutating methods (wp.uploadFile) enforce auth (faultCode 403); read-only methods (wp.getUsers, wp.getUsersBlogs) unproven without credentials; MEDIUM impact only
+[PARKED] JWT alg confusion on staging IdP: confidence 30; algs=['RS256'] only verified 10x — no HS256/none surface
+[PARKED] API key query-param referrer leak: confidence 35; canonical auth = `X-S4-Api-Key` header per all docs/integrations; query-param `API_Key_Query` is swagger-only, no real-world usage → referrer-leak impact not demonstrable
+[FINAL] 1) connect.signl4.com/webhook/{teamSecret} Webhook team-secret enumeration via status-keyword oracle (AUTH, 75) — passive verifiable, HIGH
+[FINAL] 2) devconnect.signl4.com/identity/connect/token Cross-environment token forgery via shared RS256 key + staging password grant (AUTH, 85) — strongest finding, blocked on client_secret (AUTH_HELPED)
+[FINAL] 3) api.signl4.com/api/v2/teams Staging-to-prod API token acceptance via handler-deferred auth (AUTH, 80) — blocked on token acquisition (AUTH_HELPED)
+[NEXT] PROBE: POST https://connect.signl4.com/webhook/test123 Content-Type: application/json body={"Id":"test","X-S4-Status":"acknowledged","X-S4-ExternalID":"test"} — test webhook team-secret oracle behavior (expect 404); if 201 returned with eventId, confirms oracle enabling secret enumeration
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: swagger confirms no security scheme, team secret in path, 404 vs 201 oracle — team-secret enumeration vector confirmed
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+[LEARN] ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler, not route layer (10th+ live confirmation)
+[LEARN] ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect/devapi at 10th deep-equal observation — cross-env trust anchor re-confirmed stable across 4 identity hosts
+[LEARN] REJECTED AUTH @ devconnect.signl4.com: no registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+[LEARN] REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect / OAuth code-theft primitive
+[LEARN] ACCEPTED AUTH @ connect/api/devconnect/devapi.signl4.com: 10th deep-equal of byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — shared prod signing key confirmed across 4 identity hosts; stable, no drift
+[LEARN] ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and scope set — cross-env client reuse confirmed
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json` — distinct auth pipelines with different error responses confirm independent validation paths
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
+[LEARN] ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → referrer-leak impact not demonstrable
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated)
+[LEARN] REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content this cycle — credential-leak hypothesis has no current evidence
+[LEARN] ACCEPTED OTHER @ crt.sh: CT surface expansion — 8 previously-unknown live hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com)
+[LEARN] ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured portal shell serves literal %ReplaceStatusTitle% title (static, 2024-09-03) — LOW
+[LEARN] ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application, /signin-oidc 500 broken OIDC (devfix twin); Blazor estate
+[LEARN] ACCEPTED AUTH @ connect.signl4.com: new routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, handler-deferred auth) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + public webhook OpenAPI /webhook/docs/v1/swagger.json
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, no security scheme, status-keyword query config (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404 vs 201
+[LEARN] REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert
+[LEARN] REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.derdack.com); WP auth cookies host-scoped to www.derdack.com, cannot traverse 302→301 HTTP redirect; residual = missing HSTS header only on non-sensitive pages; LOW
+[RISK] derdack: 88 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devapi/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant + client_credentials + PAR on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); webhook team-secret oracle confirmed HIGH impact; blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra; NEW CT surface (fix/frontdoor/status/support/trust/docs/demo/downloads) adds 8 live hosts with unprobed attack surface

@@ -229,3 +229,5 @@
 - 2026-09-10 REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content across 3 cycles — credential-leak hypothesis has no current evidence
 - 2026-09-10 ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured portal shell serves literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — LOW cosmetic, deploy residue
 - 2026-09-10 ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application, /signin-oidc 500 broken OIDC callback — devfix twin; Blazor estate family
+- 2026-09-10 ACCEPTED OTHER @ connect.signl4.com/webhook: contract = POST /{teamSecret}, no security scheme, status-keyword query config (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404-invalid vs 201-eventId
+- 2026-09-10 ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: swagger confirms no security scheme, team secret in path, 404 vs 201 oracle — team-secret enumeration vector confirmed

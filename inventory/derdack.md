@@ -535,3 +535,5 @@ www.derdack.com
 - NEW connect.signl4.com/webhook contract confirmed: POST /{teamSecret}, NO security scheme, query-config status keywords (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus), oracle 404-invalid v
 - CHANGED api.signl4.com/api/v2/teams baseline flapping: 401 WWW-Authenticate:Bearer this cycle vs 405 in prior cycles — auth-status flapping re-confirmed (10th+ observation)
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism permanently invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.de
+
+## 2026-09-10 14:36:44 UTC
