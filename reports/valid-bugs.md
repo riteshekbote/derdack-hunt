@@ -25,3 +25,9 @@
   - **VERDICT: VALID**
   - | 1 | Cross-Env JWKS Key + Client/Scope Reuse | **VALID** | 7.4 |
   - | 6 | Staging IdP Directly Reachable | **VALID** | 6.5 |
+
+- 4 lead(s) marked VALID at 2026-09-10 10:37:58 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | Q7 Reasonable triager? | Yes — hardcoded real secrets in public code is a standard valid finding |
+  - **Verdict: VALID**
