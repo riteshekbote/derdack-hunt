@@ -31,3 +31,19 @@
   - **Verdict: VALID**
   - | Q7 Reasonable triager? | Yes — hardcoded real secrets in public code is a standard valid finding |
   - **Verdict: VALID**
+
+- 14 lead(s) marked VALID at 2026-09-11 05:08:59 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: HOLD** — valid code defect, but impact gated on EA Scripting Host deployment and attacker ability to control event parameters; needs confirmatory evidence of production deployment
+  - **Verdict: HOLD** — valid code defect, but impact requires confirmation that parameters originate from external/user input in production
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | Cross-env JWKS key reuse (4 hosts) | **VALID** | 7.4 | HIGH |
+  - | 2 | Hardcoded SQL Server SA creds | **VALID** | 8.1 | HIGH |
+  - | 5 | Hardcoded Checkmk creds + internal IP | **VALID** | 7.5 | MEDIUM |
+  - | 6 | SIGNL4 secret logged at INFO (ioBroker) | **VALID** | 5.3 | MEDIUM |
+  - | 7 | Team secrets in public repos | **VALID** | 5.3 | MEDIUM |
+  - | 8 | PII in public CSV export | **VALID** | 5.3 | MEDIUM |
