@@ -567,3 +567,17 @@ www.derdack.com
 - CHANGED www.derdack.com/de/ & /ea/ XML-RPC both POST-exposed with full method lists but mutating methods (wp.uploadFile, metaWeblog.newMediaObject) return faultCode 403 "incorrect username/password" — auth-ga
 
 ## 2026-09-11 00:44:48 UTC
+
+## 2026-09-11 05:12:37 UTC
+- NEW SIGNL4 API V2 swagger.json discovered at `connect.signl4.com/api/docs/v2/swagger.json` — declares OAuth2 scheme (authorizationCode) pointing to `connect.signl4.com/identity/connect/authorize` + `/toke
+- NEW RAG confirms SIGNL4 public API auth = API key (`X-S4-Api-Key`) + OAuth2 Bearer token (swagger-declared); client_id `692A0A56` NOT published anywhere — no GitHub/npm/Postman/helpcenter leak; no public 
+- NEW RAG confirms Derdack GitHub org (12 repos) contains Enterprise Alert plugins only — no OAuth/OIDC code, no leaked secrets
+- CHANGED Cross-env token forgery hypothesis (85) now has FULL exploit-chain evidence: shared RS256 key → shared token endpoint → API accepts OAuth tokens → scopes grant CRUD → attack chain complete pending cli
+- NEW No new probes executed since last cycle (2026-09-09 14:50:14 UTC)
+- CHANGED Cross-env token forgery chain fully documented: shared RS256 key + shared client_id + swagger-confirmed OAuth2 API access + staging password grant + prod twin; blocked on client_secret
+- CHANGED API key query-param auth confirmed live on both api.signl4.com and connect.signl4.com (403 "API Key is invalid" vs 401 when absent); dual auth pipeline established
+- CHANGED API spec empty security requirement confirmed (LOW impact; spec-vs-implementation mismatch)
+- NEW nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+- CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+- NEW nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+- CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation

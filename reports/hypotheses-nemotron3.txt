@@ -1,4 +1,4 @@
-## 2026-09-11 00:44:38 UTC [target] (model nemotron3)
+## 2026-09-11 05:11:39 UTC [target] (model nemotron3)
 [PRIO] connect.signl4.com/webhook/{teamSecret},9.5,a=10,b=9,t=10,g=10,c=8,f=10
 [PRIO] devconnect.signl4.com/identity/connect/token,9.0,a=9,b=10,t=9,g=3,c=9,f=10
 [PRIO] api.signl4.com/api/v2/teams,8.5,a=9,b=9,t=8,g=5,c=9,f=10
@@ -10,6 +10,9 @@
 [PRIO] www.derdack.com/de/xmlrpc.php,5.2,a=6,b=5,t=6,g=8,c=4,f=5
 [PRIO] www.derdack.com/ea/xmlrpc.php,5.2,a=6,b=5,t=6,g=8,c=4,f=5
 [PRIO] frontdoor.signl4.com,3.8,a=4,b=3,t=4,g=10,c=4,f=8
+[PRIO] status.signl4.com,3.5,a=4,b=3,t=3,g=10,c=4,f=7
+[PRIO] support.signl4.com,3.0,a=3,b=3,t=3,g=10,c=3,f=6
+[PRIO] docs.signl4.com,2.5,a=3,b=2,t=2,g=10,c=3,f=5
 [HYP] Webhook team-secret enumeration via status-keyword oracle
 class: AUTH
 asset: connect.signl4.com/webhook/{teamSecret}
@@ -19,15 +22,6 @@ evidence_needed: POST https://connect.signl4.com/webhook/test123 returns 404; PO
 verify_steps: POST https://connect.signl4.com/webhook/test123 Content-Type: application/json body={"Id":"test","X-S4-Status":"acknowledged","X-S4-ExternalID":"test"} (expect 404); POST https://connect.signl4.com/webhook/{known_valid_secret_from_integration_docs} Content-Type: application/json body={"Id":"test","X-S4-Status":"acknowledged","X-S4-ExternalID":"test"} (expect 201 with eventId) — AUTH_HELPED for valid secret
 impact: Team secret enumeration → alert acknowledgment/resolution, webhook replay, potential alert suppression, on-call schedule manipulation; severity HIGH
 testability: PASSIVE
-[HYP] BOLA on subscription invoice download (ZUGFeRD/EN16931)
-class: IDOR
-asset: connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
-confidence: 50
-reasoning: OpenAPI at /webhook/docs/v1/swagger.json documents GET on this route with path params subscriptionId (string UUID) and invoiceId (string); OPTIONS on fabricated IDs returns 405 Allow:GET confirming route registration; anonymous GET returns 401 (handler-level auth present); invoice download returns financial billing documents (EN16931 XML / hybrid PDF with structured billing data); cross-tenant authorization check vs merely scoped-valid is UNPROBED; analogous prepaid route family shares same handler-deferred auth pattern
-evidence_needed: Authenticated GET own-subscription invoice returns 200 with document; authenticated GET foreign-subscription invoice returns 2xx/403 differential proving BOLA
-verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/v2/subscriptions/<uuid>/invoices/<invId>/zugferd → 405 Allow:GET [DONE]; (AUTH_HELPED) GET https://connect.signl4.com/api/v2/subscriptions/{foreign_subscriptionId}/invoices/{foreign_invoiceId}/zugferd Authorization: Bearer <valid_token> (expect 403 if BOLA enforced, 200 if vulnerable) — HUMAN gate (customer billing data)
-impact: Cross-tenant exfiltration of customer invoices (financial/order data, PII in billing); severity HIGH conditional on BOLA
-testability: AUTH_HELPED
 [HYP] Staging-to-prod API token acceptance via handler-deferred auth + cross-env trust anchor
 class: AUTH
 asset: api.signl4.com/api/v2/teams
@@ -37,9 +31,18 @@ evidence_needed: Valid access_token from devconnect.signl4.com (any grant) accep
 verify_steps: GET https://api.signl4.com/api/v2/teams Authorization: Bearer <staging_token> (expect 200); decode token verify kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256
 impact: Cross-environment token acceptance — staging compromise = prod API access to teams, alerts, webhooks, subscriptions, invoices, prepaid billing; severity CRITICAL
 testability: AUTH_HELPED
-[PARKED] Webhook team-secret enumeration via status-keyword oracle: confidence 75 ≥ 40, has verify steps, class AUTH in-scope — **KEEP** (PASSIVE verifiable, HIGH impact)
-[PARKED] BOLA on subscription invoice download (ZUGFeRD/EN16931): confidence 50 ≥ 40, has verify steps, class IDOR in-scope — **KEEP** (AUTH_HELPED, HIGH conditional)
-[PARKED] Staging-to-prod API token acceptance via handler-deferred auth + cross-env trust anchor: confidence 85 ≥ 40, has verify steps, class AUTH in-scope — **KEEP** (strongest finding, AUTH_HELPED blocked on token acquisition)
+[HYP] BOLA on subscription invoice download (ZUGFeRD/EN16931)
+class: IDOR
+asset: connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
+confidence: 50
+reasoning: OpenAPI at /webhook/docs/v1/swagger.json documents GET on this route with path params subscriptionId (string UUID) and invoiceId (string); OPTIONS on fabricated IDs returns 405 Allow:GET confirming route registration; anonymous GET returns 401 (handler-level auth present); invoice download returns financial billing documents (EN16931 XML / hybrid PDF with structured billing data); cross-tenant authorization check vs merely scoped-valid is UNPROBED; analogous prepaid route family shares same handler-deferred auth pattern
+evidence_needed: Authenticated GET own-subscription invoice returns 200 with document; authenticated GET foreign-subscription invoice returns 2xx/403 differential proving BOLA
+verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/v2/subscriptions/<uuid>/invoices/<invId>/zugferd → 405 Allow:GET [DONE]; (AUTH_HELPED) GET https://connect.signl4.com/api/v2/subscriptions/{foreign_subscriptionId}/invoices/{foreign_invoiceId}/zugferd Authorization: Bearer <valid_token> (expect 403 if BOLA enforced, 200 if vulnerable) — HUMAN gate (customer billing data)
+impact: Cross-tenant exfiltration of customer invoices (financial/order data, PII in billing); severity HIGH conditional on BOLA
+testability: AUTH_HELPED
+[PARKED] Webhook team-secret enumeration via status-keyword oracle: confidence 75 ≥ 40, has verify steps, class AUTH in-scope — KEEP (PASSIVE verifiable, HIGH impact)
+[PARKED] Staging-to-prod API token acceptance via handler-deferred auth + cross-env trust anchor: confidence 85 ≥ 40, has verify steps, class AUTH in-scope — KEEP (strongest finding, AUTH_HELPED blocked on token acquisition)
+[PARKED] BOLA on subscription invoice download (ZUGFeRD/EN16931): confidence 50 ≥ 40, has verify steps, class IDOR in-scope — KEEP (AUTH_HELPED, HIGH conditional)
 [FINAL] 1) devconnect.signl4.com/identity/connect/token → api.signl4.com/api/v2/teams Cross-environment token forgery/acceptance via shared RS256 key + staging password grant + handler-deferred auth (AUTH, 85) — strongest finding, blocked on client_secret/token acquisition (AUTH_HELPED)
 [FINAL] 2) connect.signl4.com/webhook/{teamSecret} Webhook team-secret enumeration via status-keyword oracle (AUTH, 75) — PASSIVE verifiable, HIGH
 [FINAL] 3) connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd BOLA on subscription invoice download (ZUGFeRD/EN16931) (IDOR, 50) — new billing surface, AUTH_HELPED

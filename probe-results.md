@@ -319,3 +319,16 @@ https://www.derdack.com/de/xmlrpc.php -> HTTP 405
 
 ## 2026-09-11 00:44:48 UTC
 
+
+## 2026-09-11 05:13:38 UTC
+https://signl4.derdack.com/api/v1/health -> ERR <urlopen error timed out>
+https://signl4.derdack.com/.well-known/openid-configuration -> ERR <urlopen error timed out>
+https://dev.derdack.com/ -> HTTP 403
+https://dev.derdack.com/api/ -> HTTP 404
+https://signals.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://signl4.derdack.com/.well-known/jwks.json -> ERR <urlopen error timed out>
+https://signl4.derdack.com/oauth/token -> ERR <urlopen error timed out>
+https://dev.derdack.com/actuator -> HTTP 404
+https://dev.derdack.com/actuator/env -> HTTP 404
+https://dev.derdack.com/swagger-ui.html -> HTTP 404
+https://dev.derdack.com/api/docs -> HTTP 404
