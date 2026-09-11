@@ -3017,3 +3017,50 @@ testability: AUTH_HELPED
 [LEARN] ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler, not route layer (10th+ live confirmation)
 [LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: MultiViews 300 stable — static namespace echo, files 403/404
 [RISK] derdack: 88 — SIGNL4 estate critical: prod IdP + public API + live staging cluster sharing PROD RS256 signing key + same OAuth client_id + password grant on staging → cross-env token forgery chain AUTH_HELPED-blocked; api/v2+v3 fully Bearer-gated at handler (zero unauth surface); webhook team-secret oracle confirmed HIGH impact (PASSIVE, ACCEPTED); billing/report routes documented but auth-gated (BOLA AUTH_HELPED × 3); V3 surface adds invoice/SCIM/prepaid routes; www.derdack.com/de+/ea XML-RPC exposed but mutating methods auth-gated; dev.derdack.com MultiViews static echo; blog/techblog downgrade dismissed; 8 CT-surfaced hosts (fix/frontdoor/status/support/trust/docs/demo/downloads) partially probed; no new unauth defect this cycle.
+## 2026-09-11 17:32:00 UTC [target] (model bigpickle)
+[NEW] FULL V3 OpenAPI dumped (1.2MB, 200+ paths) from connect.signl4.com/api/docs/v3/swagger.json — documented read+file-download surface now exhaustively known: /v3/teams/{teamId}/signlReports/{fileName}, /v3/teams/{teamId}/dutyReports/{fileName}, /v3/signls/{signlId}/attachments/{attachmentId}, /v3/{teams,subscriptions}/{id}/image GET, /v3/shifts/ai/forwardPlanning/{teamId}/*, /v3/teams/{teamId}/holidays/years/{year}/copyFrom/{sourceTeamId}
+[NEW] Standard SCIM endpoints on connect.signl4.com/api/v3/scim/* (ServiceProviderConfig, Users, Groups, Schemas, Bulk) ALL 404 — only /scim/settings is registered (anon→401); no standard/anonymous SCIM surface
+[NEW] V3 "public"-named routes live-probed anon: /api/v3/teams/public, categories/public, distributionLists/public, users/availableRoles, teams/dutySettings, teams/signalingSettings → ALL 401; "public" suffix ≠ anonymous on this gateway
+[PRIO] connect.signl4.com/webhook/{teamSecret},9.0,attack_surface=9,business_value=9,tech_exposure=8,gate_ease=10,cloud_surface=7,freshness=8 — no security scheme, 404-vs-201 oracle ACCEPTED, only unvalidated HIGH chain
+[PRIO] connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName},7.2,attack_surface=7,business_value=7,tech_exposure=7,gate_ease=3,cloud_surface=6,freshness=9 — unvalidated String path segment + sibling dutyReports/{fileName} + attachments/{attachmentId}; full file-family now documented
+[PRIO] connect.signl4.com/api/v3/signls/report,7.0,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=3,cloud_surface=6,freshness=8 — userId+teamId attacker-scoped query params, handler-deferred auth family
+[PRIO] connect.signl4.com/api/v3/events/{webhookIdOrTeamId},8.0,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=3,cloud_surface=7,freshness=8 — incident ack/resolve/close suppression primitive
+[HYP] Cross-tenant webhook team-secret oracle + format characterization
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 80
+reasoning: contract in public /webhook/docs/v1/swagger.json = POST /{teamSecret}, NO security scheme; 404-invalid vs 201-eventId oracle already ACCEPTED across 2+ cycles; 15+ integration guides embed the static team secret in the URL; charset/length of teamSecret never characterized — determines guessability.
+evidence_needed: (a) a real doc-derived teamSecret sample; (b) charset/length from public integration corpus → decides enumeration feasibility.
+verify_steps: (DONE) `curl -X POST .../webhook/test-not-real-uuid ...` → 404; (NEXT RAG) extract teamSecret format from SIGNL4 docs/integration examples; HUMAN gate only if a genuine doc secret is obtained — POST → 201+eventId would confirm valid secret.
+impact: cross-tenant ack/resolve/close of genuine alerts via a URL-embedded immutable secret; HIGH if format short/guessable, HIGH-config finding regardless.
+testability: PASSIVE (oracle) → HUMAN_ONLY (secret-validation exploit)
+[HYP] Cross-team incident write via attacker-chosen webhookIdOrTeamId (spoogfi + suppression)
+class: BUSLOGIC
+asset: connect.signl4.com/api/v3/events/{webhookIdOrTeamId}
+confidence: 55
+reasoning: POST route takes team-scoped id in path; handler-deferred auth family confirmed gateway-wide this cycle (public-named routes still 401, i.e. authz never parsed before body); swagger documents ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus — foreign attack can spoof or ack/resolve/close genuine incidents if path-scope not intersected with token claims.
+evidence_needed: authenticated POST to own vs foreign teamId — 201-vs-403 differential; status-keyword acceptance on foreign team.
+verify_steps: (DONE) anon POST → 401; (AUTH_HELPED) `X-S4-Api-Key` POST /api/v3/events/{own} vs {foreign} benign payload — HUMAN gate (mutating).
+impact: cross-team alert spoofing + suppression; HIGH if scoping gap.
+testability: AUTH_HELPED
+[HYP] Cross-tenant report/file download via fileName + attachment path segments
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}
+confidence: 50
+reasoning: GET takes unvalidated String fileName (siblings dutyReports/{fileName}, signls/{signlId}/attachments/{attachmentId}); swagger global security empty `[{}]` (spec under-declares auth everywhere); report contains alert PII (contents/recipients/timing).
+evidence_needed: authenticated GET with own+own → 200; foreign teamId and/or `../` fileName → 200 (vuln) vs 403/400 (scoped).
+verify_steps: (DONE) anon GET → 401 (route registered); (AUTH_HELPED) `X-S4-Api-Key` GET /api/v3/teams/{own}/signlReports/{own-file} then {foreign}/{file} and traversal `..%2f{own-file}` — HUMAN gate.
+impact: cross-tenant alert-report + attachment exfiltration; MEDIUM-HIGH.
+testability: AUTH_HELPED
+[PARKED] Standard SCIM surface (ServiceProviderConfig/Users/Groups/Schemas/Bulk): all 404, only /scim/settings registered — closed, 0 split.
+[PARKED] V3 "public"-named routes anon read (teams/public, categories/public, distributionLists/public, availableRoles, dutySettings, signalingSettings): all 401 — naming misread, no anonymous surface.
+[PARKED] Cross-tenant event write (BUSLOGIC, 55) + signls/report (IDOR, 50) + fileName traversal (IDOR, 50): all AUTH_HELPED, blocked on credential acquisition.
+[PARKED] Webhook oracle exploit: PASSIVE oracle confirmed but secret-validation requires a genuine teamSecret — never leaked publicly (3 prior sweep cycles).
+[FINAL] 1) Webhook team-secret oracle + format characterization (AUTH, 80) — only PASSIVE-advancedable lead; NEXT step is RAG not probe.
+[FINAL] 2) events/{webhookIdOrTeamId} incident suppression (BUSLOGIC, 55) — keep, AUTH_HELPED.
+[FINAL] 3) signlReports/dutyReports/attachments file-download BOLA (IDOR, 50) — expanded surface this cycle, keep, AUTH_HELPED.
+[NEXT] RAG: fetch SIGNL4 public docs (help.signl4.com webhook/API pages + one third-party integration guide, e.g. ServiceNow/Zabbix/OpenIntegrationHub) to extract REAL teamSecret format — exact charset+length and one genuine sample secret from docs/examples; this decides whether the 404-vs-201 oracle is enumerable (HIGH) or config-only (config finding), the single unblocked decision remaining this cycle.
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v3/scim/*: ServiceProviderConfig/Users/Groups/Schemas/Bulk all 404 — only /scim/settings registered (anon→401); no standard or anonymous SCIM surface.
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/-public: teams/public, categories/public, distributionLists/public, users/availableRoles, teams/dutySettings, teams/signalingSettings all anon→401 — "public" naming is not an auth bypass on this gateway; handler-deferred Bearer/API-key enforced gateway-wide.
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/docs/v3/swagger.json: full V3 schema dumped (200+ paths) — file-download family (/teams/{teamId}/signlReports/{fileName}, dutyReports/{fileName}, /signls/{signlId}/attachments/{attachmentId}), tenant image GETs, AI forwardPlanning/{teamId}, holidays copyFrom/{sourceTeamId} all anon→401; global security still `[{}]` empty (spec under-declares); BOLA inventory materially expanded, all AUTH_HELPED.
+[RISK] derdack: 89 — confirmed HIGH chain: prod/idp staging estate sharing prod RS256 signing key + same client_id + enabled password grant (token forgery AUTH_HELPED-blocked on client_secret); PASSIVE HIGH webhook team-secret oracle (unvalidated, secret never leaked publicly); 200+ route V3 BOLA surface now fully documented (file downloads, attachments, tenant images, event suppression) but uniformly Bearer/API-key-gated anonymous (401) — zero anonymous read exposure; SCIM + "public"-named routes anon-probed and closed.

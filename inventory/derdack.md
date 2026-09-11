@@ -599,3 +599,8 @@ www.derdack.com
 - CHANGED connect.signl4.com OIDC discovery byte-identical to devconnect (password/device_code/ciba/token-exchange grants, secret-only auth methods, no registration_endpoint, RS256-only) — prod is parametric tw
 
 ## 2026-09-11 14:07:58 UTC
+
+## 2026-09-11 17:49:10 UTC
+- NEW FULL V3 OpenAPI dumped (1.2MB, 200+ paths) from connect.signl4.com/api/docs/v3/swagger.json — documented read+file-download surface now exhaustively known: /v3/teams/{teamId}/signlReports/{fileName}, 
+- NEW Standard SCIM endpoints on connect.signl4.com/api/v3/scim/* (ServiceProviderConfig, Users, Groups, Schemas, Bulk) ALL 404 — only /scim/settings is registered (anon→401); no standard/anonymous SCIM sur
+- NEW V3 "public"-named routes live-probed anon: /api/v3/teams/public, categories/public, distributionLists/public, users/availableRoles, teams/dutySettings, teams/signalingSettings → ALL 401; "public" suff

@@ -16655,3 +16655,372 @@ testability: AUTH_HELPED
 ```
 [RISK] derdack: 88 — SIGNL4 estate critical: prod IdP + public API + live staging cluster sharing PROD RS256 signing key + same OAuth client_id + password grant on staging → cross-env token forgery chain AUTH_HELPED-blocked; api/v2+v3 fully Bearer-gated at handler (zero unauth surface); webhook team-secret oracle confirmed HIGH impact (PASSIVE, ACCEPTED); billing/report routes documented but auth-gated (BOLA AUTH_HELPED × 3); V3 surface adds invoice/SCIM/prepaid routes; www.derdack.com/de+/ea XML-RPC exposed but mutating methods auth-gated; dev.derdack.com MultiViews static echo; blog/techblog downgrade dismissed; 8 CT-surfaced hosts (fix/frontdoor/status/support/trust/docs/demo/downloads) partially probed; no new unauth defect this cycle.
 ```
+===== ANALYST bigpickle 2026-09-11 17:49:10 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor p in /api/v3/scim/ServiceProviderConfig /api/v3/scim/Users /api/v3/scim/Groups /api/v3/scim/Schemas /api/v3/scim/Bulk; do echo "=== GET $p ==="; curl -sS -m 15 -o /tmp/opencode/scim_body.tmp -D - -X GET "https://connect.signl4.com$p" | tr -d '\r' | sed -n '1,12p'; echo "BODY: $(head -c 300 /tmp/opencode/scim_body.tmp | tr -d '\n')"; sleep 1; done
+=== GET /api/v3/scim/ServiceProviderConfig ===
+HTTP/2 404 
+date: Fri, 11 Sep 2026 17:30:04 GMT
+content-length: 0
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+
+BODY: 
+=== GET /api/v3/scim/Users ===
+HTTP/2 404 
+date: Fri, 11 Sep 2026 17:30:05 GMT
+content-length: 0
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+
+BODY: 
+=== GET /api/v3/scim/Groups ===
+HTTP/2 404 
+date: Fri, 11 Sep 2026 17:30:07 GMT
+content-length: 0
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+
+BODY: 
+=== GET /api/v3/scim/Schemas ===
+HTTP/2 404 
+date: Fri, 11 Sep 2026 17:30:08 GMT
+content-length: 0
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+
+BODY: 
+=== GET /api/v3/scim/Bulk ===
+HTTP/2 404 
+date: Fri, 11 Sep 2026 17:30:10 GMT
+content-length: 0
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+
+BODY:
+[0m
+[0m$ [0mcurl -sS -m 30 "https://connect.signl4.com/api/docs/v3/swagger.json" -o /tmp/opencode/swagger_v3.json; echo "size: $(wc -c < /tmp/opencode/swagger_v3.json)"; python3 -c "
+import json,sys
+d=json.load(open('/tmp/opencode/swagger_v3.json'))
+for p,methods in d.get('paths',{}).items():
+    print(p, sorted(methods.keys()))
+"
+size: 1213127
+/prepaid/{subscriptionId}/prepaidSettings ['put']
+/prepaid/balance ['get']
+/prepaid/settings ['get', 'put']
+/prepaid/transactions ['get']
+/scripts/instances ['get', 'post']
+/scripts/instances/{instanceId} ['delete', 'get', 'put']
+/scripts/instances/{instanceId}/data ['put']
+/scripts/instances/{instanceId}/disable ['post']
+/scripts/instances/{instanceId}/enable ['post']
+/scripts/inventory ['get']
+/scripts/inventory/parsed ['get']
+/scripts/inventory/parsed/{scriptId} ['get']
+/subscriptions/{subscriptionId}/prepaidBalance ['get']
+/subscriptions/{subscriptionId}/prepaidSettings ['get']
+/subscriptions/{subscriptionId}/prepaidTransactions ['get']
+/v3/audits ['get']
+/v3/categories ['get']
+/v3/categories/{teamId} ['get', 'post']
+/v3/categories/{teamId}/{categoryId} ['delete', 'get', 'put']
+/v3/categories/{teamId}/{categoryId}/metrics ['get']
+/v3/categories/{teamId}/{categoryId}/subscriptions ['get', 'post']
+/v3/categories/{teamId}/metrics ['get']
+/v3/categories/images ['get']
+/v3/categories/public ['get']
+/v3/distributionLists ['get', 'post']
+/v3/distributionLists/{listId} ['delete', 'get', 'put']
+/v3/distributionLists/{listId}/memberships ['delete', 'get', 'post']
+/v3/distributionLists/memberships ['get']
+/v3/distributionLists/public ['get']
+/v3/duties/punchIn ['post']
+/v3/duties/punchInAsManager ['post']
+/v3/duties/punchOut ['post']
+/v3/duties/summary ['get']
+/v3/events/{eventId} ['get']
+/v3/events/{eventId}/details ['get']
+/v3/events/{eventId}/parameters ['get']
+/v3/events/{webhookIdOrTeamId} ['post']
+/v3/events/paged ['post']
+/v3/eventsources ['get', 'post']
+/v3/eventsources/{eventSourceId} ['delete', 'get', 'put']
+/v3/prepaid/{subscriptionId}/prepaidSettings ['put']
+/v3/prepaid/balance ['get']
+/v3/prepaid/settings ['get', 'put']
+/v3/prepaid/transactions ['get']
+/v3/remoteActions ['get', 'post']
+/v3/remoteActions/{actionId} ['delete', 'get', 'put']
+/v3/remoteActions/{actionId}/jobs ['post']
+/v3/remoteActions/definitions ['get']
+/v3/remoteActions/definitions/{definitionId} ['get']
+/v3/remoteActions/journal/{jobId} ['get']
+/v3/remoteActions/journal/paged ['post']
+/v3/schedules ['post']
+/v3/schedules/standIn ['post']
+/v3/scim/apiKey ['post']
+/v3/scim/settings ['get', 'put']
+/v3/scim/status ['get']
+/v3/scripts/instances ['get', 'post']
+/v3/scripts/instances/{instanceId} ['delete', 'get', 'put']
+/v3/scripts/instances/{instanceId}/data ['put']
+/v3/scripts/instances/{instanceId}/disable ['post']
+/v3/scripts/instances/{instanceId}/enable ['post']
+/v3/scripts/inventory ['get']
+/v3/scripts/inventory/parsed ['get']
+/v3/scripts/inventory/parsed/{scriptId} ['get']
+/v3/shifts ['get', 'post']
+/v3/shifts/{shiftId} ['delete', 'get', 'put']
+/v3/shifts/{shiftId}/assignments ['delete', 'post', 'put']
+/v3/shifts/{shiftId}/assignments/replace ['post']
+/v3/shifts/{shiftId}/intervals/{intervalId} ['get']
+/v3/shifts/ai/forwardPlanning/{teamId} ['post']
+/v3/shifts/ai/forwardPlanning/{teamId}/feedback/{operationId} ['post']
+/v3/shifts/ai/forwardPlanning/{teamId}/result/{operationId} ['get']
+/v3/shifts/ai/forwardPlanning/{teamId}/result/last ['get']
+/v3/shifts/ai/forwardPlanning/{teamId}/status ['get']
+/v3/shifts/moveAssignment ['post']
+/v3/shifts/swapAssignments ['post']
+/v3/shifts/validateTimeSlots ['post']
+/v3/signls ['post']
+/v3/signls/{signlId} ['get']
+/v3/signls/{signlId}/acknowledge ['post']
+/v3/signls/{signlId}/annotate ['post']
+/v3/signls/{signlId}/attachments ['get', 'post']
+/v3/signls/{signlId}/attachments/{attachmentId} ['get']
+/v3/signls/{signlId}/close ['post']
+/v3/signls/{signlId}/details ['get']
+/v3/signls/{signlId}/escalateToTeam ['post']
+/v3/signls/{signlId}/escalations ['get']
+/v3/signls/{signlId}/escalations/csv ['get']
+/v3/signls/{signlId}/feedback ['post']
+/v3/signls/{signlId}/notifications ['get']
+/v3/signls/{signlId}/parameters ['get']
+/v3/signls/{signlId}/postMortem ['get']
+/v3/signls/{signlId}/postMortem/mail ['post']
+/v3/signls/{signlId}/signalingPattern ['get']
+/v3/signls/{signlId}/summarize ['post']
+/v3/signls/{signlId}/summary ['get']
+/v3/signls/{signlId}/summary/feedback ['post']
+/v3/signls/{signlId}/timeline ['get']
+/v3/signls/{signlId}/undoAcknowledge ['post']
+/v3/signls/{signlId}/undoClose ['post']
+/v3/signls/{signlId}/workflow ['get']
+/v3/signls/acknowledgeAll ['post']
+/v3/signls/acknowledgeAll/status ['get']
+/v3/signls/acknowledgeMultiple ['post']
+/v3/signls/closeAll ['post']
+/v3/signls/closeAll/status ['get']
+/v3/signls/closeMultiple ['post']
+/v3/signls/paged ['post']
+/v3/signls/report ['get']
+/v3/signls/undoAcknowledgeMultiple ['post']
+/v3/signls/undoCloseMultiple ['post']
+/v3/stakeholders ['get']
+/v3/stakeholders/{stakeholderId} ['delete', 'get', 'put']
+/v3/stakeholders/{stakeholderId}/locale ['put']
+/v3/subscriptions ['get']
+/v3/subscriptions/{subscriptionId} ['get']
+/v3/subscriptions/{subscriptionId}/channelPrices ['get']
+/v3/subscriptions/{subscriptionId}/features ['get']
+/v3/subscriptions/{subscriptionId}/image ['delete', 'get', 'post']
+/v3/subscriptions/{subscriptionId}/imageFile ['get']
+/v3/subscriptions/{subscriptionId}/imageInfo ['get']
+/v3/subscriptions/{subscriptionId}/imageSettings ['get', 'post']
+/v3/subscriptions/{subscriptionId}/inboundVoiceNumberLicenses ['get']
+/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/en16931 ['get']
+/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd ['get']
+/v3/subscriptions/{subscriptionId}/prepaidBalance ['get']
+/v3/subscriptions/{subscriptionId}/prepaidSettings ['get']
+/v3/subscriptions/{subscriptionId}/prepaidTransactions ['get']
+/v3/subscriptions/{subscriptionId}/profile ['put']
+/v3/subscriptions/{subscriptionId}/settings ['get', 'put']
+/v3/subscriptions/{subscriptionId}/stakeholderLicenses ['get']
+/v3/subscriptions/{subscriptionId}/tags ['get']
+/v3/subscriptions/{subscriptionId}/teams ['get']
+/v3/subscriptions/{subscriptionId}/userLicenses ['get']
+/v3/teams ['get', 'post']
+/v3/teams/{teamId} ['delete', 'get']
+/v3/teams/{teamId}/absences ['get']
+/v3/teams/{teamId}/dutyReports ['get']
+/v3/teams/{teamId}/dutyReports/{fileName} ['get']
+/v3/teams/{teamId}/eventSources ['get']
+/v3/teams/{teamId}/holidays ['delete', 'get']
+/v3/teams/{teamId}/holidays/repeating ['put']
+/v3/teams/{teamId}/holidays/years/{year} ['put']
+/v3/teams/{teamId}/holidays/years/{year}/copyFrom/{sourceTeamId} ['post']
+/v3/teams/{teamId}/image ['delete', 'get', 'post']
+/v3/teams/{teamId}/memberships ['get']
+/v3/teams/{teamId}/memberships/{userId} ['delete', 'post', 'put']
+/v3/teams/{teamId}/memberships/resendInviteMail ['post']
+/v3/teams/{teamId}/privacySettings ['get', 'put']
+/v3/teams/{teamId}/profile ['put']
+/v3/teams/{teamId}/schedules ['post']
+/v3/teams/{teamId}/schedules/{dutyId} ['delete']
+/v3/teams/{teamId}/schedules/{scheduleId} ['get']
+/v3/teams/{teamId}/schedules/deleteRange ['post']
+/v3/teams/{teamId}/schedules/multiple ['post']
+/v3/teams/{teamId}/setupProgress ['get']
+/v3/teams/{teamId}/signalingPatterns ['get', 'post']
+/v3/teams/{teamId}/signalingPatterns/{patternId} ['delete', 'put']
+/v3/teams/{teamId}/signalingPatterns/timeSlots/validate ['post']
+/v3/teams/{teamId}/signalingSettings ['get', 'post']
+/v3/teams/{teamId}/signlReports ['get']
+/v3/teams/{teamId}/signlReports/{fileName} ['get']
+/v3/teams/dutySettings ['get']
+/v3/teams/memberships ['post']
+/v3/teams/memberships/{userId} ['get']
+/v3/teams/public ['get']
+/v3/teams/signalingSettings ['get']
+/v3/teams/users ['get']
+/v3/templates ['get', 'post']
+/v3/templates/{templateId} ['delete', 'get', 'put']
+/v3/templates/{templateId}/execute ['post']
+/v3/users ['get']
+/v3/users/{userGuid} ['delete']
+/v3/users/{userId} ['get']
+/v3/users/{userId}/absences ['get', 'post']
+/v3/users/{userId}/absences/{id} ['delete', 'get', 'put']
+/v3/users/{userId}/absences/setAll ['post']
+/v3/users/{userId}/changePassword ['put']
+/v3/users/{userId}/checkPermissions ['post']
+/v3/users/{userId}/checkSubscriptionPermissions ['post']
+/v3/users/{userId}/contactAddresses/{addressId} ['delete']
+/v3/users/{userId}/dutyStatus ['get']
+/v3/users/{userId}/image ['delete', 'get', 'post']
+/v3/users/{userId}/locale ['put']
+/v3/users/{userId}/location ['post']
+/v3/users/{userId}/notificationProfiles ['get', 'put']
+/v3/users/{userId}/phoneNumbers ['delete', 'post']
+/v3/users/{userId}/phoneNumbers/validate ['post']
+/v3/users/{userId}/profile ['put']
+/v3/users/{userId}/sendEventSourcesInfo ['post']
+/v3/users/{userId}/setupProgress ['get']
+/v3/users/{userId}/tags ['get', 'put']
+/v3/users/{userId}/teams ['get']
+/v3/users/availableRoles ['get']
+/v3/users/overview ['post']
+/v3/users/overview/{userId} ['get']
+/v3/webhooks ['get', 'post']
+/v3/webhooks/{webhookId} ['delete', 'get', 'put']
+/v3/webhooks/{webhookId}/disable ['post']
+/v3/webhooks/{webhookId}/enable ['post']
+/v3/workflows ['get', 'post']
+/v3/workflows/{workflowId} ['delete', 'get', 'put']
+/webhooks ['get', 'post']
+/webhooks/{webhookId} ['delete', 'get', 'put']
+/webhooks/{webhookId}/disable ['post']
+/webhooks/{webhookId}/enable ['post']
+[0m
+[0m$ [0mfor p in /api/v3/teams/public /api/v3/categories/public /api/v3/distributionLists/public /api/v3/users/availableRoles /api/v3/teams/dutySettings /api/v3/teams/signalingSettings; do echo "=== GET $p ==="; code=$(curl -sS -m 15 -o /tmp/opencode/body.tmp -w "%{http_code}|%{content_type}" -X GET "https://connect.signl4.com$p"); echo "HTTP: $code"; echo "BODY: $(head -c 400 /tmp/opencode/body.tmp | tr -d '\n')"; echo; sleep 1; done
+=== GET /api/v3/teams/public ===
+HTTP: 401|
+BODY: 
+
+=== GET /api/v3/categories/public ===
+HTTP: 401|
+BODY: 
+
+=== GET /api/v3/distributionLists/public ===
+HTTP: 401|
+BODY: 
+
+=== GET /api/v3/users/availableRoles ===
+HTTP: 401|
+BODY: 
+
+=== GET /api/v3/teams/dutySettings ===
+HTTP: 401|
+BODY: 
+
+=== GET /api/v3/teams/signalingSettings ===
+HTTP: 401|
+BODY:
+[0m
+STEP 1 — DELTA
+[NEW] FULL V3 OpenAPI dumped (1.2MB, 200+ paths) from connect.signl4.com/api/docs/v3/swagger.json — documented read+file-download surface now exhaustively known: /v3/teams/{teamId}/signlReports/{fileName}, /v3/teams/{teamId}/dutyReports/{fileName}, /v3/signls/{signlId}/attachments/{attachmentId}, /v3/{teams,subscriptions}/{id}/image GET, /v3/shifts/ai/forwardPlanning/{teamId}/*, /v3/teams/{teamId}/holidays/years/{year}/copyFrom/{sourceTeamId}
+[NEW] Standard SCIM endpoints on connect.signl4.com/api/v3/scim/* (ServiceProviderConfig, Users, Groups, Schemas, Bulk) ALL 404 — only /scim/settings is registered (anon→401); no standard/anonymous SCIM surface
+[NEW] V3 "public"-named routes live-probed anon: /api/v3/teams/public, categories/public, distributionLists/public, users/availableRoles, teams/dutySettings, teams/signalingSettings → ALL 401; "public" suffix ≠ anonymous on this gateway
+
+STEP 2 — PRIORITIZE
+[PRIO] connect.signl4.com/webhook/{teamSecret},9.0,attack_surface=9,business_value=9,tech_exposure=8,gate_ease=10,cloud_surface=7,freshness=8 — no security scheme, 404-vs-201 oracle ACCEPTED, only unvalidated HIGH chain
+[PRIO] connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName},7.2,attack_surface=7,business_value=7,tech_exposure=7,gate_ease=3,cloud_surface=6,freshness=9 — unvalidated String path segment + sibling dutyReports/{fileName} + attachments/{attachmentId}; full file-family now documented
+[PRIO] connect.signl4.com/api/v3/signls/report,7.0,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=3,cloud_surface=6,freshness=8 — userId+teamId attacker-scoped query params, handler-deferred auth family
+[PRIO] connect.signl4.com/api/v3/events/{webhookIdOrTeamId},8.0,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=3,cloud_surface=7,freshness=8 — incident ack/resolve/close suppression primitive
+
+STEP 3 — HYPOTHESES
+[HYP] Cross-tenant webhook team-secret oracle + format characterization
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 80
+reasoning: contract in public /webhook/docs/v1/swagger.json = POST /{teamSecret}, NO security scheme; 404-invalid vs 201-eventId oracle already ACCEPTED across 2+ cycles; 15+ integration guides embed the static team secret in the URL; charset/length of teamSecret never characterized — determines guessability.
+evidence_needed: (a) a real doc-derived teamSecret sample; (b) charset/length from public integration corpus → decides enumeration feasibility.
+verify_steps: (DONE) `curl -X POST .../webhook/test-not-real-uuid ...` → 404; (NEXT RAG) extract teamSecret format from SIGNL4 docs/integration examples; HUMAN gate only if a genuine doc secret is obtained — POST → 201+eventId would confirm valid secret.
+impact: cross-tenant ack/resolve/close of genuine alerts via a URL-embedded immutable secret; HIGH if format short/guessable, HIGH-config finding regardless.
+testability: PASSIVE (oracle) → HUMAN_ONLY (secret-validation exploit)
+[HYP] Cross-team incident write via attacker-chosen webhookIdOrTeamId (spoogfi + suppression)
+class: BUSLOGIC
+asset: connect.signl4.com/api/v3/events/{webhookIdOrTeamId}
+confidence: 55
+reasoning: POST route takes team-scoped id in path; handler-deferred auth family confirmed gateway-wide this cycle (public-named routes still 401, i.e. authz never parsed before body); swagger documents ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus — foreign attack can spoof or ack/resolve/close genuine incidents if path-scope not intersected with token claims.
+evidence_needed: authenticated POST to own vs foreign teamId — 201-vs-403 differential; status-keyword acceptance on foreign team.
+verify_steps: (DONE) anon POST → 401; (AUTH_HELPED) `X-S4-Api-Key` POST /api/v3/events/{own} vs {foreign} benign payload — HUMAN gate (mutating).
+impact: cross-team alert spoofing + suppression; HIGH if scoping gap.
+testability: AUTH_HELPED
+[HYP] Cross-tenant report/file download via fileName + attachment path segments
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}
+confidence: 50
+reasoning: GET takes unvalidated String fileName (siblings dutyReports/{fileName}, signls/{signlId}/attachments/{attachmentId}); swagger global security empty `[{}]` (spec under-declares auth everywhere); report contains alert PII (contents/recipients/timing).
+evidence_needed: authenticated GET with own+own → 200; foreign teamId and/or `../` fileName → 200 (vuln) vs 403/400 (scoped).
+verify_steps: (DONE) anon GET → 401 (route registered); (AUTH_HELPED) `X-S4-Api-Key` GET /api/v3/teams/{own}/signlReports/{own-file} then {foreign}/{file} and traversal `..%2f{own-file}` — HUMAN gate.
+impact: cross-tenant alert-report + attachment exfiltration; MEDIUM-HIGH.
+testability: AUTH_HELPED
+
+STEP 4 — SELF-CRITIQUE
+[PARKED] Standard SCIM surface (ServiceProviderConfig/Users/Groups/Schemas/Bulk): all 404, only /scim/settings registered — closed, 0 split.
+[PARKED] V3 "public"-named routes anon read (teams/public, categories/public, distributionLists/public, availableRoles, dutySettings, signalingSettings): all 401 — naming misread, no anonymous surface.
+[PARKED] Cross-tenant event write (BUSLOGIC, 55) + signls/report (IDOR, 50) + fileName traversal (IDOR, 50): all AUTH_HELPED, blocked on credential acquisition.
+[PARKED] Webhook oracle exploit: PASSIVE oracle confirmed but secret-validation requires a genuine teamSecret — never leaked publicly (3 prior sweep cycles).
+[FINAL] 1) Webhook team-secret oracle + format characterization (AUTH, 80) — only PASSIVE-advancedable lead; NEXT step is RAG not probe.
+[FINAL] 2) events/{webhookIdOrTeamId} incident suppression (BUSLOGIC, 55) — keep, AUTH_HELPED.
+[FINAL] 3) signlReports/dutyReports/attachments file-download BOLA (IDOR, 50) — expanded surface this cycle, keep, AUTH_HELPED.
+
+STEP 5 — NEXT ACTION
+[NEXT] RAG: fetch SIGNL4 public docs (help.signl4.com webhook/API pages + one third-party integration guide, e.g. ServiceNow/Zabbix/OpenIntegrationHub) to extract REAL teamSecret format — exact charset+length and one genuine sample secret from docs/examples; this decides whether the 404-vs-201 oracle is enumerable (HIGH) or config-only (config finding), the single unblocked decision remaining this cycle.
+
+STEP 6 — LEARNING
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v3/scim/*: ServiceProviderConfig/Users/Groups/Schemas/Bulk all 404 — only /scim/settings registered (anon→401); no standard or anonymous SCIM surface.
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/-public: teams/public, categories/public, distributionLists/public, users/availableRoles, teams/dutySettings, teams/signalingSettings all anon→401 — "public" naming is not an auth bypass on this gateway; handler-deferred Bearer/API-key enforced gateway-wide.
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/docs/v3/swagger.json: full V3 schema dumped (200+ paths) — file-download family (/teams/{teamId}/signlReports/{fileName}, dutyReports/{fileName}, /signls/{signlId}/attachments/{attachmentId}), tenant image GETs, AI forwardPlanning/{teamId}, holidays copyFrom/{sourceTeamId} all anon→401; global security still `[{}]` empty (spec under-declares); BOLA inventory materially expanded, all AUTH_HELPED.
+
+STEP 7 — RISK
+[RISK] derdack: 89 — confirmed HIGH chain: prod/idp staging estate sharing prod RS256 signing key + same client_id + enabled password grant (token forgery AUTH_HELPED-blocked on client_secret); PASSIVE HIGH webhook team-secret oracle (unvalidated, secret never leaked publicly); 200+ route V3 BOLA surface now fully documented (file downloads, attachments, tenant images, event suppression) but uniformly Bearer/API-key-gated anonymous (401) — zero anonymous read exposure; SCIM + "public"-named routes anon-probed and closed.

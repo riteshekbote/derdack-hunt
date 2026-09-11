@@ -1270,3 +1270,10 @@
 - LEARN: REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert, no Derdack def
 - LEARN: ACCEPTED IDOR @ connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16
 - LEARN: ACCEPTED MISCONFIG @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid
+
+## RANKED HYPOTHESES 2026-09-11 17:49:10 UTC
+- [80] connect.signl4.com/webhook/{teamSecret}: Cross-tenant webhook team-secret oracle + format characterization (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): RAG: fetch SIGNL4 public docs (help.signl4.com webhook/API pages + one third-party integration guide, e.g. ServiceNow/Zabbix/OpenIntegrationHub) to extract REAL
+- LEARN: REJECTED AUTH @ connect.signl4.com/api/v3/scim/*: ServiceProviderConfig/Users/Groups/Schemas/Bulk all 404 — only /scim/settings registered (anon→401); no standa
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v3/-public: teams/public, categories/public, distributionLists/public, users/availableRoles, teams/dutySettings, teams/si
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/api/docs/v3/swagger.json: full V3 schema dumped (200+ paths) — file-download family (/teams/{teamId}/signlReports/{fileName}

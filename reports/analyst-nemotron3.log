@@ -10013,3 +10013,176 @@ testability: AUTH_HELPED
 
 **STEP 7 — RISK**
 [RISK] derdack: 92 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devapi/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant + client_credentials + PAR on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); webhook team-secret oracle confirmed HIGH impact; invoice download (ZUGFeRD) + prepaid billing routes documented but auth-gated (BOLA AUTH_HELPED); blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra; NEW CT surface (fix/frontdoor/status/support/trust/docs/demo/downloads) adds 8 live hosts with unprobed attack surface; V3 API exposes internal billing/SCIM routes in public OpenAPI with empty security requirement
+===== ANALYST nemotron3 2026-09-11 17:49:10 UTC =====
+[0m
+> build · nemotron-3-ultra-free
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "%{http_code}" "https://connect.signl4.com/webhook/test123" -X POST -H "Content-Type: application/json" -d '{"Id":"test","X-S4-Status":"acknowledged","X-S4-ExternalID":"test"}'
+404
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "%{http_code}" "https://connect.signl4.com/webhook/docs/v1/swagger.json"
+200
+[0m
+[0m$ [0mcurl -s "https://connect.signl4.com/webhook/docs/v1/swagger.json" | head -100
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "SIGNL4 Inbound Webhook",
+    "description": "The SIGNL4 webhook allows you to send events to your SIGNL4 team from external systems or applications.\r\nThe base URL of the webhook is [https://connect.signl4.com/webhook/](https://connect.signl4.com/webhook/).\r\nOther than the SIGNL4 API, authentication is based on an API key which is encoded in the request URI and matches your SIGNL4 team secret such as [https://connect.signl4.com/webhook/{teamSecret}](https://connect.signl4.com/webhook/{teamSecret}).<br/><br/>\r\nCopyright © Derdack<br/>",
+    "contact": {
+      "url": "https://www.signl4.com/feedback-we-love-hear-from-you/"
+    },
+    "license": {
+      "name": "Derdack GmbH",
+      "url": "https://www.signl4.com"
+    },
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "https://connect.signl4.com/webhook"
+    }
+  ],
+  "paths": {
+    "/docs/index.html": {
+      "get": {
+        "tags": [
+          "Docs"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/{teamSecret}": {
+      "post": {
+        "tags": [
+          "Events"
+        ],
+        "summary": "Transmit an event",
+        "description": "Triggers a new Signl for your team.\r\nIt will be displayed in the Signl overview and people on duty receive an alert notification, except the Signl is\r\nfiltered (keyword filtering with categories).\r\nPlease note that people, who have muted the category to which the Signl may be assigned (keyword matching or\r\nX-S4-Service parameter), won't receive an alert notification.\r\nThe body of this request is any data of your choice, typically sent in JSON format. However, SIGNL4 does not\r\nrequire a specific schema.\r\nYou may want to include the following parameters to enrich your Signl or to influence its processing as follows:\r\n\r\n</br><b>X-S4-Service</b>: Assigns the Signl to the service/system category with the specified name. Will be overwritten if category is assigned in distribution rule.\r\n</br><b>X-S4-Location</b>: Transmit location information ('latitude, longitude') with your event and display a map in\r\nthe mobile app.\r\n</br><b>X-S4-AlertingScenario</b>: If this event triggers a Signl, allows to control how SIGNL4 notifies the team.\r\n<ul><li><b>single_ack</b>\r\n</br>Only one person needs to acknowledge this Signl.\r\n</br></li><li><b>multi_ack</b>\r\n</br>The Signl must be confirmed by the number of people who are on duty at the time this Signl is created.\r\n</br></li><li><b>emergency</b>\r\n</br>All people in the team are notified regardless of their duty status and must acknowledge the Signl, which is also assigned to the built-in emergency category.\r\n</br></li></ul><b>X-S4-ExternalID</b>: If the event originates from a record in a 3rd party system, use this parameter to pass the\r\nunique ID of that record. That ID will be communicated in outbound webhook notifications from SIGNL4, which is\r\ngreat for correlation/synchronization of that record with the Signl.\r\n</br><b>X-S4-Filtering</b>: Specify a boolean value of true or false to apply event filtering for this event, or not. If\r\nset to true, the event will only trigger a notification to the team, if it contains at least one keyword from one\r\nof your services and system categories (i.e. it is whitelisted). If set to false it skips the filter set in the team.\r\nIt will also prevent the suppression of a Signl by signaling overrides.\r\n</br><b>X-S4-Status</b>: If you want to resolve an existing Signl by an external id (X-S4-ExternalID), you can add this\r\nstatus parameter. It has three possible values:\r\n<ul><li><b>new</b>\r\n</br>Default value which means that this event triggers a new Signl.\r\n</br></li><li><b>acknowledged</b>\r\n</br>If you want to acknowledge a previously triggered Signl (e.g. someone responded in the 3rd party system and not in the mobile\r\n        app during business hours), set the X-S4-Status to 'acknowledged' and provide an external ID via the 'X-S4-ExternalID' parameter for the Signl you want to acknowledge.\r\n        It is only possible to acknowledge a Signl with a provided external id that initially triggered it.\r\n</br></li><li><b>resolved</b>\r\n</br>If you want to resolve a previously triggered Signl (e.g. monitoring system has auto-closed the event),\r\n        make sure to set the X-S4-Status to 'resolved' and provide an external ID via the 'X-S4-ExternalID' parameter for the Signl(s) you want to resolve. It is only possible to resolve a Signl with a provided external id that initially triggered it.\r\n</br></li></ul>\r\nYou can also add query parameters which are each documented below. They are used to correlate the status of events\r\nin your 3rd party system with the\r\nSignl status in SIGNL4. You are thereby able to define when an event, sent to the webhook, should acknowledge or resolve a Signl\r\nthat it has triggered earlier.\r\nAn example is: https://connect.signl4.com/webhook/teamssecret?ExtIdParam=Id&ExtStatusParam=Status&ResolvedStatus=UP&AckStatus=PENDING",
+        "parameters": [
+          {
+            "name": "teamSecret",
+            "in": "path",
+            "description": "The team secret of your SIGNL4 team (must be present in the request URI)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ExtIdParam",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ExtStatusParam",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "NewStatus",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ResolvedStatus",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "AckStatus",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Information you want to send to your team. No fixed data format or schema is required by SIGNL4.<br /><br />\r\nWhen you want to send data as application/x-www-form-urlencoded, it must be in the format name=value and needs to be url path encoded.<br />\r\nMultiple name/value pairs are separated with an &, an example is<br /><i>Id=INC091210&Gate%20Id=A45&Message=Agressive%20passenger&Source=Gate%20agent&Type=Security%20alert&Status=UP&X-S4-Service=Security&X-S4-Location=40.6413111,-73.7781391&X-S4-AlertingScenario=multi_ack&X-S4-ExternalID=INC091210&X-S4-Status=resolved</i><br />\r\nWhen you select application/x-www-form-urlencoded and try it out here, the JSON example is converted into that format automatically (see the curl command line output).",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Event"
+              },
+              "examples": {
+                "application/json": {
+                  "value": "{\r\n  \"Id\": \"INC091210\",\r\n  \"Gate Id\": \"A45\",\r\n  \"Message\": \"Agressive passenger\",\r\n  \"Source\": \"Gate agent\",\r\n  \"Type\": \"Security alert\",\r\n  \"Status\": \"UP\",\r\n  \"X-S4-Service\": \"Security\",\r\n  \"X-S4-Location\": \"40.6413111,-73.7781391\",\r\n  \"X-S4-AlertingScenario\": \"multi_ack\",\r\n  \"X-S4-ExternalID\": \"INC091210\",\r\n  \"X-S4-Status\": \"resolved\"\r\n}"
+                }
+              }
+            },
+            "text/plain": {
+              "schema": {
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "%{http_code}" "https://api.signl4.com/api/v2/teams" -H "Authorization: Bearer invalid_token"
+401
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "%{http_code}" "https://api.signl4.com/api/v2/teams"
+401
+[0m
+[0m$ [0mcurl -s "https://devconnect.signl4.com/identity/.well-known/openid-configuration" | jq -r '.jwks_uri'
+https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks
+[0m
+[0m$ [0mcurl -s "https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks" | jq -c '.keys[0]' | sha256sum
+562195e1726e7ba12fb78afc415e2199fafb650128ced33a9124e6936cfd274c  -
+[0m
+[0m$ [0mcurl -s "https://connect.signl4.com/identity/.well-known/openid-configuration/jwks" | jq -c '.keys[0]' | sha256sum
+562195e1726e7ba12fb78afc415e2199fafb650128ced33a9124e6936cfd274c  -
+[0m
+[0m$ [0mcurl -s "https://api.signl4.com/identity/.well-known/openid-configuration/jwks" | jq -c '.keys[0]' | sha256sum
+562195e1726e7ba12fb78afc415e2199fafb650128ced33a9124e6936cfd274c  -
+[0m
+[0m$ [0mcurl -s "https://devapi.signl4.com/identity/.well-known/openid-configuration/jwks" | jq -c '.keys[0]' | sha256sum
+562195e1726e7ba12fb78afc415e2199fafb650128ced33a9124e6936cfd274c  -
+[0m
+[0m$ [0mcurl -s "https://devconnect.signl4.com/identity/.well-known/openid-configuration" | jq -r '.grant_types_supported[]'
+authorization_code
+client_credentials
+refresh_token
+implicit
+password
+urn:ietf:params:oauth:grant-type:device_code
+urn:openid:params:grant-type:ciba
+urn:ietf:params:oauth:grant-type:token-exchange
+[0m
+[0m$ [0mcurl -s "https://devconnect.signl4.com/identity/.well-known/openid-configuration" | jq -r '.registration_endpoint // "NOT_PRESENT"'
+NOT_PRESENT
+[0m
+[0m$ [0mcurl -s "https://devconnect.signl4.com/identity/.well-known/openid-configuration" | jq -r '.token_endpoint_auth_methods_supported[]'
+client_secret_basic
+client_secret_post
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "%{http_code}\n%{redirect_url}" "https://devaccount.signl4.com/manage" | head -2
+302
+https://devconnect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Fdevaccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=_LeFsJoNzr9GW-YfVyKGrgTYp495Ga9GlgqJEKkBJg4&code_challenge_method=S256&response_mode=form_post&nonce=639247453641824032.M2EyNDcyMmYtOTVmOC00OWJjLTgyMTQtNGU2ZWQ0YjA2NDgxYTQ5OWYwMTctOTYzNy00NGZhLTgwM2UtMDA3YzgzMWM2OTZi&state=CfDJ8HRhdHKj5_pDq2dFwl0f4pyDk8pOVEOAbtMGl8Uvm1GQF7x3W3xKtbFsQNjd5WQMV_h6sHzg9wnnRJuZ-lgd50AWWiDIbGqYWMp04ZD9_yLDy-xyS_7013UFSiULbHxCpMd3fw4dLmZ8Ia2nbNzRdwXr19j_z6sehqBM6bLPouVEMvskhZ9tXBumfphGdxIZhQ23tWsCf-LiPg5HlBGXmlpejanh3xGpv15sxAB3U1cRnmhDYl2zaHzRvIe2GIpbFmcOixk6GegWDJJ4jK0gsxH7PEEba37S43NkBvMgAdvFGAfy6TV8ohm09t7n7-87RWy5tnkT5TbSkOdnSLbZOi4OuhVxxwZIUReAUOLmZv2WEhfGYdOz3ebwdTfnIKAp4SmKWUFWUFgdLm-zz43qYvA&x-client-SKU=ID_NET10_0&x-client-ver=8.19.2.0
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "%{http_code}\n%{redirect_url}" "https://account.signl4.com/manage" | head -2
+302
+https://connect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=_dG87AEiDzTfniAiP6tTw61AJ4H8bsNcM3Ie7ykEZF4&code_challenge_method=S256&response_mode=form_post&nonce=639247454128761636.ZTZkOWMzOTAtOWI0OC00NWE4LTkwN2QtNzFiYzZiYmRlZTg0YzRmODFiYjMtODYzZS00NjIzLWEwYjEtZjhhZTZlZTZkNGNm&state=CfDJ8P0bhSkvNP5HkPto7qc9KqPHzrzeHFULwv-W-nsEUq9oJEZmfA0ffFuN-_WMak-K79YxsU9Ew2jjm4iZstD0F-btqTCtS7ROZnzyHM5D4JVlkn-iiVY3wdh-RIYg3X0eKB8uXfszj0sJA8kDVikf73mgvWNbiuvI6s-_jwdbfdLPppAUNm8pIiXFYbyzF5K24Me_kbKA-TFFcfg-F_4FbqcqQF_sj88GlGoXoHujCrnbHP0v9EzXtJaTZNf9is8MBSN9gnE2S1GfqlRttadrwsMJYXxJ6b1GpnsutHkWOuat_pcfhT8KK3v9XqUZTR5jXFa8E6ZmV-amZBNnh2X-OisaHa876_YFa_CPRgOCxu83Jut6xVYY2o2pauI03UsdfxqHzCnfHh05lFBC0HNbXL4&x-client-SKU=ID_NET10_0&x-client-ver=8.19.2.0
+[0m
+[0m$ [0mcurl -s "https://connect.signl4.com/api/docs/v3/swagger.json" | jq -r '.security'
+[
+  {}
+]
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "%{http_code}" "https://connect.signl4.com/api/v3/invoice-en16931/zugferd" -X OPTIONS
+404
+[0m
+[0m$ [0mcurl -s "https://connect.signl4.com/api/docs/v3/swagger.json" | jq -r '.paths | keys[]' | grep -i invoice
+/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/en16931
+/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "%{http_code}" "https://connect.signl4.com/api/v3/subscriptions/00000000-0000-0000-0000-000000000000/invoices/00000000-0000-0000-0000-000000000000/zugferd" -X OPTIONS
+405
+[0m
