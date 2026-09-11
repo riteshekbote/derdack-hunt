@@ -236,3 +236,96 @@ reasoning: Line 14 contains a commented-out connection string: `Server=sqlserver
 impact: Low — Commented-out code is not executed. However, it leaks an internal Derdack hostname and a second password variant for the SA account. If `sqlserver.derdack-support.local` resolves on any Derdack-internal network, the hostname disclosure is valuable for lateral movement.
 verify_steps: Passive only: (1) Confirm repo ownership (2) DNS-resolve `sqlserver.derdack-support.local` from external (should fail — internal only) (3) Compare with prior finding: HolidayImport.js has `PWD=Derdack!` while this has `PWD=none` — two password variants for the same SA account suggest credential rotation or multiple test environments.
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-11 00:33:06 UTC
+[HYP] Hardcoded SIGNL4 Team Secret `96sbq38s` in Google IoT Integration
+class: SECRET
+asset: signl4/signl4-integration-google-iot/index.js:19
+confidence: 85
+reasoning: Team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a real alphanumeric string committed to source. The repo is owned by the signl4 GitHub org (Derdack-owned).
+impact: Medium — Any party can send arbitrary alerts to this SIGNL4 team via the webhook. Could be used for alert flooding, social engineering via fake incident notifications, or to probe the team's response workflows.
+verify_steps: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If 404, team was deleted and finding is historical only.
+[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+class: SECRET
+asset: signl4/code-snippets/SIGNL4.postman_collection.json:40 + signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7
+confidence: 80
+reasoning: Team secret `vbguzfsi` appears in two files: (1) Postman collection path array `["webhook", "vbguzfsi"]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardcoded directly. Same secret reused across two files suggests a Derdack employee's real team secret used during development.
+impact: Medium — Unauthorized alert injection, alert flooding, potential social engineering via fake incidents. Two files expose the same secret, increasing blast radius.
+verify_steps: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+[HYP] Hardcoded Checkmk Admin Credentials with Internal IP
+class: SECRET
+asset: derdack-plugin-checkmk/2-way/Main.js:90-94
+confidence: 95
+reasoning: Hardcoded `username = "cmkadmin"`, `password = "CNlydVqZ"`, and `serverURL = "http://192.168.88.107:8080/cmk/check_mk/api/v0/"` with an internal RFC1918 IP. Credentials are used in Bearer auth headers at lines 317, 360. This exposes a real internal hostname pattern and valid credential format. The IP `192.168.88.107` matches the pattern used in other Derdack samples (e.g., `derdack-2wayREST-samples/README.md:147`).
+impact: HIGH — If deployed as-is, exposes Checkmk monitoring admin account; internal IP leaks network topology. Credential reuse risk if same password is used elsewhere.
+verify_steps: (1) Check if 192.168.88.107 is/was reachable from any Derdack network (2) Check git history for when this was committed (3) Verify if "CNlydVqZ" appears in any breach database.
+[HYP] Hardcoded SQL Server SA Credentials with Internal Derdack Hostname
+class: SECRET
+asset: derdack-oncall-holidayimport/HolidayImport.js:16 + HolidayDeleteAll.js:22
+confidence: 95
+reasoning: Connection string `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017` — exposes internal hostname, SQL Server `sa` (sysadmin) account, and plaintext password. The `sa` account with password `Derdack!` is a sysadmin-level DB credential. `derdack-support.local` is an internal Derdack asset.
+impact: CRITICAL — SA account grants full SQL Server control; internal host disclosure; credential reuse risk. If `sqlserver.derdack-support.local` resolves on any Derdack-internal network, this is a direct compromise vector.
+verify_steps: (1) DNS-resolve `sqlserver.derdack-support.local` from external (should fail — internal only) (2) Check if "Derdack!" appears in credential stuffing lists (3) Verify git history.
+[HYP] Commented-Out SQL Server SA Credentials (Second Password Variant)
+class: SECRET
+asset: signl4/signl4-integration-sql-server/db2signl.ps1:14
+confidence: 70
+reasoning: Line 14 contains a commented-out connection string: `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=none;Database=EnterpriseAlert2017`. This exposes: (1) internal Derdack hostname `sqlserver.derdack-support.local`, (2) SQL Server SA account, (3) password `none`. Two password variants for the same SA account (`Derdack!` in HolidayImport.js vs `none` here) suggest credential rotation or multiple test environments.
+impact: Low — Commented-out code is not executed. However, it leaks an internal Derdack hostname and a second password variant for the SA account. Valuable for lateral movement if the hostname resolves internally.
+verify_steps: (1) Confirm repo ownership (2) DNS-resolve `sqlserver.derdack-support.local` from external (3) Compare with prior finding: HolidayImport.js has `PWD=Derdack!` while this has `PWD=none`.
+[HYP] SQL Injection via String Concatenation in Enterprise Alert Scripts
+class: MISCONFIG
+asset: derdack-oncall-holidayimport/HolidayImport.js:65,86,105 + derdack-alert-forwarding/Alert2Team.js:28,72
+confidence: 90
+reasoning: All SQL queries are built via direct string concatenation with unsanitized variables. HolidayImport.js:65 — `"SELECT ID FROM OnCallPlanHolidays WHERE OnCallPlanID=" + iTeamId + " AND Holiday='" + sDate + "'"`. HolidayImport.js:86 — `sTeams` variable split from user-controlled `STRING_TEAMS` and injected directly into `IN (...)` clauses. Alert2Team.js:28 concatenates `sExecutor` into a SQL query without escaping. Alert2Team.js:72 concatenates `sTeamnames` into UPDATE statement.
+impact: HIGH — Allows SQL injection if any parameter originates from user/external input; Enterprise Alert database compromise.
+verify_steps: Trace whether `STRING_TEAMS`, `sExecutor`, or MIB file contents can be influenced by external input in production deployments.
+[HYP] Command Injection via PowerShell in HTML-to-Text Script
+class: MISCONFIG
+asset: derdack-alert-augmentation/html-to-text/ps.js:40
+confidence: 85
+reasoning: `ExecutePowershell()` constructs a shell command by directly interpolating `htmlString` (from event parameter `PARAMETER_WITH_HTML`) into a `powershell.exe` invocation: `"powershell.exe \"node.exe '" + SCRIPTING_HOST_DIR + "html_text.js' '" + htmlString + "'\""`. An attacker who controls the `text` event parameter can inject arbitrary OS commands. Line 143 also concatenates `alertID` and `executor` into a powershell command without sanitization.
+impact: CRITICAL — Remote code execution on the Enterprise Alert scripting host via crafted event parameter.
+verify_steps: Confirm the script is deployed in production ScriptingHost; test with a malicious `text` parameter payload.
+[HYP] eval() on Application Context Data in Multiple EA Plugins
+class: MISCONFIG
+asset: derdack-2wayREST-samples/Logic Monitor/Main.js:52-68, zendesk/Main.js:52-68, Dynatrace/Main.js:53-69, derdack-plugin-checkmk/2-way/Main.js:52-68
+confidence: 75
+reasoning: `eval()` is called on `appContext.state.callbackSaveState`, `appContext.runtimeInfo.callbackSetStatusError`, `appContext.runtimeInfo.callbackSetStatusOK`, `appContext.runtimeInfo.callbackSendMail`. If the EA runtime provides attacker-controllable data in these fields, it enables arbitrary code execution. This pattern is repeated identically in 4 repos.
+impact: MEDIUM — Potential code execution if app context can be tampered with. Risk depends on EA SDK trust boundary.
+verify_steps: Review EA Scripting Host SDK to determine if context fields are sanitized before delivery.
+[HYP] SIGNL4 Team Secret Logged at DEBUG Level in EA WebhookGateway
+class: SECRET
+asset: derdack-integration-SIGNL4/js/WebhookGateway.js:41,87
+confidence: 80
+reasoning: The decoded SIGNL4 team secret is written to debug logs at lines 41 and 87: `EAScriptHost.LogDebug("Decoded S4 Team Secret: " + strS4TeamSecret)`. The secret is also appended to the webhook URL at line 94. This exposes the secret in EA log files.
+impact: MEDIUM — Team secret exposure in log files; allows unauthorized SIGNL4 webhook calls if logs are accessible.
+verify_steps: Check EA log retention and access controls; verify if debug logging is enabled in production.
+[HYP] SIGNL4 Team Secret Logged at INFO Level in ioBroker Adapter
+class: SECRET
+asset: signl4/ioBroker.signl4/main.js:40
+confidence: 85
+reasoning: Line 40: `this.log.info('config team_secret: ' + this.config.team_secret);` logs the SIGNL4 team secret to ioBroker's info-level log on adapter ready. INFO-level logs are typically retained longer and are more accessible than DEBUG logs in production ioBroker installations.
+impact: MEDIUM — Team secret exposure in ioBroker log files. Any user with access to ioBroker admin/logs can read the secret and send arbitrary alerts.
+verify_steps: (1) Confirm repo ownership at github.com/signl4/ioBroker.signl4 (2) Check if ioBroker log files are typically stored in a world-readable location (3) Verify if the `this.log.info` call is present in the published npm package version.
+[HYP] Commented-Out Pipedream Debug Webhook in Zabbix Integration
+class: OTHER
+asset: signl4/signl4-integration-zabbix/signl4-mediatype.yaml:122
+confidence: 70
+reasoning: Line contains commented-out debug endpoint: `//endpoint = 'https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net';` — a Pipedream request inspection URL. This is a developer debug/test artifact left in production Zabbix media type export. While commented out, it reveals an internal testing endpoint and confirms Pipedream was used for webhook debugging.
+impact: Low — Commented-out code is not executed. However, it leaks a historical debug endpoint. If someone uncomments it, all Zabbix alerts would be sent to a third-party service (Pipedream) instead of SIGNL4.
+verify_steps: (1) Check if the Pipedream endpoint is still active: `curl -s -o /dev/null -w '%{http_code}' https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net` (2) If active, confirms debug artifact was real.
+[HYP] Hardcoded MySQL Credentials in SIGNL4 MariaDB Integration Sample
+class: SECRET
+asset: signl4/signl4-integration-mysql-mariadb/db2signl.php:10-13
+confidence: 75
+reasoning: `STRING_DB_USER = "signl4"` and `STRING_DB_PASS = "signl4"` are hardcoded real credential values (not placeholders). While intended as sample code, users who deploy this without changing credentials expose a local MySQL instance with known username/password pair. The password matches the database name, suggesting a default install pattern.
+impact: Low — Sample code only; impact depends on whether any deployment ships with these defaults. No Derdack-internal hostname exposed.
+verify_steps: (1) Confirm repo ownership at github.com/signl4/signl4-integration-mysql-mariadb (2) Search GitHub code search for `STRING_DB_PASS = "signl4"` to see if any forks/deployments use this verbatim.
+[HYP] PII and Internal Infrastructure URLs in Public CSV Export
+class: MISCONFIG
+asset: signl4/signl4-reporting/AlertAuditReport.csv
+confidence: 90
+reasoning: CSV file contains real user email addresses (`ron@signl4.com`, `system@signl4.com`) and internal Grafana URLs (`ronlab.grafana.net`). This is operational alert audit data that should not be in a public repo. The file has 821 lines of production alert data from May 2022.
+impact: MEDIUM — PII exposure of Derdack employee email; internal infrastructure URL disclosure (Grafana instance).
+verify_steps: (1) Confirm the CSV is in the public repo (2) Check if `ronlab.grafana.net` is accessible externally (3) Verify if the email addresses are valid Derdack accounts.
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
