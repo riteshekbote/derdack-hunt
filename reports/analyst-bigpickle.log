@@ -17173,3 +17173,80 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 [RISK] derdack: 89 — Webhook lead resolved: URL-embedded operator-entropy bearer secret + 3004 oracle confirmed on prod AND staging (no security scheme, ack/resolve/close of genuine alerts possible with a leaked secret; 4 corpora clean, no POC); cross-env token-forgery chain still AUTH_HELPED-blocked on client_secret; V3 BOLA/file-download surface fully documented but uniformly auth-gated; all remaining vectors credential-blocked — no new unauthenticated defect this cycle.
+===== ANALYST bigpickle 2026-09-11 22:27:32 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -sS -m 25 'https://frontdoor.signl4.com/' -o /tmp/opencode/frontdoor.html -w 'HTTP %{http_code} size=%{size_download}\n'; rg -o 'src="[^"]+"|href="[^"]+\.(js|css)[^"]*"' /tmp/opencode/frontdoor.html | head -40
+HTTP 200 size=67561
+/bin/bash: line 1: rg: command not found
+[0m
+[0m$ [0mcurl -sS -m 25 'https://connect.signl4.com/api/docs/v2/swagger.json' -o /tmp/opencode/v2swagger.json -w 'HTTP %{http_code} size=%{size_download}\n'; rg -n '"events|teamSecret|webhookIdOrTeamId' /tmp/opencode/v2swagger.json | head -40
+HTTP 200 size=1216391
+/bin/bash: line 1: rg: command not found
+[0m
+[0m✱ [0mGrep ""events"|teamSecret|webhookIdOrTeamId|"webhook"[90m in /tmp/opencode/v2swagger.json · 8 matches[0m
+[0m✱ [0mGrep "src="[^"]+\.js[^"]*"|modulepreload|bundle"[90m in /tmp/opencode/frontdoor.html · 0 matches[0m
+[0m→ [0mRead /tmp/opencode/v2swagger.json[90m [offset=8748, limit=90][0m
+[0m✱ [0mGrep "script|\.js|api|auth|config"[90m in /tmp/opencode/frontdoor.html · 100 matches[0m
+[0m✱ [0mGrep ""security"|"apiKey"|X-S4-Api-Key|"OAuth2"|Bearer|"authorizationCode""[90m in /tmp/opencode/v2swagger.json · 9 matches[0m
+[0m→ [0mRead /tmp/opencode/v2swagger.json[90m [offset=42290, limit=30][0m
+[0m→ [0mRead /tmp/opencode/v2swagger.json[90m [offset=39720, limit=20][0m
+STEP 1 — DELTA
+- [NEW] V2 OpenAPI (connect.signl4.com/api/docs/v2/swagger.json, 1.2MB re-pulled) documents POST `/v2/events/{webhookIdOrTeamId}` = "Create new event" with parameter semantics: *team id* OR the *inbound webhook identifier* `https://connect.signl4.com/webhook/{Identifier}` — spec-level proof the webhook teamSecret is a dual-use credential (public webhook + API event routing).
+- [NEW] V2 swagger global `security: [{ }]` (empty) and ZERO per-operation security blocks across all 200+ paths (events, alerts CRUD, subscriptions, invoices all declared unauthenticated); spec under-declares auth universally while live handlers enforce 401 — same family, escalated to system-wide.
+- [NEW] frontdoor.signl4.com shell = pure static HTML (inline CSS only, no JS bundles) — no embedded backend URLs/config/keys; estate value LOW.
+- [CHANGED] events/{webhookIdOrTeamId} hypothesis: webhook-secret namespace overlap formally confirmed via OpenAPI param doc; incident-suppression chain now links to the (leaked) public webhook secret — still handler-auth-gated (anon→401).
+
+STEP 2 — PRIORITIZE
+- [PRIO] connect.signl4.com/webhook/{teamSecret},8.1,attack_surface=8,business_value=9,tech_exposure=6,gate_ease=10,cloud_surface=7,freshness=8
+- [PRIO] connect.signl4.com/api/v2/events/{webhookIdOrTeamId},7.4,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=3,cloud_surface=7,freshness=9
+- [PRIO] connect.signl4.com/api/v2/alerts/{alertId}?userId=,6.5,attack_surface=7,business_value=7,tech_exposure=7,gate_ease=3,cloud_surface=6,freshness=9
+
+STEP 3 — HYPOTHESES
+[HYP] Webhook team-secret dual-use credential: public webhook + events API, operator entropy
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret} + /api/v2/events/{webhookIdOrTeamId}
+confidence: 80
+reasoning: V2 OpenAPI events param: "team id ... or an inbound webhook identifier (https://connect.signl4.com/webhook/{Identifier})"; webhook OpenAPI declares NO security scheme; fabricated secret → 404 `code:3004` byte-identical on connect AND devconnect; teamSecret operator-chosen ("teamssecret"/"helloworld"/"team-secret" samples); events POST live anon→401 (handler-deferred, spec says none required); 4 corpora clean of real secrets.
+evidence_needed: one genuine teamSecret → 201 event-create on BOTH no-auth webhook and events path; absent from 4 swept corpora.
+verify_steps: (DONE) POST /webhook/{fabricated} → 404 3004 prod+staging; (DONE) RAG format + V2 OpenAPI param linkage to webhook identifier; (HUMAN gate) valid-secret dual-path 201 POC only if leaked secret surfaces.
+impact: leaked/weak operator-chosen secret = unauthenticated alert creation AND API event ingestion routing via victim-team distribution rules; status-keyword ack/close/resolve of genuine alerts; HIGH-in-principle, config/design-level absent a leak.
+testability: PASSIVE
+[HYP] Cross-team event creation/suppression via events/{webhookIdOrTeamId}
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/events/{webhookIdOrTeamId}
+confidence: 60
+reasoning: route registered GET+POST; V2 spec declares "Create new event" with dual identifier (teamId OR webhook secret); global security empty yet live 401 → handler-deferred auth, baseline flapping 405↔401; token-claims vs path-scope intersection is the only gate.
+evidence_needed: authenticated POST own vs foreign webhookIdOrTeamId differential (201 vs 403).
+verify_steps: (DONE) OPTIONS Allow + anon POST → 401; (DONE) OpenAPI param semantics; (AUTH_HELPED) X-S4-Api-Key POST own vs foreign benign status payload — HUMAN gate (mutating).
+impact: cross-team alert injection + status spoofing; HIGH if scoping gap exists.
+testability: AUTH_HELPED
+[HYP] Cross-user alert read via act-as userId query param
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/alerts/{alertId}?userId=
+confidence: 40
+reasoning: V2 OpenAPI documents userId param on alert view: "User ID of user in which behave the api is called. It is used for filtering purposes regarding the alert." — per-request acting-user identifier; if handler scopes by param claims rather than token principal, cross-user (same-team) reads possible.
+evidence_needed: authenticated GET own alert with {own} vs {other} userId differential.
+verify_steps: (DONE) anon → 401; (AUTH_HELPED) X-S4-Api-Key GET own alert + alternate userId — HUMAN gate.
+impact: cross-user alert read/context disclosure; MEDIUM.
+testability: AUTH_HELPED
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] V2 empty-global-security across ALL paths: spec-only, live handlers uniformly 401 — known under-declaration family, no new anonymous defect.
+- [PARKED] frontdoor.signl4.com JS/asset recon: static HTML only, zero scripts — closed, 0 split.
+- [PARKED] events id/secret guessing: brute-force class — REJECTED.
+- [FINAL] 1) Webhook dual-use operator-entropy secret oracle (AUTH, 80) — PASSIVE-confirmed spec+live on prod & staging; only reportable confirmable finding.
+- [FINAL] 2) events/{webhookIdOrTeamId} cross-team create/suppress (BUSLOGIC, 60) — keep, AUTH_HELPED.
+- [FINAL] 3) alerts userId act-as read (BUSLOGIC, 40) — borderline keep, AUTH_HELPED.
+
+STEP 5 — NEXT ACTION
+- [NEXT] HUMAN: draft report for bugs.olivermaicher.eu — (1) webhook team-secret design/configuration finding: URL-embedded operator-entropy bearer secret, no security scheme in OpenAPI, now spec-confirmed dual-use as `/api/v2/events/{webhookIdOrTeamId}` identifier; 3004 oracle byte-identical prod+staging; ack/close/resolve impact; no live 201 POC (4 corpora clean); (2) system-wide V2/V3 OpenAPI empty-`security`-array spec-vs-implementation mismatch (LOW, corroborating); (3) cross-env identity chain (shared RS256 key ×4 hosts + client_id 692A0A56 + password grant) + events/alerts BOLA family as AUTH_HELPED context. No further passive probe is productive — every remaining vector is credential-blocked.
+
+STEP 6 — LEARNING
+- [LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/events/{webhookIdOrTeamId}: OpenAPI formally parameterizes it as teamId OR `https://connect.signl4.com/webhook/{Identifier}` — webhook teamSecret is a dual-use identifier across public webhook AND API event-creation; handler still Bearer-gated (anon→401).
+- [LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v2/swagger.json: global security `[{ }]` with zero per-operation security blocks across all paths — V2 spec under-declares auth systemically (matches V3); no live anonymous handler bypass observed.
+- [LEARN] REJECTED MISCONFIG @ frontdoor.signl4.com: shell is pure static HTML (inline CSS, no JS bundles) → no embedded endpoints/keys; no further surface.
+
+STEP 7 — RISK
+- [RISK] derdack: 89 — Webhook finding strengthened (dual-use secret now spec-confirmed; oracle 3004 live on both envs) but remains config/design absent a leaked secret; 4 corpora clean; cross-env token forgery chain and events/alerts BOLA all AUTH_HELPED-blocked on credentials; system-wide OpenAPI empty-security is spec-only (LOW); zero new anonymous defects this cycle.

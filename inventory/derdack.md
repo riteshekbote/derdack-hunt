@@ -610,3 +610,17 @@ www.derdack.com
 - NEW devconnect.signl4.com/webhook/{fabricated-secret} → 404 with envelope byte-format identical to prod: `{"code":3004,"details":"No matching event source found.","message":"Error raising event."}`; /webh
 - NEW Vendor repo github.com/signl4/code-snippets + SIGNL4.postman_collection.json swept: only placeholders (`team-secret`, `<signl4-integration-secret>`, `--team-secret--`), zero real secrets — 4th clean c
 - CHANGED Webhook-lead open decision closed: charset/length is operator-entropy → guess-enumeration falls under REJECTED brute-force class; oracle exploitable only via secret leak; 4 corpora clean → downgraded 
+
+## 2026-09-11 22:27:32 UTC
+- NEW connect.signl4.com/api/v3 route map fully live-verified: invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance all anon→401; OPTIONS confirms Allow sets; global `security: [{}]` in
+- NEW connect.signl4.com/webhook/{teamSecret}: staging (devconnect) mirrors prod oracle byte-for-byte (`{"code":3004,"details":"No matching event source found."}`); teamSecret is operator-chosen (docs `team
+- NEW Vendor corpus sweep (github.com/signl4/code-snippets, Postman collection): only placeholder secrets; zero real team secret/API key across 4 corpora — credential-leak hypothesis unsupported
+- NEW connect.signl4.com/api/v3 "public" routes (teams/public, categories/public, distributionLists/public, users/availableRoles, teams/dutySettings, teams/signalingSettings) all anon→401 — "public" naming 
+- NEW Standard SCIM endpoints (ServiceProviderConfig, Users, Groups, Schemas, Bulk) all 404 — only /scim/settings registered (anon→401)
+- CHANGED Webhook enumeration downgraded: operator-entropy secret makes guessing feasible in theory but falls under program-REJECTED brute-force class; oracle exploitable only via secret leak → config/design fi
+- CHANGED Cross-env token forgery chain complete (shared RS256 key 10x, shared client_id, password grant, prod parametric twin) but AUTH_HELPED-blocked on client_secret
+- CHANGED api.signl4.com/api/v2/teams handler-deferred auth stable 10th+ cycles (405 on unauth GET, not 401; invalid Bearer also 405)
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets `secure`+host-only cookie); residual missing-HSTS only (LOW)
+- CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404
+- CHANGED www.derdack.com/de/ & /ea/ XML-RPC both POST-exposed but mutating methods (wp.uploadFile, metaWeblog.newMediaObject) return faultCode 403 — auth-gated
+- CHANGED 8 new CT hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com) unprobed beyond initial fingerprint

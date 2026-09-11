@@ -3112,3 +3112,31 @@ testability: AUTH_HELPED
 [LEARN] REJECTED OTHER @ github.com/signl4/code-snippets + Postman collection: only placeholder secrets; zero real team secret/API key in vendor's official sample corpus — credential-leak hypothesis unsupported across 4 corpora (indexed web, grep.app, GitHub, vendor samples).
 [LEARN] REJECTED AUTH @ webhook oracle enumeration: operator-entropy secret makes guessing feasible in theory but falls under program-REJECTED brute-force class; oracle exploitable only via secret leak → downgraded to config/design finding.
 [RISK] derdack: 89 — Webhook lead resolved: URL-embedded operator-entropy bearer secret + 3004 oracle confirmed on prod AND staging (no security scheme, ack/resolve/close of genuine alerts possible with a leaked secret; 4 corpora clean, no POC); cross-env token-forgery chain still AUTH_HELPED-blocked on client_secret; V3 BOLA/file-download surface fully documented but uniformly auth-gated; all remaining vectors credential-blocked — no new unauthenticated defect this cycle.
+## 2026-09-11 22:23:02 UTC [target] (model bigpickle)
+[HYP] Webhook team-secret dual-use credential: public webhook + events API, operator entropy
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret} + /api/v2/events/{webhookIdOrTeamId}
+confidence: 80
+reasoning: V2 OpenAPI events param: "team id ... or an inbound webhook identifier (https://connect.signl4.com/webhook/{Identifier})"; webhook OpenAPI declares NO security scheme; fabricated secret → 404 `code:3004` byte-identical on connect AND devconnect; teamSecret operator-chosen ("teamssecret"/"helloworld"/"team-secret" samples); events POST live anon→401 (handler-deferred, spec says none required); 4 corpora clean of real secrets.
+evidence_needed: one genuine teamSecret → 201 event-create on BOTH no-auth webhook and events path; absent from 4 swept corpora.
+verify_steps: (DONE) POST /webhook/{fabricated} → 404 3004 prod+staging; (DONE) RAG format + V2 OpenAPI param linkage to webhook identifier; (HUMAN gate) valid-secret dual-path 201 POC only if leaked secret surfaces.
+impact: leaked/weak operator-chosen secret = unauthenticated alert creation AND API event ingestion routing via victim-team distribution rules; status-keyword ack/close/resolve of genuine alerts; HIGH-in-principle, config/design-level absent a leak.
+testability: PASSIVE
+[HYP] Cross-team event creation/suppression via events/{webhookIdOrTeamId}
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/events/{webhookIdOrTeamId}
+confidence: 60
+reasoning: route registered GET+POST; V2 spec declares "Create new event" with dual identifier (teamId OR webhook secret); global security empty yet live 401 → handler-deferred auth, baseline flapping 405↔401; token-claims vs path-scope intersection is the only gate.
+evidence_needed: authenticated POST own vs foreign webhookIdOrTeamId differential (201 vs 403).
+verify_steps: (DONE) OPTIONS Allow + anon POST → 401; (DONE) OpenAPI param semantics; (AUTH_HELPED) X-S4-Api-Key POST own vs foreign benign status payload — HUMAN gate (mutating).
+impact: cross-team alert injection + status spoofing; HIGH if scoping gap exists.
+testability: AUTH_HELPED
+[HYP] Cross-user alert read via act-as userId query param
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/alerts/{alertId}?userId=
+confidence: 40
+reasoning: V2 OpenAPI documents userId param on alert view: "User ID of user in which behave the api is called. It is used for filtering purposes regarding the alert." — per-request acting-user identifier; if handler scopes by param claims rather than token principal, cross-user (same-team) reads possible.
+evidence_needed: authenticated GET own alert with {own} vs {other} userId differential.
+verify_steps: (DONE) anon → 401; (AUTH_HELPED) X-S4-Api-Key GET own alert + alternate userId — HUMAN gate.
+impact: cross-user alert read/context disclosure; MEDIUM.
+testability: AUTH_HELPED
