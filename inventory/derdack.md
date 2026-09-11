@@ -604,3 +604,9 @@ www.derdack.com
 - NEW FULL V3 OpenAPI dumped (1.2MB, 200+ paths) from connect.signl4.com/api/docs/v3/swagger.json — documented read+file-download surface now exhaustively known: /v3/teams/{teamId}/signlReports/{fileName}, 
 - NEW Standard SCIM endpoints on connect.signl4.com/api/v3/scim/* (ServiceProviderConfig, Users, Groups, Schemas, Bulk) ALL 404 — only /scim/settings is registered (anon→401); no standard/anonymous SCIM sur
 - NEW V3 "public"-named routes live-probed anon: /api/v3/teams/public, categories/public, distributionLists/public, users/availableRoles, teams/dutySettings, teams/signalingSettings → ALL 401; "public" suff
+
+## 2026-09-11 20:07:33 UTC
+- NEW RAG: `teamSecret` is an operator-chosen per-endpoint secret (docs example `teamssecret`, n8n sample `helloworld`, vendor snippets `team-secret`) — NOT fixed high-entropy; a URL-embedded bearer credent
+- NEW devconnect.signl4.com/webhook/{fabricated-secret} → 404 with envelope byte-format identical to prod: `{"code":3004,"details":"No matching event source found.","message":"Error raising event."}`; /webh
+- NEW Vendor repo github.com/signl4/code-snippets + SIGNL4.postman_collection.json swept: only placeholders (`team-secret`, `<signl4-integration-secret>`, `--team-secret--`), zero real secrets — 4th clean c
+- CHANGED Webhook-lead open decision closed: charset/length is operator-entropy → guess-enumeration falls under REJECTED brute-force class; oracle exploitable only via secret leak; 4 corpora clean → downgraded 

@@ -17024,3 +17024,152 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 [RISK] derdack: 89 — confirmed HIGH chain: prod/idp staging estate sharing prod RS256 signing key + same client_id + enabled password grant (token forgery AUTH_HELPED-blocked on client_secret); PASSIVE HIGH webhook team-secret oracle (unvalidated, secret never leaked publicly); 200+ route V3 BOLA surface now fully documented (file downloads, attachments, tenant images, event suppression) but uniformly Bearer/API-key-gated anonymous (401) — zero anonymous read exposure; SCIM + "public"-named routes anon-probed and closed.
+===== ANALYST bigpickle 2026-09-11 20:07:33 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m◈ [0mParallel Web Search "SIGNL4 inbound webhook URL team secret format help.signl4.com"
+[0m✗ [0mWebFetch https://help.signl4.com/en/integrations/80006-incoming-webhooks failed
+[91m[1mError: [0mTransport error (GET https://help.signl4.com/en/integrations/80006-incoming-webhooks)
+[0m% [0mWebFetch https://docs.signl4.com/integrations/webhook/webhook.html
+[0m% [0mWebFetch https://support.signl4.com/hc/en-us/articles/360015827597-Where-is-my-team-secret
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "code=%{http_code} redirect=%{redirect_url} len=%{size_download}\n" -X POST "https://devconnect.signl4.com/webhook/9f4a2c12-0000-0000-0000-000000000000" -H "Content-Type: application/json" -d '{"Title":"probe","X-S4-ExternalID":"bigpickle-probe"}' --max-time 20; echo "---"; curl -s -o /dev/null -w "code=%{http_code} len=%{size_download}\n" "https://devconnect.signl4.com/webhook/docs/" --max-time 20
+code=404 redirect= len=163
+---
+code=200 len=728
+[0m
+[0m$ [0mcurl -s -X POST "https://devconnect.signl4.com/webhook/9f4a2c12-0000-0000-0000-000000000000" -H "Content-Type: application/json" -d '{"Title":"probe","X-S4-ExternalID":"bigpickle-probe"}' --max-time 20 | head -c 400; echo; echo "=== connect baseline ==="; curl -s -X POST "https://connect.signl4.com/webhook/9f4a2c12-0000-0000-0000-000000000000" -H "Content-Type: application/json" -d '{"Title":"probe"}' --max-time 20 | head -c 400
+{
+  "code": 3004,
+  "requestId": "3edb0dbd-9a07-4a16-a557-87aeb6a8c265",
+  "details": "No matching event source found.",
+  "message": "Error raising event."
+}
+=== connect baseline ===
+{
+  "code": 3004,
+  "requestId": "498eca24-95e0-4ce0-8f53-974c1933d560",
+  "details": "No matching event source found.",
+  "message": "Error raising event."
+}
+[0m
+[0m$ [0mcd /tmp/opencode && rm -rf s4cs && git clone --depth 1 -q https://github.com/signl4/code-snippets s4cs 2>&1 | tail -1; echo "clone rc=$?"; ls s4cs 2>/dev/null | head -30
+clone rc=0
+README.md
+SIGNL4.postman_collection.json
+signl4-alert-axios.js
+signl4-alert-curl.sh
+signl4-alert-with-result.html
+signl4-alert.html
+signl4-alert.js
+signl4-alert.py
+signl4-alert.rs
+signl4.vba
+signl4_alert.cs
+signl4_alert.go
+signl4_alert.php
+signl4_alert.ps1
+signl4_alert.rb
+signl4_alert.sh
+[0m
+[0m$ [0mcd /tmp/opencode/s4cs && rg -n -i "webhook/|api[-_]?key|secret|team-secret|teamsecret|x-s4" --no-heading 2>/dev/null | rg -v "^.*\{.*\}" | head -40
+/bin/bash: line 1: rg: command not found
+[0m
+[0m$ [0mcd /tmp/opencode/s4cs && grep -rniE "webhook/|api.?key|secret" --include="*" . 2>/dev/null | grep -viE "\{[^}]*\}" | head -40
+./signl4_alert.go:13:	// Your SIGNL4 team secret
+./signl4_alert.go:14:	teamSecret := "team-secret"
+./signl4_alert.go:15:	url := "https://connect.signl4.com/webhook/" + teamSecret
+./signl4-alert.html:11:    <!-- Use your SIGNL4 webhook URL including team or integration secret here -->
+./signl4-alert.html:12:    <form action="https://connect.signl4.com/webhook/<signl4-integration-secret>" method="POST">
+./signl4_alert.php:5:// Your SIGNL4 team secret
+./signl4_alert.php:6:$teamSecret = 'team-secret';
+./signl4_alert.php:8:$url = 'https://connect.signl4.com/webhook/' . $teamSecret;
+./signl4_alert.ps1:4:# SIGNL4 team secret
+./signl4_alert.ps1:5:$team_secret = "team-secret"
+./signl4_alert.ps1:12:Invoke-RestMethod "https://connect.signl4.com/webhook/$team_secret" -Method POST -ContentType "application/json" -Body $data
+./signl4_alert.sh:4:# SIGNL4 team secret
+./signl4_alert.sh:5:team_secret="team-secret"
+./signl4_alert.sh:18:curl -d "$(data)" -H "Content-Type: application/json" "https://connect.signl4.com/webhook/$team_secret"
+./signl4-alert.py:7:# Your SIGNL4 team secret
+./signl4-alert.py:8:teamSecret = 'team-secret'
+./signl4-alert.py:11:webhook_url = 'https://connect.signl4.com/webhook/' + teamSecret
+./signl4_alert.rb:8:# SIGNL4 team secret
+./signl4_alert.rb:9:team_secret = "team-secret"
+./signl4_alert.rb:14:url = "https://connect.signl4.com/webhook/" + team_secret
+./signl4-alert-with-result.html:8:        // Use your SIGNL4 webhook URL including team or integration secret here
+./signl4-alert-with-result.html:9:        var strWebhookUrl = "https://connect.signl4.com/webhook/<signl4-integration-secret>";
+./SIGNL4.postman_collection.json:31:					"raw": "https://connect.signl4.com/webhook/--team-secret--",
+./signl4-alert.js:4:// Your SIGNL4 team secret
+./signl4-alert.js:5:const teamSecret = 'team-secret'
+./signl4-alert.js:19:  path: '/webhook/' + teamSecret,
+./signl4-alert-axios.js:4:// Your SIGNL4 team secret
+./signl4-alert-axios.js:5:const teamSecret = 'team-secret'
+./signl4-alert-axios.js:19:  const res = await axios.post('https://connect.signl4.com/webhook/' + teamSecret, data, {
+./signl4_alert.cs:8:// Your SIGNL4 team secret
+./signl4_alert.cs:9:string teamSecret = "team-secret";
+./signl4_alert.cs:17:sendSIGNL4Alert(teamSecret, json);
+./signl4_alert.cs:19:public static void sendSIGNL4Alert(string strTeamSecret, string strData)
+./signl4_alert.cs:21:    string url = "https://connect.signl4.com/webhook/" + strTeamSecret;
+./signl4.vba:8:' SIGNL4 webhook URL including team or integration secret
+[0m
+STEP 1 — DELTA
+[NEW] RAG: `teamSecret` is an operator-chosen per-endpoint secret (docs example `teamssecret`, n8n sample `helloworld`, vendor snippets `team-secret`) — NOT fixed high-entropy; a URL-embedded bearer credential whose entropy is under operator control.
+[NEW] devconnect.signl4.com/webhook/{fabricated-secret} → 404 with envelope byte-format identical to prod: `{"code":3004,"details":"No matching event source found.","message":"Error raising event."}`; /webhook/docs/ → 200 — staging webhook contract mirrors prod oracle on a previously-unprobed estate.
+[NEW] Vendor repo github.com/signl4/code-snippets + SIGNL4.postman_collection.json swept: only placeholders (`team-secret`, `<signl4-integration-secret>`, `--team-secret--`), zero real secrets — 4th clean corpus.
+[CHANGED] Webhook-lead open decision closed: charset/length is operator-entropy → guess-enumeration falls under REJECTED brute-force class; oracle exploitable only via secret leak; 4 corpora clean → downgraded to config/design finding.
+
+STEP 2 — PRIORITIZE
+[PRIO] connect.signl4.com/webhook/{teamSecret},8.1,attack_surface=8,business_value=9,tech_exposure=6,gate_ease=10,cloud_surface=7,freshness=8
+[PRIO] connect.signl4.com/api/v2/events/{webhookIdOrTeamId},7.2,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=3,cloud_surface=7,freshness=8
+[PRIO] devconnect.signl4.com/webhook/{teamSecret},6.8,attack_surface=6,business_value=5,tech_exposure=6,gate_ease=10,cloud_surface=7,freshness=9
+[PRIO] connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName},6.5,attack_surface=7,business_value=7,tech_exposure=7,gate_ease=3,cloud_surface=6,freshness=9
+
+STEP 3 — HYPOTHESES
+[HYP] URL-embedded operator-entropy webhook secret oracle — design finding across prod+staging
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 78
+reasoning: public webhook OpenAPI/docs confirm POST /{teamSecret} with NO security scheme; fabricated secret → HTTP 404 `code:3004` on BOTH connect and devconnect this cycle; secret is operator-chosen word-level ("teamssecret"/"helloworld"), embedded in the URL and copied into 15+ integrations; oracle re-confirmed idempotent.
+evidence_needed: a genuine teamSecret sample to prove 201-eventId ack/resolve — absent from 4 swept corpora (indexed web, grep.app, GitHub, vendor code-snippets).
+verify_steps: (DONE) POST /webhook/{fabricated} → 404 code 3004 on prod+staging; (DONE) RAG format characterization; (HUMAN gate) valid-secret POC only if a leaked secret is surfaced; no mutating test against live teams.
+impact: cross-tenant alert spoofing + acknowledge/resolve/close of genuine alerts via URL-embedded static bearer secret; entropy operator-chosen — HIGH-in-principle, config-level absent a leaked secret.
+testability: PASSIVE
+[HYP] Cross-team incident suppression via events/{webhookIdOrTeamId}
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/events/{webhookIdOrTeamId}
+confidence: 55
+reasoning: route registered on connect (GET+POST, anon→401); docs show it targets team-secret OR teamId and honors X-S4-Status ack/resolved + ExtIdParam correlation; handler-deferred auth family gateway-wide this cycle means token claims vs path-scope intersection is the only gate.
+evidence_needed: authenticated POST own vs foreign webhookIdOrTeamId differential (201 vs 403).
+verify_steps: (DONE) anon POST → 401; (AUTH_HELPED) X-S4-Api-Key POST /api/v2/events/{own} vs {foreign} benign status payload — HUMAN gate (mutating).
+impact: cross-team alert spoofing + acknowledgment/closure; HIGH if scoping gap exists.
+testability: AUTH_HELPED
+[HYP] Cross-tenant report/file download via fileName path segment
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}
+confidence: 50
+reasoning: GET takes unvalidated String fileName (siblings dutyReports/{fileName}, signls/{signlId}/attachments/{attachmentId}); V3 swagger global security still [{}]; report bundles alert PII/recipients/timing; all anon→401.
+evidence_needed: authenticated GET own+own-file → 200; foreign teamId and/or ..%2f fileName → 200 (vuln) vs 403 (scoped).
+verify_steps: (DONE) anon GET → 401 (route registered); (AUTH_HELPED) X-S4-Api-Key GET /api/v3/teams/{own}/signlReports/{own-file} then {foreign}/{file} and traversal — HUMAN gate.
+impact: cross-tenant alert-report + attachment exfiltration; MEDIUM-HIGH.
+testability: AUTH_HELPED
+
+STEP 4 — SELF-CRITIQUE
+[PARKED] Webhook secret guessability sub-hypothesis: charset/length now known operator-entropy ("teamssecret"/"helloworld" examples) but enumeration = brute-force = REJECTED class; exploit strictly requires leaked secret; 4 clean corpora → parked at design level, no 201-POC possible under rules.
+[PARKED] events/{webhookIdOrTeamId} suppression: AUTH_HELPED, blocked on credential acquisition.
+[PARKED] signlReports/dutyReports/attachments BOLA: AUTH_HELPED, blocked on credential acquisition.
+[FINAL] 1) Webhook URL-embedded operator-entropy secret oracle (AUTH, 78) — PASSIVE-confirmed this cycle on prod+staging; only reportable confirmable finding.
+[FINAL] 2) events/{webhookIdOrTeamId} incident suppression (BUSLOGIC, 55) — keep, AUTH_HELPED.
+[FINAL] 3) signlReports/dutyReports/attachments file-download BOLA (IDOR, 50) — keep, AUTH_HELPED.
+
+STEP 5 — NEXT ACTION
+[NEXT] HUMAN: draft report for bugs.olivermaicher.eu — (1) webhook team-secret design finding: URL-embedded operator-entropy bearer secret, no security scheme, 3004 oracle re-confirmed prod+staging, ack/resolve/close impact, no live POC/no leaked secret (4 corpora clean); (2) cross-env identity chain (shared RS256 key + client_id 692A0A56 + password grant) as AUTH_HELPED context. All remaining vectors (events suppression, file BOLA) are credential-blocked; no further passive probe is productive this cycle.
+
+STEP 6 — LEARNING
+[LEARN] ACCEPTED AUTH @ devconnect+connect /webhook/{teamSecret}: fabricated secret → 404 `{"code":3004,"details":"No matching event source found."}` byte-format identical on both — staging webhook oracle mirrors prod contract on previously-unprobed estate.
+[LEARN] ACCEPTED AUTH @ connect/devconnect /webhook: teamSecret is operator-chosen per-endpoint identifier (docs `teamssecret`, n8n `helloworld`, vendor samples `team-secret`) — not fixed high-entropy by design.
+[LEARN] REJECTED OTHER @ github.com/signl4/code-snippets + Postman collection: only placeholder secrets; zero real team secret/API key in vendor's official sample corpus — credential-leak hypothesis unsupported across 4 corpora (indexed web, grep.app, GitHub, vendor samples).
+[LEARN] REJECTED AUTH @ webhook oracle enumeration: operator-entropy secret makes guessing feasible in theory but falls under program-REJECTED brute-force class; oracle exploitable only via secret leak → downgraded to config/design finding.
+
+STEP 7 — RISK
+[RISK] derdack: 89 — Webhook lead resolved: URL-embedded operator-entropy bearer secret + 3004 oracle confirmed on prod AND staging (no security scheme, ack/resolve/close of genuine alerts possible with a leaked secret; 4 corpora clean, no POC); cross-env token-forgery chain still AUTH_HELPED-blocked on client_secret; V3 BOLA/file-download surface fully documented but uniformly auth-gated; all remaining vectors credential-blocked — no new unauthenticated defect this cycle.

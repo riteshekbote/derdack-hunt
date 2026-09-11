@@ -3064,3 +3064,51 @@ testability: AUTH_HELPED
 [LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/-public: teams/public, categories/public, distributionLists/public, users/availableRoles, teams/dutySettings, teams/signalingSettings all anon→401 — "public" naming is not an auth bypass on this gateway; handler-deferred Bearer/API-key enforced gateway-wide.
 [LEARN] ACCEPTED OTHER @ connect.signl4.com/api/docs/v3/swagger.json: full V3 schema dumped (200+ paths) — file-download family (/teams/{teamId}/signlReports/{fileName}, dutyReports/{fileName}, /signls/{signlId}/attachments/{attachmentId}), tenant image GETs, AI forwardPlanning/{teamId}, holidays copyFrom/{sourceTeamId} all anon→401; global security still `[{}]` empty (spec under-declares); BOLA inventory materially expanded, all AUTH_HELPED.
 [RISK] derdack: 89 — confirmed HIGH chain: prod/idp staging estate sharing prod RS256 signing key + same client_id + enabled password grant (token forgery AUTH_HELPED-blocked on client_secret); PASSIVE HIGH webhook team-secret oracle (unvalidated, secret never leaked publicly); 200+ route V3 BOLA surface now fully documented (file downloads, attachments, tenant images, event suppression) but uniformly Bearer/API-key-gated anonymous (401) — zero anonymous read exposure; SCIM + "public"-named routes anon-probed and closed.
+## 2026-09-11 20:03:15 UTC [target] (model bigpickle)
+[NEW] RAG: `teamSecret` is an operator-chosen per-endpoint secret (docs example `teamssecret`, n8n sample `helloworld`, vendor snippets `team-secret`) — NOT fixed high-entropy; a URL-embedded bearer credential whose entropy is under operator control.
+[NEW] devconnect.signl4.com/webhook/{fabricated-secret} → 404 with envelope byte-format identical to prod: `{"code":3004,"details":"No matching event source found.","message":"Error raising event."}`; /webhook/docs/ → 200 — staging webhook contract mirrors prod oracle on a previously-unprobed estate.
+[NEW] Vendor repo github.com/signl4/code-snippets + SIGNL4.postman_collection.json swept: only placeholders (`team-secret`, `<signl4-integration-secret>`, `--team-secret--`), zero real secrets — 4th clean corpus.
+[CHANGED] Webhook-lead open decision closed: charset/length is operator-entropy → guess-enumeration falls under REJECTED brute-force class; oracle exploitable only via secret leak; 4 corpora clean → downgraded to config/design finding.
+[PRIO] connect.signl4.com/webhook/{teamSecret},8.1,attack_surface=8,business_value=9,tech_exposure=6,gate_ease=10,cloud_surface=7,freshness=8
+[PRIO] connect.signl4.com/api/v2/events/{webhookIdOrTeamId},7.2,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=3,cloud_surface=7,freshness=8
+[PRIO] devconnect.signl4.com/webhook/{teamSecret},6.8,attack_surface=6,business_value=5,tech_exposure=6,gate_ease=10,cloud_surface=7,freshness=9
+[PRIO] connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName},6.5,attack_surface=7,business_value=7,tech_exposure=7,gate_ease=3,cloud_surface=6,freshness=9
+[HYP] URL-embedded operator-entropy webhook secret oracle — design finding across prod+staging
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 78
+reasoning: public webhook OpenAPI/docs confirm POST /{teamSecret} with NO security scheme; fabricated secret → HTTP 404 `code:3004` on BOTH connect and devconnect this cycle; secret is operator-chosen word-level ("teamssecret"/"helloworld"), embedded in the URL and copied into 15+ integrations; oracle re-confirmed idempotent.
+evidence_needed: a genuine teamSecret sample to prove 201-eventId ack/resolve — absent from 4 swept corpora (indexed web, grep.app, GitHub, vendor code-snippets).
+verify_steps: (DONE) POST /webhook/{fabricated} → 404 code 3004 on prod+staging; (DONE) RAG format characterization; (HUMAN gate) valid-secret POC only if a leaked secret is surfaced; no mutating test against live teams.
+impact: cross-tenant alert spoofing + acknowledge/resolve/close of genuine alerts via URL-embedded static bearer secret; entropy operator-chosen — HIGH-in-principle, config-level absent a leaked secret.
+testability: PASSIVE
+[HYP] Cross-team incident suppression via events/{webhookIdOrTeamId}
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/events/{webhookIdOrTeamId}
+confidence: 55
+reasoning: route registered on connect (GET+POST, anon→401); docs show it targets team-secret OR teamId and honors X-S4-Status ack/resolved + ExtIdParam correlation; handler-deferred auth family gateway-wide this cycle means token claims vs path-scope intersection is the only gate.
+evidence_needed: authenticated POST own vs foreign webhookIdOrTeamId differential (201 vs 403).
+verify_steps: (DONE) anon POST → 401; (AUTH_HELPED) X-S4-Api-Key POST /api/v2/events/{own} vs {foreign} benign status payload — HUMAN gate (mutating).
+impact: cross-team alert spoofing + acknowledgment/closure; HIGH if scoping gap exists.
+testability: AUTH_HELPED
+[HYP] Cross-tenant report/file download via fileName path segment
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}
+confidence: 50
+reasoning: GET takes unvalidated String fileName (siblings dutyReports/{fileName}, signls/{signlId}/attachments/{attachmentId}); V3 swagger global security still [{}]; report bundles alert PII/recipients/timing; all anon→401.
+evidence_needed: authenticated GET own+own-file → 200; foreign teamId and/or ..%2f fileName → 200 (vuln) vs 403 (scoped).
+verify_steps: (DONE) anon GET → 401 (route registered); (AUTH_HELPED) X-S4-Api-Key GET /api/v3/teams/{own}/signlReports/{own-file} then {foreign}/{file} and traversal — HUMAN gate.
+impact: cross-tenant alert-report + attachment exfiltration; MEDIUM-HIGH.
+testability: AUTH_HELPED
+[PARKED] Webhook secret guessability sub-hypothesis: charset/length now known operator-entropy ("teamssecret"/"helloworld" examples) but enumeration = brute-force = REJECTED class; exploit strictly requires leaked secret; 4 clean corpora → parked at design level, no 201-POC possible under rules.
+[PARKED] events/{webhookIdOrTeamId} suppression: AUTH_HELPED, blocked on credential acquisition.
+[PARKED] signlReports/dutyReports/attachments BOLA: AUTH_HELPED, blocked on credential acquisition.
+[FINAL] 1) Webhook URL-embedded operator-entropy secret oracle (AUTH, 78) — PASSIVE-confirmed this cycle on prod+staging; only reportable confirmable finding.
+[FINAL] 2) events/{webhookIdOrTeamId} incident suppression (BUSLOGIC, 55) — keep, AUTH_HELPED.
+[FINAL] 3) signlReports/dutyReports/attachments file-download BOLA (IDOR, 50) — keep, AUTH_HELPED.
+[NEXT] HUMAN: draft report for bugs.olivermaicher.eu — (1) webhook team-secret design finding: URL-embedded operator-entropy bearer secret, no security scheme, 3004 oracle re-confirmed prod+staging, ack/resolve/close impact, no live POC/no leaked secret (4 corpora clean); (2) cross-env identity chain (shared RS256 key + client_id 692A0A56 + password grant) as AUTH_HELPED context. All remaining vectors (events suppression, file BOLA) are credential-blocked; no further passive probe is productive this cycle.
+[LEARN] ACCEPTED AUTH @ devconnect+connect /webhook/{teamSecret}: fabricated secret → 404 `{"code":3004,"details":"No matching event source found."}` byte-format identical on both — staging webhook oracle mirrors prod contract on previously-unprobed estate.
+[LEARN] ACCEPTED AUTH @ connect/devconnect /webhook: teamSecret is operator-chosen per-endpoint identifier (docs `teamssecret`, n8n `helloworld`, vendor samples `team-secret`) — not fixed high-entropy by design.
+[LEARN] REJECTED OTHER @ github.com/signl4/code-snippets + Postman collection: only placeholder secrets; zero real team secret/API key in vendor's official sample corpus — credential-leak hypothesis unsupported across 4 corpora (indexed web, grep.app, GitHub, vendor samples).
+[LEARN] REJECTED AUTH @ webhook oracle enumeration: operator-entropy secret makes guessing feasible in theory but falls under program-REJECTED brute-force class; oracle exploitable only via secret leak → downgraded to config/design finding.
+[RISK] derdack: 89 — Webhook lead resolved: URL-embedded operator-entropy bearer secret + 3004 oracle confirmed on prod AND staging (no security scheme, ack/resolve/close of genuine alerts possible with a leaked secret; 4 corpora clean, no POC); cross-env token-forgery chain still AUTH_HELPED-blocked on client_secret; V3 BOLA/file-download surface fully documented but uniformly auth-gated; all remaining vectors credential-blocked — no new unauthenticated defect this cycle.
