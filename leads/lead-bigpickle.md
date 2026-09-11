@@ -2290,3 +2290,36 @@ evidence_needed: authenticated PUT own vs foreign subscriptionId (2xx vs 403)
 verify_steps: (AUTH_HELPED) staging API key PUT foreign subscriptionId — HUMAN gate (write, billing)
 impact: cross-tenant prepaid/billing tamper; HIGH if subscriptionId reachable + missing BOLA
 testability: AUTH_HELPED
+## 2026-09-11 00:32:50 UTC [target] (model bigpickle)
+[HYP] BOLA on undocumented invoice download (ZUGFeRD/EN16931) → cross-tenant financial exfiltration
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/en16931
+confidence: 52
+reasoning: route GET-only + live (anon 401); absent from all public docs (self-service/internal); spec explicitly documents 403 "not allowed to access this ressource" = handler-level authz exists and is the exact differential to test; response schema leaks full EN16931 XML (`invoiceId`,`xml`) with buyer/seller/tax/order data; IDs opaque, no collection/list route so invoiceId not enumerable — BOLA needs a real foreign invoiceId; same family as prepaid id-form routes
+evidence_needed: authenticated GET own-subscription invoice (200/403) vs foreign-subscription invoice (200 vs 403) differential with a scoped API key
+verify_steps: (DONE) anon GET any UUID → 401; (AUTH_HELPED) `X-S4-Api-Key: <key>` GET /api/v3/subscriptions/{own}/invoices/{own} then {foreign} — HUMAN gate (customer billing data)
+impact: cross-tenant exfiltration of customer invoices (financial/B2B/order data); HIGH conditional on BOLA
+testability: AUTH_HELPED
+[HYP] Credentialed cross-team event write via API-key path-scope gap
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/events/{webhookIdOrTeamId}
+confidence: 55
+reasoning: docs confirm `POST /api/v2/events/{team-secret}` with `X-S4-Api-Key` allowed in path (webhookId OR teamId); webhook oracle 404-vs-201; teams/users routes enumerate team/user IDs with a valid key; key validation historically deferred to handler (teams 405-vs-401 flapping); if authz does not intersect path-scope, any valid key writes alerts to foreign teams incl. X-S4-Status ack/resolve suppression
+evidence_needed: API-key POST events to own teamId (201) vs foreign teamId (201 vs 403)
+verify_steps: (DONE) anon POST → 401 Bearer; webhook contract confirmed; (AUTH_HELPED) `X-S4-Api-Key` POST /api/v2/events/{own-teamId} vs {foreign-teamId} with benign Title — HUMAN gate (mutating, alert spoof)
+impact: cross-team alert spoofing + suppression of genuine incidents (ack/resolve); HIGH if scoping gap
+testability: AUTH_HELPED
+[HYP] Cross-tenant prepaid auto top-up settings tamper (money-flow BOLA)
+class: IDOR
+asset: connect.signl4.com/api/v3/prepaid/{subscriptionId}/prepaidSettings
+confidence: 48
+reasoning: PUT registered (OPTIONS 405→Allow, anon GET 401) on id-form path with phone ID only claims-form twin exists; schema = topUpAmount/topUpEnabled/topUpLimit (financial thresholds trigger real top-up events); handler-deferred auth pattern family; cross-tenant check unprobed
+evidence_needed: authenticated PUT own vs foreign subscriptionId (200 vs 403)
+verify_steps: (DONE) anon GET fabricated-id → 401; OPTIONS Allow:PUT; (AUTH_HELPED) staging/devapi key PUT foreign subscriptionId with current own values — HUMAN gate (write, billing)
+impact: tamper with another tenant's auto top-up (force/suppress charges); MEDIUM-HIGH if reachable + missing BOLA
+testability: AUTH_HELPED
+[NEXT] RAG: fetch account.signl4.com/manage prod-portal bundles + docs.signl4.com for invoice/SCIM/subscriptionId references — determine if invoice download and SCIM are customer-facing self-service (raises BOLA reach and ID discoverability) or Derdack-internal only
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3: invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance live-verified anon→401; OPTIONS confirms Allow sets — handler-deferred auth family extended to subscriptions/SCIM/prepaid; all BOLA-relevant routes registered and probing-validated
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/docs/v3/swagger.json: global `security: [{}]` (empty) reconfirmed on V3 — spec under-declares auth everywhere; internal billing + SCIM routes published publicly in OpenAPI while absent from marketing docs (self-service/internal API surface)
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v3/scim/settings: anon GET → 401, not anonymous — SCIM key-rotation surface is gated; hypothesis of unauth SCIM access invalidated
+[RISK] derdack: 74 — full V3 OpenAPI now publicly documents the entire internal billing surface (invoice downloads with EN16931 XML schema, prepaid top-up thresholds, SCIM key regeneration) making the credentialed-BOLA attack map complete; SCIM apiKey regenerate adds a high-impact identity-pipeline primitive; anonymous read surface remains zero and invoice/SCIM routes are gated (401/403), so all remaining credit paths stay AUTH_HELPED on a valid API key/OAuth token — up 2 from 72, no new anonymous vector.

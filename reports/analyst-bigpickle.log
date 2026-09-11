@@ -14584,3 +14584,106 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 - [RISK] derdack: 73 — three full spec versions (488 routes) with undocumented billing/SCIM/script surfaces now published on prod gateway; cross-env shared signing key + shared client_id chains any staging disclosure into prod OAuth; webhook family credential-free by design. Anonymous credit still zero (10 new family probes 401/405); residual risk is credentialed BOLA (invoices/prepaid) + speculative credentialed cross-team write + secret-leak chain — all AUTH_HELPED, no new anonymous path.
+===== ANALYST bigpickle 2026-09-11 00:44:48 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m◈ [0mParallel Web Search "SIGNL4 API subscription invoice ZUGFeRD EN16931 download REST"
+[0m◈ [0mParallel Web Search "SIGNL4 docs REST API prepaid subscriptions getStarted prepaidBalance transactions"
+[0m✗ [0mWebFetch https://connect.signl4.com/api/docs/v3/openapi.json failed
+[91m[1mError: [0mStatusCode: non 2xx status code (404 GET https://connect.signl4.com/api/docs/v3/openapi.json)
+RAG confirmed: invoice/ZUGFeRD routes absent from public docs (self-service/internal only), while `/prepaid/{subscriptionId}/prepaidSettings` PUT and `/api/v2/events/{team-secret}` are publicly documented. Let me pull the live OpenAPI to enumerate operations lacking security schemes.
+[0m% [0mWebFetch https://connect.signl4.com/api/docs/v3/swagger.json
+[0m
+[0m$ [0mf=/home/runner/.local/share/opencode/tool-output/tool_08de004bd001Hb79IWWX3YK00P; echo "=== invoice/zugferd/en16931 routes ==="; rg -n 'invoice|zugferd|en16931|ZUGFeRD|zugferd' "$f" | head -40; echo; echo "=== securitySchemes ==="; rg -n 'securitySchemes|apiKey|BearerAuth|securityScheme|in": "query"|x-s4-api-key|X-S4-Api-Key' "$f" | head -20
+=== invoice/zugferd/en16931 routes ===
+/bin/bash: line 1: rg: command not found
+
+=== securitySchemes ===
+/bin/bash: line 1: rg: command not found
+[0m
+[0m$ [0mf=/home/runner/.local/share/opencode/tool-output/tool_08de004bd001Hb79IWWX3YK00P; echo "=== path keys ==="; rg -n '^    "/' "$f" | sed 's/": {$//' | head -120
+=== path keys ===
+/bin/bash: line 1: rg: command not found
+[0m
+Swagger saved (1.16MB). Let me query it directly for the invoice route family, security schemes, and any operations lacking auth.
+[0m✱ [0mGrep "invoice|zugferd|en16931|ZUGFeRD"[90m in /home/runner/.local/share/opencode/tool-output · 12 matches[0m
+[0m✱ [0mGrep "securitySchemes|"components"|"security"|apiKey|X-S4-Api-Key"[90m in /home/runner/.local/share/opencode/tool-output · 10 matches[0m
+[0m→ [0mRead /home/runner/.local/share/opencode/tool-output/tool_08de004bd001Hb79IWWX3YK00P[90m [offset=16875, limit=160][0m
+[0m→ [0mRead /home/runner/.local/share/opencode/tool-output/tool_08de004bd001Hb79IWWX3YK00P[90m [offset=42280, limit=80][0m
+[0m✱ [0mGrep ""/v3/scim|"/scim|SCIM|scim"[90m in /home/runner/.local/share/opencode/tool-output · 15 matches[0m
+[0m✱ [0mGrep "PrepaidSettingsInfo|InvoiceEn16931Details|"invoices""[90m in /home/runner/.local/share/opencode/tool-output · 45 matches[0m
+Invoice routes confirmed in V3 spec with a documented 403 authz layer, plus a SCIM family. Let me inspect the SCIM routes, prepaid schema, and invoice collection/list routes.
+[0m→ [0mRead /home/runner/.local/share/opencode/tool-output/tool_08de004bd001Hb79IWWX3YK00P[90m [limit=150, offset=8791][0m
+[0m→ [0mRead /home/runner/.local/share/opencode/tool-output/tool_08de004bd001Hb79IWWX3YK00P[90m [limit=40, offset=32713][0m
+[0m→ [0mRead /home/runner/.local/share/opencode/tool-output/tool_08de004bd001Hb79IWWX3YK00P[90m [limit=50, offset=35050][0m
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "scim/settings OPTIONS -> %{http_code} allow=%header{allow}\n" -X OPTIONS https://connect.signl4.com/api/v3/scim/settings -H "Origin: https://www.signl4.com" ; curl -s -o /dev/null -w "scim/settings GET -> %{http_code}\n" https://connect.signl4.com/api/v3/scim/settings
+scim/settings OPTIONS -> 405 allow=GET, PUT
+scim/settings GET -> 401
+[0m
+Let me confirm the SCIM and invoice routes are live on the gateway with read-only OPTIONS probes.
+[0m$ [0mcurl -s -o /dev/null -w "invoice en16931 GET -> %{http_code}\n" "https://connect.signl4.com/api/v3/subscriptions/00000000-0000-0000-0000-000000000000/invoices/00000000-0000-0000-0000-000000000000/en16931" ; curl -s -o /dev/null -w "prepaidBalance GET -> %{http_code}\n" "https://connect.signl4.com/api/v3/subscriptions/00000000-0000-0000-0000-000000000000/prepaidBalance"
+invoice en16931 GET -> 401
+prepaidBalance GET -> 401
+[0m
+STEP 1 — DELTA
+- NEW V3 OpenAPI (swagger.json, 1.16MB, fetched live) documents invoice download routes `GET /v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/en16931|zugferd` — GET-only, `language` query param, explicit **403 "You are not allowed to access this ressource"** (per-handler authz layer distinct from anonymous 401 middleware); live-verified anon GET → 401
+- NEW SCIM route family in V3 spec (`POST /v3/scim/apiKey` regenerate, `GET/PUT /v3/scim/settings`, `GET /v3/scim/status`); live-verified OPTIONS 405 `Allow: GET, PUT`, anon GET → 401 (previously "scim 404" only tested on `/api/v3/scim` bare)
+- NEW Prepaid family fully mapped: id-form `PUT /prepaid/{subscriptionId}/prepaidSettings` + `GET /subscriptions/{subscriptionId}/prepaidBalance` vs claims-form `GET/PUT /prepaid/settings`, `GET /prepaid/balance`, `GET /prepaid/transactions`; `PrepaidSettingsInfo = {topUpAmount, topUpEnabled, topUpLimit}` (auto top-up thresholds); both id-form routes live anon→401
+- NEW RAG: invoice/ZUGFeRD/EN16931 and SCIM routes absent from docs.signl4.com (swagger-only = internal/self-service); only `events/{team-secret}`, webhook, and prepaid PUT appear in public docs
+- CHANGED Invoice BOLA (52) re-supported: route now live-confirmed with documented 403 → the owner-vs-foreign differential is testable against a real handler authz path
+
+STEP 2 — PRIORITIZE
+- [PRIO] connect.signl4.com/api/v3/subscriptions/{id}/invoices/{invoiceId}/* ,6.8,business_value(10)+freshness(10)+attack_surface
+- [PRIO] connect.signl4.com/api/v3/prepaid/{subscriptionId}/prepaidSettings ,6.3,business_value(9,money)+cloud_surface
+- [PRIO] connect.signl4.com/api/v3/scim/* ,6.1,tech_exposure(8,SCIM/key-rotation)+freshness(10)
+
+STEP 3 — HYPOTHESES
+[HYP] BOLA on undocumented invoice download (ZUGFeRD/EN16931) → cross-tenant financial exfiltration
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/en16931
+confidence: 52
+reasoning: route GET-only + live (anon 401); absent from all public docs (self-service/internal); spec explicitly documents 403 "not allowed to access this ressource" = handler-level authz exists and is the exact differential to test; response schema leaks full EN16931 XML (`invoiceId`,`xml`) with buyer/seller/tax/order data; IDs opaque, no collection/list route so invoiceId not enumerable — BOLA needs a real foreign invoiceId; same family as prepaid id-form routes
+evidence_needed: authenticated GET own-subscription invoice (200/403) vs foreign-subscription invoice (200 vs 403) differential with a scoped API key
+verify_steps: (DONE) anon GET any UUID → 401; (AUTH_HELPED) `X-S4-Api-Key: <key>` GET /api/v3/subscriptions/{own}/invoices/{own} then {foreign} — HUMAN gate (customer billing data)
+impact: cross-tenant exfiltration of customer invoices (financial/B2B/order data); HIGH conditional on BOLA
+testability: AUTH_HELPED
+
+[HYP] Credentialed cross-team event write via API-key path-scope gap
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/events/{webhookIdOrTeamId}
+confidence: 55
+reasoning: docs confirm `POST /api/v2/events/{team-secret}` with `X-S4-Api-Key` allowed in path (webhookId OR teamId); webhook oracle 404-vs-201; teams/users routes enumerate team/user IDs with a valid key; key validation historically deferred to handler (teams 405-vs-401 flapping); if authz does not intersect path-scope, any valid key writes alerts to foreign teams incl. X-S4-Status ack/resolve suppression
+evidence_needed: API-key POST events to own teamId (201) vs foreign teamId (201 vs 403)
+verify_steps: (DONE) anon POST → 401 Bearer; webhook contract confirmed; (AUTH_HELPED) `X-S4-Api-Key` POST /api/v2/events/{own-teamId} vs {foreign-teamId} with benign Title — HUMAN gate (mutating, alert spoof)
+impact: cross-team alert spoofing + suppression of genuine incidents (ack/resolve); HIGH if scoping gap
+testability: AUTH_HELPED
+
+[HYP] Cross-tenant prepaid auto top-up settings tamper (money-flow BOLA)
+class: IDOR
+asset: connect.signl4.com/api/v3/prepaid/{subscriptionId}/prepaidSettings
+confidence: 48
+reasoning: PUT registered (OPTIONS 405→Allow, anon GET 401) on id-form path with phone ID only claims-form twin exists; schema = topUpAmount/topUpEnabled/topUpLimit (financial thresholds trigger real top-up events); handler-deferred auth pattern family; cross-tenant check unprobed
+evidence_needed: authenticated PUT own vs foreign subscriptionId (200 vs 403)
+verify_steps: (DONE) anon GET fabricated-id → 401; OPTIONS Allow:PUT; (AUTH_HELPED) staging/devapi key PUT foreign subscriptionId with current own values — HUMAN gate (write, billing)
+impact: tamper with another tenant's auto top-up (force/suppress charges); MEDIUM-HIGH if reachable + missing BOLA
+testability: AUTH_HELPED
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] Webhook `{teamSecret}` secret-enumeration oracle (75): oracle only validates a secret the attacker already knows/suspects; brute-force excluded, no real secret found across 5 sweeps → passively dead, remains contingency
+- [PARKED] SCIM apiKey regeneration/status (fresh this cycle): requires valid creds + POST, HUMAN gate; queue as AUTH_HELPED next-cycle candidate
+- [FINAL] 1. events/{teamSecret} cross-team write (55) — AUTH_HELPED, one key tests scope intersection
+- [FINAL] 2. Invoice download BOLA (52) — documented 403 authz = clean differential; HIGH impact
+- [FINAL] 3. Prepaid top-up settings tamper (48) — money flow, id-form path live
+
+STEP 5 — NEXT ACTION
+[NEXT] RAG: fetch account.signl4.com/manage prod-portal bundles + docs.signl4.com for invoice/SCIM/subscriptionId references — determine if invoice download and SCIM are customer-facing self-service (raises BOLA reach and ID discoverability) or Derdack-internal only
+
+STEP 6 — LEARNING
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3: invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance live-verified anon→401; OPTIONS confirms Allow sets — handler-deferred auth family extended to subscriptions/SCIM/prepaid; all BOLA-relevant routes registered and probing-validated
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/docs/v3/swagger.json: global `security: [{}]` (empty) reconfirmed on V3 — spec under-declares auth everywhere; internal billing + SCIM routes published publicly in OpenAPI while absent from marketing docs (self-service/internal API surface)
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v3/scim/settings: anon GET → 401, not anonymous — SCIM key-rotation surface is gated; hypothesis of unauth SCIM access invalidated
+
+STEP 7 — RISK
+[RISK] derdack: 74 — full V3 OpenAPI now publicly documents the entire internal billing surface (invoice downloads with EN16931 XML schema, prepaid top-up thresholds, SCIM key regeneration) making the credentialed-BOLA attack map complete; SCIM apiKey regenerate adds a high-impact identity-pipeline primitive; anonymous read surface remains zero and invoice/SCIM routes are gated (401/403), so all remaining credit paths stay AUTH_HELPED on a valid API key/OAuth token — up 2 from 72, no new anonymous vector.

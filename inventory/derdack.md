@@ -565,3 +565,5 @@ www.derdack.com
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft mechanism permanently invalidated — wp-login.php sets wordpress_test_cookie with secure flag + host-only scope (no Domain=.derd
 - CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files return 403/404; root serves parked IONOS sedoparking iframe 
 - CHANGED www.derdack.com/de/ & /ea/ XML-RPC both POST-exposed with full method lists but mutating methods (wp.uploadFile, metaWeblog.newMediaObject) return faultCode 403 "incorrect username/password" — auth-ga
+
+## 2026-09-11 00:44:48 UTC
