@@ -581,3 +581,19 @@ www.derdack.com
 - CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
 - NEW nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
 - CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+
+## 2026-09-11 09:52:37 UTC
+- CHANGED connect.signl4.com/api/v3 confirmed live today: invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance all return anon→401; V3 swagger with empty security: [{}] reconfirmed — new bi
+- NEW Three new AUTH_HELPED hypotheses pending verification: cross-tenant report file download via fileName path traversal (IDOR, 55), cross-tenant report fetch via userId+teamId query params (IDOR, 50), cr
+- NEW No new probe data from other agents on these three vectors — all AUTH_HELPED, blocked on credential acquisition.
+- CHANGED Webhook team-secret enumeration oracle (AUTH, 75) — PASSIVE verifiable, still highest-value unvalidated hypothesis; NEXT probe pending.
+- NEW connect.signl4.com/api/v3 route map fully confirmed: invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance live-verified anon→401; OPTIONS confirms Allow sets — handler-deferred au
+- NEW connect.signl4.com/api/docs/v3/swagger.json: global `security: [{}]` (empty) reconfirmed on V3 — spec under-declares auth everywhere; internal billing + SCIM routes published publicly in OpenAPI while
+- NEW devconnect.signl4.com/identity/connect/deviceauthorization: endpoint live (400 invalid_client w/o secret) + device_code grant confirmed; still client_secret-gated
+- NEW connect+devconnect /identity/connect/ciba + deviceauthorization: both 400 across envs — endpoint twins, all secret-gated
+- NEW devapi.signl4.com: live 1:1 staging API mirror of api.signl4.com (appId cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7), root→devaccount/manage, zero unauth read surface
+- NEW api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycles confirmed
+- CHANGED connect.signl4.com/webhook/{teamSecret}: Webhook team-secret enumeration oracle re-confirmed — POST /{teamSecret} no security scheme, 404 vs 201 oracle, status-keyword query config, 15+ integrations u
+- CHANGED devconnect.signl4.com/identity/connect/token: Cross-env token forgery chain complete — shared RS256 key (10x deep-equal across 4 identity hosts), shared client_id 692A0A56, password grant enabled, pro
+- CHANGED api.signl4.com/api/v2/teams: Handler-deferred auth confirmed 10th+ cycles — unauth GET returns 405 (not 401), invalid Bearer returns 405; auth validation at handler layer enables cross-env token accep
+- CHANGED connect.signl4.com OIDC discovery byte-identical to devconnect (password/device_code/ciba/token-exchange grants, secret-only auth methods, no registration_endpoint, RS256-only) — prod is parametric tw

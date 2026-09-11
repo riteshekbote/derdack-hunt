@@ -2913,3 +2913,48 @@ evidence_needed: API-key POST to own teamId → 201, foreign teamId → 201 (vul
 verify_steps: (DONE) anon POST → 401 Bearer; webhook contract (NO security scheme) confirmed; (AUTH_HELPED) `X-S4-Api-Key` POST /api/v3/events/{own-teamId} vs {foreign-teamId} with benign Title + X-S4-Status=unspecified — HUMAN gate (mutating, alert spoof)
 impact: cross-team alert spoofing + suppression (ack/resolve/close) of genuine incidents; HIGH if scoping gap
 testability: AUTH_HELPED
+## 2026-09-11 09:45:34 UTC [target] (model bigpickle)
+[CHANGED] connect.signl4.com/api/v3 confirmed live today: invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance all return anon→401; V3 swagger with empty security: [{}] reconfirmed — new billing/SCIM surface mapped.
+[NEW] Three new AUTH_HELPED hypotheses pending verification: cross-tenant report file download via fileName path traversal (IDOR, 55), cross-tenant report fetch via userId+teamId query params (IDOR, 50), credentialed cross-team event write via webhookIdOrTeamId (BUSLOGIC, 55).
+[NEW] No new probe data from other agents on these three vectors — all AUTH_HELPED, blocked on credential acquisition.
+[CHANGED] Webhook team-secret enumeration oracle (AUTH, 75) — PASSIVE verifiable, still highest-value unvalidated hypothesis; NEXT probe pending.
+[PRIO] connect.signl4.com/webhook/{teamSecret},9.0,attack_surface=9,business_value=9,tech_exposure=8,gate_ease=10,cloud_surface=7,freshness=8 — documented public endpoint, NO security scheme, oracle behavior (404 vs 201), 15+ integration docs show URL-embedded secrets, PASSIVE verifiable
+[PRIO] connect.signl4.com/api/v3/signls/report,7.5,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=3,cloud_surface=6,freshness=9 — userId+teamId query params attacker-controlled, handler-deferred auth family, new route
+[PRIO] connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName},7.0,attack_surface=7,business_value=7,tech_exposure=6,gate_ease=3,cloud_surface=6,freshness=9 — unvalidated string path segment, path traversal potential
+[HYP] Cross-tenant alert spoofing + incident suppression via API-key scoped event write to foreign teamId
+class: BUSLOGIC
+asset: connect.signl4.com/api/v3/events/{webhookIdOrTeamId}
+confidence: 55
+reasoning: POST /v3/events/{webhookIdOrTeamId} accepts attacker-selected teamId in path; teams/users routes enumerate IDs with valid API key; webhook oracle 404-vs-201 confirmed; handler-deferred auth family means authz may not intersect path-scope; docs confirm ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus query-configurable status keywords allowing ack/resolve/close of genuine incidents.
+evidence_needed: API-key POST to own teamId → 201, foreign teamId → 201 (vulnerable) vs 403 (scoped); ack/resolve status keywords accepted on foreign team.
+verify_steps: (DONE) anon POST → 401 Bearer; webhook contract (NO security scheme) confirmed; (AUTH_HELPED) `X-S4-Api-Key` POST /api/v3/events/{own-teamId} vs {foreign-teamId} with benign Title + X-S4-Status=unspecified then X-S4-Status=acknowledged — HUMAN gate (mutating, alert spoof)
+impact: cross-team alert spoofing + suppression (ack/resolve/close) of genuine incidents; HIGH if scoping gap
+testability: AUTH_HELPED
+[HYP] Cross-tenant report file download via unvalidated fileName path traversal
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName} and /dutyReports/{fileName}
+confidence: 55
+reasoning: both routes GET registered (anon 401); {fileName} is raw string path segment (schema=string, no format/jsonPath constraint); duty/signl reports contain alert/on-call data; parent route family handler-deferred-auth (established 401/405 flapping); fileName may accept relative or ../ components if handler does naive path join.
+evidence_needed: with one scoped key — GET own team's real fileName → 2xx report; GET foreign {teamId} + guessed fileName → 200 vs 403; and %2e%2e%2f / ..%2f variants → non-404 proves traversal vs store lookup.
+verify_steps: (DONE) anon GET fabricated teamId+test.csv → 401 on both routes; (AUTH_HELPED) `X-S4-Api-Key: <key>` GET /api/v3/teams/{ownTeamId}/signlReports/{ownFileName} then /{foreignTeamId}/{sameFileName}, then fileName=..%2f..%2f..%2fetc%2fpasswd variants — HUMAN gate (may expose customer alert data)
+impact: cross-tenant exfiltration of duty/signl reports (alert timelines, team members, on-call data) and, if traversal, arbitrary file read on API host; HIGH-MEDIUM conditional on BOLA
+testability: AUTH_HELPED
+[HYP] Cross-tenant alert-report read via attacker-controlled userId+teamId query params
+class: IDOR
+asset: connect.signl4.com/api/v3/signls/report
+confidence: 50
+reasoning: GET report endpoint takes userId AND teamId as independent query parameters (userId=string, teamId=array), i.e., the object scope is attacker-selected per-request rather than derived from the token's team; handler-deferred-auth family confirmed across v2/v3; if the handler validates only "valid key" not "key↔userId/teamId affiliation", a scoped key exports arbitrary team report data.
+evidence_needed: authenticated GET /api/v3/signls/report?userId={foreign}&teamId={foreign} returns report 200 vs 403 for owned-credential.
+verify_steps: (DONE) anon GET → 401 (route registered); (AUTH_HELPED) `X-S4-Api-Key` GET /api/v3/signls/report?userId={own}&teamId={own} then {foreign} / {own,foreign} split — HUMAN gate (report contains alert PII)
+impact: cross-tenant alert-report read (alert contents, recipients, timing); MEDIUM-HIGH if query-scope not intersected with token claims
+testability: AUTH_HELPED
+[FINAL] 1) Cross-team event write via webhookIdOrTeamId (BUSLOGIC, 55) — highest-impact if BOLA confirmed (incident suppression); AUTH_HELPED-blocked; keep.
+[FINAL] 2) Cross-tenant report file download via fileName path traversal (IDOR, 55) — new route family, traversal potential on string param; AUTH_HELPED-blocked; keep.
+[FINAL] 3) Cross-tenant report fetch via userId+teamId query params (IDOR, 50) — attacker-controlled scope, handler-deferred auth; AUTH_HELPED-blocked; keep.
+[PARKED] Webhook team-secret enumeration oracle (AUTH, 75): already ACCEPTED in knowledge base; oracle confirmed by source + live observation; enumeration requires team-secret candidates which are customer-specific; parked as documented.
+[NEXT] PROBE: `curl -s -o /dev/null -w "%{http_code}" https://connect.signl4.com/api/v3/signls/report` — confirm anon 401 status and capture response body shape (error schema = problem+json?); then `curl -s -o /dev/null -w "%{http_code}" https://connect.signl4.com/api/v3/signls/report?userId=test&teamId=test` — test if query params cause different status (400 vs 401) which would confirm handler processes them before auth.
+[LEARN] ACCEPTED IDOR @ connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16931 invoice download documented in public OpenAPI; cross-tenant BOLA unproven — new billing surface.
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid billing route family — BOLA AUTH_HELPED.
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v3/scim/settings: anon GET → 401, not anonymous — SCIM key-rotation surface is gated.
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/docs/v3/swagger.json: global security: [{}] (empty) reconfirmed on V3 — spec under-declares auth everywhere; internal billing + SCIM routes published publicly in OpenAPI.
+[RISK] derdack: 88 — SIGNL4 estate critical: prod IdP + public API + live staging cluster sharing PROD RS256 signing key + same OAuth client_id + password grant on staging → cross-env token forgery chain AUTH_HELPED-blocked; api/v2+v3 fully Bearer-gated at handler (zero unauth surface); webhook team-secret oracle confirmed HIGH impact (PASSIVE, ACCEPTED); billing/report routes documented but auth-gated (BOLA AUTH_HELPED × 3); new V3 surface adds report-file download + query-param report + team-scoped event write as fresh BOLA candidates; www.derdack.com/de+/ea XML-RPC exposed but mutating methods auth-gated; dev.derdack.com MultiViews static echo; blog/techblog downgrade dismissed; 8 CT-surfaced hosts (fix/frontdoor/status/support/trust/docs/demo/downloads) partially probed; no new unauth defect this cycle.
