@@ -597,3 +597,5 @@ www.derdack.com
 - CHANGED devconnect.signl4.com/identity/connect/token: Cross-env token forgery chain complete — shared RS256 key (10x deep-equal across 4 identity hosts), shared client_id 692A0A56, password grant enabled, pro
 - CHANGED api.signl4.com/api/v2/teams: Handler-deferred auth confirmed 10th+ cycles — unauth GET returns 405 (not 401), invalid Bearer returns 405; auth validation at handler layer enables cross-env token accep
 - CHANGED connect.signl4.com OIDC discovery byte-identical to devconnect (password/device_code/ciba/token-exchange grants, secret-only auth methods, no registration_endpoint, RS256-only) — prod is parametric tw
+
+## 2026-09-11 14:07:58 UTC
