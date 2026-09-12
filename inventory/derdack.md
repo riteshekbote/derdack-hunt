@@ -639,3 +639,23 @@ www.derdack.com
 - CHANGED Cross-env token forgery chain complete (shared RS256 key 10x deep-equal across 4 identity hosts, shared client_id 692A0A56, password grant enabled, prod parametric twin) but AUTH_HELPED-blocked on cli
 - CHANGED Webhook team-secret enumeration downgraded: operator-entropy secret makes guessing feasible but falls under REJECTED brute-force class; oracle exploitable only via secret leak → config/design finding
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets `secure`+host-only cookie); residual missing-HSTS only (LOW)
+
+## 2026-09-12 12:54:56 UTC
+- NEW 8 previously-unknown live hosts via crt.sh CT sweep: fix.signl4.com (prod ASP.NET Core Support App, Blazor, /signin-oidc 500), frontdoor.signl4.com (unconfigured SPA shell, %ReplaceStatusTitle% placeh
+- NEW connect.signl4.com/api/v3 fully dumped (200+ paths via /api/docs/v3/swagger.json): invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance, PUT /api/prepaid/{id}/prepaidSettings, fil
+- NEW V3 "public"-named routes (teams/public, categories/public, distributionLists/public, users/availableRoles, teams/dutySettings, teams/signalingSettings) all anon→401 — "public" suffix ≠ auth bypass
+- NEW Standard SCIM endpoints (ServiceProviderConfig, Users, Groups, Schemas, Bulk) all 404 — only /scim/settings registered (anon→401)
+- NEW devconnect.signl4.com/webhook/{fabricated-secret} → 404 with byte-identical envelope to prod (`{"code":3004,"details":"No matching event source found."}`) — staging webhook oracle mirrors prod contrac
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET returns 405 Allow:GET,POST (not 401), invalid Bearer also 405 — handler-deferred auth stable
+- CHANGED Cross-env token forgery chain complete (shared RS256 key 10x deep-equal across 4 identity hosts, shared client_id 692A0A56, password grant enabled, prod parametric twin) but AUTH_HELPED-blocked on cli
+- CHANGED Webhook team-secret enumeration downgraded: operator-entropy secret makes guessing feasible but falls under REJECTED brute-force class; oracle exploitable only via secret leak → config/design finding
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets `secure`+host-only cookie); residual missing-HSTS only (LOW)
+- NEW 8 previously-unknown live hosts via crt.sh CT sweep: fix.signl4.com (prod ASP.NET Core Support App, Blazor, /signin-oidc 500), frontdoor.signl4.com (unconfigured SPA shell, %ReplaceStatusTitle% placeh
+- NEW connect.signl4.com/api/v3 fully dumped (200+ paths via /api/docs/v3/swagger.json): invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance, PUT /api/prepaid/{id}/prepaidSettings, fil
+- NEW V3 "public"-named routes (teams/public, categories/public, distributionLists/public, users/availableRoles, teams/dutySettings, teams/signalingSettings) all anon→401 — "public" suffix ≠ auth bypass
+- NEW Standard SCIM endpoints (ServiceProviderConfig, Users, Groups, Schemas, Bulk) all 404 — only /scim/settings registered (anon→401)
+- NEW devconnect.signl4.com/webhook/{fabricated-secret} → 404 with byte-identical envelope to prod (`{"code":3004,"details":"No matching event source found."}`) — staging webhook oracle mirrors prod contrac
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET returns 405 Allow:GET,POST (not 401), invalid Bearer also 405 — handler-deferred auth stable
+- CHANGED Cross-env token forgery chain complete (shared RS256 key 10x deep-equal across 4 identity hosts, shared client_id 692A0A56, password grant enabled, prod parametric twin) but AUTH_HELPED-blocked on cli
+- CHANGED Webhook team-secret enumeration downgraded: operator-entropy secret makes guessing feasible but falls under REJECTED brute-force class; oracle exploitable only via secret leak → config/design finding
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets `secure`+host-only cookie); residual missing-HSTS only (LOW)

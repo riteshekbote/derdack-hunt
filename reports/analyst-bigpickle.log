@@ -18434,3 +18434,152 @@ devaccount/manage -> 302 loc=[https://devconnect.signl4.com/identity/connect/aut
 
 **STEP 7 — RISK**
 - `[RISK] derdack: 80 — zero new unauthenticated defect this cycle: every live probe (identity OD ×2, webhook swagger, V1 swagger, /manage redirects, demo/downloads) matched prior baselines; CT via fallback source shows no fresh names; the only reportable finding remains the authless webhook write surface (design-level, LOW-MED, 5 clean corpora) plus cross-env identity chain + empty-security specs as AUTH_HELPED context; all BOLA/file-download vectors still credential-blocked; risk steady-state, weighted down this cycle by rotation of nothing against them.`
+===== ANALYST bigpickle 2026-09-12 12:54:56 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor h in demo.enterprisealert.com downloads.enterprisealert.com; do echo "=== $h ==="; curl -s -m 15 -o /dev/null -D - "https://$h/" 2>&1 | head -20; done
+=== demo.enterprisealert.com ===
+HTTP/1.1 404 Not Found
+Transfer-Encoding: chunked
+Date: Sat, 12 Sep 2026 12:46:21 GMT
+
+=== downloads.enterprisealert.com ===
+HTTP/1.1 403 Forbidden
+Content-Length: 58
+Content-Type: text/html
+Date: Sat, 12 Sep 2026 12:46:22 GMT
+Server: Microsoft-IIS/10.0
+Set-Cookie: ARRAffinity=15f1ae0ac79bb80865881151325416fd752016277250baf3fb99af4f1eddfccd;Path=/;HttpOnly;Secure;Domain=downloads.enterprisealert.com
+Set-Cookie: ARRAffinitySameSite=15f1ae0ac79bb80865881151325416fd752016277250baf3fb99af4f1eddfccd;Path=/;HttpOnly;SameSite=None;Secure;Domain=downloads.enterprisealert.com
+X-Powered-By: ASP.NET
+[0m
+[0m$ [0mcurl -s -m 15 -o /tmp/docs_root.html -D /tmp/docs_hdr.txt -w "docs signl4: code=%{http_code} size=%{size_download} url=%{url_effective}\n" "https://docs.signl4.com/" 2>&1; head -8 /tmp/docs_hdr.txt; echo "---"; head -c 600 /tmp/docs_root.html; echo
+docs signl4: code=200 size=38891 url=https://docs.signl4.com/
+HTTP/2 200 
+server: GitHub.com
+content-type: text/html; charset=utf-8
+last-modified: Thu, 10 Sep 2026 09:59:17 GMT
+access-control-allow-origin: *
+etag: "6aa27f75-97eb"
+expires: Sat, 12 Sep 2026 12:56:23 GMT
+cache-control: max-age=600
+---
+<!DOCTYPE html> <html lang="en-US"> <head> <meta charset="UTF-8"> <meta http-equiv="X-UA-Compatible" content="IE=Edge"> <link rel="stylesheet" href="/assets/css/just-the-docs-default.css"> <link rel="stylesheet" href="/assets/css/just-the-docs-head-nav.css" id="jtd-head-nav-stylesheet"> <style id="jtd-nav-activation"> .site-nav > ul.nav-list:first-child > li:not(:nth-child(1)) > a, .site-nav > ul.nav-list:first-child > li > ul > li a { background-image: none; } .site-nav > ul.nav-list:not(:first-child) a, .site-nav li.external a { background-image: none; } .site-nav > ul.nav-list:first-child >
+[0m
+[0m$ [0msleep 1; for p in /Account/Login /api /signin /demo; do echo "=== demo $p ==="; curl -s -m 12 -o /dev/null -w "code=%{http_code}\n" "https://demo.enterprisealert.com$p"; sleep 1; done
+=== demo /Account/Login ===
+code=404
+=== demo /api ===
+code=404
+=== demo /signin ===
+code=404
+=== demo /demo ===
+code=404
+[0m
+[0m$ [0msleep 1; for p in /Installers /download /ea/ /EnterpriseAlert /docs /api; do echo "=== downloads $p ==="; curl -s -m 12 -o /dev/null -w "code=%{http_code}\n" "https://downloads.enterprisealert.com$p"; sleep 1; done
+=== downloads /Installers ===
+code=404
+=== downloads /download ===
+code=404
+=== downloads /ea/ ===
+code=404
+=== downloads /EnterpriseAlert ===
+code=301
+=== downloads /docs ===
+code=404
+=== downloads /api ===
+code=404
+[0m
+[0m$ [0mcurl -s -m 15 -I "https://downloads.enterprisealert.com/EnterpriseAlert" 2>&1 | head -15; echo "---"; sleep 1; curl -s -m 15 -I -L "https://downloads.enterprisealert.com/EnterpriseAlert" 2>&1 | grep -E '^HTTP|^Location|^Content-|^X-Powered|^Server' | head -15
+HTTP/1.1 301 Moved Permanently
+Content-Length: 177
+Content-Type: text/html; charset=UTF-8
+Date: Sat, 12 Sep 2026 12:46:52 GMT
+Server: Microsoft-IIS/10.0
+Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept
+Access-Control-Allow-Origin: *
+Location: https://downloads.enterprisealert.com/EnterpriseAlert/
+Set-Cookie: ARRAffinity=15f1ae0ac79bb80865881151325416fd752016277250baf3fb99af4f1eddfccd;Path=/;HttpOnly;Secure;Domain=downloads.enterprisealert.com
+Set-Cookie: ARRAffinitySameSite=15f1ae0ac79bb80865881151325416fd752016277250baf3fb99af4f1eddfccd;Path=/;HttpOnly;SameSite=None;Secure;Domain=downloads.enterprisealert.com
+X-Powered-By: ASP.NET
+
+---
+HTTP/1.1 301 Moved Permanently
+Content-Length: 177
+Content-Type: text/html; charset=UTF-8
+Server: Microsoft-IIS/10.0
+Location: https://downloads.enterprisealert.com/EnterpriseAlert/
+X-Powered-By: ASP.NET
+HTTP/1.1 403 Forbidden
+Content-Length: 58
+Content-Type: text/html
+Server: Microsoft-IIS/10.0
+X-Powered-By: ASP.NET
+[0m
+Probes done (passive GET/HEAD, read-only): demo/downloads/docs estate swept. Now the structured analysis.
+
+## 2026-09-12 10:50:00 UTC — [target] (model bigpickle)
+
+**STEP 1 — DELTA**
+- [NEW] downloads.enterprisealert.com: IIS10/ASP.NET Azure artifact host — root 403, /EnterpriseAlert 301→403 (listing disabled), `ACAO:*` heads, ARRAffinity cookies; no enumerable artifact paths
+- [NEW] demo.enterprisealert.com: 404 on root, /Account/Login, /api, /signin, /demo — dead backend, zero surface
+- [NEW] docs.signl4.com: GitHub-Pages just-the-docs (Jekyll) mirror serving public docs, rebuilt 2026-09-10, `ACAO:*` — public marketing-docs only
+- [CHANGED] CT cluster demoted: demo/downloads/docs inert; only fix/frontdoor carry any estate (nemotron3 probing fix Blazor — deferring)
+
+**STEP 2 — PRIORITIZE** (a/surfile, b/biz, t/tech, g/gate, c/cloud, f/fresh; low)
+- [PRIO] connect.signl4.com/webhook/{teamSecret}: 4.4 — gate=10, biz=6 (authless write control-plane of alert lifecycle)
+- [PRIO] connect/api/devconnect cross-env token chain: 5.05 — biz=9, tech=7 (AUTH_HELPED, documented)
+- [PRIO] docs.signl4.com: 3.0 — tech=4, fresh=4 (public docs, enrichment-only)
+- [PRIO] downloads.enterprisealert.com: 2.5 — listing disabled, artifacts not enumerable (demote)
+- [PRIO] demo.enterprisealert.com: 1.85 — dead backend (demote)
+
+**STEP 3 — HYPOTHESES**
+[HYP] Cross-team incident suppression via events/{webhookIdOrTeamId} dual identifier
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/events/{webhookIdOrTeamId}
+confidence: 55
+reasoning: V2 spec param accepts team id OR inbound webhook identifier; route GET+POST registered, anon→401 (handler-deferred Bearer); global security `[{}]`; token-claims-vs-path-scope intersection is the only gate; no drift across cycles.
+evidence_needed: authenticated POST own vs foreign identifier differential (201 vs 403).
+verify_steps: (DONE) anon GET fabricated → 401; (DONE) OPTIONS Allow; (AUTH_HELPED) X-S4-Api-Key POST own vs foreign benign payload — HUMAN gate (mutating).
+impact: cross-team alert injection + status spoofing; HIGH if scoping gap exists.
+testability: AUTH_HELPED
+
+[HYP] Cross-tenant report/file download via fileName path segment
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}
+confidence: 50
+reasoning: GET unvalidated String fileName (siblings dutyReports/{fileName}, attachments/{attachmentId}); V3 swagger global `security:[{}]`; report bundles alert PII/recipients/timing; all anon→401.
+evidence_needed: authenticated GET own+own-file → 200; foreign teamId and/or `..%2f` → 200 (vuln) vs 403 (scoped).
+verify_steps: (DONE) anon GET → 401; (AUTH_HELPED) X-S4-Api-Key GET own/foreign file + traversal — HUMAN gate.
+impact: cross-tenant alert-report + attachment exfiltration; MEDIUM-HIGH.
+testability: AUTH_HELPED
+
+[HYP] Webhook authless single-endpoint write surface (report candidate)
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 78
+reasoning: 1 POST route, no securitySchemes/security in webhook OAS; 404 `code:3004` oracle byte-identical prod+staging; operator-entropy URL-embedded bearer secret (docs `teamssecret`/n8n `helloworld`); query-keyword config grants ack/resolve/close; 4 corpora clean of leaks.
+evidence_needed: leaked/guessable teamSecret → 201 event-create (no leak found → design-level only).
+verify_steps: (DONE) spec GET 200 no scheme; (DONE) POST fabricated → 404 code:3004 both envs; (HUMAN gate) 201 only on leak.
+impact: unauth alert creation + status spoofing of genuine alerts; HIGH-in-principle, LOW-MED confirmable.
+testability: PASSIVE
+
+**STEP 4 — SELF-CRITIQUE**
+- [PARKED] demo.enterprisealert.com demo-unhardened surface: five probe paths all 404 — dead backend, confidence 30.
+- [PARKED] downloads.enterprisealert.com artifact cred disclosure: listing disabled (403), 301→403, no guessable paths; confidence 40, requires artifact-path knowledge.
+- [PARKED] docs.signl4.com repo/schema leak: public Jekyll mirror; enrichment-only, confidence 38.
+- [PARKED] V1 legacy-auth differential: 14 families anon→401/405 uniform prod+staging; confidence 35.
+- [FINAL] webhook authless write (78, PASSIVE/report) > events dual-identifier BUSLOGIC (55) > V1 act-as/changePassword BUSLOGIC (55) > signlReports/as fileName IDOR (50).
+
+**STEP 5 — NEXT ACTION**
+[NEXT] HUMAN: submit to bugs.olivermaicher.eu — PRIMARY `connect.signl4.com/webhook/{teamSecret}` authless write surface (URL-embedded operator-entropy secret, 3004-oracle prod+staging byte-identical, status-keyword ack/resolve/close, 15+ integrations embed secret in URLs; LOW-MED design level, 4 corpora clean, no POC). CONTEXT: cross-env identity chain (shared RS256 kid 91EE4F3C…, client_id 692A0A56-892F-4AE2-8259-76DA398990B6 ×environments, staging password grant) as AUTH_HELPED note + V1/V2/V3 namespace triple-empty-security spec mismatch. No new productive passive probe remains: fresh-estate cluster (demo/downloads/docs) swept and demoted this cycle.
+
+**STEP 6 — LEARNING**
+- [LEARN] REJECTED OTHER @ demo.enterprisealert.com: 404 on root/Account/Login/api/signin/demo — dead backend, no demo SaaS surface.
+- [LEARN] ACCEPTED OTHER @ downloads.enterprisealert.com: IIS10/ASP.NET+ARRAffinity Azure artifact host; root 403, /EnterpriseAlert 301→403, listing disabled, `ACAO:*` — artifact names not enumerable, inert.
+- [LEARN] REJECTED MISCONFIG @ downloads.enterprisealert.com: `Access-Control-Allow-Origin:*` present only on 301/403 responses — no content-bearing CORS-gated endpoint, not exploitable.
+- [LEARN] ACCEPTED OTHER @ docs.signl4.com: GitHub-Pages just-the-docs Jekyll mirror (last-modified 2026-09-10) — public docs only, no internal schema.
+
+**STEP 7 — RISK**
+[RISK] derdack: 85 — no new unauthenticated defect this cycle: fresh CT-cluster probes (demo dead, downloads listing-gated, docs public) all demoted; reportable finding remains the webhook authless single-endpoint write surface (LOW-MED design/config, no leaked secret, 4 corpora clean) with cross-env identity chain + triple-namespace empty-security specs as context; all BOLA/file-download vectors AUTH_HELPED credential-blocked; baselines stable.
