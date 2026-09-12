@@ -3315,3 +3315,4 @@ evidence_needed: leaked/guessable teamSecret → 201 event-create (none found �
 verify_steps: (DONE) spec GET 200 no scheme; (DONE) POST fabricated → 404 code:3004 both envs; (DONE) baseline re-check this cycle — no change.
 impact: unauth alert creation + status spoofing of genuine alerts; HIGH-in-principle, LOW-MED confirmable.
 testability: PASSIVE
+## 2026-09-12 18:03:18 UTC [target] (model bigpickle)

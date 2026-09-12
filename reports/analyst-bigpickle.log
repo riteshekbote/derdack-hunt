@@ -18657,3 +18657,99 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 - [RISK] derdack: 85 — no new defect this cycle (baseline re-verified, all read surfaces gated); single reportable finding remains the webhook authless single-endpoint write surface (LOW-MED, design/config, no leaked secret) with cross-env identity chain + triple-namespace empty-security specs as context; all BOLA/act-as vectors AUTH_HELPED blocked on credentials; CT surface static, no fresh estate.
+===== ANALYST bigpickle 2026-09-12 18:03:28 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m✱ [0mGlob "**/*.md"[90m 88 matches[0m
+[0m✱ [0mGlob "art/**/*"[90m 0 matches[0m
+Let me check the workspace state and any existing artifacts before executing the 8 steps.
+[0m→ [0mRead leads/lead-bigpickle.md
+[0m→ [0mRead leads/lead-nemotron3.md
+[0m→ [0mRead reports/valid-bugs.md
+[0m→ [0mRead triage/run-2026-09-12-17-55.md
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=900][0m
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=1400][0m
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=2050][0m
+Now let me check the latest entries in the bigpickle lead file.
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=2540][0m
+## Objective
+- Security assessment of Derdack GmbH / Derdack Group (including SIGNL4 and Enterprise Alert) under a bug bounty program, reporting to bugs.olivermaicher.eu
+- Primary actionable finding: authless webhook write surface at `connect.signl4.com/webhook/{teamSecret}` (confidence 78, LOW-MED severity design-level)
+- Secondary finding: cross-env identity chain (shared RS256 signing key, shared client_id, staging password grant) — AUTH_HELPED, blocked on client_secret
+
+## Important Details
+- **In-scope assets**: All company-owned infrastructure for Derdack GmbH including SIGNL4 and Enterprise Alert
+- **Report channel**: bugs.olivermaicher.eu
+- **Excluded classes**: brute-force, rate-limit testing, OPTIONS/TRACE standalone findings, SSL/TLS, descriptive errors only, clickjacking without exploit, social engineering, outdated libraries without program-specific exploit
+- **Agent model**: bigpickle (target agent), phase POC, target api
+- **Other agents**: nemotron3 (cross-env token forgery lead, confidence 90), plus longcat, mimo, ling3, laguna leads
+- **Risk score**: 85/100 for derdack program (no new unauthenticated defect this cycle)
+
+## Work State
+### Completed
+- Full SIGNL4 API surface mapped across V1 (93 paths), V2 (40+ paths), V3 (200+ paths) — all handler-deferred Bearer, zero unauth read
+- Cross-env identity chain documented: 4 identity hosts (connect, api, devconnect, devapi) share byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, n_sha `138f432b`, x5t `ke5PPOlOtRevZrJU90l-yw4x7ic`, x5c `CN=*.signl4.com`), 10+ deep-equal observations
+- Shared client_id `692A0A56-892F-4AE2-8259-76DA398990B6` confirmed across devaccount.signl4.com/manage & account.signl4.com/manage
+- Webhook oracle confirmed: POST `/{teamSecret}` → 404 `{"code":3004,"details":"No matching event source found."}` byte-identical prod+staging; no security scheme in OpenAPI; teamSecret is operator-chosen (docs: `teamssecret`, n8n: `helloworld`)
+- API dual auth pipeline confirmed: Bearer→401 `WWW-Authenticate:Bearer`; API key `?x-s4-api-key=`→403 `application/problem+json`
+- api.signl4.com/swagger.json confirms OAuth2 authorizationCode flow targeting connect.signl4.com/identity/connect
+- Dynamic client registration REJECTED: no `registration_endpoint` + auth_methods only `client_secret_basic`/`post`
+- Open redirect REJECTED: `redirect_uri=evil.com` → 302 to `/identity/home/error`, no code/state echoed
+- CT surface: 8 previously-unknown hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com) — frontdoor=unconfigured SPA shell, fix=Blazor /signin-oidc 500
+- derdack.com WordPress: www (WP REST API, Yoast, CF7 all gated), /de/ & /ea/ (XML-RPC exposed but mutating methods auth-gated 403), root xmlrpc 503-blocked
+- dev.derdack.com: MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), root parked IONOS sedoparking iframe
+- 4 credential-leak corpora (indexed web, grep.app, GitHub, vendor samples) clean — no leaked teamSecret or API key
+
+### Active
+- `[NEXT] HUMAN: submit to bugs.olivermaicher.eu` — PRIMARY report: `connect.signl4.com/webhook/{teamSecret}` authless write surface
+- Report context: cross-env identity chain (shared RS256 key ×4 hosts, client_id 692A0A56, staging password grant) + V1/V2/V3 triple-empty-security-spec mismatch
+- AUTH_HELPED hypotheses awaiting credential: cross-team events POST, cross-tenant file download (`/teams/{teamId}/signlReports/{fileName}`), cross-tenant report fetch via userId+teamId, changePassword cross-user
+
+### Blocked
+- All BOLA/IDOR/file-download vectors require authenticated session (AUTH_HELPED)
+- Webhook secret enumeration falls under program-REJECTED brute-force class
+- Token forgery chain blocked on `client_secret` — no public leak found
+- devfix.signl4.com: /signin-oidc 500 broken OIDC — needs browser-based Blazor circuit to capture challenge authority
+- Session-theft via blog.derdack.com HTTPS→HTTP downgrade permanently invalidated (wp-login.php sets `secure`+host-only cookies)
+
+## Next Move
+1. Draft and submit the webhook authless write surface report to bugs.olivermaicher.eu with supporting context (cross-env identity chain, triple-namespace empty-security specs, operator-entropy secret design)
+2. Continue passive monitoring for CT surface expansion and webhook secret/API key leaks across public corpora
+
+## Relevant Files
+- `/home/runner/work/derdack-hunt/derdack-hunt/leads/lead-bigpickle.md`: Primary agent lead file with all hypotheses, knowledge base entries, and state
+- `/home/runner/work/derdack-hunt/derdack-hunt/leads/lead-nemotron3.md`: Companion agent with cross-env token forgery hypothesis (confidence 90)
+- `/home/runner/work/derdack-hunt/derdack-hunt/reports/valid-bugs.md`: Running count of validated findings (multiple VALID verdicts including cross-env JWKS key reuse 7.4 CVSS, staging IdP reachability 6.5 CVSS)
+- `/home/runner/work/derdack-hunt/derdack-hunt/inventory/derdack.md`: Full host inventory with passive recon observations
+- `/home/runner/work/derdack-hunt/derdack-hunt/knowledge/index.md`: Knowledge base index
+- `/home/runner/work/derdack-hunt/derdack-hunt/reports/hypotheses.md`: Hypotheses tracking
+- `/home/runner/work/derdack-hunt/derdack-hunt/triage/run-2026-09-12-15-47.md`: Latest triage run
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=2910][0m
+The lead file's `[NEXT]` is clear: **draft and submit the report to bugs.olivermaicher.eu**.
+
+This is marked `HUMAN` (requires your decision), and we're in plan mode, so here's what I'll execute once you approve:
+
+---
+
+## Plan: Submit to bugs.olivermaicher.eu
+
+### Primary Finding
+- **Title**: Authless single-endpoint write surface via URL-embedded operator-entropy webhook secret
+- **Asset**: `connect.signl4.com/webhook/{teamSecret}`
+- **Class**: AUTH (design-level)
+- **Severity**: LOW-MED (HIGH-in-principle if secret leaked)
+- **Evidence**: 3004 oracle byte-identical on prod+staging; no security scheme in OpenAPI; secret is operator-chosen (`teamssecret`/`helloworld`); configurable query keywords enable ack/resolve/close
+- **4 clean corpora**: no leaked secret found, no live POC possible
+
+### Supporting Context (design note, not standalone report)
+- Cross-env identity chain: shared RS256 JWKS across 4 identity hosts, shared `client_id 692A0A56`, staging password grant
+- V1/V2/V3 triple-empty-security-spec (`security: [{}]`) mismatch with live enforcement
+
+### What I'll do
+1. Check if `bugs.olivermaicher.eu` has an API/form endpoint
+2. Draft the report
+3. Submit (requires your confirmation on content)
+
+**Ready to proceed?** Or do you want to adjust scope/severity/content first?
