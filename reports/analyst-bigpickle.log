@@ -18259,3 +18259,178 @@ testability: PASSIVE
 
 ## STEP 7 — RISK
 [RISK] derdack: 82 — no new unauthenticated defect this cycle: V1 API namespace discovered and documented (93 paths incl. scripts/billing/act-as/changePassword) but uniformly gated 401/405 on prod+staging; reportable finding remains the webhook authless single-endpoint write surface (design/config level, no leaked secret, LOW-MED) with cross-env identity chain + triple-namespace empty-security specs as context; all BOLA vectors AUTH_HELPED credential-blocked; baseline stable, CT surface unchanged.
+===== ANALYST bigpickle 2026-09-12 09:04:28 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -s --max-time 30 "https://crt.sh/?q=%25.signl4.com&output=json" -o /tmp/opencode/ct_signl4.json 2>/dev/null; echo "signl4 bytes: $(wc -c < /tmp/opencode/ct_signl4.json)"
+signl4 bytes: 150
+[0m
+[0m$ [0mcurl -s --max-time 30 "https://crt.sh/?q=%25.enterprisealert.com&output=json" -o /tmp/opencode/ct_ea.json 2>/dev/null; echo "ea bytes: $(wc -c < /tmp/opencode/ct_ea.json)"
+ea bytes: 150
+[0m
+[0m$ [0mcurl -s --max-time 30 "https://crt.sh/?q=%25.derdack.com&output=json" -o /tmp/opencode/ct_derdack.json 2>/dev/null; echo "derdack bytes: $(wc -c < /tmp/opencode/ct_derdack.json)"
+derdack bytes: 150
+[0m
+[0m$ [0mcat /tmp/opencode/ct_signl4.json; echo; cat /tmp/opencode/ct_ea.json
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+[0m
+[0m$ [0msleep 2; curl -s --max-time 40 "https://api.certspotter.com/v1/issuances?domain=signl4.com&include_subdomains=true&expand=dns_names" -o /tmp/opencode/cs_signl4.json 2>/dev/null; echo "bytes: $(wc -c < /tmp/opencode/cs_signl4.json)"
+bytes: 7925
+[0m
+[0m$ [0msleep 3; curl -s --max-time 40 "https://api.certspotter.com/v1/issuances?domain=enterprisealert.com&include_subdomains=true&expand=dns_names" -o /tmp/opencode/cs_ea.json 2>/dev/null; echo "bytes: $(wc -c < /tmp/opencode/cs_ea.json)"
+bytes: 847
+[0m
+[0m$ [0mcat /tmp/opencode/cs_ea.json
+[
+	{
+		"id":"15435808673",
+		"tbs_sha256":"0ebb1e380b7797d4a0fbd3d7d12b6534fb4d9eaf8f216a8ce81eac7be1b24f21",
+		"cert_sha256":"b7f1653fbb85609872012e04a9c25a5ebe25c8711165c02b9813e5403ffc3e77",
+		"dns_names":["downloads.enterprisealert.com"],
+		"pubkey_sha256":"609c1af2f774878b19a5c30fa0cc4e64ca8d465b79b2dfed34315e9ea5574bc8",
+		"not_before":"2026-06-17T00:00:00Z",
+		"not_after":"2026-12-17T23:59:59Z",
+		"revoked":false
+	},
+	{
+		"id":"15976005263",
+		"tbs_sha256":"d0bb3b32990b856a74210f2db509d12287c8ead5231c619e710de51e3f5d0bb1",
+		"cert_sha256":"74ad6c0773ddb46581d41cb7df130c4409536eb2373ec83cd9a243f6326b7c50",
+		"dns_names":["*.enterprisealert.com"],
+		"pubkey_sha256":"95f87f62c067c78d54917c023bbbbb883f64129d6616e181393ff9afd479226f",
+		"not_before":"2026-07-20T10:21:44Z",
+		"not_after":"2026-10-18T10:21:43Z",
+		"revoked":false
+	}
+]
+[0m
+[0m$ [0mpython3 -c "
+import json
+d=json.load(open('/tmp/opencode/cs_signl4.json'))
+names=set()
+for e in d:
+    for n in e.get('dns_names',[]):
+        names.add(n.lower().rstrip('.'))
+for n in sorted(names): print(n)
+print('---count---',len(names))
+"
+*.signl4.com
+bot.signl4.com
+docs.signl4.com
+frontdoor.signl4.com
+signl4.com
+status.signl4.com
+support.signl4.com
+trust.signl4.com
+www.signl4.com
+---count--- 9
+[0m
+[0m$ [0msleep 10; curl -s --max-time 40 "https://crt.sh/?q=%25.signl4.com&output=json" -o /tmp/opencode/ct_signl4b.json 2>/dev/null; echo "bytes: $(wc -c < /tmp/opencode/ct_signl4b.json)"; head -c 200 /tmp/opencode/ct_signl4b.json
+bytes: 150
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://connect.signl4.com/webhook/docs/v1/swagger.json" -o /tmp/opencode/wh_swagger.json; echo "webhook swagger bytes: $(wc -c < /tmp/opencode/wh_swagger.json)"
+webhook swagger bytes: 12647
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "connect identity OD: %{http_code}\n" --max-time 20 "https://connect.signl4.com/identity/.well-known/openid-configuration"; sleep 1; curl -s -o /dev/null -w "connect webhook swagger: %{http_code}\n" --max-time 20 "https://connect.signl4.com/webhook/docs/v1/swagger.json"; sleep 1; curl -s -o /dev/null -w "connect v1 swagger: %{http_code}\n" --max-time 20 "https://connect.signl4.com/api/docs/v1/swagger.json"; sleep 1; curl -s -o /dev/null -w "api identity OD: %{http_code}\n" --max-time 20 "https://api.signl4.com/identity/.well-known/openid-configuration"
+connect identity OD: 200
+connect webhook swagger: 200
+connect v1 swagger: 200
+api identity OD: 200
+[0m
+[0m$ [0mpython3 -c "
+import json
+d=json.load(open('/tmp/opencode/wh_swagger.json'))
+print('title:', d.get('info',{}).get('title'))
+print('version:', d.get('info',{}).get('version'))
+print('paths:')
+for p,ops in d.get('paths',{}).items():
+    for m,o in ops.items():
+        print(' ', m.upper(), p, '| sec:', o.get('security','-'))
+print('global security:', d.get('security'))
+print('securitySchemes:', list(d.get('components',{}).get('securitySchemes',{}).keys()))
+print('params examples:')
+for p,ops in d.get('paths',{}).items():
+    for m,o in ops.items():
+        for prm in o.get('parameters',[]):
+            if prm.get('in')=='query':
+                print('  query param:', prm.get('name'), prm.get('schema',{}).get('type'), '-', prm.get('description','')[:60])
+"
+title: SIGNL4 Inbound Webhook
+version: v1
+paths:
+  GET /docs/index.html | sec: -
+  POST /{teamSecret} | sec: -
+global security: None
+securitySchemes: []
+params examples:
+  query param: ExtIdParam string - 
+  query param: ExtStatusParam string - 
+  query param: NewStatus string - 
+  query param: ResolvedStatus string - 
+  query param: AckStatus string -
+[0m
+[0m◈ [0mParallel Web Search ""signl4" webhook "team-secret" OR "teamsecret" example leak github gitlab"
+[0m
+[0m$ [0msleep 2; curl -s -o /dev/null -w "demo.enterprisealert.com: %{http_code}\n" --max-time 15 "https://demo.enterprisealert.com/" ; sleep 1; curl -s -o /dev/null -w "downloads.enterprisealert.com: %{http_code}\n" --max-time 15 "https://downloads.enterprisealert.com/"
+demo.enterprisealert.com: 404
+downloads.enterprisealert.com: 403
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "account/manage -> %{http_code} loc=[%{redirect_url}]\n" --max-time 20 "https://account.signl4.com/manage"; sleep 1; curl -s -o /dev/null -w "devaccount/manage -> %{http_code} loc=[%{redirect_url}]\n" --max-time 20 "https://devaccount.signl4.com/manage"
+account/manage -> 302 loc=[https://connect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=iRoBsIZ4Ry4jIkmbCSaHJ5Jq-GoO9s3sEs88V_jQH7I&code_challenge_method=S256&response_mode=form_post&nonce=639248005200851005.MGYyZjc2MmYtMzg2Zi00NGQyLTlkOTEtM2UzMzViMzM1ZTdhOTc1ZGFmOWEtMzE4NC00YTE3LWEwNTQtM2I5NTI3MzNkMzg3&state=CfDJ8P0bhSkvNP5HkPto7qc9KqPRsk1ayKsspvbMZ1On7G4_iXMIOFjtMiSd-hwn-RfNf1TcxTztSHuIrt6-YGfI0_ok3fTAXp2upUIS_QYo-cFmhBX_Aow7xWW387ZkSOJB9flayAuY7jWb83P8V0rK0eYCjrOgRZMMDSuywyytq0k0G_fiC5CdEejMpPcyKKNHUvpmH3kcUbIfJhK-AqY5FngEw1ZeEjS9-m0TN4f4p5jfiOdWi_dLiWtCqAv1AzzmInLEgzZ7vfLcCcLBFE8zLYsMzera6A9N5MjKvPrO0Bj8vi_O9DMzOPAILQMnx3lJGNL7uvTekbE5B6kF5dGddhbkaf1-rTdXG9LQYsjfnAyixbUXiw6Uwgnz65DgVEp4IwhO8CTYe3xk609uaVTY0NM&x-client-SKU=ID_NET10_0&x-client-ver=8.19.2.0]
+devaccount/manage -> 302 loc=[https://devconnect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Fdevaccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=8EWR6Zf1G2Pm3jz-PIfhHmCSwMUFlHHyEsZ4Psge5kM&code_challenge_method=S256&response_mode=form_post&nonce=639248005215814073.NmIzYWYxMzEtYTE4Yi00NWE0LWFhODctMDk2ZTBkYjM4NDhhNWI1OTQ5MjMtNjUzMC00YTM2LTg4MWUtZmQ5MGE1ZTIxNDM1&state=CfDJ8HRhdHKj5_pDq2dFwl0f4pxb7R_Pd4obvbzSorf9ehTSx32nmyucGbkOmPFTEz_Ig0CjPc8kyEOz8HpDEDUfg0xT2tk5Upsa_F5imdlkc6t8GxiIkKIcQlbCMHo71uoUS4vwP75-OEJOgfwvPshbZF1V5kv95KT77TnPvYka5lAqJ5Cno9EM7PWmVY6rfjaHypr-AiGCdfguXyYjdOcHefE-N539FlIyoa3E3M20aXW6FHMaWd3d2uBHkcRfbfwXAbJU8fWIOmppN_pPsVSw4O08UKrbjinVZcuYzucCSPqtt03F-n8cdm8wbU-iPTsn7xXt-LG_QwV9Ok-SusGnzIoSt34s6KmiWq9clzgNbkHxCozm_v-FYclVq3jpuEWa67Hr7lnnvukpT0d_Yvw09bk&x-client-SKU=ID_NET10_0&x-client-ver=8.19.2.0]
+[0m
+**STEP 1 — DELTA**
+- NEW crt.sh returned 502 this cycle → CT sweep degraded; certspotter fallback shows only 9 known signl4 names + wildcard (bot/docs/frontdoor/status/support/trust/www) and downloads+wildcard for enterprisealert.com — no new leaf names, CT surface stable 3rd cycle.
+- CHANGED account+devaccount `/manage` redirects re-pulled: byte-parametric twin, identical client_id `692A0A56-892F-4AE2-8259-76DA398990B6` + full scope set + PKCE S256 + form_post, but redirect_uri **env-scoped** (`account…/manage/signin-oidc` vs `devaccount…`) — cross-env code redemption blocked, chain gated one more layer.
+- NEW webhook OpenAPI re-downloaded: v1, single `POST /{teamSecret}`, zero securitySchemes, query keywords unchanged — contract stable 12.6KB.
+- NEW RAG: Derdack `derdack-integration-SIGNL4` README + LibreNMS/Particle docs embed plain/base64 `{team-secret}` directly in third-party config URLs (`SIGNL4_[name]_[Base64teamsecret]` EA source naming) — re-confirms URL-embedded operator-entropy secret as the documented trust model; still zero live secrets in indexed content (5th clean corridor).
+- NO_DELTA: 4-host JWKS twin, api/v2/teams 401↔405 flapping, webhook 3004 oracle, V1/V2/V3 empty-`security:[{}]` specs.
+
+**STEP 2 — PRIORITIZE**
+- `[PRIO] connect.signl4.com/webhook/{teamSecret}`, 5.75, gate_ease+attack_surface (authless single write endpoint, URL-embedded bearer secret)
+- `[PRIO] connect.signl4.com/identity/connect/token`, 5.45, business_value+tech_exposure (cross-env forgery chain, last gate client_secret)
+- `[PRIO] connect/api /api/v3/teams/{teamId}/signlReports/{fileName}`, 4.90, business_value+attack_surface (documented file-download BOLA, anon→401)
+
+**STEP 3 — HYPOTHESES**
+- `[HYP] Webhook authless write surface (carried, report-ready)` — class: AUTH — asset: connect.signl4.com/webhook/{teamSecret} — confidence: 78 — reasoning: 1 POST route, no securitySchemes in webhook OAS (re-pulled live, clean); 3004-no-match envelope byte-identical prod+staging; operator-entropy secret (docs `teamssecret`/`helloworld`, base64 in EA source name); status-keyword query grants ack/resolve/close; 15+ third-party docs embed the secret in URLs; 5th corpus sweep still clean. — evidence_needed: leaked/guessable teamSecret → 201 event-create (none found → design-level). — verify_steps: (DONE) spec 200 no scheme; (DONE) POST fabricated → 404 code 3004 both envs; (HUMAN gate) 201 only on leak. — impact: unauth alert creation + genuine-alert ack/resolve spoof; HIGH-in-principle, LOW-MED confirmable. — testability: PASSIVE
+- `[HYP] Cross-env token forgery chain` — class: AUTH — asset: connect.signl4.com/identity/connect/token — confidence: 72 — reasoning: shared RS256 (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, 10+ deep-equal × 4 hosts), shared client_id 692A0A56, staging password grant, prod parametric twin, swagger-confirmed OAuth2 API access; newly re-confirmed redirect_uri is env-scoped → only remaining gates client_secret. — evidence_needed: any env's client_secret (staging or prod) → forge valid token, cross-env. — verify_steps: (DONE) password/CC grants → invalid_client; (HUMAN gate) token issue only with secret. — impact: full tenant API CRUD + account-portal ATO; HIGH-in-principle. — testability: AUTH_HELPED
+- `[HYP] Cross-tenant report/file download via fileName path segment` — class: IDOR — asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName} — confidence: 50 — reasoning: GET unvalidated String fileName (family: dutyReports/{fileName}, signls/{signlId}/attachments/{attachmentId}); V3 spec global `security:[{}]`; report bundles alert PII/timing; all anon→401. — evidence_needed: authenticated own/foreign differential + traversal (`..%2f`). — verify_steps: (DONE) anon GET → 401; (AUTH_HELPED) X-S4-Api-Key GET own/foreign + traversal — HUMAN gate. — impact: cross-tenant exfiltration MEDIUM-HIGH. — testability: AUTH_HELPED
+
+**STEP 4 — SELF-CRITIQUE**
+- `[PARKED] V1 legacy-auth differential` — 14/14 families anon→401/405 uniform across prod+staging; zero deviation observed; namespace now fully documented, confidence 35 < 40.
+- `[PARKED] frontdoor shell + fix Blazor` — static placeholder / no REST surface; already closed, no new behavior.
+- `[FINAL]` 1) webhook authless write surface (PASSIVE, report-ready, 78) 2) cross-env token chain (AUTH_HELPED, 72) 3) BOLA report-download (AUTH_HELPED, 50).
+
+**STEP 5 — NEXT ACTION**
+- `[NEXT] HUMAN: submit to bugs.olivermaicher.eu — PRIMARY connect.signl4.com/webhook/{teamSecret} authless single-endpoint write surface (URL-embedded operator-entropy bearer secret, 3004 oracle prod+staging byte-identical, query-keyword ack/resolve/close, 15+ integrations embed secret in URLs incl. base64 in EA source naming; severity LOW-MED design-level, 5 corpora clean, no POC). SUPPORTING CONTEXT: (a) triple API namespace V1/V2/V3 all `security:[{}]` while handlers enforce Bearer — spec under-declares, V1 adds behave-as userId + changePassword + scripts; (b) cross-env identity chain (shared RS256 × 4 hosts, shared client_id 692A0A56, staging password grant) now further gated by env-scoped redirect_uri — blocked on client_secret (AUTH_HELPED note).`
+
+**STEP 6 — LEARNING**
+- `[LEARN] REJECTED OTHER @ CT signl4.com/enterprisealert.com: certspotter fallback (crt.sh 502) shows only known 9+wildcard / downloads+wildcard — zero new leaf names, surface stable 3rd cycle.`
+- `[LEARN] ACCEPTED AUTH @ account+devaccount /manage: cross-env client_id+scope+PKCE reuse re-confirmed live, but redirect_uri env-scoped (…/manage/signin-oidc per host) → authorization-code redemption cannot cross env; forgery chain additionally gated.`
+- `[LEARN] ACCEPTED OTHER @ doc corpus: Derdack EA integration + LibreNMS + Particle docs embed plain/base64 {team-secret} in third-party URL configs — URL-embedded operator-entropy secret is vendor-documented postures; no live secret in indexed content (5th clean sweep).`
+- `[LEARN] REJECTED OTHER @ webhook OAS re-pull: no new routes/params (single POST /{teamSecret}, zero securitySchemes) — contract frozen, no drift.`
+
+**STEP 7 — RISK**
+- `[RISK] derdack: 80 — zero new unauthenticated defect this cycle: every live probe (identity OD ×2, webhook swagger, V1 swagger, /manage redirects, demo/downloads) matched prior baselines; CT via fallback source shows no fresh names; the only reportable finding remains the authless webhook write surface (design-level, LOW-MED, 5 clean corpora) plus cross-env identity chain + empty-security specs as AUTH_HELPED context; all BOLA/file-download vectors still credential-blocked; risk steady-state, weighted down this cycle by rotation of nothing against them.`

@@ -1,21 +1,23 @@
-## 2026-09-12 04:59:12 UTC [target] (model nemotron3)
-[PRIO] connect.signl4.com/webhook/{teamSecret},8.55,attack_surface=9,business_value=8,tech_exposure=8,gate_ease=10,cloud_surface=7,freshness=9
-[PRIO] api.signl4.com/api/v2/teams,8.00,attack_surface=9,business_value=9,tech_exposure=9,gate_ease=3,cloud_surface=8,freshness=9
-[PRIO] connect.signl4.com/api/v3/*,7.30,attack_surface=8,business_value=8,tech_exposure=8,gate_ease=3,cloud_surface=7,freshness=9
-[PRIO] connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd,6.75,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=3,cloud_surface=7,freshness=8
-[PRIO] devconnect.signl4.com/identity/connect/token,7.15,attack_surface=7,business_value=9,tech_exposure=8,gate_ease=2,cloud_surface=7,freshness=9
-[HYP] Webhook team-secret enumeration via status-keyword oracle
+## 2026-09-12 09:04:16 UTC [target] (model nemotron3)
+[NEW] 8 previously-unknown live hosts via crt.sh CT sweep: fix.signl4.com (prod ASP.NET Core Support App, Blazor, /signin-oidc 500), frontdoor.signl4.com (unconfigured SPA shell, %ReplaceStatusTitle% placeholder static since 2024-09-03), status.signl4.com (StatusLabs), support.signl4.com (Zendesk), trust.signl4.com (CF trust center), docs.signl4.com (GitHub Pages), demo.enterprisealert.com, downloads.enterprisealert.com — all passively surfaced 2026-09-10, minimal active probing beyond initial fingerprint
+[NEW] connect.signl4.com/api/v3 fully dumped (200+ paths via /api/docs/v3/swagger.json): invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance, PUT /api/prepaid/{id}/prepaidSettings, file-download family (/teams/{teamId}/signlReports/{fileName}, dutyReports/{fileName}, /signls/{signlId}/attachments/{attachmentId}), AI forwardPlanning/{teamId}, holidays copyFrom/{sourceTeamId} — all anon→401, handler-deferred auth, global `security: [{}]` empty
+[NEW] V3 "public"-named routes (teams/public, categories/public, distributionLists/public, users/availableRoles, teams/dutySettings, teams/signalingSettings) all anon→401 — "public" suffix ≠ auth bypass
+[NEW] Standard SCIM endpoints (ServiceProviderConfig, Users, Groups, Schemas, Bulk) all 404 — only /scim/settings registered (anon→401)
+[NEW] devconnect.signl4.com/webhook/{fabricated-secret} → 404 with byte-identical envelope to prod (`{"code":3004,"details":"No matching event source found."}`) — staging webhook oracle mirrors prod contract
+[CHANGED] api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET returns 405 Allow:GET,POST (not 401), invalid Bearer also 405 — handler-deferred auth stable
+[CHANGED] Cross-env token forgery chain complete (shared RS256 key 10x deep-equal across 4 identity hosts, shared client_id 692A0A56, password grant enabled, prod parametric twin) but AUTH_HELPED-blocked on client_secret
+[CHANGED] Webhook team-secret enumeration downgraded: operator-entropy secret makes guessing feasible but falls under REJECTED brute-force class; oracle exploitable only via secret leak → config/design finding
+[CHANGED] blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets `secure`+host-only cookie); residual missing-HSTS only (LOW)
+[PRIO] connect.signl4.com, 9.2, attack_surface=10 business_value=10 tech_exposure=9 gate_ease=8 cloud_surface=9 freshness=9
+[PRIO] api.signl4.com, 8.8, attack_surface=9 business_value=10 tech_exposure=8 gate_ease=7 cloud_surface=9 freshness=9
+[PRIO] devconnect.signl4.com, 8.5, attack_surface=9 business_value=9 tech_exposure=9 gate_ease=6 cloud_surface=8 freshness=9
+[PRIO] fix.signl4.com, 7.0, attack_surface=8 business_value=7 tech_exposure=8 gate_ease=7 cloud_surface=6 freshness=10
+[PRIO] frontdoor.signl4.com, 6.2, attack_surface=7 business_value=5 tech_exposure=7 gate_ease=10 cloud_surface=5 freshness=10
+[PRIO] devapi.signl4.com, 7.8, attack_surface=8 business_value=8 tech_exposure=8 gate_ease=6 cloud_surface=8 freshness=9
+[PRIO] www.derdack.com/de/, 5.5, attack_surface=6 business_value=5 tech_exposure=6 gate_ease=8 cloud_surface=4 freshness=5
+[HYP] Cross-environment token acceptance via shared RS256 key + handler-deferred auth on V2/V3 APIs
 class: AUTH
-asset: connect.signl4.com/webhook/{teamSecret}
-confidence: 85
-reasoning: Swagger at /webhook/docs/v1/swagger.json confirms POST /{teamSecret} with NO security scheme; team secret in URI path; query-configurable status keywords (ExtIdParam, ExtStatusParam, NewStatus, ResolvedStatus, AckStatus) allow mapping arbitrary payload fields to ack/resolve actions; returns 404 for invalid teamSecret vs 201 with eventId for valid — acts as team secret oracle; 15+ third-party integrations document URL-embedded static team secret as primary credential; no rate limiting observed; staging (devconnect) mirrors prod oracle byte-for-byte ({"code":3004,"details":"No matching event source found."})
-evidence_needed: POST to known-valid team secret (from integration docs) returns 201 with eventId — confirms oracle enabling secret enumeration and alert manipulation
-verify_steps: POST https://connect.signl4.com/webhook/{known_valid_secret_from_integration_docs} Content-Type: application/json body={"Id":"test","X-S4-Status":"acknowledged","X-S4-ExternalID":"test"} (expect 201 with eventId) — AUTH_HELPED for valid secret; enumerate via dictionary of common secret patterns if no docs secret available
-impact: Team secret enumeration → alert acknowledgment/resolution, webhook replay, potential alert suppression, on-call schedule manipulation; severity HIGH
-testability: PASSIVE (oracle probe) / AUTH_HELPED (valid secret test)
-[HYP] Cross-environment token acceptance via shared RS256 key + handler-deferred auth
-class: AUTH
-asset: api.signl4.com/api/v2/teams (and all /api/v2/*, /api/v3/*)
+asset: api.signl4.com/api/v2/teams (and all /api/v2/*, /api/v3/* on connect.signl4.com)
 confidence: 90
 reasoning: 4 identity hosts (connect.signl4.com, api.signl4.com, devconnect.signl4.com, devapi.signl4.com) serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, verified 10x); shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with full scopes (account_portal, public_api_read/write/prov, offline_access, reseller_portal, mobile_api) on devaccount/account; devconnect OIDC discovery exposes password grant + client_credentials + device_code + PAR; api.signl4.com swagger.json confirms OAuth2 authorizationCode flow targeting connect.signl4.com/identity/connect endpoints; api.signl4.com/api/v2/teams returns 405 (method routing) not 401 on unauth GET, invalid Bearer also returns 405 — auth validation deferred to handler layer, not route layer (10th+ live confirmation, flapping between 401/405 across cycles); any valid token from staging IdP validates at prod API JWKS
 evidence_needed: Valid access_token from devconnect.signl4.com (any grant) accepted by api.signl4.com/api/v2/teams returning 200 with correct kid
@@ -31,13 +33,22 @@ evidence_needed: Authenticated GET own-resource returns 200; authenticated GET f
 verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/v3/invoice-en16931/zugferd → 405 Allow:GET [DONE]; (AUTH_HELPED) GET https://connect.signl4.com/api/v3/subscriptions/{foreign_id}/prepaidBalance Authorization: Bearer <valid_token> (expect 403 if BOLA enforced, 200 if vulnerable) — HUMAN gate (customer billing data)
 impact: Cross-tenant exfiltration of customer invoices (financial/order data, PII in billing), prepaid balance manipulation, SCIM key rotation abuse; severity HIGH conditional on BOLA
 testability: AUTH_HELPED
-[PARKED] Cross-environment token acceptance via shared RS256 key + handler-deferred auth: confidence 90 ≥ 40, has verify steps, class AUTH in-scope — KEEP (strongest finding, AUTH_HELPED blocked on token acquisition)
-[PARKED] Webhook team-secret enumeration via status-keyword oracle: confidence 85 ≥ 40, has verify steps, class AUTH in-scope — KEEP (PASSIVE verifiable, HIGH impact)
+[HYP] Broken OIDC callback on prod support portal enables auth flow analysis
+class: AUTH
+asset: fix.signl4.com/signin-oidc
+confidence: 70
+reasoning: fix.signl4.com (20.160.37.197) = prod ASP.NET Core "SIGNL4 Support Application" (Kestrel); /signin-oidc returns 500 (broken OIDC callback) — identical to devfix.signl4.com staging twin; Blazor Server app ("Admin Support Page") on staging cluster 108.143.123.104; /_blazor/negotiate 200+connectionId (standard Blazor behavior); OIDC callback registered but broken on both prod (fix) and staging (devfix); connects to shared IdentityServer (connect.signl4.com/identity) per CSP references
+evidence_needed: Error detail from /signin-oidc 500 reveals IdentityServer interaction flow; Blazor circuit handshake may expose anti-forgery tokens or OIDC state parameters
+verify_steps: GET https://fix.signl4.com/signin-oidc (expect 500, capture error body/headers); GET https://fix.signl4.com/_blazor/negotiate (expect 200 connectionId); POST https://fix.signl4.com/_blazor (negotiate response) — PASSIVE first, then Blazor circuit probe
+impact: Support portal auth bypass potential; if OIDC callback misconfiguration leaks state/nonce or allows redirect_uri manipulation, could chain to IdentityServer token theft; severity MEDIUM-HIGH
+testability: PASSIVE
+[PARKED] Cross-environment token acceptance via shared RS256 key + handler-deferred auth on V2/V3 APIs: confidence 90 ≥ 40, has verify steps, class AUTH in-scope — KEEP (strongest finding, AUTH_HELPED blocked on token acquisition)
 [PARKED] BOLA on V3 billing/SCIM routes via handler-deferred auth: confidence 60 ≥ 40, has verify steps, class IDOR in-scope — KEEP (newly documented V3 surface, AUTH_HELPED)
-[FINAL] 1) connect.signl4.com/webhook/{teamSecret} Webhook team-secret enumeration via status-keyword oracle (AUTH, 85) — PASSIVE verifiable, HIGH
-[FINAL] 2) api.signl4.com/api/v2/teams Cross-environment token acceptance via shared RS256 key + handler-deferred auth (AUTH, 90) — CRITICAL, AUTH_HELPED
-[FINAL] 3) connect.signl4.com/api/v3/* BOLA on V3 billing/SCIM routes via handler-deferred auth (IDOR, 60) — new internal API surface, AUTH_HELPED
-[NEXT] RAG: fetch SIGNL4 public docs (help.signl4.com webhook/API pages + one third-party integration guide, e.g. ServiceNow/Zabbix/OpenIntegrationHub) to extract REAL team secret format/patterns for oracle validation — enables passive enumeration probe without AUTH_HELPED
+[PARKED] Broken OIDC callback on prod support portal enables auth flow analysis: confidence 70 ≥ 40, has verify steps, class AUTH in-scope — KEEP (new CT host, PASSIVE verifiable)
+[FINAL] 1) api.signl4.com/api/v2/teams Cross-environment token acceptance via shared RS256 key + handler-deferred auth (AUTH, 90) — CRITICAL, AUTH_HELPED
+[FINAL] 2) connect.signl4.com/api/v3/* BOLA on V3 billing/SCIM routes via handler-deferred auth (IDOR, 60) — new internal API surface, AUTH_HELPED
+[FINAL] 3) fix.signl4.com/signin-oidc Broken OIDC callback on prod support portal (AUTH, 70) — new CT host, PASSIVE verifiable
+[NEXT] PROBE: GET https://fix.signl4.com/signin-oidc (capture 500 error body/headers) → GET https://fix.signl4.com/_blazor/negotiate (capture connectionId) → POST https://fix.signl4.com/_blazor with negotiate response to establish Blazor circuit — PASSIVE, maps auth flow on new prod host
 [LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: Webhook team-secret enumeration oracle confirmed — POST /{teamSecret} no security scheme, 404 vs 201 oracle, status-keyword query config, 15+ integrations use URL-embedded static team secret (live probe: invalid secret → 404)
 [LEARN] ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token: Cross-env token forgery chain complete — shared RS256 key (10x deep-equal across 4 identity hosts), shared client_id 692A0A56, password grant enabled, prod parametric twin; blocked on client_secret (AUTH_HELPED)
 [LEARN] ACCEPTED AUTH @ api.signl4.com/api/v2/teams: Handler-deferred auth confirmed 10th+ cycles — unauth GET returns 405 (not 401), invalid Bearer returns 405; auth validation at handler layer enables cross-env token acceptance
@@ -65,4 +76,9 @@ testability: AUTH_HELPED
 [LEARN] REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert, no Derdack defect
 [LEARN] ACCEPTED IDOR @ connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16931 invoice download documented in public OpenAPI; cross-tenant BOLA unproven — new billing surface
 [LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid billing route family — BOLA AUTH_HELPED
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api (V1): V1 OpenAPI (93 paths) live on connect+api+devapi at /api/* and /api/v1/* — three concurrent namespaces all handler-deferred Bearer (anon reads 14/14 → 401/405), zero unauth deviation; V1 spec adds scripts/inventory + behave-as userId + changePassword + attachments to documented surface.
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across all three namespaces (V1/V2/V3); internal/self-service routes (scripts, prepaid, subscriptions licenses) published publicly.
+[LEARN] REJECTED AUTH @ frontdoor.signl4.com: /api/status /api/incidents /incidents /status all SPA-fallback 404 — status shell has no backend; static placeholder only.
+[LEARN] REJECTED OTHER @ fix.signl4.com: /api/status → 404 Kestrel — no REST surface, Blazor-only app.
+[LEARN] REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles.
 [RISK] derdack: 92 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devapi/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant + client_credentials + PAR on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); webhook team-secret oracle confirmed HIGH impact; invoice download (ZUGFeRD) + prepaid billing routes documented but auth-gated (BOLA AUTH_HELPED); blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra; NEW CT surface (fix/frontdoor/status/support/trust/docs/demo/downloads) adds 8 live hosts with unprobed attack surface; V3 API exposes internal billing/SCIM routes in public OpenAPI with empty security requirement

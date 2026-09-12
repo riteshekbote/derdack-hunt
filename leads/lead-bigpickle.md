@@ -3274,3 +3274,4 @@ testability: PASSIVE
 [LEARN] REJECTED OTHER @ fix.signl4.com: /api/status → 404 Kestrel — no REST surface, Blazor-only app.
 [LEARN] REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles.
 [RISK] derdack: 82 — no new unauthenticated defect this cycle: V1 API namespace discovered and documented (93 paths incl. scripts/billing/act-as/changePassword) but uniformly gated 401/405 on prod+staging; reportable finding remains the webhook authless single-endpoint write surface (design/config level, no leaked secret, LOW-MED) with cross-env identity chain + triple-namespace empty-security specs as context; all BOLA vectors AUTH_HELPED credential-blocked; baseline stable, CT surface unchanged.
+## 2026-09-12 09:02:53 UTC [target] (model bigpickle)
