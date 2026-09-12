@@ -678,3 +678,22 @@ www.derdack.com
 - CHANGED api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET returns 405 Allow:GET,POST (not 401), invalid Bearer also 405 — handler-deferred auth stable
 - CHANGED Cross-env token forgery chain complete (shared RS256 key 10x deep-equal across 4 identity hosts, shared client_id 692A0A56, password grant enabled, prod parametric twin) but AUTH_HELPED-blocked on cli
 - CHANGED 8 new CT hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com) unprobed beyond initial fingerprint — fix.signl4.com (prod ASP.NET Core Support App, Blazor, /signin-o
+
+## 2026-09-12 20:44:26 UTC
+- NEW 9 hosts discovered via passive DNS/CT, 0 probed for live HTTP — initial surface unvalidated
+- NEW No GitHub org configured for reposcan — code-level recon gap
+- NEW Knowledge base empty — no prior tech fingerprint, endpoint map, or auth flow data
+- NEW dev.derdack.com /.well-known/openid-configuration returns 300 Multiple Choices with directory traversal suggestions (/.ssh/, /.bash_history/, /.viminfo/) — misconfiguration confirmed
+- NEW signl4.derdack.com (AWS 13.94.244.66) connection timeout on HTTP/HTTPS — SaaS platform unreachable, likely firewall/WAF
+- NEW signals.derdack.com NXDOMAIN — subdomain does not exist, hypothesis invalid
+- NEW blog.derdack.com & techblog.derdack.com redirect via HTTP (not HTTPS) to www.derdack.com — mixed content / downgrade risk
+- NEW de.derdack.com / www.de.derdack.com return 403 with sedoparking.com iframe — parked domain, not Derdack infrastructure
+- CHANGED Inventory validation: only 5/9 hosts are live Derdack infrastructure; 2 unreachable, 1 non-existent, 1 parked
+- NEW fix.signl4.com/signin-oidc returns 500 (broken OIDC callback), /_blazor/negotiate returns 405 on GET — prod ASP.NET Core Support Application (Blazor Server) confirmed live, identical to devfix twin
+- NEW connect.signl4.com/api/v3/subscriptions/{id}/invoices/{id}/zugferd OPTIONS → 405 Allow:GET; /api/prepaid/{id}/prepaidSettings OPTIONS → 405 Allow:PUT — V3 billing routes registered, handler-deferred a
+- NEW connect.signl4.com/api/docs/v3/swagger.json and /api/docs/v1/swagger.json both declare global `security: [{}]` — spec under-declares auth across V1/V2/V3; internal routes published publicly
+- NEW api.signl4.com/api/v2/teams unauth GET → 401 (this cycle), invalid Bearer → 401 — auth-status flapping re-confirmed (405 in prior cycles, 401 now); handler-deferred auth family unstable
+- NEW devconnect.signl4.com & connect.signl4.com JWKS byte-identical 10th+ deep-equal (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, modulus n identical) — cross-env RS256 key reuse stable
+- CHANGED Webhook team-secret enumeration oracle downgraded: operator-chosen secret (not high-entropy fixed), guessing falls under REJECTED brute-force class; exploitable only via secret leak → config/design fi
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets secure+host-only cookie); residual missing-HSTS only (LOW)
+- CHANGED Cross-env token forgery chain complete (shared RS256 key 4 hosts, shared client_id 692A0A56, password grant enabled, prod parametric twin) but AUTH_HELPED-blocked on client_secret — strongest finding,

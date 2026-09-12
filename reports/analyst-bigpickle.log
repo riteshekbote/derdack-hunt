@@ -18753,3 +18753,293 @@ This is marked `HUMAN` (requires your decision), and we're in plan mode, so here
 3. Submit (requires your confirmation on content)
 
 **Ready to proceed?** Or do you want to adjust scope/severity/content first?
+===== ANALYST bigpickle 2026-09-12 20:44:26 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la; ls -la inventory 2>/dev/null; ls -la *.yml *.md 2>/dev/null
+total 456
+drwxr-xr-x 12 runner runner   4096 Sep 12 20:35 .
+drwxr-xr-x  3 runner runner   4096 Sep 12 20:34 ..
+drwxr-xr-x  7 runner runner   4096 Sep 12 20:35 .git
+drwxr-xr-x  3 runner runner   4096 Sep 12 20:34 .github
+-rw-r--r--  1 runner runner   1831 Sep 12 20:34 README.md
+-rw-r--r--  1 runner runner     32 Sep 12 20:35 analyst-out.txt
+-rw-r--r--  1 runner runner 181085 Sep 12 20:35 analyst-prompt.txt
+-rw-r--r--  1 runner runner 177206 Sep 12 20:35 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Sep 12 20:34 inventory
+drwxr-xr-x  2 runner runner   4096 Sep 12 20:34 knowledge
+drwxr-xr-x  2 runner runner   4096 Sep 12 20:34 leads
+-rw-r--r--  1 runner runner  12889 Sep 12 20:34 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Sep 12 20:34 recon-notes
+drwxr-xr-x  2 runner runner   4096 Sep 12 20:34 reports
+drwxr-xr-x  2 runner runner   4096 Sep 12 20:34 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Sep 12 20:34 scope.yml
+drwxr-xr-x  2 runner runner   4096 Sep 12 20:34 scripts
+-rw-r--r--  1 runner runner     33 Sep 12 20:34 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Sep 12 20:34 state_laguna.json
+-rw-r--r--  1 runner runner     33 Sep 12 20:34 state_ling3.json
+-rw-r--r--  1 runner runner     33 Sep 12 20:34 state_longcat.json
+-rw-r--r--  1 runner runner     33 Sep 12 20:34 state_mimo.json
+-rw-r--r--  1 runner runner     33 Sep 12 20:34 state_nemotron3.json
+drwxr-xr-x  2 runner runner   4096 Sep 12 20:34 triage
+total 100
+drwxr-xr-x  2 runner runner  4096 Sep 12 20:34 .
+drwxr-xr-x 12 runner runner  4096 Sep 12 20:35 ..
+-rw-r--r--  1 runner runner 90255 Sep 12 20:34 derdack.md
+-rw-r--r-- 1 runner runner  1831 Sep 12 20:34 README.md
+-rw-r--r-- 1 runner runner 12889 Sep 12 20:34 probe-results.md
+-rw-r--r-- 1 runner runner  3292 Sep 12 20:34 scope.yml
+[0m
+[0m$ [0mcat scope.yml; echo ---; ls leads knowledge recon-notes triage reports scripts 2>/dev/null
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+  passive_first: false          # deep-hunt agent: active probes allowed when scoped
+  max_requests_per_second: 1    # never hammer live infra
+  no_doom: true                 # no DoS/DDoS, no account-lockout attacks
+  account_creation: restricted  # only on test/sandbox assets, never live customer data
+  no_data_modification: true    # no writes/deletes on live customer data
+  no_pre_disclosure: true       # never disclose before program response
+  poc_required: true            # scanner output alone is REJECTED
+  redact_secrets_in_commits: true
+
+models:
+  - { id: opencode/big-pickle, name: bigpickle }
+  - { id: opencode/nemotron-3-ultra-free, name: nemotron3 }
+  - { id: opencode/longcat-2.0-free, name: longcat }
+  - { id: opencode/ling-3.0-flash-free, name: ling3 }
+  - { id: opencode/laguna-s-2.1-free, name: laguna }
+---
+knowledge:
+index.md
+
+leads:
+lead-bigpickle.md
+lead-laguna.md
+lead-ling3.md
+lead-longcat.md
+lead-mimo.md
+lead-nemotron3.md
+reposcan-derdack.md
+
+recon-notes:
+DEDICATED-DEEP.md
+
+reports:
+analyst-bigpickle.log
+analyst-laguna.log
+analyst-ling3.log
+analyst-longcat.log
+analyst-nemotron3.log
+hypotheses-bigpickle.txt
+hypotheses-laguna.txt
+hypotheses-ling3.txt
+hypotheses-longcat.txt
+hypotheses-nemotron3.txt
+hypotheses.md
+valid-bugs.md
+
+scripts:
+sync-issues.py
+
+triage:
+run-2026-09-02-21-25.md
+run-2026-09-02-23-31.md
+run-2026-09-03-01-23.md
+run-2026-09-03-06-25.md
+run-2026-09-03-11-39.md
+run-2026-09-03-15-10.md
+run-2026-09-03-18-39.md
+run-2026-09-03-21-19.md
+run-2026-09-03-23-20.md
+run-2026-09-04-01-02.md
+run-2026-09-04-05-54.md
+run-2026-09-04-10-01.md
+run-2026-09-04-14-22.md
+run-2026-09-04-17-46.md
+run-2026-09-04-19-58.md
+run-2026-09-04-21-58.md
+run-2026-09-04-23-38.md
+run-2026-09-05-01-22.md
+run-2026-09-05-06-16.md
+run-2026-09-05-10-37.md
+run-2026-09-05-13-31.md
+run-2026-09-05-16-13.md
+run-2026-09-05-18-18.md
+run-2026-09-05-20-26.md
+run-2026-09-05-22-13.md
+run-2026-09-05-23-54.md
+run-2026-09-06-01-28.md
+run-2026-09-06-06-28.md
+run-2026-09-06-11-17.md
+run-2026-09-06-14-12.md
+run-2026-09-06-17-03.md
+run-2026-09-06-19-11.md
+run-2026-09-06-21-21.md
+run-2026-09-06-23-04.md
+run-2026-09-07-01-02.md
+run-2026-09-07-06-07.md
+run-2026-09-07-12-33.md
+run-2026-09-07-17-53.md
+run-2026-09-07-20-50.md
+run-2026-09-07-23-04.md
+run-2026-09-08-01-12.md
+run-2026-09-08-05-59.md
+run-2026-09-08-10-34.md
+run-2026-09-08-14-45.md
+run-2026-09-08-18-09.md
+run-2026-09-08-21-10.md
+run-2026-09-08-23-24.md
+run-2026-09-09-01-28.md
+run-2026-09-09-06-38.md
+run-2026-09-09-11-47.md
+run-2026-09-09-15-23.md
+run-2026-09-09-18-50.md
+run-2026-09-09-21-18.md
+run-2026-09-09-23-18.md
+run-2026-09-10-01-08.md
+run-2026-09-10-05-59.md
+run-2026-09-10-10-37.md
+run-2026-09-10-14-36.md
+run-2026-09-10-17-50.md
+run-2026-09-10-20-09.md
+run-2026-09-10-22-35.md
+run-2026-09-11-00-29.md
+run-2026-09-11-05-08.md
+run-2026-09-11-09-42.md
+run-2026-09-11-13-54.md
+run-2026-09-11-17-22.md
+run-2026-09-11-19-59.md
+run-2026-09-11-22-15.md
+run-2026-09-12-00-19.md
+run-2026-09-12-04-41.md
+run-2026-09-12-08-53.md
+run-2026-09-12-12-27.md
+run-2026-09-12-15-47.md
+run-2026-09-12-17-55.md
+run-2026-09-12-19-43.md
+[0m
+[0m$ [0msed -n 1,60p leads/lead-nemotron3.md; echo '=== PENDING PROBES in hypotheses-nemotron3 ==='; tail -20 reports/hypotheses-nemotron3.txt
+## 2026-09-03 15:38:35 UTC [target] (model nemotron3)
+[NEW] 9 hosts discovered via passive DNS/CT, 0 probed for live HTTP — initial surface unvalidated
+[NEW] No GitHub org configured for reposcan — code-level recon gap
+[NEW] Knowledge base empty — no prior tech fingerprint, endpoint map, or auth flow data
+[PRIO] signl4.derdack.com,8.5,a=9 b=10 t=8 g=6 c=8 f=5
+[PRIO] signals.derdack.com,8.0,a=9 b=9 t=7 g=6 c=8 f=5
+[PRIO] dev.derdack.com,7.5,a=8 b=7 t=9 g=8 c=6 f=5
+[PRIO] derdack.com,6.5,a=7 b=8 t=6 g=5 c=7 f=5
+[PRIO] www.derdack.com,6.0,a=6 b=8 t=5 g=5 c=7 f=5
+[PRIO] blog.derdack.com,4.0,a=5 b=4 t=4 g=4 c=4 f=4
+[PRIO] techblog.derdack.com,4.0,a=5 b=4 t=4 g=4 c=4 f=4
+[PRIO] de.derdack.com,3.5,a=4 b=4 t=3 g=4 c=3 f=4
+[PRIO] www.de.derdack.com,3.5,a=4 b=4 t=3 g=4 c=3 f=4
+[HYP] SIGNL4 API JWT alg confusion on token validation
+class: AUTH
+asset: signl4.derdack.com
+confidence: 55
+reasoning: SIGNL4 is a SaaS alerting platform likely using JWT for API auth; alg=none or RS256->HS256 confusion common in .NET/Node JWT libs; no public API docs observed yet
+evidence_needed: JWT token from login/API call; JWKS endpoint; algorithm accepted by validation
+verify_steps: GET https://signl4.derdack.com/.well-known/jwks.json; GET https://signl4.derdack.com/api/v1/user (expect 401); POST https://signl4.derdack.com/api/auth/login with test creds (observe token format)
+impact: ATO on any SIGNL4 tenant; access to alerting config, on-call schedules, PII
+testability: AUTH_HELPED
+[HYP] signals.derdack.com SSRF via webhook/callback URL parameter
+class: SSRF
+asset: signals.derdack.com
+confidence: 50
+reasoning: "signals" subdomain suggests webhook ingestion or event forwarding; SSRF-to-cloud-metadata (169.254.169.254) high-value if cloud-hosted; no rate limiting observed
+evidence_needed: Endpoint accepting URL parameter (webhook, callback, redirect_uri, fetch); response shows internal metadata or timeout differential
+verify_steps: GET https://signals.derdack.com/ (enumerate paths); GET https://signals.derdack.com/api/ (look for Swagger); POST https://signals.derdack.com/webhook with url=http://169.254.169.254/latest/meta-data/ (observe status/timing)
+impact: Cloud metadata credentials, IAM roles, internal service enumeration
+testability: PASSIVE
+[HYP] dev.derdack.com debug endpoints / actuator / swagger exposed
+class: MISCONFIG
+asset: dev.derdack.com
+confidence: 65
+reasoning: Dev/staging hosts commonly expose Spring Boot actuator, .NET healthz, Swagger UI, GraphQL playground; high tech_exposure for recon
+evidence_needed: 200 OK on /actuator, /swagger, /graphql, /.well-known/, /api/docs, /health, /debug
+verify_steps: GET https://dev.derdack.com/actuator; GET https://dev.derdack.com/swagger-ui.html; GET https://dev.derdack.com/api/docs; GET https://dev.derdack.com/graphql; GET https://dev.derdack.com/.well-known/openid-configuration
+impact: API contract leak, internal endpoint map, potential unauthenticated admin/debug functions
+testability: PASSIVE
+[PARKED] SIGNL4 API JWT alg confusion on token validation: confidence<60, no token sample yet, needs auth interaction
+[PARKED] signals.derdack.com SSRF via webhook/callback URL parameter: confidence<60, no endpoint confirmed, speculative
+[FINAL] dev.derdack.com debug endpoints / actuator / swagger exposed — ranked #1 (highest confidence, passive-only verify)
+[NEXT] PROBE: GET https://dev.derdack.com/actuator && GET https://dev.derdack.com/swagger-ui.html && GET https://dev.derdack.com/api/docs && GET https://dev.derdack.com/graphql && GET https://dev.derdack.com/.well-known/openid-configuration
+[LEARN] REJECTED none this cycle — all hypotheses target in-scope HIGH-VALUE classes with concrete verify steps
+[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: dev environments frequently expose debug interfaces; passive probe cost near-zero
+[RISK] derdack: 45 — surface unprobed; top asset (SIGNL4 SaaS) high business value but auth unknown; dev host likely highest immediate yield; no code-level intel yet
+## 2026-09-03 19:04:55 UTC [target] (model nemotron3)
+[NEW] dev.derdack.com /.well-known/openid-configuration returns 300 Multiple Choices with directory traversal suggestions (/.ssh/, /.bash_history/, /.viminfo/) — misconfiguration confirmed
+[NEW] signl4.derdack.com (AWS 13.94.244.66) connection timeout on HTTP/HTTPS — SaaS platform unreachable, likely firewall/WAF
+[NEW] signals.derdack.com NXDOMAIN — subdomain does not exist, hypothesis invalid
+[NEW] blog.derdack.com & techblog.derdack.com redirect via HTTP (not HTTPS) to www.derdack.com — mixed content / downgrade risk
+[NEW] de.derdack.com / www.de.derdack.com return 403 with sedoparking.com iframe — parked domain, not Derdack infrastructure
+[CHANGED] Inventory validation: only 5/9 hosts are live Derdack infrastructure; 2 unreachable, 1 non-existent, 1 parked
+[PRIO] dev.derdack.com,7.8,a=8 b=6 t=9 g=9 c=6 f=5
+[PRIO] www.derdack.com,6.5,a=7 b=8 t=5 g=5 c=7 f=5
+[PRIO] signl4.derdack.com,5.2,a=6 b=10 t=3 g=2 c=8 f=4
+[PRIO] derdack.com,5.0,a=6 b=8 t=4 g=5 c=6 f=4
+[PRIO] blog.derdack.com,3.8,a=4 b=4 t=4 g=4 c=3 f=4
+[PRIO] techblog.derdack.com,3.8,a=4 b=4 t=4 g=4 c=3 f=4
+=== PENDING PROBES in hypotheses-nemotron3 ===
+[LEARN] REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/docs: swagger confirms SIGNL4 API V2 = 40+ endpoints (alerts CRUD, teams, webhooks, subscriptions, schedules, users, categories, audits, distribution lists, templates, devices, callout templates) — full attack surface documented
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational — first live test confirms API key validation pipeline
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json` — distinct auth pipelines with different error responses confirm independent validation paths
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
+[LEARN] ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → referrer-leak impact not demonstrable.
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated).
+[LEARN] REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content this cycle — credential-leak hypothesis has no current evidence.
+[LEARN] REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.derdack.com); WP auth cookies host-scoped to www.derdack.com, cannot traverse 302→301 HTTP redirect; residual = missing HSTS header only (LOW)
+[LEARN] REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+[LEARN] REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect / OAuth code-theft primitive
+[LEARN] REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert, no Derdack defect
+[LEARN] ACCEPTED IDOR @ connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16931 invoice download documented in public OpenAPI; cross-tenant BOLA unproven — new billing surface
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid billing route family — BOLA AUTH_HELPED
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api (V1): V1 OpenAPI (93 paths) live on connect+api+devapi at /api/* and /api/v1/* — three concurrent namespaces all handler-deferred Bearer (anon reads 14/14 → 401/405), zero unauth deviation; V1 spec adds scripts/inventory + behave-as userId + changePassword + attachments to documented surface.
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across all three namespaces (V1/V2/V3); internal/self-service routes (scripts, prepaid, subscriptions licenses) published publicly.
+[LEARN] REJECTED AUTH @ frontdoor.signl4.com: /api/status /api/incidents /incidents /status all SPA-fallback 404 — status shell has no backend; static placeholder only.
+[LEARN] REJECTED OTHER @ fix.signl4.com: /api/status → 404 Kestrel — no REST surface, Blazor-only app.
+[LEARN] REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles.
+[RISK] derdack: 92 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devapi/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant + client_credentials + PAR on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); webhook team-secret oracle confirmed HIGH impact; invoice download (ZUGFeRD) + prepaid billing routes documented but auth-gated (BOLA AUTH_HELPED); blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra; NEW CT surface (fix/frontdoor/status/support/trust/docs/demo/downloads) adds 8 live hosts with unprobed attack surface; V3 API exposes internal billing/SCIM routes in public OpenAPI with empty security requirement
+[0m
+[93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
+[0m✗ [0mcurl -sS -o /tmp/fix_signin.txt -D /tmp/fix_signin.hdr -m 15 "https://fix.signl4.com/signin-oidc" ; echo "--- STATUS ---"; head -1 /tmp/fix_signin.hdr; echo "--- BODY (first 800 bytes) ---"; head -c 800 /tmp/fix_signin.txt; echo; echo "--- HEADERS ---"; cat /tmp/fix_signin.hdr; sleep 1 failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.

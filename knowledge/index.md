@@ -350,3 +350,5 @@
 - 2026-09-12 REJECTED AUTH @ frontdoor.signl4.com: /api/status /api/incidents /incidents /status all SPA-fallback 404 — status shell has no backend; static placeholder only.
 - 2026-09-12 REJECTED OTHER @ fix.signl4.com: /api/status → 404 Kestrel — no REST surface, Blazor-only app.
 - 2026-09-12 REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles.
+- 2026-09-12 REJECTED none this cycle — all hypotheses target in-scope HIGH-VALUE classes with concrete verify steps
+- 2026-09-12 ACCEPTED MISCONFIG @ dev.derdack.com: dev environments frequently expose debug interfaces; passive probe cost near-zero

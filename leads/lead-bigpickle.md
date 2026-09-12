@@ -3316,3 +3316,82 @@ verify_steps: (DONE) spec GET 200 no scheme; (DONE) POST fabricated → 404 code
 impact: unauth alert creation + status spoofing of genuine alerts; HIGH-in-principle, LOW-MED confirmable.
 testability: PASSIVE
 ## 2026-09-12 18:03:18 UTC [target] (model bigpickle)
+## 2026-09-12 20:36:17 UTC [target] (model bigpickle)
+[NEW] 9 hosts discovered via passive DNS/CT, 0 probed for live HTTP — initial surface unvalidated
+[NEW] No GitHub org configured for reposcan — code-level recon gap
+[NEW] Knowledge base empty — no prior tech fingerprint, endpoint map, or auth flow data
+[PRIO] signl4.derdack.com,8.5,a=9 b=10 t=8 g=6 c=8 f=5
+[PRIO] signals.derdack.com,8.0,a=9 b=9 t=7 g=6 c=8 f=5
+[PRIO] dev.derdack.com,7.5,a=8 b=7 t=9 g=8 c=6 f=5
+[PRIO] derdack.com,6.5,a=7 b=8 t=6 g=5 c=7 f=5
+[PRIO] www.derdack.com,6.0,a=6 b=8 t=5 g=5 c=7 f=5
+[PRIO] blog.derdack.com,4.0,a=5 b=4 t=4 g=4 c=4 f=4
+[PRIO] techblog.derdack.com,4.0,a=5 b=4 t=4 g=4 c=4 f=4
+[PRIO] de.derdack.com,3.5,a=4 b=4 t=3 g=4 c=3 f=4
+[PRIO] www.de.derdack.com,3.5,a=4 b=4 t=3 g=4 c=3 f=4
+[HYP] SIGNL4 API JWT alg confusion on token validation
+class: AUTH
+asset: signl4.derdack.com
+confidence: 55
+reasoning: SIGNL4 is a SaaS alerting platform likely using JWT for API auth; alg=none or RS256->HS256 confusion common in .NET/Node JWT libs; no public API docs observed yet
+evidence_needed: JWT token from login/API call; JWKS endpoint; algorithm accepted by validation
+verify_steps: GET https://signl4.derdack.com/.well-known/jwks.json; GET https://signl4.derdack.com/api/v1/user (expect 401); POST https://signl4.derdack.com/api/auth/login with test creds (observe token format)
+impact: ATO on any SIGNL4 tenant; access to alerting config, on-call schedules, PII
+testability: AUTH_HELPED
+[HYP] signals.derdack.com SSRF via webhook/callback URL parameter
+class: SSRF
+asset: signals.derdack.com
+confidence: 50
+reasoning: "signals" subdomain suggests webhook ingestion or event forwarding; SSRF-to-cloud-metadata (169.254.169.254) high-value if cloud-hosted; no rate limiting observed
+evidence_needed: Endpoint accepting URL parameter (webhook, callback, redirect_uri, fetch); response shows internal metadata or timeout differential
+verify_steps: GET https://signals.derdack.com/ (enumerate paths); GET https://signals.derdack.com/api/ (look for Swagger); POST https://signals.derdack.com/webhook with url=http://169.254.169.254/latest/meta-data/ (observe status/timing)
+impact: Cloud metadata credentials, IAM roles, internal service enumeration
+testability: PASSIVE
+[HYP] dev.derdack.com debug endpoints / actuator / swagger exposed
+class: MISCONFIG
+asset: dev.derdack.com
+confidence: 65
+reasoning: Dev/staging hosts commonly expose Spring Boot actuator, .NET healthz, Swagger UI, GraphQL playground; high tech_exposure for recon
+evidence_needed: 200 OK on /actuator, /swagger, /graphql, /.well-known/, /api/docs, /health, /debug
+verify_steps: GET https://dev.derdack.com/actuator; GET https://dev.derdack.com/swagger-ui.html; GET https://dev.derdack.com/api/docs; GET https://dev.derdack.com/graphql; GET https://dev.derdack.com/.well-known/openid-configuration
+impact: API contract leak, internal endpoint map, potential unauthenticated admin/debug functions
+testability: PASSIVE
+[PARKED] SIGNL4 API JWT alg confusion on token validation: confidence<60, no token sample yet, needs auth interaction
+[PARKED] signals.derdack.com SSRF via webhook/callback URL parameter: confidence<60, no endpoint confirmed, speculative
+[FINAL] dev.derdack.com debug endpoints / actuator / swagger exposed — ranked #1 (highest confidence, passive-only verify)
+[NEXT] PROBE: GET https://dev.derdack.com/actuator && GET https://dev.derdack.com/swagger-ui.html && GET https://dev.derdack.com/api/docs && GET https://dev.derdack.com/graphql && GET https://dev.derdack.com/.well-known/openid-configuration
+[LEARN] REJECTED none this cycle — all hypotheses target in-scope HIGH-VALUE classes with concrete verify steps
+[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: dev environments frequently expose debug interfaces; passive probe cost near-zero
+[RISK] derdack: 45 — surface unprobed; top asset (SIGNL4 SaaS) high business value but auth unknown; dev host likely highest immediate yield; no code-level intel yet
+[NEW] dev.derdack.com /.well-known/openid-configuration returns 300 Multiple Choices with directory traversal suggestions (/.ssh/, /.bash_history/, /.viminfo/) — misconfiguration confirmed
+[NEW] signl4.derdack.com (AWS 13.94.244.66) connection timeout on HTTP/HTTPS — SaaS platform unreachable, likely firewall/WAF
+[NEW] signals.derdack.com NXDOMAIN — subdomain does not exist, hypothesis invalid
+[NEW] blog.derdack.com & techblog.derdack.com redirect via HTTP (not HTTPS) to www.derdack.com — mixed content / downgrade risk
+[NEW] de.derdack.com / www.de.derdack.com return 403 with sedoparking.com iframe — parked domain, not Derdack infrastructure
+[CHANGED] Inventory validation: only 5/9 hosts are live Derdack infrastructure; 2 unreachable, 1 non-existent, 1 parked
+[PRIO] dev.derdack.com,7.8,a=8 b=6 t=9 g=9 c=6 f=5
+[PRIO] www.derdack.com,6.5,a=7 b=8 t=5 g=5 c=7 f=5
+[PRIO] signl4.derdack.com,5.2,a=6 b=10 t=3 g=2 c=8 f=4
+[PRIO] derdack.com,5.0,a=6 b=8 t=4 g=5 c=6 f=4
+[PRIO] blog.derdack.com,3.8,a=4 b=4 t=4 g=4 c=3 f=4
+[PRIO] techblog.derdack.com,3.8,a=4 b=4 t=4 g=4 c=3 f=4
+[LEARN] REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/docs: swagger confirms SIGNL4 API V2 = 40+ endpoints (alerts CRUD, teams, webhooks, subscriptions, schedules, users, categories, audits, distribution lists, templates, devices, callout templates) — full attack surface documented
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational — first live test confirms API key validation pipeline
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json` — distinct auth pipelines with different error responses confirm independent validation paths
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
+[LEARN] ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → referrer-leak impact not demonstrable.
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated).
+[LEARN] REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content this cycle — credential-leak hypothesis has no current evidence.
+[LEARN] REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.derdack.com); WP auth cookies host-scoped to www.derdack.com, cannot traverse 302→301 HTTP redirect; residual = missing HSTS header only (LOW)
+[LEARN] REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+[LEARN] REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect / OAuth code-theft primitive
+[LEARN] REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert, no Derdack defect
+[LEARN] ACCEPTED IDOR @ connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16931 invoice download documented in public OpenAPI; cross-tenant BOLA unproven — new billing surface
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid billing route family — BOLA AUTH_HELPED
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api (V1): V1 OpenAPI (93 paths) live on connect+api+devapi at /api/* and /api/v1/* — three concurrent namespaces all handler-deferred Bearer (anon reads 14/14 → 401/405), zero unauth deviation; V1 spec adds scripts/inventory + behave-as userId + changePassword + attachments to documented surface.
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across all three namespaces (V1/V2/V3); internal/self-service routes (scripts, prepaid, subscriptions licenses) published publicly.
+[LEARN] REJECTED AUTH @ frontdoor.signl4.com: /api/status /api/incidents /incidents /status all SPA-fallback 404 — status shell has no backend; static placeholder only.
+[LEARN] REJECTED OTHER @ fix.signl4.com: /api/status → 404 Kestrel — no REST surface, Blazor-only app.
+[LEARN] REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles.
+[RISK] derdack: 92 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devapi/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant + client_credentials + PAR on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); webhook team-secret oracle confirmed HIGH impact; invoice download (ZUGFeRD) + prepaid billing routes documented but auth-gated (BOLA AUTH_HELPED); blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra; NEW CT surface (fix/frontdoor/status/support/trust/docs/demo/downloads) adds 8 live hosts with unprobed attack surface; V3 API exposes internal billing/SCIM routes in public OpenAPI with empty security requirement

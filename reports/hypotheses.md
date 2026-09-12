@@ -1615,3 +1615,62 @@
 - LEARN: REJECTED AUTH @ frontdoor.signl4.com: /api/status /api/incidents /incidents /status all SPA-fallback 404 — status shell has no backend; static placeholder only.
 - LEARN: REJECTED OTHER @ fix.signl4.com: /api/status → 404 Kestrel — no REST surface, Blazor-only app.
 - LEARN: REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles.
+
+## RANKED HYPOTHESES 2026-09-12 20:44:26 UTC
+- [65] connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Cross-tenant BOLA on V3 invoice download via handler-deferred auth (from art/lead_nemotron3.txt)
+- [55] signl4.derdack.com: SIGNL4 API JWT alg confusion on token validation (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: GET https://dev.derdack.com/actuator && GET https://dev.derdack.com/swagger-ui.html && GET https://dev.derdack.com/api/docs && GET https://dev.derdack.co
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://fix.signl4.com/signin-oidc (capture 500 error body/headers) → GET https://fix.signl4.com/_blazor/negotiate (capture negotiation response) → P
+- LEARN: REJECTED none this cycle — all hypotheses target in-scope HIGH-VALUE classes with concrete verify steps
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: dev environments frequently expose debug interfaces; passive probe cost near-zero
+- LEARN: REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/api/docs: swagger confirms SIGNL4 API V2 = 40+ endpoints (alerts CRUD, teams, webhooks, subscriptions, schedules, users, cat
+- LEARN: ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when ab
+- LEARN: ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served f
+- LEARN: ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → r
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resol
+- LEARN: REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content this cycle — credential-leak hypothesis has no curren
+- LEARN: REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie w
+- LEARN: REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client
+- LEARN: REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect /
+- LEARN: REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert, no Derdack def
+- LEARN: ACCEPTED IDOR @ connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16
+- LEARN: ACCEPTED MISCONFIG @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api (V1): V1 OpenAPI (93 paths) live on connect+api+devapi at /api/* and /api/v1/* — three concurrent namespaces all handler-
+- LEARN: ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across all three namespaces (V1/V
+- LEARN: REJECTED AUTH @ frontdoor.signl4.com: /api/status /api/incidents /incidents /status all SPA-fallback 404 — status shell has no backend; static placeholder only.
+- LEARN: REJECTED OTHER @ fix.signl4.com: /api/status → 404 Kestrel — no REST surface, Blazor-only app.
+- LEARN: REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles.
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api (V1): V1 OpenAPI (93 paths) live on connect+api+devapi at /api/* and /api/v1/* — three concurrent namespaces all handler-
+- LEARN: ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across all three namespaces (V1/V
+- LEARN: ACCEPTED AUTH @ api.signl4.com/api/v2/teams: Handler-deferred auth confirmed 10th+ cycles — unauth GET returns 405 (not 401), invalid Bearer returns 405; auth v
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v3: invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance live-verified anon→401; OPTIONS confirms Al
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/api/docs/v3/swagger.json: global `security: [{}]` (empty) reconfirmed on V3 — spec under-declares auth everywhere; internal 
+- LEARN: REJECTED AUTH @ connect.signl4.com/api/v3/scim/settings: anon GET → 401, not anonymous — SCIM key-rotation surface is gated; hypothesis of unauth SCIM access in
+- LEARN: ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/deviceauthorization: endpoint live (400 invalid_client w/o secret) + device_code grant confirmed; still c
+- LEARN: ACCEPTED AUTH @ connect+devconnect /identity/connect/ciba + deviceauthorization: both 400 across envs — endpoint twins, all secret-gated
+- LEARN: ACCEPTED MISCONFIG @ devapi.signl4.com: live 1:1 staging API mirror of api.signl4.com (appId cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7), root→devaccount/manag
+- LEARN: ACCEPTED MISCONFIG @ api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycle
+- LEARN: ACCEPTED AUTH @ api.signl4.com: swagger.json confirms OAuth2 security scheme (authorizationCode flow) targeting connect.signl4.com/identity/connect endpoints wi
+- LEARN: ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v2/swagger.json: global security requirement empty (`"security": [{}]`) — spec declares no auth required while 
+- LEARN: ACCEPTED AUTH @ api.signl4.com: swagger declares `API_Key_Query` scheme (x-s4-api-key in query param) — potential key leakage vector via referrer/logs if live
+- LEARN: REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/api/docs: swagger confirms SIGNL4 API V2 = 40+ endpoints (alerts CRUD, teams, webhooks, subscriptions, schedules, users, cat
+- LEARN: ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when ab
+- LEARN: ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served f
+- LEARN: ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → r
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resol
+- LEARN: REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content this cycle — credential-leak hypothesis has no curren
+- LEARN: REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie w
+- LEARN: REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client
+- LEARN: REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect /
+- LEARN: REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert, no Derdack def
+- LEARN: ACCEPTED IDOR @ connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16
+- LEARN: ACCEPTED MISCONFIG @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api (V1): V1 OpenAPI (93 paths) live on connect+api+devapi at /api/* and /api/v1/* — three concurrent namespaces all handler-
+- LEARN: ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across all three namespaces (V1/V
+- LEARN: REJECTED AUTH @ frontdoor.signl4.com: /api/status /api/incidents /incidents /status all SPA-fallback 404 — status shell has no backend; static placeholder only.
+- LEARN: REJECTED OTHER @ fix.signl4.com: /api/status → 404 Kestrel — no REST surface, Blazor-only app.
+- LEARN: REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles.
