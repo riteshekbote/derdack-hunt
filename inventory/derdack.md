@@ -624,3 +624,5 @@ www.derdack.com
 - CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404
 - CHANGED www.derdack.com/de/ & /ea/ XML-RPC both POST-exposed but mutating methods (wp.uploadFile, metaWeblog.newMediaObject) return faultCode 403 — auth-gated
 - CHANGED 8 new CT hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com) unprobed beyond initial fingerprint
+
+## 2026-09-12 00:38:34 UTC

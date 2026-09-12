@@ -3140,3 +3140,33 @@ evidence_needed: authenticated GET own alert with {own} vs {other} userId differ
 verify_steps: (DONE) anon → 401; (AUTH_HELPED) X-S4-Api-Key GET own alert + alternate userId — HUMAN gate.
 impact: cross-user alert read/context disclosure; MEDIUM.
 testability: AUTH_HELPED
+## 2026-09-12 00:36:41 UTC [target] (model bigpickle)
+[HYP] Webhook team-secret design flaw: authless single-endpoint write surface with operator-entropy URL-embedded bearer secret
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 78
+reasoning: OpenAPI dump confirms 1 POST route, empty securitySchemes, `security` absent; 404 `{"code":3004,"details":"No matching event source found."}` byte-identical on prod+staging; teamSecret operator-chosen (`teamssecret`/`helloworld`/`team-secret` samples); configurable status keywords (ExtIdParam/ExtStatusParam/NewStatus/ResolvedStatus/AckStatus) enable alert ack/resolve/close; 15+ third-party integrations embed the secret in URLs; 4 corpora swept clean.
+evidence_needed: leaked or guessable teamSecret → 201 on POST; absent from 4 swept corpora → only design-level.
+verify_steps: (DONE) GET spec 200, no securitySchemes; (DONE) POST /{fabricated} → 404 3004 prod+staging; (HUMAN gate) valid-secret 201 only on leak.
+impact: unauth alert creation + status ack/resolve/close of genuine alerts; HIGH-in-principle, LOW-MED confirmable absent a leak.
+testability: PASSIVE
+[HYP] Cross-team incident suppression via events/{webhookIdOrTeamId} dual identifier
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/events/{webhookIdOrTeamId}
+confidence: 55
+reasoning: route GET+POST registered; V2 spec param accepts team id OR inbound webhook identifier; global security empty yet live 401 → handler-deferred auth; token-claims vs path-scope intersection is the only gate; no drift from prior cycles.
+evidence_needed: authenticated POST own vs foreign identifier differential (201 vs 403).
+verify_steps: (DONE) anon GET fabricated → 401; (DONE) OPTIONS Allow; (AUTH_HELPED) X-S4-Api-Key POST own vs foreign benign payload — HUMAN gate (mutating).
+impact: cross-team alert injection + status spoofing; HIGH if scoping gap exists.
+testability: AUTH_HELPED
+[HYP] Cross-tenant report/file download via fileName path segment
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}
+confidence: 50
+reasoning: GET unvalidated String fileName (siblings dutyReports/{fileName}, signls/{signlId}/attachments/{attachmentId}); V3 swagger global `security:[{}]`; report bundles alert PII/recipients/timing; all anon→401.
+evidence_needed: authenticated GET own+own-file → 200; foreign teamId and/or traversal → 200 (vuln) vs 403 (scoped).
+verify_steps: (DONE) anon GET → 401; (AUTH_HELPED) X-S4-Api-Key GET own/foreign file + `..%2f` — HUMAN gate.
+impact: cross-tenant alert-report + attachment exfiltration; MEDIUM-HIGH.
+testability: AUTH_HELPED
+[NEXT] HUMAN: submit report to bugs.olivermaicher.eu — PRIMARY: `connect.signl4.com/webhook/{teamSecret}` authless single-endpoint write surface, URL-embedded operator-entropy bearer secret (docs `teamssecret`/`helloworld`), 3004-no-match oracle byte-identical on prod+staging, configurable query keywords grant ack/resolve/close, 15+ integrations embed secret in URLs; severity LOW-MED (HIGH-in-principle on leak), no live leak found (4 corpora clean, no POC). CONTEXT: cross-env identity chain (shared RS256 kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 ×4 hosts, shared client_id 692A0A56, staging password grant) as AUTH_HELPED design note. No productive passive probe remains this cycle.
+[RISK] derdack: 85 — only confirmable finding is the webhook authless write surface (design/config level, no leaked secret, no POC; LOW-MED) plus cross-env identity chain as gated context; all BOLA/file-download vectors AUTH_HELPED credential-blocked; zero new unauthenticated defect this cycle, baselines stable.
