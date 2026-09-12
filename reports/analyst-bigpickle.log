@@ -18583,3 +18583,77 @@ testability: PASSIVE
 
 **STEP 7 — RISK**
 [RISK] derdack: 85 — no new unauthenticated defect this cycle: fresh CT-cluster probes (demo dead, downloads listing-gated, docs public) all demoted; reportable finding remains the webhook authless single-endpoint write surface (LOW-MED design/config, no leaked secret, 4 corpora clean) with cross-env identity chain + triple-namespace empty-security specs as context; all BOLA/file-download vectors AUTH_HELPED credential-blocked; baselines stable.
+===== ANALYST bigpickle 2026-09-12 16:07:18 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor u in "https://api.signl4.com/api/v2/teams" "https://api.signl4.com/api/v2/alerts" "https://connect.signl4.com/api/docs/v1/swagger.json"; do echo "== $u"; curl -sk -o /dev/null -w "%{http_code} %{header_json}" --max-time 15 "$u"; echo; sleep 1; done
+== https://api.signl4.com/api/v2/teams
+401 {"date":["Sat, 12 Sep 2026 15:56:28 GMT"],
+"content-length":["0"],
+"server":["Microsoft-HTTPAPI/2.0"],
+"request-context":["appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd"],
+"x-frame-options":["DENY"],
+"x-xss-protection":["0"],
+"x-content-type-options":["nosniff"],
+"strict-transport-security":["max-age=15552000"],
+"referrer-policy":["strict-origin-when-cross-origin"],
+"www-authenticate":["Bearer"]
+}
+== https://api.signl4.com/api/v2/alerts
+405 {"date":["Sat, 12 Sep 2026 15:56:29 GMT"],
+"content-length":["0"],
+"allow":["POST"],
+"server":["Microsoft-HTTPAPI/2.0"],
+"request-context":["appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd"],
+"x-frame-options":["DENY"],
+"x-xss-protection":["0"],
+"x-content-type-options":["nosniff"],
+"strict-transport-security":["max-age=15552000"],
+"referrer-policy":["strict-origin-when-cross-origin"]
+}
+== https://connect.signl4.com/api/docs/v1/swagger.json
+200 {"date":["Sat, 12 Sep 2026 15:56:31 GMT"],
+"content-type":["application/json;charset=utf-8"],
+"server":["Microsoft-HTTPAPI/2.0"],
+"request-context":["appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd"],
+"x-frame-options":["DENY"],
+"x-xss-protection":["0"],
+"x-content-type-options":["nosniff"],
+"strict-transport-security":["max-age=15552000"],
+"referrer-policy":["strict-origin-when-cross-origin"]
+}
+[0m
+STEP 1 — DELTA
+- [CHANGED] api.signl4.com/api/v2/teams baseline flipped 405→401 (WWW-Authenticate:Bearer) this cycle — normal handler-deferred auth flapping, no deviation
+- [CHANGED] api/v2/alerts 405 Allow:POST + connect V1 swagger 200 unchanged — route maps and spec endpoints byte-stable
+
+STEP 2 — PRIORITIZE
+- [PRIO] api.signl4.com/api,7.2,axis(a=7,b=8,t=8,g=1,c=9,f=5) — three namespaces fully mapped, all gated; fresh-value low
+- [PRIO] connect.signl4.com/webhook/{teamSecret},6.5,axis(a=5,b=9,t=5,g=1,c=9,f=3) — only authless write route; oracle verified prod+staging
+- [PRIO] fix/frontdoor.signl4.com,3.0,axis(a=2,b=4,t=3,g=1,c=2,f=4) — inert shells, no backend
+
+STEP 3 — HYPOTHESES
+[HYP] Webhook authless write surface = only reportable unauthenticated finding (carried)
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 78
+reasoning: single POST route, no securitySchemes/security in webhook OAS; 404 `{"code":3004,"details":"No matching event source found."}` oracle byte-identical prod+staging; operator-entropy URL-embedded secret (docs `teamssecret`, n8n `helloworld`); query-keyword config grants ack/resolve/close; 4 corpora clean of leaks.
+evidence_needed: leaked/guessable teamSecret → 201 event-create (none found → design-level only).
+verify_steps: (DONE) spec GET 200 no scheme; (DONE) POST fabricated → 404 code:3004 both envs; (DONE) baseline re-check this cycle — no change.
+impact: unauth alert creation + status spoofing of genuine alerts; HIGH-in-principle, LOW-MED confirmable.
+testability: PASSIVE
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] V1 act-as userId / scripts / changePassword BOLA: AUTH_HELPED credential-blocked, no anon deviation, 14/14 routes gated both envs; kept as HUMAN context note only
+- [PARKED] Cross-tenant signlReports/events file+event vectors: same credential gate, 401 baseline steady
+- [FINAL] Webhook authless write surface (78) — sole confirmable finding, design/config level, ready for report
+
+STEP 5 — NEXT ACTION
+- [NEXT] HUMAN: submit to bugs.olivermaicher.eu — PRIMARY `connect.signl4.com/webhook/{teamSecret}` authless write surface (URL-embedded operator-entropy secret, 3004-oracle prod+staging byte-identical, status-keyword ack/resolve/close, 15+ integrations embed secret in URLs; LOW-MED design-level, 4 corpora clean, no POC). CONTEXT: cross-env identity chain (shared RS256 kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 across 4 hosts, shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6, staging password grant, prod parametric twin) as AUTH_HELPED note; V1/V2/V3 triple-namespace empty `security:[{}]` spec under-declaration; handler-deferred auth pattern (405-before-401) across billing/SCIM/events routes.
+
+STEP 6 — LEARNING
+- [LEARN] ACCEPTED AUTH @ api.signl4.com: /api/v2/teams 401 Bearer + /api/v2/alerts 405 POST + connect V1 swagger 200 all byte-stable this cycle — no drift, no new unauth surface; flapping is network-era stochastic (405/401), not config change.
+
+STEP 7 — RISK
+- [RISK] derdack: 85 — no new defect this cycle (baseline re-verified, all read surfaces gated); single reportable finding remains the webhook authless single-endpoint write surface (LOW-MED, design/config, no leaked secret) with cross-env identity chain + triple-namespace empty-security specs as context; all BOLA/act-as vectors AUTH_HELPED blocked on credentials; CT surface static, no fresh estate.

@@ -3305,3 +3305,13 @@ impact: unauth alert creation + status spoofing of genuine alerts; HIGH-in-princ
 testability: PASSIVE
 [NEXT] HUMAN: submit to bugs.olivermaicher.eu — PRIMARY `connect.signl4.com/webhook/{teamSecret}` authless write surface (URL-embedded operator-entropy secret, 3004-oracle prod+staging byte-identical, status-keyword ack/resolve/close, 15+ integrations embed secret in URLs; LOW-MED design level, 4 corpora clean, no POC). CONTEXT: cross-env identity chain (shared RS256 kid 91EE4F3C…, client_id 692A0A56-892F-4AE2-8259-76DA398990B6 ×environments, staging password grant) as AUTH_HELPED note + V1/V2/V3 namespace triple-empty-security spec mismatch. No new productive passive probe remains: fresh-estate cluster (demo/downloads/docs) swept and demoted this cycle.
 [RISK] derdack: 85 — no new unauthenticated defect this cycle: fresh CT-cluster probes (demo dead, downloads listing-gated, docs public) all demoted; reportable finding remains the webhook authless single-endpoint write surface (LOW-MED design/config, no leaked secret, 4 corpora clean) with cross-env identity chain + triple-namespace empty-security specs as context; all BOLA/file-download vectors AUTH_HELPED credential-blocked; baselines stable.
+## 2026-09-12 15:56:54 UTC [target] (model bigpickle)
+[HYP] Webhook authless write surface = only reportable unauthenticated finding (carried)
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 78
+reasoning: single POST route, no securitySchemes/security in webhook OAS; 404 `{"code":3004,"details":"No matching event source found."}` oracle byte-identical prod+staging; operator-entropy URL-embedded secret (docs `teamssecret`, n8n `helloworld`); query-keyword config grants ack/resolve/close; 4 corpora clean of leaks.
+evidence_needed: leaked/guessable teamSecret → 201 event-create (none found → design-level only).
+verify_steps: (DONE) spec GET 200 no scheme; (DONE) POST fabricated → 404 code:3004 both envs; (DONE) baseline re-check this cycle — no change.
+impact: unauth alert creation + status spoofing of genuine alerts; HIGH-in-principle, LOW-MED confirmable.
+testability: PASSIVE
