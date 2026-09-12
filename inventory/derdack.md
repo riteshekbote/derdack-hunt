@@ -697,3 +697,15 @@ www.derdack.com
 - CHANGED Webhook team-secret enumeration oracle downgraded: operator-chosen secret (not high-entropy fixed), guessing falls under REJECTED brute-force class; exploitable only via secret leak → config/design fi
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets secure+host-only cookie); residual missing-HSTS only (LOW)
 - CHANGED Cross-env token forgery chain complete (shared RS256 key 4 hosts, shared client_id 692A0A56, password grant enabled, prod parametric twin) but AUTH_HELPED-blocked on client_secret — strongest finding,
+
+## 2026-09-12 22:33:52 UTC
+- NEW fix.signl4.com (prod ASP.NET Core Support App, Blazor Server) confirmed live with broken OIDC callback (/signin-oidc 500) and /_blazor/negotiate 405 — new CT host, identical to devfix twin
+- NEW frontdoor.signl4.com unconfigured SPA shell serving literal `%ReplaceStatusTitle%` placeholder (static since 2024-09-03) — new CT host
+- NEW connect.signl4.com/api (V1) OpenAPI (93 paths) live at /api/* and /api/v1/* on connect+api+devapi — three concurrent namespaces, all handler-deferred Bearer, zero unauth deviation
+- NEW connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across V1/V2/V3; internal/self-service routes (scripts, prepaid, subscriptions licenses) publi
+- NEW connect.signl4.com/api/v3 fully dumped (200+ paths): invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance, PUT /api/prepaid/{id}/prepaidSettings, file-download family — all anon→4
+- NEW devconnect.signl4.com/webhook/{fabricated-secret} → 404 with byte-identical envelope to prod (`{"code":3004,"details":"No matching event source found."}`) — staging webhook oracle mirrors prod contrac
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET returns 405 Allow:GET,POST (not 401), invalid Bearer also 405 — handler-deferred auth stable
+- CHANGED Cross-env token forgery chain complete (shared RS256 key 10x deep-equal across 4 identity hosts, shared client_id 692A0A56, password grant enabled, prod parametric twin) but AUTH_HELPED-blocked on cli
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets `secure`+host-only cookie); residual missing-HSTS only (LOW)
+- CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404; root serves parked IONOS sedoparking iframe

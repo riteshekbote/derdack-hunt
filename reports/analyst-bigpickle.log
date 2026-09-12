@@ -19043,3 +19043,67 @@ testability: PASSIVE
 [93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
 [0m✗ [0mcurl -sS -o /tmp/fix_signin.txt -D /tmp/fix_signin.hdr -m 15 "https://fix.signl4.com/signin-oidc" ; echo "--- STATUS ---"; head -1 /tmp/fix_signin.hdr; echo "--- BODY (first 800 bytes) ---"; head -c 800 /tmp/fix_signin.txt; echo; echo "--- HEADERS ---"; cat /tmp/fix_signin.hdr; sleep 1 failed
 [91m[1mError: [0mThe user rejected permission to use this specific tool call.
+===== ANALYST bigpickle 2026-09-12 22:33:52 UTC =====
+[0m
+> build · big-pickle
+[0m
+STEP 1 — DELTA
+- [NEW] demo/downloads.enterprisealert.com: CT-live since 2026-09-10 sweep, ZERO fingerprint in KB cycle history — only fix/frontdoor/status/support/trust/docs received initial fingerprint; demo+downloads remain an unexplored surface (downloads naming implies artifact/installer infra)
+- [NEW] connect.signl4.com now runs THREE concurrent API namespaces (V1 93-path /api/* + /api/v1/*, V2, V3); anon reads 14/14 → 401/405 handler-gated — endpoint-map work saturated, remaining value is authenticated BOLA only
+- [CHANGED] My prior-cycle [NEXT] probes (dev.derdack.com/actuator|swagger|graphql; signl4.derdack.com JWKS; signals SSRF) are all invalidated by KB: actuator/swagger/graphql 404 (REJECTED 09-03/04), signl4 TCP-dead 8+ cycles, signals NXDOMAIN — stale leads dropped, no re-probe
+- [CHANGED] devconnect.signl4.com/webhook/{secret} 404 envelope byte-identical to prod — staging mirrors prod oracle; webhook enumeration downgraded to REJECTED brute-force class (operator-entropy secret)
+
+STEP 2 — PRIORITIZE
+- [PRIO] connect.signl4.com,6.8,a=8 b=9 t=8 g=2 c=8 f=2
+- [PRIO] downloads.enterprisealert.com,6.6,a=7 b=5 t=5 g=8 c=6 f=10
+- [PRIO] demo.enterprisealert.com,5.9,a=6 b=4 t=4 g=8 c=6 f=10
+
+STEP 3 — HYPOTHESES
+[HYP] downloads.enterprisealert.com directory listing / installer-artifact disclosure
+class: MISCONFIG
+asset: downloads.enterprisealert.com
+confidence: 45
+reasoning: CT-live since 2026-09-10, never fingerprinted while all sibling live hosts were; host-family convention implies static artifact/installer serving where default directory listing or default server pages are common; zero probe data exists to refute
+evidence_needed: 200 with Index-of listing / alternate 403+server-header revealing file server; any installer/artifact path exposing config, license/signing material, or stale test content
+verify_steps: GET https://downloads.enterprisealert.com/ ; HEAD https://downloads.enterprisealert.com/ ; GET https://downloads.enterprisealert.com/robots.txt ; GET https://downloads.enterprisealert.com/install/ ; GET https://downloads.enterprisealert.com/EnterpriseAlert/
+impact: installer bundles may embed config/signing context → supply-chain disclosure for Enterprise Alert customers; MED until artifact content inspected
+testability: PASSIVE
+
+[HYP] V3 signlReports/{fileName} cross-tenant report file read
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}
+confidence: 55
+reasoning: V3 OpenAPI dumps file-download family (/teams/{teamId}/signlReports/{fileName}, /dutyReports/{fileName}, /signls/{signlId}/attachments/{attachmentId}); KB confirms routes registered, anon→401 handler-deferred, no route-layer authz; fileName is raw string param — naive join + teamId-only authz would be traversal/tenant-crossing
+evidence_needed: authenticated cross-tenant fetch; this cycle only re-confirms gating (no token available)
+verify_steps: GET https://connect.signl4.com/api/v3/teams/0/signlReports/__doesNotExist__.pdf (anon → expect 401, re-confirm gating); authenticated ../ + other-tenant teamId test (AUTH_HELPED, deferred)
+impact: cross-tenant monitoring/billing report exfiltration; MED-HIGH
+testability: AUTH_HELPED
+
+[HYP] demo.enterprisealert.com exposed product/demo instance with admin or health surface
+class: MISCONFIG
+asset: demo.enterprisealert.com
+confidence: 42
+reasoning: CT-live 2026-09-10, zero fingerprint history; "demo" product instances commonly ship with permissive app shell, health/status endpoints, or exposed API surface
+evidence_needed: HTTP 200 app shell or API/health route; any non-404 on product/monitoring paths
+verify_steps: GET https://demo.enterprisealert.com/ ; GET https://demo.enterprisealert.com/robots.txt ; GET https://demo.enterprisealert.com/health ; GET https://demo.enterprisealert.com/api ; GET https://demo.enterprisealert.com/EnterpriseAlert/
+impact: unauthenticated product internals / demo tenant exposure; MED if health/config leaks
+testability: PASSIVE
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] V3 signlReports fileName traversal: confidence 55 but AUTH_HELPED with no token this cycle — already KB-documented as gated; no new evidence gatherable anon
+- [PARKED] Webhook team-secret enumeration: operator-entropy, brute-force class REJECTED by program
+- [PARKED] signl4.derdack.com JWKS / signals SSRF / dev actuator: permanently invalidated by KB, would waste cycles
+- [FINAL] #1 downloads.enterprisealert.com listing/artifact disclosure (45, zero-history passive)
+- [FINAL] #2 demo.enterprisealert.com product-surface leak (42, zero-history passive)
+- [FINAL] #3 connect.signl4.com authenticated BOLA (55, AUTH_HELPED — parked until creds)
+
+STEP 5 — NEXT ACTION
+- [NEXT] PROBE: GET https://downloads.enterprisealert.com/ + HEAD (capture Server/status/location/body) — first-ever fingerprint of the sole unfingerprinted live host family
+
+STEP 6 — LEARNING
+- [LEARN] ACCEPTED MISCONFIG @ downloads.enterprisealert.com: CT-live 09-10, zero fingerprint history — highest-freshness passive surface in estate; artifact servers are classic disclosure class
+- [LEARN] REJECTED AUTH @ signl4.derdack.com + signals.derdack.com + dev.derdack.com: all three prior-cycle leads invalidated by KB (TCP-dead / NXDOMAIN / 404s) — closed to prevent wasted probes
+- [LEARN] ACCEPTED OTHER @ connect.signl4.com/api V1-V3: three namespaces fully probing-validated, anon reads uniformly 401/405 handler-gated — endpoint-map saturation reached, value now exclusively authenticated
+
+STEP 7 — RISK
+- [RISK] derdack: 90 — crown-jewel cross-env token forgery chain confirmed but AUTH_HELPED-blocked on client_secret; V1/V2/V3 API anonymous surface zero; residual high-value passive surface concentrates in the two unfingerprinted CT hosts (demo/downloads.enterprisealert.com, freshness 10/10); everything else mapped and gated
