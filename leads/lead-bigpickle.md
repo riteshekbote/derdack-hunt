@@ -3423,3 +3423,4 @@ evidence_needed: HTTP 200 app shell or API/health route; any non-404 on product/
 verify_steps: GET https://demo.enterprisealert.com/ ; GET https://demo.enterprisealert.com/robots.txt ; GET https://demo.enterprisealert.com/health ; GET https://demo.enterprisealert.com/api ; GET https://demo.enterprisealert.com/EnterpriseAlert/
 impact: unauthenticated product internals / demo tenant exposure; MED if health/config leaks
 testability: PASSIVE
+## 2026-09-13 00:15:00 UTC [target] (model bigpickle)
