@@ -1,35 +1,30 @@
-## 2026-09-13 21:40:03 UTC [target] (model nemotron3)
-[NEW] fix.signl4.com confirmed as prod ASP.NET Core Support Application (Blazor Server) with broken OIDC callback (/signin-oidc 500) and /_blazor/negotiate 200+connectionId — new CT host, identical to devfix twin
-[NEW] frontdoor.signl4.com unconfigured SPA shell serving literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — new CT host, cosmetic deploy residue
+## 2026-09-13 23:33:43 UTC [target] (model nemotron3)
+[NEW] fix.signl4.com confirmed as prod ASP.NET Core Support Application (Blazor Server) with broken OIDC callback (/signin-oidc 500) and /_blazor/negotiate 200+connectionId — identical to devfix twin; new CT host (2026-09-13 probe)
+[NEW] frontdoor.signl4.com confirmed as unconfigured SPA shell serving literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — new CT host, cosmetic deploy residue
 [NEW] connect.signl4.com/api (V1) OpenAPI (93 paths) live at /api/* and /api/v1/* on connect+api+devapi — three concurrent namespaces, all handler-deferred Bearer, zero unauth deviation
-[NEW] connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across V1/V2/V3; internal/self-service routes published publicly
-[NEW] devconnect.signl4.com/webhook/{fabricated-secret} → 404 with byte-identical envelope to prod — staging webhook oracle mirrors prod contract estate-wide
+[NEW] connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across V1/V2/V3; internal/self-service routes (scripts, prepaid, subscriptions licenses) published publicly
+[NEW] devconnect.signl4.com/webhook/{fabricated-secret} → 404 with byte-identical envelope to prod (`{"code":3004,"details":"No matching event source found."}`) — staging webhook oracle mirrors prod contract estate-wide
+[NEW] api.signl4.com /webhook bare OPTIONS 404: only {teamSecret} leaf + /docs/v1 routed; base unregistered — route map now exact per host
+[NEW] devapi.signl4.com/webhook/test (OPTIONS 405 Allow:GET,POST, appId d7865de8): staging mirror route-registration parity on webhook namespace — 2/4 OPTIONS matrix complete
+[NEW] devconnect.signl4.com/webhook/docs/v1/swagger.json 200: webhook OpenAPI served on all 4 API hosts — public no-security-scheme POST /{teamSecret} contract estate-wide
+[NEW] fix.signl4.com: 3rd distinct appId `fe51434f` (vs ec6c57ca api/connect, d7865de8 devapi); Login button interactive Blazor (all static auth paths 404); OIDC authority/client_id server-side only — passive client recovery permanently closed
+[NEW] downloads.enterprisealert.com: `/` 403, `/site/`+`/EA/` 404 — no readable resources under wildcard ACAO; CORS data-theft unsubstantiated
+[NEW] status/support/trust/docs.signl4.com confirmed third-party (StatusLabs, Zendesk, Safebase, GitHub Pages) — not Derdack infrastructure
+[NEW] demo/downloads.enterprisealert.com: 404 / 403 (IIS/10.0 directory browsing disabled) — no attack surface
+[CHANGED] Cross-env token forgery chain: 10th deep-equal of byte-identical RS256 JWKS across 4 identity hosts (connect/api/devconnect/devapi) — stable, no drift
 [CHANGED] api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET returns 405 Allow:GET,POST (not 401), invalid Bearer also 405 — handler-deferred auth stable
-[CHANGED] Cross-env token forgery chain complete (shared RS256 key 10x deep-equal across 4 identity hosts, shared client_id 692A0A56, password grant enabled, prod parametric twin) but AUTH_HELPED-blocked on client_secret
+[CHANGED] Webhook team-secret enumeration oracle: operator-chosen secret (not high-entropy fixed), guessing falls under REJECTED brute-force class; exploitable only via secret leak → config/design finding
 [CHANGED] blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets `secure`+host-only cookie); residual missing-HSTS only (LOW)
-[PRIO] fix.signl4.com,8.8,attack_surface=9,business_value=8,tech_exposure=9,gate_ease=10,cloud_surface=8,freshness=9
-[PRIO] connect.signl4.com/api/v3,8.5,attack_surface=9,business_value=9,tech_exposure=8,gate_ease=6,cloud_surface=8,freshness=8
-[PRIO] api.signl4.com/api/v2/teams,8.3,attack_surface=8,business_value=9,tech_exposure=9,gate_ease=7,cloud_surface=8,freshness=7
-[PRIO] connect.signl4.com/webhook/{teamSecret},7.5,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=10,cloud_surface=7,freshness=6
-[PRIO] devconnect.signl4.com/identity/connect/token,7.2,attack_surface=7,business_value=9,tech_exposure=8,gate_ease=4,cloud_surface=8,freshness=7
-[HYP] Broken OIDC callback on prod support portal enables auth flow analysis
-class: AUTH
-asset: fix.signl4.com/signin-oidc
-confidence: 80
-reasoning: fix.signl4.com (20.160.37.197) is prod ASP.NET Core Support Application (Blazor Server); /signin-oidc returns 500 (empty body) — broken OIDC callback identical to devfix twin; /_blazor/negotiate returns 200 with connectionId on POST; Login button interactive in Blazor UI; OIDC authority/client_id server-side only (not recoverable passively); new CT host confirmed live 2026-09-13
-evidence_needed: OIDC authorize redirect capturing state/nonce params; callback error details to determine if state/nonce leaked or redirect_uri manipulable
-verify_steps: GET https://fix.signl4.com/ -H "Accept: text/html" → capture OIDC authorize redirect URL with state/nonce; GET https://fix.signl4.com/signin-oidc?state=test&code=test → analyze 500 response body for error disclosure; probe redirect_uri parameter manipulation on authorize endpoint
-impact: Support portal auth bypass potential; if OIDC callback misconfiguration leaks state/nonce or allows redirect_uri manipulation, could chain to IdentityServer token theft; severity MEDIUM-HIGH
-testability: PASSIVE
-[HYP] Cross-tenant BOLA on V3 invoice/download via handler-deferred auth
-class: IDOR
-asset: connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
-confidence: 70
-reasoning: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16931 invoice download documented in public OpenAPI; connect.signl4.com/api/v3/* all return 401 on anon GET (not 404) — handler-deferred auth; global `security: [{}]` empty in V3 swagger — spec under-declares auth; internal billing routes published publicly while absent from marketing docs; same backend as api.signl4.com (shared appId)
-evidence_needed: Valid Bearer token (staging or prod) accepted by V3 invoice endpoint; cross-tenant subscriptionId/invoiceId enumeration yielding 200 vs 401/403 differential
-verify_steps: (AUTH_HELPED) Obtain valid token from devconnect.signl4.com/identity/connect/token (password grant or client_credentials with client_secret) → GET https://connect.signl4.com/api/v3/subscriptions/{other_tenant_sub}/invoices/{other_tenant_inv}/zugferd; observe 200 vs 401/403; enumerate subscriptionId/invoiceId space via OPTIONS/HEAD
-impact: Cross-tenant exfiltration of customer invoices (financial/order data, PII in billing); severity HIGH conditional on BOLA
-testability: AUTH_HELPED
+[CHANGED] dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404; root serves parked IONOS sedoparking iframe
+[CHANGED] www.derdack.com/de/ & /ea/ XML-RPC both POST-exposed with full method lists but mutating methods (wp.uploadFile, metaWeblog.newMediaObject) return faultCode 403 — auth-gated
+[PRIO] connect.signl4.com/api/v3,9.5,attack_surface=10|business_value=10|tech_exposure=10|gate_ease=8|cloud_surface=9|freshness=10
+[PRIO] api.signl4.com/api/v2,9.0,attack_surface=9|business_value=10|tech_exposure=9|gate_ease=7|cloud_surface=9|freshness=10
+[PRIO] fix.signl4.com,8.5,attack_surface=9|business_value=8|tech_exposure=8|gate_ease=10|cloud_surface=8|freshness=8
+[PRIO] devconnect.signl4.com/identity,8.0,attack_surface=8|business_value=9|tech_exposure=9|gate_ease=6|cloud_surface=9|freshness=9
+[PRIO] connect.signl4.com/webhook,7.5,attack_surface=8|business_value=8|tech_exposure=7|gate_ease=10|cloud_surface=7|freshness=9
+[PRIO] connect.signl4.com/api/v2,7.0,attack_surface=7|business_value=8|tech_exposure=8|gate_ease=7|cloud_surface=8|freshness=9
+[PRIO] www.derdack.com/de,5.5,attack_surface=6|business_value=5|tech_exposure=6|gate_ease=8|cloud_surface=5|freshness=6
+[PRIO] dev.derdack.com,4.0,attack_surface=5|business_value=3|tech_exposure=5|gate_ease=10|cloud_surface=4|freshness=3
 [HYP] Cross-environment token forgery via shared RS256 key + handler-deferred auth on V1/V2/V3 APIs
 class: AUTH
 asset: api.signl4.com/api/v2/teams, connect.signl4.com/api/v3/*, api.signl4.com/api/v2/*
@@ -39,6 +34,24 @@ evidence_needed: Valid staging token (client_secret compromise or password grant
 verify_steps: (AUTH_HELPED) Obtain valid token from devconnect.signl4.com/identity/connect/token (password grant or client_credentials with client_secret) → present to api.signl4.com/api/v2/teams and connect.signl4.com/api/v3/subscriptions/{id}/invoices/{id}/zugferd; observe 200 vs 401 differential
 impact: Full cross-environment token forgery — staging token grants prod API access (CRUD on alerts, teams, webhooks, subscriptions, schedules, users, categories, audits, distribution lists, templates, devices, callout templates, invoices, reports); severity CRITICAL
 testability: AUTH_HELPED
+[HYP] Cross-tenant BOLA on V3 invoice/download via handler-deferred auth
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
+confidence: 70
+reasoning: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16931 invoice download documented in public OpenAPI; connect.signl4.com/api/v3/* all return 401 on anon GET (not 404) — handler-deferred auth; global `security: [{}]` empty in V3 swagger — spec under-declares auth; internal billing routes published publicly while absent from marketing docs; same backend as api.signl4.com (shared appId)
+evidence_needed: Valid Bearer token (staging or prod) accepted by V3 invoice endpoint; cross-tenant subscriptionId/invoiceId enumeration yielding 200 vs 401/403 differential
+verify_steps: (AUTH_HELPED) Obtain valid token from devconnect.signl4.com/identity/connect/token (password grant or client_credentials with client_secret) → GET https://connect.signl4.com/api/v3/subscriptions/{other_tenant_sub}/invoices/{other_tenant_inv}/zugferd; observe 200 vs 401/403; enumerate subscriptionId/invoiceId space via OPTIONS/HEAD
+impact: Cross-tenant exfiltration of customer invoices (financial/order data, PII in billing); severity HIGH conditional on BOLA
+testability: AUTH_HELPED
+[HYP] Broken OIDC callback on prod support portal enables auth flow analysis
+class: AUTH
+asset: fix.signl4.com/signin-oidc
+confidence: 80
+reasoning: fix.signl4.com (20.160.37.197) = prod ASP.NET Core "SIGNL4 Support Application" (Kestrel); /signin-oidc returns 500 (broken OIDC callback — devfix twin); Blazor estate (_blazor/negotiate 200+connectionId); OIDC authority/client_id server-side only (not in SPA); identical topology to devfix.signl4.com on staging cluster 108.143.123.104; new CT host confirmed live 2026-09-13
+evidence_needed: OIDC authorize redirect parameters (state, nonce, redirect_uri, client_id) captured from landing page → analyze callback failure mode for state/nonce leakage or redirect_uri manipulation
+verify_steps: GET https://fix.signl4.com/ -H "Accept: text/html" — capture OIDC authorize redirect with state/nonce params to analyze broken callback flow; test redirect_uri parameter manipulation on authorize endpoint
+impact: Support portal auth bypass potential; if OIDC callback misconfiguration leaks state/nonce or allows redirect_uri manipulation, could chain to IdentityServer token theft; severity MEDIUM-HIGH
+testability: PASSIVE
 [PARKED] Cross-environment token forgery via shared RS256 key + handler-deferred auth on V1/V2/V3 APIs: confidence 95 ≥ 40, has verify steps, class AUTH in-scope — KEEP (strongest finding, AUTH_HELPED blocked on token acquisition)
 [PARKED] Cross-tenant BOLA on V3 invoice/download via handler-deferred auth: confidence 70 ≥ 40, has verify steps, class IDOR in-scope — KEEP (newly documented V3 surface, AUTH_HELPED)
 [PARKED] Broken OIDC callback on prod support portal enables auth flow analysis: confidence 80 ≥ 40, has verify steps, class AUTH in-scope — KEEP (new CT host, PASSIVE verifiable)

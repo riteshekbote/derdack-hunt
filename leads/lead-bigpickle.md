@@ -3593,3 +3593,33 @@ impact: cross-env secret-verification oracle; HIGH when combined with any leak
 testability: AUTH_HELPED
 [NEXT] RAG: fetch SIGNL4 helpcenter/docs for `/api/v2/events/{teamSecret}` usage — determine if it is a 2nd URL-embedded operator-secret family (like webhook's 15+ integrations) or an OAuth/Bearer construct, before any further probing of that namespace.
 [RISK] derdack: 93 — webhook estate oracle now 100% passive-verified (config/design, HIGH-when-leaked, leak-dependent not brute-force); events/{teamSecret} second URI-secret family mapped but Bearer-gated; cross-env token forgery chain unchanged and AUTH_HELPED-blocked on client_secret; V1/V2/V3 anon surface remains zero (401/405); fix.connect OIDC client unrecoverable passively; no new exploitable defect, magnitude stable.
+## 2026-09-13 23:29:31 UTC [target] (model bigpickle)
+[HYP] Webhook team-secret no-security-scheme oracle — 100% passive-verified (FINAL)
+class: AUTH
+asset: api/connect/devapi/devconnect.signl4.com/webhook/{teamSecret}
+confidence: 70
+reasoning: 4/4 hosts OPTIONS Allow:GET,POST + bare base 404 + GET-leaf byte-identical + swagger no security scheme + POST invalid→404 code 3004 vs 201 eventId; docs confirm secret is "fixed part of its URL", TLS-only, no HMAC, no rotation surfaced; same credential doubles as `{teamsecret}@mail.signl4.com`; operator-entropy samples (`helloworld`, `team-secret`); 15+ integrations URL-embed it
+evidence_needed: none — oracle contract fully characterized; exploit requires secret leak (REJECTED brute-force class)
+verify_steps: done this cycle + prior (OPTIONS x4, base 404, swagger 200, POST oracle, docs RAG)
+impact: unauth alert trigger/ack/resolve within a real team → incident-response corruption; HIGH-when-leaked, null without leak
+testability: PASSIVE
+[HYP] V2/V3 `userId` (query) cross-user impersonation on signls traversal
+class: IDOR
+asset: connect.signl4.com/api/v3/signls/*?userId=
+confidence: 45
+reasoning: swagger documents userId/UserId on acknowledgeAll/closeAll/report/paged; all named routes anon→401/405 handler-deferred Bearer; no program-specific exploit yet
+evidence_needed: authenticated cross-user test (user A, userId=B) observing B's data/actions — requires credential
+verify_steps: GET /api/v3/signls/paged?userId=0 (anon → expect 401, gating only; no credential available)
+impact: cross-user alert read/mutation → cross-tenant incident manipulation; MED-HIGH if backend trusts userId over token sub
+testability: AUTH_HELPED
+[HYP] Staging events namespace completes webhook family parity but adds no unauth surface
+class: AUTH
+asset: devapi.signl4.com/api/v2/events/{teamSecret}
+confidence: 40
+reasoning: devapi serves staging mirror appId d7865de8 and replicated webhook contract byte-for-byte; events = API-key-gated variant so cross-env secret-reuse oracle gains nothing beyond webhook
+evidence_needed: valid API key exercised on staging+prod — requires credential
+verify_steps: OPTIONS https://devapi.signl4.com/api/v2/events/test (route parity confirmation only)
+impact: no standalone defect; corroborates systemic cross-env replication
+testability: AUTH_HELPED
+[NEXT] PROBE: `OPTIONS https://devapi.signl4.com/api/v2/events/test` (1 read-only request @1rps) — closes the events-namespace parity matrix on the staging twin; if leaf returns 405 Allow:GET,POST, events family is 2/2 envs identical to webhook family and both namespaces are fully characterized → park both as config/design.
+[RISK] derdack: 93 — cross-env token forgery chain (shared RS256 x4 identity hosts + client_id 692A0A56 + password grant) stays dominant but AUTH_HELPED-blocked on client_secret; webhook estate oracle 100% passive-verified config/design (HIGH-when-leaked, leak-dependent not brute-force); events family confirmed by-design API-key gated, adds zero unauth surface; V1/V2/V3 anon surface remains 401/405; no new exploitable defect, magnitude stable, ceiling driven by credential-access gap.
