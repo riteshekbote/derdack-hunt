@@ -721,3 +721,14 @@ www.derdack.com
 - CHANGED Cross-env token forgery chain complete (shared RS256 key 10x deep-equal across 4 identity hosts, shared client_id 692A0A56, password grant enabled, prod parametric twin) but AUTH_HELPED-blocked on cli
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets `secure`+host-only cookie); residual missing-HSTS only (LOW)
 - CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404; root serves parked IONOS sedoparking iframe
+
+## 2026-09-13 05:09:17 UTC
+- NEW fix.signl4.com/signin-oidc → 500 (empty body); /_blazor/negotiate → 405 on GET, 200 on POST with connectionId; root → 200 Blazor Server "Admin Support Page" with Login button (prod ASP.NET Core, Kestr
+- NEW frontdoor.signl4.com → 200 with literal `%ReplaceStatusTitle%` placeholder (static since 2024-09-03)
+- NEW status.signl4.com → StatusLabs (adminlabs.com) page
+- NEW support.signl4.com → Zendesk (third-party)
+- NEW trust.signl4.com → Safebase trust center (third-party)
+- NEW docs.signl4.com → GitHub Pages
+- NEW demo.enterprisealert.com → 404
+- NEW downloads.enterprisealert.com → 403 (IIS/10.0, directory browsing disabled)
+- CHANGED Cross-env token forgery chain now has live probe data on fix.signl4.com (Blazor Server, broken OIDC callback identical to devfix twin)

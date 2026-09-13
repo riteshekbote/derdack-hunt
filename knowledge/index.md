@@ -382,3 +382,8 @@
 - 2026-09-13 REJECTED AUTH @ frontdoor.signl4.com: /api/status /api/incidents /incidents /status all SPA-fallback 404 — status shell has no backend; static placeholder only
 - 2026-09-13 REJECTED OTHER @ fix.signl4.com: /api/status → 404 Kestrel — no REST surface, Blazor-only app
 - 2026-09-13 REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles
+- 2026-09-13 ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application (Blazor Server), /signin-oidc 500 broken OIDC callback, /_blazor/negotiate 200 with connectionId — identical to devfix twin; new CT host confirmed live
+- 2026-09-13 ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured SPA shell serves literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — LOW cosmetic deploy residue
+- 2026-09-13 REJECTED OTHER @ status/support/trust/docs.signl4.com: third-party (StatusLabs, Zendesk, Safebase, GitHub Pages) — not Derdack infrastructure
+- 2026-09-13 REJECTED OTHER @ demo/downloads.enterprisealert.com: 404 / 403 (IIS/10.0 directory browsing disabled) — no attack surface
+- 2026-09-13 ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v3/swagger.json: global `security: [{}]` (empty) reconfirmed on V3 — spec under-declares auth everywhere; internal billing + SCIM routes published publicly in OpenAPI
