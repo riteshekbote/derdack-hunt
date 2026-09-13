@@ -47,3 +47,12 @@
   - | 6 | SIGNL4 secret logged at INFO (ioBroker) | **VALID** | 5.3 | MEDIUM |
   - | 7 | Team secrets in public repos | **VALID** | 5.3 | MEDIUM |
   - | 8 | PII in public CSV export | **VALID** | 5.3 | MEDIUM |
+
+- 7 lead(s) marked VALID at 2026-09-13 21:11:57 UTC
+  - | 1 | Cross-env JWKS key + client/scope reuse (devconnect + connect.signl4.com) | VALID | 7.4 | Reported |
+  - | 2 | Staging IdentityServer directly reachable (devconnect.signl4.com, password grant) | VALID | 6.5 | Reported |
+  - | 3 | Hardcoded SQL Server SA creds (`Derdack!`) in public EA plugin | VALID | 8.1 | Reported |
+  - | 4 | Hardcoded Checkmk admin creds + internal IP in public plugin | VALID | 7.5 | Reported |
+  - | 5 | SIGNL4 team secrets in public repos (Google IoT, Postman, DevTools) | VALID | 5.3 | Reported |
+  - | 6 | SIGNL4 secret logged at INFO level in ioBroker adapter | VALID | 5.3 | Reported |
+  - | 7 | PII + internal infra URLs in public CSV export | VALID | 5.3 | Reported |
