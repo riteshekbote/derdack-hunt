@@ -1817,3 +1817,7 @@
 - LEARN: REJECTED AUTH @ frontdoor.signl4.com: /api/status /api/incidents /incidents /status all SPA-fallback 404 — status shell has no backend; static placeholder only
 - LEARN: REJECTED OTHER @ fix.signl4.com: /api/status → 404 Kestrel — no REST surface, Blazor-only app
 - LEARN: REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles
+
+## RANKED HYPOTHESES 2026-09-13 14:19:08 UTC
+- [60] api.signl4.com/webhook/{teamSecret}: Webhook team-secret oracle estate-wide incl prod api host (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: GET https://api.signl4.com/webhook/test

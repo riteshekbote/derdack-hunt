@@ -745,3 +745,5 @@ www.derdack.com
 - CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404; root serves parked IONOS sedoparking iframe
 - CHANGED www.derdack.com/de/ & /ea/ XML-RPC both POST-exposed with full method lists but mutating methods (wp.uploadFile, metaWeblog.newMediaObject) return faultCode 403 "incorrect username/password" — auth-ga
 - CHANGED 8 new CT hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com) — status/support/trust/docs are third-party (StatusLabs, Zendesk, Safebase, GitHub Pages); demo/downlo
+
+## 2026-09-13 14:19:08 UTC

@@ -3455,3 +3455,33 @@ impact: none confirmed; LOW
 testability: PASSIVE
 [NEXT] PROBE: GET https://fix.signl4.com/authentication/login (and if 404, grep root HTML for `/connect/authorize` href / external authority URL; passive, no redirect-follow)
 [RISK] derdack: 94 — cross-env token forgery chain (shared RS256 key ×4 identity hosts + client_id 692A0A56 + password/client_credentials/PAR) remains the dominant exposure but AUTH_HELPED on client_secret; webhook operator-entropy secret oracle (config finding) HIGH-when-leaked; fix.signl4.com now confirmed as 3rd independent backend with external-OIDC login (new unprobed client vector) and broken callback; api/v2+v3 zero unauth read surface re-confirmed; downloads/demo enterprisealert inert; prior-cycle blog downgrade + MultiViews remain low-value; risk stable at 94.
+## 2026-09-13 14:04:11 UTC [target] (model bigpickle)
+[HYP] Webhook team-secret oracle estate-wide incl prod api host
+class: AUTH
+asset: api.signl4.com/webhook/{teamSecret}
+confidence: 60
+reasoning: OPTIONS /webhook/fabricatedSecret00 → 405 Allow:GET,POST on api+devapi+devconnect; docs swagger 200 on all three; connect contract = POST /{teamSecret} no security scheme, 404-invalid vs 201-eventId, operator-entropy secret, 15+ integrations URL-embed it
+evidence_needed: parity that POST on api/devapi returns identical 404 envelope (mutating POST, deferred); GET /webhook/test on api for passive confirmation
+verify_steps: GET https://api.signl4.com/webhook/test (passive, expect 404/405); already done: OPTIONS on all three → 405 Allow:GET,POST
+impact: guessable static team secret now confirmed reachable on a production API host for 3 more hosts; exploitable via leak not brute-force (config/design finding, HIGH-when-leaked)
+testability: PASSIVE
+[HYP] V1/V2/V3 userId(query) cross-user impersonation on alerts/signls
+class: IDOR
+asset: connect.signl4.com/api/v3/signls/paged?userId=
+confidence: 45
+reasoning: swagger lists userId/UserId query on acknowledgeAll/closeAll/report/paged + shifts/{id}/assignments; docs pattern advertises acting-on-behalf; all routes anon→401 handler-deferred Bearer; no program-specific exploitation yet
+evidence_needed: authenticated cross-user test (user A, userId=B) observing B's data/actions — needs real credential
+verify_steps: GET https://connect.signl4.com/api/v3/signls/paged?userId=0 (anon → expect 401, gating only)
+impact: cross-user alert mutation/read → incident-response manipulation on another tenant/user; MED-HIGH if backend trusts userId over token sub
+testability: AUTH_HELPED
+[HYP] fix.signl4.com OIDC client recovery via interactive Blazor login challenge
+class: AUTH
+asset: fix.signl4.com (Blazor AuthStateProvider → external IdP)
+confidence: 50
+reasoning: root shell renders interactive Login button; /authentication/login 404 (no Razor fallback); /signin-oidc 500 empty on any input = callback registered but dies pre-handler; authority+client_id not in static HTML
+evidence_needed: negotiate Blazor circuit + trigger login challenge → capture /connect/authorize redirect; exceeds passive-only
+verify_steps: POST /_blazor/negotiate (known 200+connectionId); invoke Login handler, observe authorize redirect
+impact: new client_id on shared-IdP estate → extends cross-env token-forgery client inventory; LOW-MED standalone
+testability: AUTH_HELPED
+[NEXT] PROBE: GET https://api.signl4.com/webhook/test
+[RISK] derdack: 94 — cross-env token forgery chain (shared RS256 key ×4 + client_id 692A0A56 + password grant) stays dominant but blocked on client_secret; webhook operator-entropy secret now confirmed on prod api host (4 hosts total), exploitable only via leak; fix.login client undiscoverable passively; all api read surfaces remain 401/405.
