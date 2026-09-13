@@ -1,1 +1,30 @@
-## 2026-09-13 04:52:47 UTC [target] (model bigpickle)
+## 2026-09-13 09:56:11 UTC [target] (model bigpickle)
+[HYP] fix.signl4.com login flow attaches to shared-IdP estate with an undocumented support-portal client_id
+class: AUTH
+asset: fix.signl4.com (Blazor support app login → external OIDC)
+confidence: 55
+reasoning: third distinct appId confirmed (fe51434f vs ec6c57ca/d7865de8) = dedicated backend; root renders Login button but self-hosted IdP paths are 404 → external authority; all prior estate IdPs (connect/devconnect/devapi) share RS256 key + client_id 692A0A56, so support portal likely registers a client on the same IdP; /signin-oidc 500 confirms OIDC callback wired
+evidence_needed: the external authority + client_id used by the fix login redirect (would add a new client to the cross-env forgery chain inventory, or reveal a support-only scope)
+verify_steps: GET fix.signl4.com/Authentication/Login; GET fix.signl4.com/authentication/login; GET fix.signl4.com/ (grep href URLs pointing at /connect/authorize); passive only, follow none
+impact: attacker learns support-portal OAuth client target → chain into shared-signing-key token analysis; MED if new client found, LOW otherwise
+testability: PASSIVE
+[HYP] downloads.enterprisealert.com CORS wildcard permits cross-origin read of otherwise-gated installer paths
+class: MISCONFIG
+asset: downloads.enterprisealert.com/EnterpriseAlert/
+confidence: 40
+reasoning: 403 emits `Access-Control-Allow-Origin: *` + `Allow-Headers: Origin, X-Requested-With...` — explicit CORS policy on the static file server; if any sibling path returns 200 (e.g. site root files), wildcard ACAO would allow browser-side exfiltration
+evidence_needed: any 200-under-that-CORS-policy resource; no 200 seen on probed paths (403/404 only), so impact currently nil
+verify_steps: OPTIONS https://downloads.enterprisealert.com/EnterpriseAlert/ (map Access-Control-Allow-Methods); GET https://downloads.enterprisealert.com/site/ ; GET "/EA/" (both passive, reject if all 403/404)
+impact: data theft only if readable resources exist — unproven; LOW
+testability: PASSIVE
+[HYP] frontdoor.signl4.com placeholder shell resolves to real status backend after JS boot
+class: MISCONFIG
+asset: frontdoor.signl4.com
+confidence: 42
+reasoning: shell has served static placeholder since 2024-09-03 and SPA-fallback 404s on /api/status /incidents — previous cycle concluded no backend; residual chance a JS bundle defines API base URL to a live status service not probed
+evidence_needed: JS asset does not exist / no API base URL found; prior SPA-fallback tests already cover this — marginal
+verify_steps: GET https://frontdoor.signl4.com/static/js/main.js (or bundle discovered in shell HTML); grep for https:// or /api/ endpoints
+impact: none confirmed; LOW
+testability: PASSIVE
+[NEXT] PROBE: GET https://fix.signl4.com/authentication/login (and if 404, grep root HTML for `/connect/authorize` href / external authority URL; passive, no redirect-follow)
+[RISK] derdack: 94 — cross-env token forgery chain (shared RS256 key ×4 identity hosts + client_id 692A0A56 + password/client_credentials/PAR) remains the dominant exposure but AUTH_HELPED on client_secret; webhook operator-entropy secret oracle (config finding) HIGH-when-leaked; fix.signl4.com now confirmed as 3rd independent backend with external-OIDC login (new unprobed client vector) and broken callback; api/v2+v3 zero unauth read surface re-confirmed; downloads/demo enterprisealert inert; prior-cycle blog downgrade + MultiViews remain low-value; risk stable at 94.

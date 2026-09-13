@@ -732,3 +732,16 @@ www.derdack.com
 - NEW demo.enterprisealert.com → 404
 - NEW downloads.enterprisealert.com → 403 (IIS/10.0, directory browsing disabled)
 - CHANGED Cross-env token forgery chain now has live probe data on fix.signl4.com (Blazor Server, broken OIDC callback identical to devfix twin)
+
+## 2026-09-13 10:00:13 UTC
+- NEW fix.signl4.com confirmed live as prod ASP.NET Core Support Application (Blazor Server) with broken OIDC callback (/signin-oidc 500) and /_blazor/negotiate 200+connectionId — identical to devfix twin; 
+- NEW frontdoor.signl4.com unconfigured SPA shell serving literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — new CT host, cosmetic deploy residue
+- NEW connect.signl4.com/api (V1) OpenAPI (93 paths) live at /api/* and /api/v1/* on connect+api+devapi — three concurrent namespaces, all handler-deferred Bearer, zero unauth deviation
+- NEW connect.signl4.com/api/v3 fully dumped (200+ paths): invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance, PUT /api/prepaid/{id}/prepaidSettings, file-download family — all anon→4
+- NEW devconnect.signl4.com/webhook/{fabricated-secret} → 404 with byte-identical envelope to prod (`{"code":3004,"details":"No matching event source found."}`) — staging webhook oracle mirrors prod contrac
+- NEW api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET returns 405 Allow:GET,POST (not 401), invalid Bearer also 405 — handler-deferred auth stable
+- NEW Cross-env token forgery chain complete (shared RS256 key 10x deep-equal across 4 identity hosts, shared client_id 692A0A56, password grant enabled, prod parametric twin) but AUTH_HELPED-blocked on cli
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets `secure`+host-only cookie); residual missing-HSTS only (LOW)
+- CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404; root serves parked IONOS sedoparking iframe
+- CHANGED www.derdack.com/de/ & /ea/ XML-RPC both POST-exposed with full method lists but mutating methods (wp.uploadFile, metaWeblog.newMediaObject) return faultCode 403 "incorrect username/password" — auth-ga
+- CHANGED 8 new CT hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com) — status/support/trust/docs are third-party (StatusLabs, Zendesk, Safebase, GitHub Pages); demo/downlo
