@@ -772,3 +772,13 @@ www.derdack.com
 - CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404; root serves parked IONOS sedoparking iframe
 - NEW status/support/trust/docs.signl4.com confirmed third-party (StatusLabs, Zendesk, Safebase, GitHub Pages) — not Derdack infrastructure
 - NEW demo/downloads.enterprisealert.com: 404 / 403 (IIS/10.0 directory browsing disabled) — no attack surface
+
+## 2026-09-13 21:40:13 UTC
+- NEW fix.signl4.com confirmed as prod ASP.NET Core Support Application (Blazor Server) with broken OIDC callback (/signin-oidc 500) and /_blazor/negotiate 200+connectionId — new CT host, identical to devfi
+- NEW frontdoor.signl4.com unconfigured SPA shell serving literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — new CT host, cosmetic deploy residue
+- NEW connect.signl4.com/api (V1) OpenAPI (93 paths) live at /api/* and /api/v1/* on connect+api+devapi — three concurrent namespaces, all handler-deferred Bearer, zero unauth deviation
+- NEW connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across V1/V2/V3; internal/self-service routes published publicly
+- NEW devconnect.signl4.com/webhook/{fabricated-secret} → 404 with byte-identical envelope to prod — staging webhook oracle mirrors prod contract estate-wide
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET returns 405 Allow:GET,POST (not 401), invalid Bearer also 405 — handler-deferred auth stable
+- CHANGED Cross-env token forgery chain complete (shared RS256 key 10x deep-equal across 4 identity hosts, shared client_id 692A0A56, password grant enabled, prod parametric twin) but AUTH_HELPED-blocked on cli
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets `secure`+host-only cookie); residual missing-HSTS only (LOW)
