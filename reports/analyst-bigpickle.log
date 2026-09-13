@@ -19945,3 +19945,79 @@ testability: AUTH_HELPED
 
 **STEP 7 — RISK**
 [RISK] derdack: 94 — cross-env token forgery chain (shared RS256 key ×4 identity hosts + client_id 692A0A56 + password grant) stays dominant, blocked on client_secret (AUTH_HELPED); webhook operator-entropy team-secret oracle now confirmed estate-wide (4 hosts, public OpenAPI, GET+OPTIONS parity) — exploitable via leak not brute-force (config/design, HIGH-when-leaked); fix.signl4.com support-portal OIDC client passively unrecoverable (HUMAN_ONLY); no new unauth read surface on api/v2+v3; magnitude unchanged from prior cycle.
+===== ANALYST bigpickle 2026-09-13 19:38:42 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -sS -i -X OPTIONS https://devapi.signl4.com/webhook/test -m 20; sleep 1; curl -sS -o /dev/null -w 'devconnect_swagger status=%{http_code} ct=%{content_type}\n' https://devconnect.signl4.com/webhook/docs/v1/swagger.json -m 20; sleep 1; curl -sS -o /dev/null -w 'api_webhook_base status=%{http_code} ct=%{content_type}\n' -X OPTIONS https://api.signl4.com/webhook -m 20
+HTTP/2 405 
+date: Sun, 13 Sep 2026 19:33:11 GMT
+content-length: 0
+allow: GET, POST
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+
+devconnect_swagger status=200 ct=application/json;charset=utf-8
+api_webhook_base status=404 ct=
+[0m
+STEP 1 — DELTA
+- NEW devapi.signl4.com/webhook/test OPTIONS → 405 `Allow: GET, POST` (19:33 UTC, request-context d7865de8) — staging-mirror route-registration parity on webhook namespace CONFIRMED; OPTIONS matrix now 2/4 hosts (api+devapi)
+- NEW devconnect.signl4.com/webhook/docs/v1/swagger.json → 200 application/json — webhook OpenAPI now confirmed on ALL 4 hosts (api+connect+devapi+devconnect): public no-security-scheme contract estate-wide
+- NEW api.signl4.com/webhook (bare) OPTIONS → 404 — only `/{teamSecret}` leaf + `/docs/v1/swagger.json` routed; base unregistered; route map exact
+- CHANGED fix.signl4.com OIDC client recovery permanently blocked passively (appId fe51434f server-side only, circuit-gated login) — stays [PARKED]/HUMAN_ONLY
+
+STEP 2 — PRIORITIZE
+[PRIO] api.signl4.com/webhook/{teamSecret},7.35,a8;b7;t8;g8;c4;f8: no-security-scheme POST surface confirmed estate-wide; 15+ integrations URL-embed operator-entropy secret; HIGH-when-leaked
+[PRIO] connect.signl4.com/api V2/V3 userId-param impersonation,6.55,a9;b8;t7;g1;c5;f6: 200+ path BOLA inventory; backend trusts userId? over token sub — needs credential
+
+STEP 3 — HYPOTHESES
+[HYP] Webhook team-secret oracle fully registered on prod API host + staging mirror
+class: AUTH
+asset: api.signl4.com/webhook/{teamSecret}
+confidence: 70
+reasoning: OPTIONS api+devapi both 405 Allow:GET,POST; GET leaf 200 byte-identical on all 4 hosts; swagger 200 on all 4 hosts declares POST /{teamSecret} with NO security scheme; connect contract POST invalid→404 code 3004 vs 201 eventId; teamSecret operator-entropy (docs `teamssecret`); 15+ integrations URL-embed it
+evidence_needed: OPTIONS parity on connect+devconnect (closes 4x4 matrix); POST severity deduction only unreachable passively (mutating, deferred per rules)
+verify_steps: OPTIONS https://connect.signl4.com/webhook/test; OPTIONS https://devconnect.signl4.com/webhook/test (GET/OPTIONS-only, 1 rps)
+impact: static alerting credential reachable on prod API gateway + staging mirror; unauthenticated alert trigger/ack/resolve within a team → incident-response corruption; HIGH-when-leaked, config/design otherwise
+testability: PASSIVE
+[HYP] V2/V3 userId(query) cross-user impersonation on signls traversal
+class: IDOR
+asset: connect.signl4.com/api/v3/signls/*?userId=
+confidence: 45
+reasoning: swagger documents userId/UserId query on acknowledgeAll/closeAll/report/paged + shifts assignments; docs pattern advertises acting-on-behalf; all named routes anon→401/405 handler-deferred Bearer; no program-specific exploitation yet
+evidence_needed: authenticated cross-user test (user A, userId=B) observing B's data/actions — requires valid credential
+verify_steps: GET https://connect.signl4.com/api/v3/signls/paged?userId=0 (anon → expect 401, gating only; no credential available)
+impact: cross-user alert mutation/read → cross-tenant incident manipulation; MED-HIGH if backend trusts userId over token sub
+testability: AUTH_HELPED
+[HYP] Staging webhook namespace mirrors prod team secrets (cross-env drift)
+class: AUTH
+asset: devapi.signl4.com/webhook/{teamSecret}
+confidence: 45
+reasoning: devapi is 1:1 staging API mirror (appId d7865de8); cross-env client reuse proven (client_id 692A0A56 identical, JWKS x10 deep-equal); webhook OPTIONS+GET+swagger parity now confirmed on staging — secret-lookup behaves identically
+evidence_needed: a valid secret exercised on both staging+prod — requires credential
+verify_steps: GET https://devapi.signl4.com/webhook/test (done: 200 help leaf = route parity); secret comparison immutable passively
+impact: cross-env secret-verification oracle; HIGH combined with any leak
+testability: AUTH_HELPED
+
+STEP 4 — SELF-CRITIQUE
+[PARKED] fix.signl4.com OIDC client recovery: HUMAN_ONLY, circuit-gated login; all static auth paths 404; authority/client_id server-side only; passive recovery permanently closed
+[PARKED] downloads.enterprisealert.com CORS: no readable resources under wildcard ACAO (`/`,`/site/`,`/EA/` 403/404); exfiltration target nil
+[PARKED] frontdoor.signl4.com placeholder boot: SPA-fallback 404s cover all API bases; cosmetic only
+[FINAL] webhook estate oracle (70, PASSIVE); V2/V3 userId impersonation (45, AUTH_HELPED); staging webhook secret-reuse (45, AUTH_HELPED)
+
+STEP 5 — NEXT ACTION
+[NEXT] PROBE: `OPTIONS https://connect.signl4.com/webhook/test` then `OPTIONS https://devconnect.signl4.com/webhook/test` (2 read-only requests @1 rps) — closes the 4-host OPTIONS route matrix; then webhook hypothesis fully passive-verified → park as config/design finding
+
+STEP 6 — LEARNING
+[LEARN] ACCEPTED AUTH @ devapi.signl4.com/webhook/test (OPTIONS 405 Allow:GET,POST, appId d7865de8): staging mirror route-registration parity on webhook namespace — 2/4 OPTIONS matrix complete
+[LEARN] ACCEPTED OTHER @ devconnect.signl4.com/webhook/docs/v1/swagger.json 200: webhook OpenAPI served on all 4 API hosts — public no-security-scheme POST /{teamSecret} contract estate-wide
+[LEARN] ACCEPTED OTHER @ api.signl4.com /webhook bare OPTIONS 404: only {teamSecret} leaf + /docs/v1 routed; base unregistered — route map now exact per host
+[LEARN] REJECTED MISCONFIG @ downloads.enterprisealert.com: `/` 403, `/site/`+`/EA/` 404 — no readable resources under wildcard ACAO; CORS data-theft unsubstantiated (re-confirmed)
+
+STEP 7 — RISK
+[RISK] derdack: 94 — cross-env token forgery chain (shared RS256 key x4 identity hosts + client_id 692A0A56 + password grant) stays dominant but AUTH_HELPED-blocked on client_secret; webhook estate oracle now passive-verified on 4/4 hosts (config/design, HIGH-when-leaked, requires leak not brute-force); V1/V2/V3 anon surface remains zero (401/405); fix.connect portal OIDC client unrecoverable passively; magnitude unchanged, no new exploitable defect this cycle.
