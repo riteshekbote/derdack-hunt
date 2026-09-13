@@ -387,3 +387,6 @@
 - 2026-09-13 REJECTED OTHER @ status/support/trust/docs.signl4.com: third-party (StatusLabs, Zendesk, Safebase, GitHub Pages) — not Derdack infrastructure
 - 2026-09-13 REJECTED OTHER @ demo/downloads.enterprisealert.com: 404 / 403 (IIS/10.0 directory browsing disabled) — no attack surface
 - 2026-09-13 ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v3/swagger.json: global `security: [{}]` (empty) reconfirmed on V3 — spec under-declares auth everywhere; internal billing + SCIM routes published publicly in OpenAPI
+- 2026-09-13 ACCEPTED AUTH @ api/devapi/connect/devconnect /webhook/{teamSecret}: GET leaf returns byte-identical `{"GET not supported"+docs link}` on all 4 hosts; `/webhook/docs/v1/swagger.json` 200 on api+connect+devapi (no security scheme, POST /{teamSecret}); OPTIONS api → 405 Allow:GET,POST — team-secret URI-embedded attack surface estate-wide.
+- 2026-09-13 ACCEPTED OTHER @ fix.signl4.com: 3rd distinct appId `fe51434f` (vs ec6c57ca api/connect, d7865de8 devapi); Login button interactive Blazor (all static auth paths 404); OIDC authority/client_id server-side only — passive client recovery permanently closed.
+- 2026-09-13 REJECTED MISCONFIG @ downloads.enterprisealert.com: `/` 403, `/site/`+`/EA/` 404 — no readable resources under wildcard ACAO; CORS data-theft unsubstantiated.
