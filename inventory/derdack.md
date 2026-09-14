@@ -843,3 +843,16 @@ www.derdack.com
 - CHANGED api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET returns 405 Allow:GET,POST (not 401), invalid Bearer also 405 — handler-deferred auth stable
 - CHANGED connect.signl4.com/api/v3 fully dumped (200+ paths): invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance, PUT /api/prepaid/{id}/prepaidSettings, file-download family — all anon→4
 - CHANGED Webhook team-secret enumeration: operator-chosen secret (not high-entropy), guessing falls under REJECTED brute-force; oracle exploitable only via secret leak → config/design finding
+
+## 2026-09-14 22:18:36 UTC
+- NEW fix.signl4.com: Blazor Server serves compiled assemblies under /_framework/ (default hosting) — assembly/boot-manifest disclosure + embedded-config recovery entirely unexplored; prior "OIDC client_id 
+- NEW No new probe data from other agents since last cycle; estate otherwise unchanged.
+- CHANGED V1 swagger static analysis exhausted: userId mapped to 4 query endpoints (acknowledgeAll, closeAll, paged, report) + 15 path endpoints; "behave-as" invalidated; remaining V1 value requires authenticat
+- NEW fix.signl4.com confirmed live as prod ASP.NET Core Blazor Server "SIGNL4 Support Application" (20.160.37.197), /signin-oidc returns 500 (broken OIDC callback), /_blazor/negotiate 200+connectionId — id
+- NEW V1 API surface on connect.signl4.com/api (93 paths) live across connect/api/devapi with handler-deferred Bearer auth; userId query parameter on /alerts/acknowledgeAll, /alerts/closeAll, /alerts/paged,
+- NEW connect.signl4.com/api/v3 fully dumped (200+ paths): invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance, PUT /api/prepaid/{id}/prepaidSettings, file-download family — all anon→4
+- NEW devconnect.signl4.com/webhook/{fabricated-secret} → 404 with byte-identical envelope to prod (`{"code":3004,"details":"No matching event source found."}`) — staging webhook oracle mirrors prod contrac
+- NEW api+devapi /api/v2/teams auth-status flapping: 401 this cycle vs 405 prior — handler/routing auth-status flapping confirmed 10th+ cycles
+- CHANGED Cross-env token forgery chain: 10th+ deep-equal of byte-identical RS256 JWKS across 4 identity hosts (connect/api/devconnect/devapi), shared client_id 692A0A56, password grant enabled on staging — AUT
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets secure+host-only cookie); residual missing-HSTS only (LOW)
+- CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404

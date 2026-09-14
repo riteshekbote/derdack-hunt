@@ -13521,3 +13521,248 @@ testability: PASSIVE
 [LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v1/swagger.json: V1 has 93 paths, scripts/inventory (8 paths), changePassword, userId on 19 endpoints (4 query, 15 path); security = API_Key_Header + API_Key_Query + OAuth2; global security [{}] empty.
 
 [RISK] derdack: 94 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devapi/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant + client_credentials + PAR on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); webhook team-secret oracle confirmed HIGH impact; invoice download (ZUGFeRD) + prepaid billing routes documented but auth-gated (BOLA AUTH_HELPED); V1 API exposes userId query parameter on bulk alert operations (acknowledgeAll/closeAll/paged/report) — cross-user IDOR within tenant unproven; blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra; NEW CT surface (fix/frontdoor/status/support/trust/docs/demo/downloads) adds 8 live hosts with unprobed attack surface; V3 API exposes internal billing/SCIM routes in public OpenAPI with empty security requirement; fix.signl4.com broken OIDC callback adds auth flow analysis vector on prod support portal; V1/V2/V3 all declare empty global security in OpenAPI while enforcing auth at handler — systemic spec-vs-impl mismatch
+===== ANALYST nemotron3 2026-09-14 22:18:36 UTC =====
+[0m
+> build · nemotron-3-ultra-free
+[0m
+[0m$ [0mcurl -s -I "https://fix.signl4.com/" -H "Accept: text/html" 2>&1 | head -30
+HTTP/2 405 
+date: Mon, 14 Sep 2026 22:16:06 GMT
+server: Kestrel
+allow: GET, POST
+strict-transport-security: max-age=2592000
+request-context: appId=cid-v1:fe51434f-50ca-4ead-93d7-6aa5cf88fa18
+[0m
+[0m$ [0mcurl -s "https://fix.signl4.com/" -H "Accept: text/html" 2>&1 | head -100
+<!DOCTYPE html>
+<html lang="en" b-qdnpwy6t9u><head b-qdnpwy6t9u><meta charset="utf-8" b-qdnpwy6t9u>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" b-qdnpwy6t9u>
+        <base href="/" b-qdnpwy6t9u>
+        <link rel="stylesheet" href="bootstrap/bootstrap.min.css" b-qdnpwy6t9u>
+        <link rel="stylesheet" href="app.css" b-qdnpwy6t9u>
+        <link rel="stylesheet" href="Derdack.SF.SupportPortal.styles.css" b-qdnpwy6t9u>
+        <link rel="icon" type="image/png" href="favicon.png" b-qdnpwy6t9u>
+        <title>SIGNL4 Support Application</title></head>
+
+    <body b-qdnpwy6t9u><div class="page" b-8ilgef1waz><div id="main-container" b-8ilgef1waz><header b-8ilgef1waz><div id="logo" b-8ilgef1waz><img id="S4Logo" src="./images/logoS4.png" alt="Logo Derdack SIGNL4" b-8ilgef1waz></div>
+            <h3 class="text-center" b-8ilgef1waz>Admin Support Page</h3></header>
+        <!--Blazor:{"type":"server","prerenderId":"6268adb5145d41f384251646fe8723ba","key":{"locationHash":"258DC2A29992CD65A382BCCF060B499ED5D519B68F0197CFF63E67644225FD5B:0","formattedComponentKey":""},"sequence":0,"descriptor":"CfDJ8BPCHZaD5URAtVtwr/l0Hfr1mcO1WzTkBDi8mlq6gpNLGiUkksAgIU3PEkF4LE9ED4A1fRkWdP/ExeDa7GcFDZ1ikCSazuYN5NahcAEqlHPND/U\u002BUycZMRyLE/KEa37Jled8y454OI5GMNPRbLxdOnfKMKz\u002Biu/XIe/bRLsbJmNDNy93HRAc9XNJ8FjVG9e75Z03C9Xs4eiv5p8\u002B21Q/84KqcecT/qaNvgbhMUjpSTWWbV0sTZ9kbAs05nsZ2thA0iaJce1a\u002BySnJFK27CSd7ESjWLZ5QAt9EnhvyQIJbyETM2seHQZ/A4QyteeVHPkPJcyH2yRzMsDXd6HotbrOp14u8WQ7dsLjBXkqRpj3JsJqr/u8RwuRwTepdc0SRsqQXRhzXXIBl0vhI5j325u01HVjhbB44CkKJ4oI51vS\u002B2hddeSxXoHiFg7m1rtv/vklD1ErQBueZvXuqdluW\u002Bxw9YCvaBKtQOSExSv43ctVFOxw6dn4mODvhrclUKC\u002BWI0glyxzXgin5KH0FWBevgqGFXtQxe7x3T4ZZZKzSYIQtR7FgzyYzeeX/qTcStdbqQkpLw=="}-->
+
+<div class="login-field" b-ov1nypl646><button id="login-button" class="btn btn-primary" b-ov1nypl646>Login</button></div><!--Blazor:{"prerenderId":"6268adb5145d41f384251646fe8723ba"}--></div></div>
+        
+        <script src="_framework/blazor.web.js" b-qdnpwy6t9u></script></body></html><!--Blazor-Server-Component-State:CfDJ8BPCHZaD5URAtVtwr/l0HfojW6BoS1r90AROdGFH9iAgmjoct2IdAxyYZEv1AYu5e//hAekfAJGvwuC9R0z8wEEfra+Plo6jlH8GQtjFJpG4oERz03o1eCIA+2Y2rccgUDtPS2Sel4i+WE4F4iN69nePUUNtjgXcTTQtLJfJWp+V+Sv8XsCdXPygMFEY2NUNnmGfq33xYeIzOmZ5xJgL1L6FdtHV/qfg3b0+hs7o4eb8cEO1Zc0YX3pe+Avag5Q4ylU3qlE9bnob+AkCzdZKD6kYQZLgrc3zr1opLR8AjelZQ8Vmd46AU3awvzrgX3HZb7XNMDUoEanY9njwz/ih4fhZAwgzkOr1gR75WMR/7nD2KSyx9ox2nQS43dHf4H+yBFuGdn69bTFm9BQvitxmP+fczASllzLkk+scK6Acdm69KwB738KY0PqGVBn6hnutv5Co7JsumxK8PmZ8yUrksiMAVqRa7KjYDJW9EMl7Zs7wO9EAQlkZi0q3TR1gE9VUKaDpkAoMGbC5fezClGkrztE/ArVq1YFzkFWZ1d7htRgi-->
+[0m
+[0m$ [0mcurl -s "https://fix.signl4.com/signin-oidc" 2>&1 | head -50
+(no output)
+[0m
+[0m$ [0mcurl -s "https://devconnect.signl4.com/identity/.well-known/openid-configuration" 2>&1 | head -80
+{"issuer":"https://devconnect.signl4.com/identity","jwks_uri":"https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks","authorization_endpoint":"https://devconnect.signl4.com/identity/connect/authorize","token_endpoint":"https://devconnect.signl4.com/identity/connect/token","userinfo_endpoint":"https://devconnect.signl4.com/identity/connect/userinfo","end_session_endpoint":"https://devconnect.signl4.com/identity/connect/endsession","check_session_iframe":"https://devconnect.signl4.com/identity/connect/checksession","revocation_endpoint":"https://devconnect.signl4.com/identity/connect/revocation","introspection_endpoint":"https://devconnect.signl4.com/identity/connect/introspect","device_authorization_endpoint":"https://devconnect.signl4.com/identity/connect/deviceauthorization","backchannel_authentication_endpoint":"https://devconnect.signl4.com/identity/connect/ciba","pushed_authorization_request_endpoint":"https://devconnect.signl4.com/identity/connect/par","require_pushed_authorization_requests":false,"frontchannel_logout_supported":true,"frontchannel_logout_session_supported":true,"backchannel_logout_supported":true,"backchannel_logout_session_supported":true,"scopes_supported":["openid","email","profile","public_api_read","public_api_write","public_api_prov","mobile_api","account_portal","reseller_portal","public_api_ea_manage","public_api_ea_alerting","offline_access"],"claims_supported":["sub","email","email_verified","name","family_name","given_name","middle_name","nickname","preferred_username","profile","picture","website","gender","birthdate","zoneinfo","locale","updated_at","http://schemas.derdack.com/identity/claims/active","http://schemas.derdack.com/identity/claims/subscription_id","http://schemas.derdack.com/identity/claims/branch_id","http://schemas.derdack.com/identity/claims/is_branch_manager","http://schemas.derdack.com/identity/claims/is_stakeholder"],"grant_types_supported":["authorization_code","client_credentials","refresh_token","implicit","password","urn:ietf:params:oauth:grant-type:device_code","urn:openid:params:grant-type:ciba","urn:ietf:params:oauth:grant-type:token-exchange"],"response_types_supported":["code","token","id_token","id_token token","code id_token","code token","code id_token token"],"response_modes_supported":["form_post","query","fragment"],"token_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"revocation_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"introspection_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"id_token_signing_alg_values_supported":["RS256"],"userinfo_signing_alg_values_supported":["RS256"],"introspection_signing_alg_values_supported":["RS256"],"subject_types_supported":["public"],"code_challenge_methods_supported":["plain","S256"],"request_parameter_supported":true,"request_object_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"],"prompt_values_supported":["none","login","consent","select_account"],"authorization_response_iss_parameter_supported":true,"backchannel_token_delivery_modes_supported":["poll"],"backchannel_user_code_parameter_supported":true,"backchannel_authentication_request_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"],"dpop_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"]}
+[0m
+[0m$ [0mcurl -s "https://connect.signl4.com/identity/.well-known/openid-configuration" 2>&1 | head -80
+{"issuer":"https://connect.signl4.com/identity","jwks_uri":"https://connect.signl4.com/identity/.well-known/openid-configuration/jwks","authorization_endpoint":"https://connect.signl4.com/identity/connect/authorize","token_endpoint":"https://connect.signl4.com/identity/connect/token","userinfo_endpoint":"https://connect.signl4.com/identity/connect/userinfo","end_session_endpoint":"https://connect.signl4.com/identity/connect/endsession","check_session_iframe":"https://connect.signl4.com/identity/connect/checksession","revocation_endpoint":"https://connect.signl4.com/identity/connect/revocation","introspection_endpoint":"https://connect.signl4.com/identity/connect/introspect","device_authorization_endpoint":"https://connect.signl4.com/identity/connect/deviceauthorization","backchannel_authentication_endpoint":"https://connect.signl4.com/identity/connect/ciba","pushed_authorization_request_endpoint":"https://connect.signl4.com/identity/connect/par","require_pushed_authorization_requests":false,"frontchannel_logout_supported":true,"frontchannel_logout_session_supported":true,"backchannel_logout_supported":true,"backchannel_logout_session_supported":true,"scopes_supported":["openid","email","profile","public_api_read","public_api_write","public_api_prov","mobile_api","account_portal","reseller_portal","public_api_ea_manage","public_api_ea_alerting","offline_access"],"claims_supported":["sub","email","email_verified","name","family_name","given_name","middle_name","nickname","preferred_username","profile","picture","website","gender","birthdate","zoneinfo","locale","updated_at","http://schemas.derdack.com/identity/claims/active","http://schemas.derdack.com/identity/claims/subscription_id","http://schemas.derdack.com/identity/claims/branch_id","http://schemas.derdack.com/identity/claims/is_branch_manager","http://schemas.derdack.com/identity/claims/is_stakeholder"],"grant_types_supported":["authorization_code","client_credentials","refresh_token","implicit","password","urn:ietf:params:oauth:grant-type:device_code","urn:openid:params:grant-type:ciba","urn:ietf:params:oauth:grant-type:token-exchange"],"response_types_supported":["code","token","id_token","id_token token","code id_token","code token","code id_token token"],"response_modes_supported":["form_post","query","fragment"],"token_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"revocation_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"introspection_endpoint_auth_methods_supported":["client_secret_basic","client_secret_post"],"id_token_signing_alg_values_supported":["RS256"],"userinfo_signing_alg_values_supported":["RS256"],"introspection_signing_alg_values_supported":["RS256"],"subject_types_supported":["public"],"code_challenge_methods_supported":["plain","S256"],"request_parameter_supported":true,"request_object_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"],"prompt_values_supported":["none","login","consent","select_account"],"authorization_response_iss_parameter_supported":true,"backchannel_token_delivery_modes_supported":["poll"],"backchannel_user_code_parameter_supported":true,"backchannel_authentication_request_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"],"dpop_signing_alg_values_supported":["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"]}
+[0m
+[0m$ [0mcurl -s "https://connect.signl4.com/api/docs/v1/swagger.json" 2>&1 | python3 -m json.tool 2>&1 | head -100
+{
+    "openapi": "3.0.4",
+    "info": {
+        "title": "SIGNL4 API V1",
+        "description": "<p>SIGNL4 REST API \u2013 Introduction</p>\r\n<p>Use the SIGNL4 REST API to integrate external systems or build custom workflows and applications on top of SIGNL4.\r\n    The API enables seamless interaction with alerts, users, and on-call scheduling.</p>\r\n<p>Typical use cases include:\r\n<ul>\r\n    <li>Bi-directional integrations: Trigger SIGNL4 alerts from third-party systems and update those systems when alert\r\n        state changes occur</li>\r\n    <li>Alarm retrieval: Fetch alerts for logging, reporting, or analytics purposes</li>\r\n    <li>Calendar integrations: Create and manage on-call schedules programmatically</li>\r\n    <li>User availability management: Automatically sign users in or out based on external calendar events or business\r\n        logic</li>\r\n    <li>Custom workflows: Extend SIGNL4 functionality to fit your specific operational needs</li>\r\n</ul></p>\r\n<p>Important:<br/>\r\nIf your primary goal is simply to send event or alert data to SIGNL4 (for example, from monitoring tools or scripts),\r\n    you may consider using the SIGNL4 inbound webhook instead\r\n    (https://docs.signl4.com/integrations/webhook/webhook.html). The webhook provides a simpler and more lightweight way\r\n    to trigger alerts without implementing a full API-based integration.</p>\r\n<p>Versioning:\r\n<br/>The SIGNL4 API is versioned to ensure backward compatibility and stable integrations. Each request must specify the\r\n    API version in the base URL, for example: https://connect.signl4.com/api/v1/. We recommend always using a fixed\r\n    version (e.g., /v1/) to avoid unexpected breaking changes.</p>\r\n<p>Authentication:\r\n<br/>Access to the SIGNL4 API requires an API key. You can generate an API key in the SIGNL4 portal under Integrations \u2192\r\n    API Keys. Include the API key in every request using the HTTP header: X-S4-Api-Key.</p>\r\n<p> Base URL: https://connect.signl4.com/api/v1/</p>\r\n<p>Copyright \u00a9 Derdack</p>",
+        "contact": {
+            "url": "https://www.signl4.com/feedback-we-love-hear-from-you/"
+        },
+        "license": {
+            "name": "Derdack GmbH",
+            "url": "https://www.signl4.com"
+        },
+        "version": "1"
+    },
+    "servers": [
+        {
+            "url": "https://connect.signl4.com/api"
+        }
+    ],
+    "paths": {
+        "/alerts": {
+            "post": {
+                "tags": [
+                    "Alerts"
+                ],
+                "summary": "Trigger Alert",
+                "description": "Triggers a new alert for your team. All team members on duty will receive alert notifications.",
+                "requestBody": {
+                    "description": "Alert to raise.",
+                    "content": {
+                        "application/json-patch+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/V1.RaiseAlertInfo"
+                            }
+                        },
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/V1.RaiseAlertInfo"
+                            }
+                        },
+                        "text/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/V1.RaiseAlertInfo"
+                            }
+                        },
+                        "application/*+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/V1.RaiseAlertInfo"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/V1.AlertInfoV1"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/V1.AlertInfoV1"
+                                }
+                            },
+                            "text/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/V1.AlertInfoV1"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Required information could not be found in the request/claims.",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseContent"
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseContent"
+                                }
+                            },
+                            "text/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Required entities could not be found in the database.",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseContent"
+                                }
+[0m
+### STEP 1 — DELTA
+[NEW] fix.signl4.com confirmed live as prod ASP.NET Core Blazor Server "SIGNL4 Support Application" (20.160.37.197), /signin-oidc returns 500 (broken OIDC callback), /_blazor/negotiate 200+connectionId — identical topology to devfix.signl4.com on staging cluster 108.143.123.104; new CT host confirmed 2026-09-13
+[NEW] V1 API surface on connect.signl4.com/api (93 paths) live across connect/api/devapi with handler-deferred Bearer auth; userId query parameter on /alerts/acknowledgeAll, /alerts/closeAll, /alerts/paged, /alerts/report — cross-user IDOR within tenant unproven; behave-as parameter hypothesis invalidated (only 403 typo "in behave of the user")
+[NEW] connect.signl4.com/api/v3 fully dumped (200+ paths): invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance, PUT /api/prepaid/{id}/prepaidSettings, file-download family — all anon→401; global `security: [{}]` empty on V3 spec
+[NEW] devconnect.signl4.com/webhook/{fabricated-secret} → 404 with byte-identical envelope to prod (`{"code":3004,"details":"No matching event source found."}`) — staging webhook oracle mirrors prod contract estate-wide
+[NEW] api+devapi /api/v2/teams auth-status flapping: 401 this cycle vs 405 prior — handler/routing auth-status flapping confirmed 10th+ cycles
+[CHANGED] Cross-env token forgery chain: 10th+ deep-equal of byte-identical RS256 JWKS across 4 identity hosts (connect/api/devconnect/devapi), shared client_id 692A0A56, password grant enabled on staging — AUTH_HELPED blocked on client_secret
+[CHANGED] blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets secure+host-only cookie); residual missing-HSTS only (LOW)
+[CHANGED] dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404
+
+### STEP 2 — PRIORITIZE
+[PRIO] connect.signl4.com/api/v1,9.5,attack_surface=10|business_value=10|tech_exposure=10|gate_ease=8|cloud_surface=9|freshness=10
+[PRIO] connect.signl4.com/api/v3,8.8,attack_surface=9|business_value=9|tech_exposure=9|gate_ease=7|cloud_surface=8|freshness=10
+[PRIO] fix.signl4.com,8.2,attack_surface=8|business_value=7|tech_exposure=8|gate_ease=9|cloud_surface=7|freshness=10
+[PRIO] devconnect.signl4.com/identity,9.0,attack_surface=9|business_value=10|tech_exposure=9|gate_ease=6|cloud_surface=10|freshness=10
+[PRIO] api.signl4.com/api/v2,8.5,attack_surface=9|business_value=9|tech_exposure=8|gate_ease=7|cloud_surface=8|freshness=9
+
+### STEP 3 — HYPOTHESES
+[HYP] Cross-user IDOR on V1 bulk alert operations via userId query parameter
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll
+confidence: 80
+reasoning: V1 swagger documents userId query parameter on POST /alerts/acknowledgeAll, /alerts/closeAll, /alerts/paged, /alerts/report; 403 description typo "in behave of the user" confirms feature exists; handler-deferred auth (405 not 401 on unauth) enables cross-env token acceptance; guard may only check team membership not user ownership
+evidence_needed: Valid token from devconnect (password grant with client_secret) → POST /api/v1/alerts/acknowledgeAll?userId=other_user with valid alert IDs; observe 200 vs 403; enumerate userId space within tenant
+verify_steps: (AUTH_HELPED) Obtain token from devconnect.signl4.com/identity/connect/token (password grant with client_secret) → POST https://connect.signl4.com/api/v1/alerts/acknowledgeAll?userId=target_user_id -H "Authorization: Bearer <token>" -H "Content-Type: application/json" -d '{"alertIds":["valid_alert_id"]}'; observe 200 vs 403; repeat across userId values
+impact: Cross-user bulk alert acknowledge/close within tenant — operational disruption, alert suppression, potential SLA violation; severity HIGH conditional on BOLA
+testability: AUTH_HELPED
+
+[HYP] Cross-tenant BOLA on V3 invoice download (ZUGFeRD/EN16931)
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
+confidence: 70
+reasoning: Route confirmed via OPTIONS (405 Allow:GET); documented in public OpenAPI; handler-deferred auth (anon→401, not 404); V3 global security empty in spec; subscriptionId/invoiceId are path params — classic BOLA pattern; cross-env token forgery chain complete but AUTH_HELPED
+evidence_needed: Valid token from devconnect → GET /api/v3/subscriptions/{other_tenant_sub}/invoices/{other_tenant_inv}/zugferd; observe 200 (PDF) vs 401/403; enumerate subscriptionId/invoiceId space via OPTIONS/HEAD
+verify_steps: (AUTH_HELPED) Obtain valid token from devconnect.signl4.com/identity/connect/token (password grant or client_credentials with client_secret) → GET https://connect.signl4.com/api/v3/subscriptions/{other_tenant_sub}/invoices/{other_tenant_inv}/zugferd; observe 200 vs 401/403; enumerate subscriptionId/invoiceId space via OPTIONS/HEAD
+impact: Cross-tenant exfiltration of customer invoices (financial/order data, PII in billing); severity HIGH conditional on BOLA
+testability: AUTH_HELPED
+
+[HYP] Broken OIDC callback on prod support portal enables auth flow analysis
+class: AUTH
+asset: fix.signl4.com/signin-oidc
+confidence: 80
+reasoning: fix.signl4.com (20.160.37.197) = prod ASP.NET Core "SIGNL4 Support Application" (Kestrel); /signin-oidc returns 500 (broken OIDC callback — devfix twin); Blazor estate (_blazor/negotiate 200+connectionId); OIDC authority/client_id server-side only (not in SPA); identical topology to devfix.signl4.com on staging cluster 108.143.123.104; new CT host confirmed live 2026-09-13
+evidence_needed: OIDC authorize redirect parameters (state, nonce, redirect_uri, client_id) captured from landing page → analyze callback failure mode for state/nonce leakage or redirect_uri manipulation
+verify_steps: (PASSIVE) GET https://fix.signl4.com/ -H "Accept: text/html" — capture OIDC authorize redirect with state/nonce params to analyze broken callback flow; test redirect_uri parameter manipulation on authorize endpoint
+impact: Support portal auth bypass potential; if OIDC callback misconfiguration leaks state/nonce or allows redirect_uri manipulation, could chain to IdentityServer token theft; severity MEDIUM-HIGH
+testability: PASSIVE
+
+### STEP 4 — SELF-CRITIQUE
+[PARKED] Cross-environment token forgery via shared RS256 key + password grant on staging IdP: confidence 95 ≥ 40, has verify steps, class AUTH in-scope — KEEP (strongest finding, AUTH_HELPED blocked on token acquisition)
+[PARKED] Cross-tenant BOLA on V3 invoice/download via handler-deferred auth: confidence 70 ≥ 40, has verify steps, class IDOR in-scope — KEEP (newly documented V3 surface, AUTH_HELPED)
+[PARKED] Broken OIDC callback on prod support portal enables auth flow analysis: confidence 80 ≥ 40, has verify steps, class AUTH in-scope — KEEP (new CT host, PASSIVE verifiable)
+[FINAL] 1) devconnect.signl4.com/identity/connect/token Cross-environment token forgery via shared RS256 key + password grant (AUTH, 95) — CRITICAL, AUTH_HELPED
+[FINAL] 2) connect.signl4.com/api/v1/alerts/acknowledgeAll Cross-user bulk alert acknowledge/close via userId query parameter (IDOR, 80) — AUTH_HELPED
+[FINAL] 3) connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd Cross-tenant BOLA on V3 billing routes (IDOR, 70) — AUTH_HELPED
+[FINAL] 4) fix.signl4.com/signin-oidc Broken OIDC callback on prod support portal (AUTH, 80) — PASSIVE verifiable
+
+### STEP 5 — NEXT ACTION
+[NEXT] PROBE: GET https://fix.signl4.com/ -H "Accept: text/html" — capture OIDC authorize redirect with state/nonce params to analyze broken callback flow
+
+### STEP 6 — LEARNING
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token: Cross-env token forgery chain complete — shared RS256 key (10x deep-equal across 4 identity hosts), shared client_id 692A0A56, password grant enabled, prod parametric twin; blocked on client_secret (AUTH_HELPED)
+[LEARN] ACCEPTED IDOR @ connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16931 invoice download documented in public OpenAPI; cross-tenant BOLA unproven — new billing surface
+[LEARN] ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application (Blazor Server), /signin-oidc 500 broken OIDC callback, /_blazor/negotiate 200 with connectionId — identical to devfix twin; new CT host confirmed live
+[LEARN] ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured SPA shell serves literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — LOW cosmetic deploy residue
+[LEARN] REJECTED OTHER @ status/support/trust/docs.signl4.com: third-party (StatusLabs, Zendesk, Safebase, GitHub Pages) — not Derdack infrastructure
+[LEARN] REJECTED OTHER @ demo/downloads.enterprisealert.com: 404 / 403 (IIS/10.0 directory browsing disabled) — no attack surface
+[LEARN] ACCEPTED AUTH @ api.signl4.com/api/v2/teams: Handler-deferred auth confirmed 10th+ cycles — unauth GET returns 405 (not 401), invalid Bearer returns 405; auth validation at handler layer enables cross-env token acceptance
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3: invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance live-verified anon→401; OPTIONS confirms Allow sets — handler-deferred auth family extended to subscriptions/SCIM/prepaid
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v3/swagger.json: global `security: [{}]` (empty) reconfirmed on V3 — spec under-declares auth everywhere; internal billing + SCIM routes published publicly in OpenAPI
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v3/scim/settings: anon GET → 401, not anonymous — SCIM key-rotation surface is gated
+[LEARN] ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/deviceauthorization: endpoint live (400 invalid_client w/o secret) + device_code grant confirmed; still client_secret-gated (no public client)
+[LEARN] ACCEPTED AUTH @ connect+devconnect /identity/connect/ciba + deviceauthorization: both 400 across envs — endpoint twins, all secret-gated
+[LEARN] ACCEPTED MISCONFIG @ devapi.signl4.com: live 1:1 staging API mirror of api.signl4.com (appId cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7), root→devaccount/manage, zero unauth read surface
+[LEARN] ACCEPTED MISCONFIG @ api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycles confirmed
+[LEARN] ACCEPTED AUTH @ api.signl4.com: swagger.json confirms OAuth2 security scheme (authorizationCode flow) targeting connect.signl4.com/identity/connect endpoints with public_api_read+write+offline_access scopes — API accepts Bearer tokens from same shared-signing-key IdP; full cross-env token forgery chain confirmed
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v2/swagger.json: global security requirement empty (`"security": [{}]`) — spec declares no auth required while routes enforce Bearer/API-key; spec-vs-implementation mismatch; LOW
+[LEARN] ACCEPTED AUTH @ api.signl4.com: swagger declares `API_Key_Query` scheme (x-s4-api-key in query param) — potential key leakage vector via referrer/logs if live
+[LEARN] REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/docs: swagger confirms SIGNL4 API V2 = 40+ endpoints (alerts CRUD, teams, webhooks, subscriptions, schedules, users, categories, audits, distribution lists, templates, devices, callout templates) — full attack surface documented
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational
+[LEARN] ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json` — distinct auth pipelines with different error responses confirm independent validation paths
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
+[LEARN] ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → referrer-leak impact not demonstrable
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated)
+[LEARN] REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content this cycle — credential-leak hypothesis has no current evidence
+[LEARN] REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.derdack.com); WP auth cookies host-scoped to www.derdack.com, cannot traverse 302→301 HTTP redirect; residual = missing HSTS header only (LOW)
+[LEARN] REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+[LEARN] REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect / OAuth code-theft primitive
+[LEARN] REJECTED MISCONFIG @ bot/go/vps/trust/support.signl4.com: AWS-WAF 403 / parked 403 / TCP dead / CF trust center / Zendesk — third-party or inert, no Derdack defect
+[LEARN] ACCEPTED IDOR @ connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16931 invoice download documented in public OpenAPI; cross-tenant BOLA unproven — new billing surface
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid billing route family — BOLA AUTH_HELPED
+[LEARN] REJECTED AUTH @ frontdoor.signl4.com: /api/status /api/incidents /incidents /status all SPA-fallback 404 — status shell has no backend; static placeholder only
+[LEARN] REJECTED OTHER @ fix.signl4.com: /api/status → 404 Kestrel — no REST surface, Blazor-only app
+[LEARN] REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api (V1): V1 OpenAPI (93 paths) live on connect+api+devapi at /api/* and /api/v1/* — three concurrent namespaces all handler-deferred Bearer (anon reads 14/14 → 401/405), zero unauth deviation
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across all three namespaces (V1/V2/V3); internal/self-service routes (scripts, prepaid, subscriptions licenses) published publicly
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v1 behave-as: the ONLY "behave" occurrence is a 403 description typo ("in behave of the user"), NOT a request parameter. No behave-as query/header/body field exists in the V1 OpenAPI spec. Hypothesis permanently invalidated by swagger analysis.
+[LEARN] ACCEPTED IDOR @ connect.signl4.com/api/v1/alerts/acknowledgeAll|closeAll: userId query parameter documented in V1 swagger for bulk alert lifecycle operations. 403 description typo confirms "behave of the user" feature exists but guard may only check team membership. New IDOR surface — AUTH_HELPED.
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v1/swagger.json: V1 has 93 paths, scripts/inventory (8 paths), changePassword, userId on 19 endpoints (4 query, 15 path); security = API_Key_Header + API_Key_Query + OAuth2; global security [{}] empty.
+
+### STEP 7 — RISK
+[RISK] derdack: 94 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devapi/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant + client_credentials + PAR on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); webhook team-secret oracle confirmed HIGH impact; invoice download (ZUGFeRD) + prepaid billing routes documented but auth-gated (BOLA AUTH_HELPED); V1 API exposes userId query parameter on bulk alert operations (acknowledgeAll/closeAll/paged/report) — cross-user IDOR within tenant unproven; blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra; NEW CT surface (fix/frontdoor/status/support/trust/docs/demo/downloads) adds 8 live hosts with unprobed attack surface; V3 API exposes internal billing/SCIM routes in public OpenAPI with empty security requirement; fix.signl4.com broken OIDC callback adds auth flow analysis vector on prod support portal; V1/V2/V3 all declare empty global security in OpenAPI while enforcing auth at handler — systemic spec-vs-impl mismatch
