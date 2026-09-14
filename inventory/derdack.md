@@ -802,3 +802,27 @@ www.derdack.com
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets `secure`+host-only cookie); residual missing-HSTS only (LOW)
 - CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404; root serves parked IONOS sedoparking iframe
 - CHANGED www.derdack.com/de/ & /ea/ XML-RPC both POST-exposed with full method lists but mutating methods (wp.uploadFile, metaWeblog.newMediaObject) return faultCode 403 — auth-gated
+
+## 2026-09-14 01:36:12 UTC
+- NEW nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+- CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+- NEW nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+- CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+- NEW fix.signl4.com confirmed as prod ASP.NET Core Support Application (Blazor Server) with broken OIDC callback (/signin-oidc 500) and /_blazor/negotiate 200+connectionId — new CT host, identical to devfi
+- NEW frontdoor.signl4.com confirmed as unconfigured SPA shell serving literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — new CT host, cosmetic deploy residue
+- NEW connect.signl4.com/api (V1) OpenAPI (93 paths) live at /api/* and /api/v1/* on connect+api+devapi — three concurrent namespaces, all handler-deferred Bearer, zero unauth deviation
+- NEW connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across V1/V2/V3; internal/self-service routes (scripts, prepaid, subscriptions licenses) publi
+- NEW devconnect.signl4.com/webhook/{fabricated-secret} → 404 with byte-identical envelope to prod (`{"code":3004,"details":"No matching event source found."}`) — staging webhook oracle mirrors prod contrac
+- NEW api.signl4.com /webhook bare OPTIONS 404: only {teamSecret} leaf + /docs/v1 routed; base unregistered — route map now exact per host
+- NEW devapi.signl4.com/webhook/test (OPTIONS 405 Allow:GET,POST, appId d7865de8): staging mirror route-registration parity on webhook namespace — 2/4 OPTIONS matrix complete
+- NEW devconnect.signl4.com/webhook/docs/v1/swagger.json 200: webhook OpenAPI served on all 4 API hosts — public no-security-scheme POST /{teamSecret} contract estate-wide
+- NEW fix.signl4.com: 3rd distinct appId `fe51434f` (vs ec6c57ca api/connect, d7865de8 devapi); Login button interactive Blazor (all static auth paths 404); OIDC authority/client_id server-side only — passi
+- NEW downloads.enterprisealert.com: `/` 403, `/site/`+`/EA/` 404 — no readable resources under wildcard ACAO; CORS data-theft unsubstantiated
+- NEW status/support/trust/docs.signl4.com confirmed third-party (StatusLabs, Zendesk, Safebase, GitHub Pages) — not Derdack infrastructure
+- NEW demo/downloads.enterprisealert.com: 404 / 403 (IIS/10.0 directory browsing disabled) — no attack surface
+- CHANGED Cross-env token forgery chain: 10th deep-equal of byte-identical RS256 JWKS across 4 identity hosts (connect/api/devconnect/devapi) — stable, no drift
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET returns 405 Allow:GET,POST (not 401), invalid Bearer also 405 — handler-deferred auth stable
+- CHANGED Webhook team-secret enumeration oracle: operator-chosen secret (not high-entropy fixed), guessing falls under REJECTED brute-force class; exploitable only via secret leak → config/design finding
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets `secure`+host-only cookie); residual missing-HSTS only (LOW)
+- CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404; root serves parked IONOS sedoparking iframe
+- CHANGED www.derdack.com/de/ & /ea/ XML-RPC both POST-exposed with full method lists but mutating methods (wp.uploadFile, metaWeblog.newMediaObject) return faultCode 403 — auth-gated
