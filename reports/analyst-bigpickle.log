@@ -21075,3 +21075,86 @@ testability: AUTH_HELPED
 ## STEP 7 — RISK
 
 [RISK] derdack: 92 — SIGNL4 estate critical: cross-env token forgery chain (shared RS256 key 10x deep-equal across 4 identity hosts + client_id 692A0A56 + password grant + prod parametric twin) stays dominant but AUTH_HELPED-blocked on client_secret; webhook estate oracle 100% passive-verified config/design (HIGH-when-leaked, leak-dependent not brute-force); V1 swagger reveals internal routes (scripts, inventory, behave-as, changePassword) publicly documented with empty security requirement — behave-as privilege escalation hypothesis pending swagger analysis; V1/V2/V3 anon surface remains 401/405; fix.signl4.com broken OIDC adds auth flow analysis vector but SignalR access not exploitable; no new exploitable defect, magnitude stable, ceiling driven by credential-access gap.
+===== ANALYST bigpickle 2026-09-14 14:02:51 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m% [0mWebFetch https://connect.signl4.com/api/docs/v1/swagger.json
+[0m• [0mSearch V1 swagger for behave-as[90m Explore Agent[0m
+[0m✓ [0mSearch V1 swagger for behave-as[90m Explore Agent[0m
+## STEP 1 — DELTA
+
+[NEW] V1 swagger `behave-as` parameter does NOT exist — the only "behave" occurrence is a 403 response typo: "You are not allowed to perform this method in behave of the user." My prior hypothesis (confidence 50) was based on a false assumption. **Hypothesis invalidated.**
+
+[NEW] V1 `/alerts/acknowledgeAll` (POST) and `/alerts/closeAll` (POST) accept `userId` as a **query parameter** (not path) — caller specifies which user performs bulk acknowledge/close. If not validated against the authenticated caller's identity, this enables cross-user alert manipulation within the same tenant.
+
+[NEW] V1 `/alerts/paged` (POST) and `/alerts/report` (GET) also accept `userId` query parameter — data filtering/scope may leak across users within a tenant.
+
+[CHANGED] V1 `securitySchemes` = API_Key_Header (`x-s4-api-key` header), API_Key_Query (`x-s4-api-key` query), OAuth2 (authorizationCode); `security: [{}]` empty — same pattern as V2/V3. Global security does not declare which scheme is required, all enforcement is handler-side.
+
+## STEP 2 — PRIORITIZE
+
+[PRIO] connect.signl4.com/api/v1/alerts/acknowledgeAll|closeAll,7.2,attack_surface=6(userId query param for cross-user impersonation on bulk ops),business_value=8(alert lifecycle control),tech_exposure=6(OAuth/API-key dual auth),gate_ease=3(auth-gated but userId not validated?),cloud_surface=3,freshness=7(new finding)
+[PRIO] connect.signl4.com/api (V1 scripts/inventory),6.5,attack_surface=5(8 paths including enable/disable/data),business_value=7(script execution in subscription context),tech_exposure=6,business_value=7,tech_exposure=6,gate_ease=3,cloud_surface=3,freshness=7
+[PRIO] devconnect.signl4.com/identity/connect/token,5.0,attack_surface=3(cross-env token forgery — fully characterized, AUTH_HELPED),business_value=9,tech_exposure=9,gate_ease=2,cloud_surface=3,freshness=5
+
+## STEP 3 — HYPOTHESES
+
+[HYP] Cross-user bulk alert acknowledge/close via userId query parameter
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll, /api/v1/alerts/closeAll
+confidence: 55
+reasoning: V1 swagger documents POST /alerts/acknowledgeAll with userId query parameter described as "User ID of the user to be used to acknowledge the alarms." and POST /alerts/closeAll with userId "User ID of the user to be used to close the alarms." These are bulk operations acting on ALL unhandled/closed alerts. If the backend trusts the userId query parameter instead of deriving it from the authenticated API key's token claims, an API key holder could acknowledge/close any user's alerts within the same tenant. The 403 response says "You are not allowed to perform this method in behave of the user" (typo confirms the feature exists) — but the guard may only check team membership, not user identity. V1 is the oldest namespace and may lack hardening applied to V2/V3.
+evidence_needed: authenticated test with valid API key + userId=<other_user_id> on POST /alerts/acknowledgeAll — observe whether bulk acknowledge succeeds on other user's alerts or returns 403/400
+verify_steps: (AUTH_HELPED) POST https://connect.signl4.com/api/v1/alerts/acknowledgeAll?userId=<other_user_id> with X-S4-Api-Key header and valid JSON body; compare response to POST without userId parameter
+impact: cross-user alert lifecycle manipulation within same tenant — could acknowledge/close security alerts raised by other team members, disrupting incident response; MEDIUM-HIGH
+testability: AUTH_HELPED
+
+[HYP] Cross-user alert report data leakage via userId query parameter
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/report
+confidence: 45
+reasoning: GET /alerts/report accepts userId query param ("User ID of the user for whom you want a report"). If backend returns report data for any userId without verifying the caller's authorization to view that user's report, it leaks per-user alert volume and response behavior metrics within the tenant. Lower impact than acknowledgeAll since report data is operational metrics, not PII.
+evidence_needed: authenticated test with valid API key + userId=<other_user_id> on GET /alerts/report — observe whether report returns data for other user or returns 403/empty
+verify_steps: (AUTH_HELPED) GET https://connect.signl4.com/api/v1/alerts/report?userId=<other_user_id> with X-S4-Api-Key header; compare response to GET without userId
+impact: per-user alert response behavior metrics leakage within tenant; LOW-MEDIUM
+testability: AUTH_HELPED
+
+[HYP] V1 scripts/instances enable/disable without tenant scoping verification
+class: IDOR
+asset: connect.signl4.com/api/v1/scripts/instances/{instanceId}/enable, /disable
+confidence: 40
+reasoning: V1 swagger documents POST /scripts/instances/{instanceId}/enable and /disable — mutative script lifecycle operations. If instanceId is not validated against the caller's subscription/tenant, an API key holder could enable/disable script instances belonging to other tenants (if UUIDs are predictable). However, instanceId is a path parameter that may be opaque UUID — speculative without probing.
+evidence_needed: authenticated test with valid API key + fabricated instanceId on POST /scripts/instances/{instanceId}/enable — observe whether 404 (not found) vs 403 (unauthorized) vs 200 (success)
+verify_steps: (AUTH_HELPED) POST https://connect.signl4.com/api/v1/scripts/instances/00000000-0000-0000-0000-000000000000/enable with X-S4-Api-Key; observe response code
+impact: cross-tenant script lifecycle manipulation if instanceId enumerable; speculative
+testability: AUTH_HELPED
+
+## STEP 4 — SELF-CRITIQUE
+
+[PARKED] V1 "behave-as userId" privilege escalation: confidence 0 — the ONLY occurrence of "behave" in the entire V1 swagger is a 403 error message description typo ("in behave of the user"). There is NO behave-as query parameter, header, or request body field. Hypothesis permanently invalidated.
+
+[PARKED] Cross-user alert report data leakage (IDOR): confidence 45 < 40 threshold barely met, but impact is LOW-MEDIUM (operational metrics only, no PII). Park for now — acknowledgeAll has higher impact and same class.
+
+[PARKED] V1 scripts enable/disable without tenant scoping: confidence 40 = threshold, speculative without probing. Park pending acknowledgeAll analysis.
+
+[FINAL] survivors ranked:
+1. [55] Cross-user bulk alert acknowledge/close via userId query parameter (IDOR) — highest new value
+2. [85] Cross-env token forgery chain — fully characterized, AUTH_HELPED-blocked (ceiling driver)
+3. [70] Webhook team-secret enumeration oracle — PASSIVE, config/design class
+
+## STEP 5 — NEXT ACTION
+
+[NEXT] PROBE: GET https://connect.signl4.com/api/v1/alerts/report (anonymized) — attempt to trigger the userId endpoint to understand error shape and whether userId is validated. Then OPTIONS/HEAD on acknowledgeAll to confirm Allow set. Both at 1rps, read-only passive.
+
+## STEP 6 — LEARNING
+
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v1 behave-as: the ONLY "behave" occurrence is a 403 description typo ("in behave of the user"), NOT a request parameter. No behave-as query/header/body field exists in the V1 OpenAPI spec. Hypothesis permanently invalidated by swagger analysis.
+
+[LEARN] ACCEPTED IDOR @ connect.signl4.com/api/v1/alerts/acknowledgeAll|closeAll: userId query parameter documented in V1 swagger for bulk alert lifecycle operations. 403 description typo confirms "behave of the user" feature exists but guard may only check team membership. New IDOR surface — AUTH_HELPED.
+
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v1/swagger.json: V1 has 93 paths, scripts/inventory (8 paths), changePassword, userId on 19 endpoints (4 query, 15 path); security = API_Key_Header + API_Key_Query + OAuth2; global security [{}] empty.
+
+## STEP 7 — RISK
+
+[RISK] derdack: 90 — SIGNL4 estate remains critical: cross-env token forgery chain (shared RS256 key, 10x+ deep-equal, 4 identity hosts, password grant, client_id 692A0A56, AUTH_HELPED) is dominant but blocked; NEW: V1 userId query parameter on bulk alert acknowledge/close creates cross-user IDOR within tenant (AUTH_HELPED, 55); webhook team-secret oracle HIGH-when-leaked (70, PASSIVE); V1 scripts/inventory surface (8 paths) unprobed; V1 changePassword endpoint exists but request body unknown; "behave-as" hypothesis invalidated; cross-env signing key stable across 10+ cycles with no drift.

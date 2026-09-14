@@ -828,3 +828,9 @@ www.derdack.com
 - CHANGED www.derdack.com/de/ & /ea/ XML-RPC both POST-exposed with full method lists but mutating methods (wp.uploadFile, metaWeblog.newMediaObject) return faultCode 403 — auth-gated
 
 ## 2026-09-14 07:06:06 UTC
+
+## 2026-09-14 14:02:51 UTC
+- NEW V1 swagger `behave-as` parameter does NOT exist — the only "behave" occurrence is a 403 response typo: "You are not allowed to perform this method in behave of the user." My prior hypothesis (confiden
+- NEW V1 `/alerts/acknowledgeAll` (POST) and `/alerts/closeAll` (POST) accept `userId` as a **query parameter** (not path) — caller specifies which user performs bulk acknowledge/close. If not validated aga
+- NEW V1 `/alerts/paged` (POST) and `/alerts/report` (GET) also accept `userId` query parameter — data filtering/scope may leak across users within a tenant.
+- CHANGED V1 `securitySchemes` = API_Key_Header (`x-s4-api-key` header), API_Key_Query (`x-s4-api-key` query), OAuth2 (authorizationCode); `security: [{}]` empty — same pattern as V2/V3. Global security does no
