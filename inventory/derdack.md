@@ -834,3 +834,12 @@ www.derdack.com
 - NEW V1 `/alerts/acknowledgeAll` (POST) and `/alerts/closeAll` (POST) accept `userId` as a **query parameter** (not path) — caller specifies which user performs bulk acknowledge/close. If not validated aga
 - NEW V1 `/alerts/paged` (POST) and `/alerts/report` (GET) also accept `userId` query parameter — data filtering/scope may leak across users within a tenant.
 - CHANGED V1 `securitySchemes` = API_Key_Header (`x-s4-api-key` header), API_Key_Query (`x-s4-api-key` query), OAuth2 (authorizationCode); `security: [{}]` empty — same pattern as V2/V3. Global security does no
+
+## 2026-09-14 19:02:36 UTC
+- NEW V1 API surface on connect.signl4.com/api (93 paths) live across connect/api/devapi with handler-deferred Bearer auth; userId query parameter on /alerts/acknowledgeAll, /alerts/closeAll, /alerts/paged,
+- NEW behave-as parameter hypothesis INVALIDATED — only occurrence is 403 response typo "in behave of the user", not a request parameter
+- NEW fix.signl4.com OIDC callback probe completed (per 2026-09-13/14 entries): confirmed prod ASP.NET Core Blazor Server, /signin-oidc 500, /_blazor/negotiate 200+connectionId — identical to devfix twin
+- CHANGED Cross-env token forgery chain: 10th+ deep-equal of byte-identical RS256 JWKS across 4 identity hosts (connect/api/devconnect/devapi), shared client_id 692A0A56, password grant enabled on staging — AUT
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET returns 405 Allow:GET,POST (not 401), invalid Bearer also 405 — handler-deferred auth stable
+- CHANGED connect.signl4.com/api/v3 fully dumped (200+ paths): invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance, PUT /api/prepaid/{id}/prepaidSettings, file-download family — all anon→4
+- CHANGED Webhook team-secret enumeration: operator-chosen secret (not high-entropy), guessing falls under REJECTED brute-force; oracle exploitable only via secret leak → config/design finding
