@@ -56,3 +56,11 @@
   - | 5 | SIGNL4 team secrets in public repos (Google IoT, Postman, DevTools) | VALID | 5.3 | Reported |
   - | 6 | SIGNL4 secret logged at INFO level in ioBroker adapter | VALID | 5.3 | Reported |
   - | 7 | PII + internal infra URLs in public CSV export | VALID | 5.3 | Reported |
+
+- 6 lead(s) marked VALID at 2026-09-14 21:52:08 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | Cross-env JWKS key reuse | **VALID** | 8.1 |
+  - | 2 | Password grant on staging IdP | **VALID** | 7.3 |
+  - | 5 | /de/ XML-RPC exposed | **VALID** | 7.5 |
