@@ -463,3 +463,8 @@
 - 2026-09-14 REJECTED AUTH @ frontdoor.signl4.com: /api/status /api/incidents /incidents /status all SPA-fallback 404 — status shell has no backend; static placeholder only
 - 2026-09-14 REJECTED OTHER @ fix.signl4.com: /api/status → 404 Kestrel — no REST surface, Blazor-only app
 - 2026-09-14 REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles
+- 2026-09-14 ACCEPTED AUTH @ connect.signl4.com/api (V1): V1 OpenAPI (93 paths) live on connect+api+devapi at /api/* and /api/v1/* — three concurrent namespaces all handler-deferred Bearer (anon reads 14/14 → 401/405), zero unauth deviation
+- 2026-09-14 ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v1/swagger.json: global security:[{}] empty on V1 too — spec-under-declares across all three namespaces (V1/V2/V3); internal/self-service routes (scripts, prepaid, subscriptions licenses) published publicly
+- 2026-09-14 REJECTED fix.signl4.com Blazor SignalR: /_blazor/negotiate 200+connectionId = standard Blazor transport negotiation, not auth bypass; component model gates data on auth state; confidence 40 parked
+- 2026-09-14 ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token: Cross-env token forgery chain complete — shared RS256 key (10x deep-equal across 4 identity hosts), shared client_id 692A0A56, password grant enabled, prod parametric twin; blocked on client_secret (AUTH_HELPED)
+- 2026-09-14 ACCEPTED IDOR @ connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16931 invoice download documented in public OpenAPI; cross-tenant BOLA unproven — new billing surface

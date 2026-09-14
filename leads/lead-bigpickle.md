@@ -3870,3 +3870,41 @@ testability: AUTH_HELPED
 [LEARN] REJECTED OTHER @ fix.signl4.com: /api/status → 404 Kestrel — no REST surface, Blazor-only app
 [LEARN] REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles
 [RISK] derdack: 92 — SIGNL4 estate critical: prod IdP (connect) + public API (api) + live staging cluster (devconnect/devaccount/devapi/devfix on 108.143.123.104) sharing PROD RS256 signing key, same OAuth client_id 692A0A56, password grant + client_credentials + PAR on staging — cross-env token forgery confirmed but AUTH_HELPED-blocked on client_secret; api/v2 fully Bearer-gated at handler (zero unauth surface); webhook team-secret oracle confirmed HIGH impact; invoice download (ZUGFeRD) + prepaid billing routes documented but auth-gated (BOLA AUTH_HELPED); blog/techblog downgrade dismissed (no session-theft, missing-HSTS only); www.derdack.com/de + /ea XML-RPC exposed but auth-gated on mutating methods; dev.derdack.com MultiViews discloses paths only; 4/9 inventory hosts not Derdack infra; NEW CT surface (fix/frontdoor/status/support/trust/docs/demo/downloads) adds 8 live hosts with unprobed attack surface; V3 API exposes internal billing/SCIM routes in public OpenAPI with empty security requirement; fix.signl4.com broken OIDC callback adds auth flow analysis vector on prod support portal
+## 2026-09-14 07:02:14 UTC [target] (model bigpickle)
+[PRIO] connect.signl4.com/api (V1),7.5,attack_surface=9(93 paths/scripts/inventory/behave-as/changePassword/attachments),business_value=9(full API),tech_exposure=8(OAuth/Bearer/API-key/empty security),gate_ease=2(all 401/405),cloud_surface=3,freshness=6
+[PRIO] connect.signl4.com/webhook/{teamSecret},6.3,attack_surface=6,business_value=8,tech_exposure=7,gate_ease=5,cloud_surface=2,freshness=8
+[PRIO] fix.signl4.com (Blazor Server),5.5,attack_surface=5,business_value=8,tech_exposure=7,gate_ease=3,cloud_surface=2,freshness=6
+[HYP] V1 "behave-as userId" privilege escalation via impersonation parameter
+class: AUTH
+asset: connect.signl4.com/api/v1/* (V1 OpenAPI 93 paths)
+confidence: 50
+reasoning: V1 swagger documents "behave-as userId" feature alongside scripts/inventory/changePassword/attachments; global security:[{}] empty; if backend accepts behave-as query/header without validating caller authorization, authenticated user could impersonate any userId → cross-tenant data access; V1 served on connect+api+devapi (3 hosts) alongside V2/V3; V1 is the oldest namespace and may lack auth hardening applied to V2/V3
+evidence_needed: full V1 swagger route map showing behave-as parameter location, required scopes, and validation rules; or authenticated test with valid Bearer token + behave-as userId=<other_user> observing data change
+verify_steps: GET https://connect.signl4.com/api/docs/v1/swagger.json (passive swagger read to map behave-as parameter location, required scopes, and validation rules)
+impact: cross-tenant data access + account takeover if backend trusts behave-as over token sub claim; CRITICAL
+testability: AUTH_HELPED
+[HYP] Webhook team-secret enumeration oracle — 100% passive-verified (FINAL)
+class: AUTH
+asset: api/connect/devapi/devconnect.signl4.com/webhook/{teamSecret}
+confidence: 70
+reasoning: 4/4 hosts OPTIONS Allow:GET,POST + bare base 404 + GET-leaf byte-identical + swagger no security scheme + POST invalid→404 code 3004 vs 201 eventId; docs confirm secret is "fixed part of its URL", TLS-only, no HMAC, no rotation surfaced; same credential doubles as {teamsecret}@mail.signl4.com; operator-entropy samples (helloworld, team-secret); 15+ integrations URL-embed it
+evidence_needed: none — oracle contract fully characterized; exploit requires secret leak (REJECTED brute-force class)
+verify_steps: done this cycle + prior (OPTIONS x4, base 404, swagger 200, POST oracle, docs RAG)
+impact: unauth alert trigger/ack/resolve within a real team → incident-response corruption; HIGH-when-leaked, null without leak
+testability: PASSIVE
+[HYP] Cross-env token forgery chain — shared RS256 key + client_id + password grant
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token → api.signl4.com/api/v2/*
+confidence: 85
+reasoning: 10th+ deep-equal of byte-identical RS256 JWKS across 4 identity hosts (connect/api/devconnect/devapi); shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6; password grant enabled on staging; prod is parametric twin (OIDC discovery byte-identical); API accepts Bearer tokens from same IdP (swagger OAuth2 flow); handler-deferred auth on V2/V3 enables cross-env token acceptance
+evidence_needed: client_secret for client_id 692A0A56 (not found in public docs/GitHub/Postman/helpcenter); or staging credential compromise
+verify_steps: none — fully characterized, blocked on client_secret acquisition
+impact: full API access (alerts CRUD, teams, webhooks, subscriptions, billing, SCIM) across all tenants; CRITICAL
+testability: AUTH_HELPED
+[PARKED] fix.signl4.com Blazor SignalR unauthenticated access: confidence 40 = threshold; /_blazor/negotiate 200+connectionId is standard Blazor transport negotiation, not auth bypass; SignalR hub accepts connection but Blazor component model gates data rendering on auth state; broken OIDC → unauthenticated SignalR connection → no data rendered; low exploit potential without additional misconfiguration.
+[FINAL] survivors ranked:
+[NEXT] PROBE: GET https://connect.signl4.com/api/docs/v1/swagger.json (passive read of V1 OpenAPI to map "behave-as userId" parameter location, required scopes, and validation rules — single GET request @1rps; if behave-as is a query param or header without role validation, confidence jumps to 70+)
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api (V1): V1 OpenAPI (93 paths) live on connect+api+devapi at /api/* and /api/v1/* — three concurrent namespaces all handler-deferred Bearer (anon reads 14/14 → 401/405), zero unauth deviation
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v1/swagger.json: global security:[{}] empty on V1 too — spec-under-declares across all three namespaces (V1/V2/V3); internal/self-service routes (scripts, prepaid, subscriptions licenses) published publicly
+[LEARN] REJECTED fix.signl4.com Blazor SignalR: /_blazor/negotiate 200+connectionId = standard Blazor transport negotiation, not auth bypass; component model gates data on auth state; confidence 40 parked
+[RISK] derdack: 92 — SIGNL4 estate critical: cross-env token forgery chain (shared RS256 key 10x deep-equal across 4 identity hosts + client_id 692A0A56 + password grant + prod parametric twin) stays dominant but AUTH_HELPED-blocked on client_secret; webhook estate oracle 100% passive-verified config/design (HIGH-when-leaked, leak-dependent not brute-force); V1 swagger reveals internal routes (scripts, inventory, behave-as, changePassword) publicly documented with empty security requirement — behave-as privilege escalation hypothesis pending swagger analysis; V1/V2/V3 anon surface remains 401/405; fix.signl4.com broken OIDC adds auth flow analysis vector but SignalR access not exploitable; no new exploitable defect, magnitude stable, ceiling driven by credential-access gap.
