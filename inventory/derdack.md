@@ -888,3 +888,27 @@ www.derdack.com
 - CHANGED Webhook team-secret enumeration: operator-chosen secret (not high-entropy), guessing falls under REJECTED brute-force; oracle exploitable only via secret leak → config/design finding
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets secure+host-only cookie); residual missing-HSTS only (LOW)
 - CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404; root serves parked IONOS sedoparking iframe
+
+## 2026-09-15 10:28:06 UTC
+- NEW account.signl4.com/identity hosts its own IdentityServer (OIDC discovery 200 JSON), NOT just a redirect proxy — 6th identity host with live authorize/token/deviceauth/CIBA/PAR/introspection/revocation
+- NEW account.signl4.com/identity JWKS BYTE-IDENTICAL to all other 5 hosts — shared RS256 key (kid 91EE4F3CE94EB517) across connect/devconnect/api/devapi/account/devaccount
+- NEW account.signl4.com/identity issuer = `https://connect.signl4.com/identity` — account-hosted IdP claims connect's issuer identity (cross-host issuer mismatch)
+- NEW account.signl4.com/identity exposes 5 scopes NOT in connect discovery: `reseller_portal`, `public_api_ea_manage`, `public_api_ea_alerting`, `mobile_api` — Enterprise Alert management scope surface
+- NEW account.signl4.com/identity claims: `http://schemas.derdack.com/identity/claims/subscription_id`, `branch_id`, `is_branch_manager`, `is_stakeholder`, `active` — account-specific custom claims
+- NEW account.signl4.com/identity supports `code_challenge_methods_supported: [plain, S256]` — plain PKCE allowed (weak)
+- NEW account.signl4.com/identity password grant → invalid_client (secret-gated, same as connect)
+- NEW account.signl4.com/identity/connect/authorize?redirect_uri=evil.com → 302 to /identity/home/error (no code/state echoed — open redirect blocked)
+- NEW devaccount.signl4.com/identity mirrors prod: issuer = devconnect.signl4.com/identity, same custom claims, JWKS kid 91EE4F3C identical
+- CHANGED 6 identity hosts confirmed (was 4): connect, devconnect, api, devapi, account, devaccount — all sharing the same RS256 signing key
+- NEW No new live probes executed since last KB cycle (5 hours ago) — estate stable
+- NEW fix.signl4.com/_framework/blazor.boot.json 404 confirmed — Blazor Server publish model (no client DLLs), embedded OIDC config recovery impossible
+- NEW devfix.signl4.com/_framework/blazor.boot.json 404 — same Server publish model
+- NEW frontdoor.signl4.com/config.js + /appsettings.json 404 — static shell ships no config assets
+- CHANGED "Blazor assembly disclosure" hypothesis (AUTH, 50) permanently CLOSED — no DLL/boot-manifest surface
+- CHANGED Cross-env token forgery chain: 10th+ deep-equal of byte-identical RS256 JWKS across 4 identity hosts (connect/api/devconnect/devapi), shared client_id 692A0A56, password grant enabled on staging — AUT
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET returns 405 Allow:GET,POST (not 401), invalid Bearer also 405 — handler-deferred auth stable
+- CHANGED connect.signl4.com/api/v3 fully dumped (200+ paths): invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance, PUT /api/prepaid/{id}/prepaidSettings, file-download family — all anon→4
+- CHANGED V1 API userId query parameter on /alerts/acknowledgeAll, /alerts/closeAll, /alerts/paged, /alerts/report confirmed via static swagger analysis — cross-user IDOR within tenant unproven
+- CHANGED Webhook team-secret enumeration: operator-chosen secret (not high-entropy), guessing falls under REJECTED brute-force; oracle exploitable only via secret leak → config/design finding
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets secure+host-only cookie); residual missing-HSTS only (LOW)
+- CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404; root serves parked IONOS sedoparking iframe

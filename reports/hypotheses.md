@@ -2322,3 +2322,10 @@
 - LEARN: REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles
 - LEARN: ACCEPTED AUTH @ connect.signl4.com/api (V1): V1 OpenAPI (93 paths) live on connect+api+devapi at /api/* and /api/v1/* — three concurrent namespaces all handler-
 - LEARN: ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across all three namespaces (V1/V
+
+## RANKED HYPOTHESES 2026-09-15 10:28:06 UTC
+- [88] account.signl4.com/identity/connect/token: Cross-env token forgery chain now spans 6 identity hosts with expanded Enterprise Alert scopes on account IdP (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: token introspection surface on account host — POST https://account.signl4.com/identity/connect/introspect with empty body (1 request, 1rps). If account-h
+- LEARN: ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key; OIDC discovery live; 5 new EA scopes (reseller_portal, public_api_ea_manag
+- LEARN: ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer c
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS

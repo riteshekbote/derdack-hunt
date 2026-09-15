@@ -521,3 +521,6 @@
 - 2026-09-15 REJECTED OTHER @ crt.sh signl4.com: no new subdomain certs since 2026-09-10 sweep — CT expansion stable across 2 cycles
 - 2026-09-15 ACCEPTED AUTH @ connect.signl4.com/api (V1): V1 OpenAPI (93 paths) live on connect+api+devapi at /api/* and /api/v1/* — three concurrent namespaces all handler-deferred Bearer (anon reads 14/14 → 401/405), zero unauth deviation
 - 2026-09-15 ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v1/swagger.json: global `security:[{}]` empty on V1 too — spec-under-declares across all three namespaces (V1/V2/V3); internal/self-service routes (scripts, prepaid, subscriptions licenses) published publicly
+- 2026-09-15 ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key; OIDC discovery live; 5 new EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api) + 5 custom claims; issuer = connect.signl4.com/identity (cross-host mismatch)
+- 2026-09-15 ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer claim
+- 2026-09-15 ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
