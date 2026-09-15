@@ -395,3 +395,40 @@ TARGET_ORG not configured for derdack; skipping public-org deep scan.
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
 ## REPOSCAN 2026-09-15 21:42:53 UTC
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-15 23:51:25 UTC
+[HYP] Hardcoded SQL Server SA Credentials in Public Plugin
+class: SECRET
+asset: Derdack/derdack-oncall-holidayimport/HolidayImport.js:16, HolidayDeleteAll.js:22
+confidence: 95
+reasoning: Connection string contains `UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017` with internal hostname `sqlserver.derdack-support.local`. The SA account is SQL Server's super-admin. These are real production/support credentials, not placeholders — the same string appears across two separate scripts in the same repo, and matches a pattern already reported in valid-bugs.md (hardcoded SQL Server SA creds `Derdack!`).
+impact: HIGH (8.1 CVSS) — full database takeover if host is reachable; credential reuse risk across environments
+verify_steps: Passively confirm repo is public on github.com/Derdack; check git log for commit author (Frank Gutacker, Derdack employee); verify `sqlserver.derdack-support.local` resolves from Derdack VPN/office network
+[HYP] Hardcoded Checkmk Admin Credentials + Internal IP in Public Plugin
+class: SECRET
+asset: Derdack/derdack-plugin-checkmk/2-way/Main.js:90-94
+confidence: 95
+reasoning: Lines 90-94 contain `username = "cmkadmin"`, `password = "CNlydVqZ"`, `serverURL = "http://192.168.88.107:8080/cmk/check_mk/api/v0/"`. This is a real Checkmk admin account with plaintext password and RFC1918 internal IP, committed to a public GitHub repo. Already noted in valid-bugs.md (Hardcoded Checkmk creds + internal IP).
+impact: MEDIUM (7.5 CVSS) — internal network credential exposure; Checkmk admin can modify monitoring config, ack alerts, execute scripts
+verify_steps: Passively confirm repo is public; verify `192.168.88.107` is a private IP (RFC1918); check if Checkmk is exposed on any public-facing interface
+[HYP] SIGNL4 Team Secret Logged at INFO Level in ioBroker Adapter
+class: SECRET
+asset: signl4/ioBroker.signl4/main.js:40
+confidence: 90
+reasoning: `this.log.info('config team_secret: ' + this.config.team_secret)` logs the SIGNL4 team secret in plaintext at INFO level on adapter startup. Team secrets are authentication tokens for SIGNL4 webhooks — anyone with log access can forge alerts. Already reported in valid-bugs.md.
+impact: MEDIUM (5.3 CVSS) — secret exposure in logs enables alert forgery; log aggregation systems may persist the secret
+verify_steps: Install ioBroker.signl4 adapter, configure with a test team secret, observe logs at info level; confirm secret appears in syslog/journald
+[HYP] PII + Internal Infrastructure URLs in Public CSV Export
+class: OTHER
+asset: signl4/signl4-reporting/AlertAuditReport.csv, ShiftReport.csv
+confidence: 80
+reasoning: AlertAuditReport.csv contains employee email addresses (`ron@signl4.com`), internal Grafana dashboard URLs (`ronlab.grafana.net`), alert content with internal datasource UIDs, and operational data. ShiftReport.csv contains employee names, emails, and shift schedules. These are real SIGNL4 employee data committed to a public repo. Already reported in valid-bugs.md.
+impact: MEDIUM (5.3 CVSS) — PII disclosure of employee emails, work schedules, and internal infrastructure topology
+verify_steps: Passively confirm files are public on github.com/signl4; `ronlab.grafana.net` may reveal internal Grafana instance
+[HYP] Internal SQL Server Hostname in Commented Code
+class: OTHER
+asset: signl4/signl4-integration-sql-server/db2signl.ps1:14
+confidence: 70
+reasoning: Commented-out line contains full connection string: `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=none;Database=EnterpriseAlert2017`. While commented out, it reveals internal hostname, database name, and SA credentials (password `none`). This is distinct from the HolidayImport finding — different repo, different integration.
+impact: LOW (5.3 CVSS) — credential in comment still leaks internal infra details; `PWD=none` may be a weak/real password
+verify_steps: Passively confirm file is public; check git blame for commit context
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
