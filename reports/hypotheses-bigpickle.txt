@@ -1,1 +1,30 @@
-## 2026-09-15 19:03:51 UTC [target] (model bigpickle)
+## 2026-09-15 22:16:35 UTC [target] (model bigpickle)
+[HYP] Cross-env token forgery via account-hosted IdP (issuer mismatch + shared RS256 key across 6 hosts)
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 88
+reasoning: 6 identity hosts serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account IdP claims issuer=connect.signl4.com/identity (cross-host mint-mismatch); account exposes 5 EA scopes absent from connect (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api) + custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder); code_challenge_methods includes plain; password+device_code+CIBA grants on all hosts, all client_secret-gated; api/connect share backend appId cid-v1:ec6c57ca
+evidence_needed: any valid client_secret OR leaked X-S4-Api-Key/Bearer token from any of the 6 identity hosts
+verify_steps: (passive) OPTIONS/GET /identity/connect/{introspect,revocation,deviceauthorization,backchannel-authentication,par} on all 6 hosts — diff Allow/status per host to find fail-open registration; (AUTH_HELPED) password-grant on account host with stolen creds → Bearer → GET /api/v2/teams (401→200 proves cross-env acceptance)
+impact: minted Bearer tokens with EA-manage scopes accepted by prod API backend → multi-tenant alert CRUD + EA management + reseller portal access; CRITICAL when a credential is obtained
+testability: AUTH_HELPED
+[HYP] V3 report/attachment file-download family trusts fileName for path
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}, /dutyReports/{fileName}, /signls/{signlId}/attachments/{attachmentId}
+confidence: 50
+reasoning: V3 swagger (200+ paths) documents the file-download family; all live-verified anon→401; fileName/attachmentId in path are prime traversal + cross-tenant object-guessing candidates; V1 swagger lists equivalent report downloads
+evidence_needed: authenticated request proving traversal decoding (%2f vs /) differs from objectId validation — requires operator-owned key only
+verify_steps: (AUTH_HELPED) GET /api/v3/teams/{teamId}/signlReports/..%2f..%2f..%2fetc%2fpasswd and /signlReports/.%2e/%2e%2e/ comparators with X-S4-Api-Key; passive-first pre-check: OPTIONS same routes on devapi for staging Allow parity
+impact: cross-tenant report/invoice disclosure, potential LFI if traversal decodes; HIGH
+testability: AUTH_HELPED
+[HYP] V1 bulk alert acknowledge/close honors arbitrary userId within tenant
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll,closeAll
+confidence: 55
+reasoning: V1 swagger documents POST acknowledgeAll/closeAll with userId as query param; 403 response typo "in behave of the user" confirms impersonation feature exists; V1 is the oldest namespace on the shared handler-deferred auth backend; guard may check team membership only, not caller identity
+evidence_needed: authenticated A/B comparing userId=<other> vs omitted on a key the operator owns
+verify_steps: (passive-first) OPTIONS /api/v1/alerts/acknowledgeAll (+ /closeAll) on connect+devapi — expect 405 Allow:POST if routed, 404 if absent; (AUTH_HELPED) POST with/without userId, diff status codes
+impact: cross-user alert lifecycle manipulation within a tenant; MEDIUM-HIGH
+testability: AUTH_HELPED
+[NEXT] PROBE: OPTIONS https://connect.signl4.com/api/v1/alerts/acknowledgeAll and /api/v1/alerts/closeAll (+ same on devapi.signl4.com for staging parity) — confirm route registration and Allow set (expect 405 Allow:POST if routed, 404 if absent); 1rps.
+[RISK] derdack: 89 — unchanged; 6 identity hosts share byte-identical prod RS256 signing key, account host adds exclusive EA-manage/reseller scopes + issuer mismatch across host boundaries, password/device/CIBA grants secret-gated everywhere; full EA multi-tenant compromise achievable the moment any client_secret leaks from any cluster; all evasion paths permanently AUTH_HELPED.
