@@ -856,3 +856,18 @@ www.derdack.com
 - CHANGED Cross-env token forgery chain: 10th+ deep-equal of byte-identical RS256 JWKS across 4 identity hosts (connect/api/devconnect/devapi), shared client_id 692A0A56, password grant enabled on staging — AUT
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets secure+host-only cookie); residual missing-HSTS only (LOW)
 - CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404
+
+## 2026-09-15 00:42:33 UTC
+- NEW fix.signl4.com/_framework/blazor.boot.json → 404; _framework/ directory → 404; only blazor.web.js (200) + blazor.server.js (200) served; blazor.web.js contains NO boot.json/.wasm/.dll references — pur
+- NEW devfix.signl4.com/_framework/blazor.boot.json → 404 — same Blazor Server publish model as fix; staging manifest absent
+- NEW frontdoor.signl4.com/config.js + /appsettings.json → 404 both — static shell ships no config assets
+- CHANGED "Blazor assembly disclosure" hypothesis (AUTH, 50) dead on live probe — no DLL/boot-manifest surface exists; embedded OIDC config recovery via client download impossible
+- CHANGED No new probe data from other agents; estate otherwise stable
+- NEW fix.signl4.com/_framework/ assemblies served without auth (Blazor Server default hosting) — assembly/boot-manifest disclosure + embedded-config recovery unexplored
+- NEW V1 API userId query parameter on /alerts/acknowledgeAll, /alerts/closeAll, /alerts/paged, /alerts/report confirmed via static swagger analysis — cross-user IDOR within tenant unproven
+- NEW connect.signl4.com/api/v3 fully dumped (200+ paths): invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance, PUT /api/prepaid/{id}/prepaidSettings, file-download family — all anon→4
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET returns 405 Allow:GET,POST (not 401), invalid Bearer also 405 — handler-deferred auth stable
+- CHANGED Cross-env token forgery chain: 10th+ deep-equal of byte-identical RS256 JWKS across 4 identity hosts (connect/api/devconnect/devapi), shared client_id 692A0A56, password grant enabled on staging — AUT
+- CHANGED Webhook team-secret enumeration: operator-chosen secret (not high-entropy), guessing falls under REJECTED brute-force; oracle exploitable only via secret leak → config/design finding
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets secure+host-only cookie); residual missing-HSTS only (LOW)
+- CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404; root serves parked IONOS sedoparking iframe
