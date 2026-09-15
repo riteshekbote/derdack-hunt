@@ -932,3 +932,17 @@ www.derdack.com
 - CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently invalidated (wp-login.php sets secure+host-only cookie); residual missing-HSTS only (LOW)
 - CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/), files 403/404; root serves parked IONOS sedoparking iframe
 - CHANGED No new live probes executed since last KB cycle (5 hours ago) — estate stable
+
+## 2026-09-15 19:07:04 UTC
+- NEW account.signl4.com/identity confirmed as 6th live IdentityServer (OIDC discovery 200) with byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) shared across all 6 identity ho
+- NEW account.signl4.com/identity issuer mismatch: claims `https://connect.signl4.com/identity` despite being hosted on account subdomain — cross-host token minting with foreign issuer claim
+- NEW account.signl4.com/identity exposes 5 Enterprise Alert scopes absent from connect: `reseller_portal`, `public_api_ea_manage`, `public_api_ea_alerting`, `mobile_api` — expanded OAuth scope surface
+- NEW account.signl4.com/identity custom claims: `http://schemas.derdack.com/identity/claims/subscription_id`, `branch_id`, `is_branch_manager`, `is_stakeholder`, `active` — tenant-enrichment claims in toke
+- NEW account.signl4.com/identity allows `code_challenge_methods_supported: ["plain", "S256"]` — plain PKCE method permitted (weak, enables code theft without verifier)
+- NEW devaccount.signl4.com/identity mirrors prod: issuer = `devconnect.signl4.com/identity`, same custom claims, identical JWKS — staging parity confirmed
+- NEW fix.signl4.com/_framework/blazor.boot.json 404 confirmed — Blazor Server publish model (no client-side DLLs/boot manifest), embedded OIDC config recovery impossible
+- NEW devfix.signl4.com/_framework/blazor.boot.json 404 — same Server publish model, no staging manifest divergence
+- NEW frontdoor.signl4.com/config.js + /appsettings.json 404 — static SPA shell ships no config assets
+- CHANGED Cross-env token forgery chain now spans 6 identity hosts (was 4) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH
+- CHANGED "Blazor assembly disclosure" hypothesis (AUTH, confidence 50) permanently CLOSED — no DLL/boot-manifest surface exists on fix/devfix
+- CHANGED No new live probes executed since last KB cycle (5 hours ago) — estate stable

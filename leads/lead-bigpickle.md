@@ -4160,3 +4160,4 @@ evidence_needed: authenticated comparison GET report with userId=<other> vs omit
 verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other> with X-S4-Api-Key; diff dataset
 impact: per-user alert/response-metrics disclosure within tenant; LOW-MEDIUM
 testability: AUTH_HELPED
+## 2026-09-15 19:03:51 UTC [target] (model bigpickle)
