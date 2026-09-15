@@ -4041,3 +4041,48 @@ testability: AUTH_HELPED
 [LEARN] REJECTED MISCONFIG @ frontdoor.signl4.com/config.js|appsettings.json: 404 both — static shell ships no config assets, no backend pointer to recover
 [LEARN] ACCEPTED AUTH @ fix.signl4.com: Blazor Server OIDC client config is server-side only and unrecoverable by client download — the only remaining route to client_secret is the AUTH_HELPED device/CIBA/password grants or a credential leak
 [RISK] derdack: 88 — cross-env token forgery chain (shared RS256 + shared client_id + password grant, AUTH_HELPED) remains the dominant CRITICAL-class finding, stable across 11+ cycles with zero drift; V1 bulk-alert userId IDOR (55) is the most concretely testable authz flaw but requires any valid API key; this cycle closed the last passive credential-recovery vector (Blazor assembly download), leaving all top-3 hypotheses authentication-gated; webhook oracle + empty `security:[{}]` specs remain config/design-level residual
+## 2026-09-15 05:21:24 UTC [target] (model bigpickle)
+[NEW] fix.signl4.com/_framework blazor.boot.json 404 — Blazor Server publish model confirmed, no DLL/boot-manifest surface; embedded OIDC config recovery impossible
+[NEW] devfix.signl4.com/_framework/blazor.boot.json 404 — same Server publish model, staging manifest absent
+[NEW] frontdoor.signl4.com/config.js + /appsettings.json 404 both — static shell ships no config assets
+[CHANGED] Blazor assembly disclosure hypothesis (AUTH, 50) dead on live probe — permanently closed
+[PRIO] connect.signl4.com/api/v1/alerts/acknowledgeAll|closeAll,7.2,attack_surface=6(bulk lifecycle+userId param),business_value=8(cross-user incident control),tech_exposure=6(dual auth, oldest namespace),gate_ease=3(AUTH_HELPED),cloud_surface=3,freshness=7
+[PRIO] account.signl4.com+devaccount.signl4.com/manage,4.2,attack_surface=3(redirect-only probed),business_value=8(account lifecycle),tech_exposure=6(.NET/IdentityServer),gate_ease=5(no auth on route discovery),cloud_surface=4,freshness=9
+[PRIO] devconnect.signl4.com/identity/connect/token,5.0,attack_surface=3(fully characterized),business_value=9,tech_exposure=9,gate_ease=2(secret-blocked),cloud_surface=3,freshness=5
+[HYP] V1 bulk alert acknowledge/close honors arbitrary userId within tenant
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll,closeAll
+confidence: 55
+reasoning: V1 swagger documents POST /alerts/acknowledgeAll + /alerts/closeAll with userId as QUERY parameter; 403 typo "in behave of the user" confirms impersonation feature exists; V1 oldest namespace lacks V2/V3 hardening evidenced by shared handler-deferred auth pattern; guard may check team membership only, not caller identity
+evidence_needed: authenticated A/B test with valid X-S4-Api-Key comparing response with userId=<other> vs omitted
+verify_steps: (AUTH_HELPED) POST https://connect.signl4.com/api/v1/alerts/acknowledgeAll?userId=<other_user_id> with X-S4-Api-Key header, then same without userId; compare status codes
+impact: cross-user alert lifecycle manipulation within a tenant — attacker acknowledges/closes others' incidents, disrupting response; MEDIUM-HIGH
+testability: AUTH_HELPED
+[HYP] V1 /alerts/paged|report userId scoping leaks per-user alert data within tenant
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/paged,report
+confidence: 45
+reasoning: V1 swagger documents userId on both (report: "User ID of the user for whom you want a report"); if scoping trusts the param, caller reads other users' alert volume/response metrics inside the tenant; V1 spec security=[{}] empty
+evidence_needed: authenticated comparison GET report with userId=<other> vs omitted
+verify_steps: (AUTH_HELPED) GET https://connect.signl4.com/api/v1/alerts/report?userId=<other_user_id> with X-S4-Api-Key; diff response dataset
+impact: per-user alert/response-metrics disclosure within tenant; operational data only, no PII confirmed in spec; LOW-MEDIUM
+testability: AUTH_HELPED
+[HYP] Cross-env token forgery chain remains the dominant finding, blocked on client_secret
+class: AUTH
+asset: devconnect.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 85
+reasoning: shared RS256 key byte-identical across 4 identity hosts (10x+ deep-equal, kid 91EE4F3C, x5c CN=*.signl4.com), shared client_id 692A0A56, password grant enabled on staging, prod parametric twin, swagger-confirmed OAuth2 authorizationCode flow + API key query scheme; full chain documented
+evidence_needed: any valid client_secret OR any leaked X-S4-Api-Key/Bearer token to mint/stage cross-env tokens
+verify_steps: (AUTH_HELPED) direct /identity/connect/token password grant with stolen creds; or swagger-backed authorize code flow via account/manage
+impact: cross-environment authentication bypass → full multi-tenant alert CRUD on SIGNL4 API; CRITICAL when credential obtained
+testability: AUTH_HELPED
+[PARKED] Blazor assembly disclosure @ fix/devfix: blazor.boot.json 404 + _framework only serves framework JS + web.js has zero boot/.wasm/.dll refs → interactive-Server publish, assemblies never reach client; embedded OIDC config recovery impossible; permanently closed by live probe
+[PARKED] frontdoor config file recovery: config.js/appsettings.json 404 — shell ships no backend config assets
+[PARKED] V1 paged/report userId: 45 sits at confidence floor and yields metrics-only impact; superseded by same-class acknowledgeAll; keep parked
+[FINAL] 1. Cross-env token forgery chain (AUTH, 85, blocked on client_secret) 2. V1 acknowledgeAll/closeAll userId IDOR (IDOR, 55, AUTH_HELPED) 3. V1 paged/report userId scoping (IDOR, 45, AUTH_HELPED)
+[NEXT] PROBE: OPTIONS https://account.signl4.com/manage (read-only, 1rps) + OPTIONS https://account.signl4.com/api + OPTIONS https://account.signl4.com/identity + OPTIONS https://account.signl4.com/connect + OPTIONS https://account.signl4.com/account — 5 requests to map registered routes on the least-probed high-value account-management estate. Then same 5 on devaccount.signl4.com.
+[LEARN] REJECTED AUTH @ fix.signl4.com/_framework: blazor.boot.json 404, only blazor.web.js/blazor.server.js served, web.js references no boot.json/.wasm/.dll — interactive-Server publish has zero client-side assembly downlink; embedded OIDC config recovery via app DLLs impossible
+[LEARN] REJECTED MISCONFIG @ devfix.signl4.com/_framework/blazor.boot.json: 404 — same Server publish model, no staging manifest divergence
+[LEARN] REJECTED MISCONFIG @ frontdoor.signl4.com/config.js|appsettings.json: 404 both — static shell ships no config assets, no backend pointer to recover
+[LEARN] ACCEPTED AUTH @ fix.signl4.com: Blazor Server OIDC client config is server-side only and unrecoverable by client download — the only remaining route to client_secret is the AUTH_HELPED device/CIBA/password grants or a credential leak
+[RISK] derdack: 88 — cross-env token forgery chain (shared RS256 + shared client_id + password grant, AUTH_HELPED) remains the dominant CRITICAL-class finding, stable across 11+ cycles with zero drift; V1 bulk-alert userId IDOR (55) is the most concretely testable authz flaw but requires any valid API key; this cycle closed the last passive credential-recovery vector (Blazor assembly download), leaving all top-3 hypotheses authentication-gated; webhook oracle + empty `security:[{}]` specs remain config/design-level residual
