@@ -4592,3 +4592,31 @@ verify_steps: (AUTH_HELPED) GET /api/v3/teams/{teamId}/signlReports/..%2f..%2fet
 impact: cross-tenant report/invoice disclosure, potential LFI; HIGH
 testability: AUTH_HELPED
 [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key; account-host IdP mints tokens claiming connect issuer (mint-mismatch) against byte-identical scope/grant surface incl implicit+password+plain-PKCE; account portal proves live OIDC client (692A0A56) attached to that key family; every high-value vector (forgery, V1 userId IDOR, V3 file-download BOLA) is permanently AUTH_HELPED — full EA multi-tenant compromise sits one leaked client_secret/API-key away.
+## 2026-09-16 18:36:23 UTC [target] (model bigpickle)
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 90
+reasoning: 6 identity hosts serve byte-identical JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account discovery claims issuer=connect.signl4.com/identity (mint-mismatch) with byte-identical 12-scope set (incl public_api_ea_manage/alerting, mobile_api, reseller_portal), grants incl password/device_code/CIBA/implicit, plain+S256 PKCE, JAR on/PAR off; account portal (client 692A0A56) live-proves web PKCE form_post OIDC; all /identity/connect/* twin-clean across envs (10th+ observation, no fail-open)
+evidence_needed: valid client_secret (password grant) OR leaked X-S4-Api-Key/Bearer from any of the 6 hosts
+verify_steps: (passive done) discovery deep-diff re-verified; ReturnUrl/OIDC-callback inert; (AUTH_HELPED) account-host password grant → Bearer → GET connect/api/v2/teams 401→200 proves cross-env acceptance
+impact: minted EA-manage/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + EA management + reseller portal; CRITICAL once any credential leaks
+testability: AUTH_HELPED
+[HYP] V2 users/{userId}/changePassword honors arbitrary userId via handler-side auth only
+class: IDOR
+asset: connect.signl4.com/api/v2/users/{userId}/changePassword
+confidence: 62
+reasoning: OPTIONS live this cycle → 405 Allow:PUT (route registered, PUT-only); anon 405 not 401 = auth validation deferred to handler, mirroring /api/v2/teams handler-deferred pattern confirmed 10th+ cycles; V1 swagger "in behave of the user" 403 typo proves operator-impersonation is a coded feature; shared prod backend (appId ec6c57ca)
+evidence_needed: authenticated A/B — PUT changePassword?userId=<sibling> vs caller-self under operator-owned X-S4-Api-Key; diff status then login proof
+verify_steps: (AUTH_HELPED) PUT /api/v2/users/{target}/changePassword with currentPassword=newPassword for own + sibling user; passive route-confirm done (Allow:PUT)
+impact: password reset of sibling tenant users → full tenant ATO; HIGH
+testability: AUTH_HELPED
+[HYP] V3 signlReports/{fileName} trusts path filename for storage lookup
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}
+confidence: 50
+reasoning: OPTIONS live this cycle → 405 Allow:GET (route registered); V3 OpenAPI (200+ paths) documents file-download family; fileName/attachmentId are path-segfragments, traversal+cross-tenant guessing candidates; global security:[{}] empty on V1/V2/V3 (spec under-declares every namespace)
+evidence_needed: authenticated request showing %2f-vs-/ decoding differs from objectId validation
+verify_steps: (AUTH_HELPED) GET /api/v3/teams/{teamId}/signlReports/..%2f..%2fetc%2fpasswd vs .%2e variants with X-S4-Api-Key; passive OPTIONS route-confirm done
+impact: cross-tenant report disclosure, potential LFI; HIGH
+testability: AUTH_HELPED

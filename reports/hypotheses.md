@@ -2503,3 +2503,6 @@
 - LEARN: ACCEPTED IDOR @ connect.signl4.com/api/v1/alerts/acknowledgeAll|closeAll: userId query parameter documented in V1 swagger for bulk alert lifecycle operations. 4
 - LEARN: ACCEPTED OTHER @ connect.signl4.com/api/v1/swagger.json: V1 has 93 paths, scripts/inventory (8 paths), changePassword, userId on 19 endpoints (4 query, 15 path)
 - LEARN: CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signi
+
+## RANKED HYPOTHESES 2026-09-16 18:54:01 UTC
+- [90] account.signl4.com/identity/connect/token: Cross-env token forgery via 6-host shared RS256 IdP family with account mint-mismatch (from art/lead_bigpickle.txt)
