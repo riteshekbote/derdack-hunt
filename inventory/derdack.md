@@ -998,3 +998,12 @@ www.derdack.com
 - CHANGED No new live probes executed since last KB cycle (5 hours ago) — estate stable
 
 ## 2026-09-16 10:07:26 UTC
+
+## 2026-09-16 14:44:03 UTC
+- NEW account.signl4.com/identity confirmed as 6th live IdentityServer (OIDC discovery 200) with byte-identical RS256 JWKS across all 6 identity hosts; issuer mismatch (claims connect.signl4.com/identity); 
+- NEW Cross-env token forgery chain now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 +
+- CHANGED "Blazor assembly disclosure" hypothesis (AUTH, 50) permanently CLOSED — fix.signl4.com/_framework/blazor.boot.json 404, pure Server publish model
+- CHANGED blog.derdack.com/techblog.derdack.com HTTPS→HTTP downgrade session-theft permanently INVALIDATED — wp-login.php sets secure+host-only cookie; residual missing-HSTS only (LOW)
+- CHANGED dev.derdack.com MultiViews 300 stable across 20+ cycles — static namespace echo only, files 403/404; root serves parked IONOS sedoparking iframe
+- CHANGED No new live probes executed since last KB cycle (5 hours ago) — estate stable
+- CHANGED signl4.derdack.com permanently unreachable (8+ cycles TCP timeout) — attack surface value = 0

@@ -4563,3 +4563,32 @@ evidence_needed: authenticated A/B diff of report?userId=<other> dataset vs omit
 verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other> + POST /api/v2/alerts/paged?maxResults=1&userId=<other> with operator-owned X-S4-Api-Key (passive route/parenthood confirm done)
 impact: per-user alert/response-metrics disclosure + cross-user ack/close with audit-attribution spoofing within tenant; MEDIUM-HIGH
 testability: AUTH_HELPED
+## 2026-09-16 14:43:16 UTC [target] (model bigpickle)
+[HYP] Cross-env token forgery via shared-signing-key IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 90
+reasoning: 6 identity hosts serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account IdP claims issuer=connect (mint-mismatch) while advertising identical 12-scope set incl EA manage/alerting + mobile_api + reseller_portal, grants incl password/device_code/CIBA/implicit, plain+S256 PKCE; all /identity/connect/{token,deviceauthorization,ciba,par} twin-clean across envs (no fail-open); ReturnUrl open-redirect rejected this cycle
+evidence_needed: valid client_secret OR leaked X-S4-Api-Key/Bearer from any of the 6 identity hosts
+verify_steps: (passive, done) full discovery deep-diff account+connect re-confirmed twin-clean; ReturnUrl tested and inert; (AUTH_HELPED) password-grant on account host → Bearer → GET connect/api/v2/teams, 401→200
+impact: minted EA-manage/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + Enterprise Alert management + reseller portal; CRITICAL once any credential leaks
+testability: AUTH_HELPED
+[HYP] V1+v2 bulk alert acknowledge/close/paged/report honors arbitrary userId query
+class: IDOR
+asset: connect.signl4.com/api/v1/v2/alerts/acknowledgeAll,closeAll,paged,report
+confidence: 65
+reasoning: userId query param confirmed in BOTH V1 and V2 swagger across acknowledgeAll/closeAll/paged/report; routes live-verified 405 Allow:GET,POST + anon 401 (handler-deferred); "in behave of the user" typo confirms coded impersonation path; identical backend across V1/V2/V3 (appId ec6c57ca)
+evidence_needed: authenticated A/B diff of report?userId=<other> dataset vs omitted; acknowledgeAll?userId=<other> status/scope
+verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other> + POST /api/v2/alerts/paged?maxResults=1&userId=<other> with operator-owned X-S4-Api-Key (passive route/parenthood confirm done)
+impact: per-user alert/response-metrics disclosure + cross-user ack/close with audit-attribution spoofing within tenant; MEDIUM-HIGH
+testability: AUTH_HELPED
+[HYP] V3 report/attachment file-download family trusts fileName for path
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}, dutyReports/{fileName}, /signls/{signlId}/attachments/{attachmentId}
+confidence: 50
+reasoning: V3 swagger (200+ paths) documents file-download family; all live-verified anon→401; fileName/attachmentId in path are traversal + cross-tenant object-guessing candidates
+evidence_needed: authenticated request showing %2f-vs-/ decoding differs from objectId validation
+verify_steps: (AUTH_HELPED) GET /api/v3/teams/{teamId}/signlReports/..%2f..%2fetc%2fpasswd vs .%2e/.%2e%2e comparators with X-S4-Api-Key; passive OPTIONS route-confirm on devapi for Allow parity
+impact: cross-tenant report/invoice disclosure, potential LFI; HIGH
+testability: AUTH_HELPED
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key; account-host IdP mints tokens claiming connect issuer (mint-mismatch) against byte-identical scope/grant surface incl implicit+password+plain-PKCE; account portal proves live OIDC client (692A0A56) attached to that key family; every high-value vector (forgery, V1 userId IDOR, V3 file-download BOLA) is permanently AUTH_HELPED — full EA multi-tenant compromise sits one leaked client_secret/API-key away.
