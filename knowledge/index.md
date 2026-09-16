@@ -548,3 +548,16 @@
 - 2026-09-16 ACCEPTED IDOR @ connect.signl4.com/api/v1/alerts/acknowledgeAll|closeAll: userId query parameter documented in V1 swagger for bulk alert lifecycle operations. 403 description typo confirms "behave of the user" feature exists but guard may only check team membership. New IDOR surface — AUTH_HELPED.
 - 2026-09-16 ACCEPTED OTHER @ connect.signl4.com/api/v1/swagger.json: V1 has 93 paths, scripts/inventory (8 paths), changePassword, userId on 19 endpoints (4 query, 15 path); security = API_Key_Header + API_Key_Query + OAuth2; global security [{}] empty.
 - 2026-09-16 CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
+- 2026-09-16 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+- 2026-09-16 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+- 2026-09-16 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+- 2026-09-16 ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+- 2026-09-16 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+- 2026-09-16 REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- 2026-09-16 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+- 2026-09-16 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+- 2026-09-16 REJECTED none this cycle — all hypotheses target in-scope HIGH-VALUE classes with concrete verify steps
+- 2026-09-16 ACCEPTED MISCONFIG @ dev.derdack.com: dev environments frequently expose debug interfaces; passive probe cost near-zero
+- 2026-09-16 ACCEPTED AUTH @ account+connect /identity discovery: live deep-diff proves byte-identical parameterics (12 scopes incl EA/mobile_api/reseller, grants incl implicit+password+device+ciba+token-exchange, response_modes incl query/fragment, JAR on, require_par=false, secret-only token auth, plain+S256 PKCE); 2026-09-15 "EA scopes account-exclusive" claim invalidated — twins equal except endpoint URLs; issuer=connect on both reaffirms mint-mismatch.
+- 2026-09-16 REJECTED OATH @ account.signl4.com/manage/signin-oidc: unauthenticated GET → 302 fixed /manage/Home; no attacker-controlled redirect parameter observed.
+- 2026-09-16 ACCEPTED OTHER @ account.signl4.com/manage: ASP.NET Core OpenIDConnect 8.19.2.0 portal (client 692A0A56, PKCE S256 form_post); devaccount twin → devconnect authorize with identical client/scopes.

@@ -971,3 +971,28 @@ www.derdack.com
 - CHANGED Cross-env token forgery chain now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 +
 - CHANGED "Blazor assembly disclosure" hypothesis (AUTH, 50) permanently CLOSED — no DLL/boot-manifest surface exists on fix/devfix
 - CHANGED No new live probes executed since last KB cycle (5 hours ago) — estate stable
+
+## 2026-09-16 05:14:52 UTC
+- NEW nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+- CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+- NEW 9 hosts discovered via passive DNS/CT, 0 probed for live HTTP — initial surface unvalidated
+- NEW No GitHub org configured for reposcan — code-level recon gap
+- NEW Knowledge base empty — no prior tech fingerprint, endpoint map, or auth flow data
+- NEW dev.derdack.com /.well-known/openid-configuration returns 300 Multiple Choices with directory traversal suggestions (/.ssh/, /.bash_history/, /.viminfo/) — misconfiguration confirmed
+- NEW signl4.derdack.com (AWS 13.94.244.66) connection timeout on HTTP/HTTPS — SaaS platform unreachable, likely firewall/WAF
+- NEW signals.derdack.com NXDOMAIN — subdomain does not exist, hypothesis invalid
+- NEW blog.derdack.com & techblog.derdack.com redirect via HTTP (not HTTPS) to www.derdack.com — mixed content / downgrade risk
+- NEW de.derdack.com / www.de.derdack.com return 403 with sedoparking.com iframe — parked domain, not Derdack infrastructure
+- CHANGED Inventory validation: only 5/9 hosts are live Derdack infrastructure; 2 unreachable, 1 non-existent, 1 parked
+- NEW Live GET diff of `account.signl4.com/identity/.well-known/openid-configuration` vs `connect.signl4.com/identity/...`: byte-identical parameterics — 12 scopes (incl `mobile_api`, `reseller_portal`, `pu
+- CHANGED KB 2026-09-15/16 claim "account exposes EA scopes absent from connect" INVALIDATED — connect discovery serves the IDENTICAL 12-scope set; the "exclusive EA scope" differentiator is gone, twins now par
+- NEW `account.signl4.com/manage` = ASP.NET Core OpenIDConnect 8.19.2.0 portal (`x-client-SKU=ID_NET10_0`); `/manage` → 302 connect authorize (client_id 692A0A56-…, PKCE S256, `response_mode=form_post`, non
+- NEW `devaccount.signl4.com/manage` twin → devconnect authorize, identical client/scopes; `devaccount/identity/` OIDC discovery 200.
+- NEW account.signl4.com/identity confirmed as 6th live IdentityServer (OIDC discovery 200) with byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) shared across all 6 identity ho
+- NEW account.signl4.com/identity issuer mismatch — claims `https://connect.signl4.com/identity` despite being hosted on account subdomain (cross-host token minting with foreign issuer)
+- NEW account.signl4.com/identity exposes 5 Enterprise Alert scopes absent from connect: `reseller_portal`, `public_api_ea_manage`, `public_api_ea_alerting`, `mobile_api`
+- NEW account.signl4.com/identity custom claims: `subscription_id`, `branch_id`, `is_branch_manager`, `is_stakeholder`, `active`
+- NEW account.signl4.com/identity allows `code_challenge_methods_supported: ["plain", "S256"]` — plain PKCE permitted
+- NEW devaccount.signl4.com/identity mirrors prod with issuer = `devconnect.signl4.com/identity`, same custom claims, identical JWKS
+- CHANGED Cross-env token forgery chain now spans 6 identity hosts (was 4) — all share byte-identical RS256 key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED 
+- CHANGED No new live probes executed since last KB cycle (5 hours ago) — estate stable

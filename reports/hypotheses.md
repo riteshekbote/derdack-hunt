@@ -2434,3 +2434,43 @@
 - LEARN: ACCEPTED IDOR @ connect.signl4.com/api/v1/alerts/acknowledgeAll|closeAll: userId query parameter documented in V1 swagger for bulk alert lifecycle operations. 4
 - LEARN: ACCEPTED OTHER @ connect.signl4.com/api/v1/swagger.json: V1 has 93 paths, scripts/inventory (8 paths), changePassword, userId on 19 endpoints (4 query, 15 path)
 - LEARN: CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signi
+
+## RANKED HYPOTHESES 2026-09-16 05:14:52 UTC
+- [90] account.signl4.com/identity: Cross-env token forgery via account IdP issuer mismatch + plain PKCE + exclusive EA scopes (from art/lead_nemotron3.txt)
+- [30] signl4.derdack.com: SIGNL4 API authentication bypass (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: Passive HTTP probing of all 9 inventory hosts to confirm live status, identify technologies, and discover API endpoints. Start with signl4.derdack.com (h
+- NEXT(hypotheses-nemotron3.txt): PROBE: OPTIONS https://connect.signl4.com/api/v1/alerts/acknowledgeAll — confirm route registration and Allow header (expect 405 Allow:POST) for V1 cross-user I
+- LEARN: ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+- LEARN: REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+- LEARN: ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+- LEARN: REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+- LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- LEARN: ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+- LEARN: REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+- LEARN: REJECTED none this cycle — all hypotheses target in-scope HIGH-VALUE classes with concrete verify steps
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: dev environments frequently expose debug interfaces; passive probe cost near-zero
+- LEARN: ACCEPTED AUTH @ account+connect /identity discovery: live deep-diff proves byte-identical parameterics (12 scopes incl EA/mobile_api/reseller, grants incl impli
+- LEARN: REJECTED OATH @ account.signl4.com/manage/signin-oidc: unauthenticated GET → 302 fixed /manage/Home; no attacker-controlled redirect parameter observed.
+- LEARN: ACCEPTED OTHER @ account.signl4.com/manage: ASP.NET Core OpenIDConnect 8.19.2.0 portal (client 692A0A56, PKCE S256 form_post); devaccount twin → devconnect auth
+- LEARN: ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5
+- LEARN: ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer c
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+- LEARN: ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application (Blazor Server), /signin-oidc 500 broken OIDC callback, /_blazor/negotiate 200 with connec
+- LEARN: ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured SPA shell serves literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — LOW cosmetic deplo
+- LEARN: REJECTED OTHER @ status/support/trust/docs.signl4.com: third-party (StatusLabs, Zendesk, Safebase, GitHub Pages) — not Derdack infrastructure
+- LEARN: REJECTED OTHER @ demo/downloads.enterprisealert.com: 404 / 403 (IIS/10.0 directory browsing disabled) — no attack surface
+- LEARN: ACCEPTED AUTH @ api.signl4.com/api/v2/teams: Handler-deferred auth confirmed 10th+ cycles — unauth GET returns 405 (not 401), invalid Bearer returns 405; auth v
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v3: invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance live-verified anon→401; OPTIONS confirms Al
+- LEARN: ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v3/swagger.json: global security: [{}] (empty) reconfirmed on V3 — spec under-declares auth everywhere; interna
+- LEARN: REJECTED AUTH @ connect.signl4.com/api/v3/scim/settings: anon GET → 401, not anonymous — SCIM key-rotation surface is gated
+- LEARN: ACCEPTED MISCONFIG @ devapi.signl4.com: live 1:1 staging API mirror of api.signl4.com (appId cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7), root→devaccount/manag
+- LEARN: ACCEPTED MISCONFIG @ api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycle
+- LEARN: ACCEPTED AUTH @ api.signl4.com: swagger.json confirms OAuth2 security scheme (authorizationCode flow) targeting connect.signl4.com/identity/connect endpoints wi
+- LEARN: REJECTED MISCONFIG @ fix.signl4.com/_framework/blazor.boot.json: 404 — Blazor Server publish model confirmed (no client DLLs/boot manifest); "Blazor assembly di
+- LEARN: REJECTED MISCONFIG @ devfix.signl4.com/_framework/blazor.boot.json: 404 — same Server publish model, no staging manifest divergence
+- LEARN: REJECTED MISCONFIG @ frontdoor.signl4.com/config.js|appsettings.json: 404 both — static shell ships no config assets, no backend pointer to recover
+- LEARN: REJECTED AUTH @ connect.signl4.com/api/v1 behave-as: the ONLY "behave" occurrence is a 403 description typo ("in behave of the user"), NOT a request parameter. 
+- LEARN: ACCEPTED IDOR @ connect.signl4.com/api/v1/alerts/acknowledgeAll|closeAll: userId query parameter documented in V1 swagger for bulk alert lifecycle operations. 4
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/api/v1/swagger.json: V1 has 93 paths, scripts/inventory (8 paths), changePassword, userId on 19 endpoints (4 query, 15 path)
+- LEARN: CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signi
