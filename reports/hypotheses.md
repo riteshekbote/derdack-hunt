@@ -2506,3 +2506,7 @@
 
 ## RANKED HYPOTHESES 2026-09-16 18:54:01 UTC
 - [90] account.signl4.com/identity/connect/token: Cross-env token forgery via 6-host shared RS256 IdP family with account mint-mismatch (from art/lead_bigpickle.txt)
+
+## RANKED HYPOTHESES 2026-09-16 21:45:19 UTC
+- [90] account.signl4.com/identity/connect/token: Cross-env token forgery via 6-host shared RS256 IdP family with account mint-mismatch (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): RAG: search SIGNL4 helpcenter + GitHub org (github.com/signl4, Derdack org) + docs for the consumer host of `reseller_portal` / `public_api_ea_manage` / `mobile

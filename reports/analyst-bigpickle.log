@@ -23879,3 +23879,253 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 - [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key; account IdP mints tokens claiming connect issuer against a byte-identical grant/scope surface incl implicit+password+plain-PKCE; handler-deferred Bearer across V1/V2/V3 lets any shared-key token into prod; userId impersonation + changePassword + report-download routes all route-registered; full EA multi-tenant compromise sits one leaked client_secret/API-key away
+===== ANALYST bigpickle 2026-09-16 21:45:19 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://crt.sh/?q=%25.derdack.com&output=json" | python3 -c "
+import sys,json
+try:
+    d=json.load(sys.stdin)
+    names=sorted({n for row in d for n in row['name_value'].split(chr(10))})
+    for n in names: print(n)
+except Exception as e:
+    print('ERR', e)
+"
+ERR Expecting value: line 1 column 1 (char 0)
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://crt.sh/?q=%25.enterprisealert.com&output=json" | python3 -c "
+import sys,json
+try:
+    d=json.load(sys.stdin)
+    names=sorted({n for row in d for n in row['name_value'].split(chr(10))})
+    for n in names: print(n)
+except Exception as e:
+    print('ERR', e)
+"
+ERR Expecting value: line 1 column 1 (char 0)
+[0m
+[0m$ [0msleep 3; curl -s --max-time 25 -H "User-Agent: Mozilla/5.0" "https://crt.sh/?q=%25.enterprisealert.com" -o /tmp/opencode/crt_ea.html; wc -c /tmp/opencode/crt_ea.html; grep -oE '[a-zA-Z0-9._-]+\.enterprisealert\.com' /tmp/opencode/crt_ea.html | sort -u
+162 /tmp/opencode/crt_ea.html
+[0m
+[0m$ [0msleep 2; curl -s --max-time 25 -H "User-Agent: Mozilla/5.0" "https://crt.sh/?q=%25.derdack.com" -o /tmp/opencode/crt_derdack.html; wc -c /tmp/opencode/crt_derdack.html; grep -oE '[a-zA-Z0-9._-]+\.derdack\.com' /tmp/opencode/crt_derdack.html | sort -u
+16933 /tmp/opencode/crt_derdack.html
+signals.derdack.com
+www.derdack.com
+[0m
+[0m$ [0mhead -c 600 /tmp/opencode/crt_derdack.html; echo; echo '---GREP npq'; grep -oE 'npq[^"]*' /tmp/opencode/crt_derdack.html | head; echo '---TABLE'; grep -c '<TR>' /tmp/opencode/crt_derdack.html
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+  <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <TITLE>crt.sh | %.derdack.com</TITLE>
+  <META name="description" content="Free CT Log Certificate Search Tool from Sectigo (formerly Comodo CA)">
+  <META name="keywords" content="crt.sh, CT, Certificate Transparency, Certificate Search, SSL Certificate, Sectigo, Comodo CA">
+  <LINK href="//fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,700&family=Urbanist:wght@700&family=Roboto+Mono&display=swap" rel="stylesheet">
+  <
+---GREP npq
+---TABLE
+24
+[0m
+[0m$ [0mgrep -oE 'value="[^"]*"' /tmp/opencode/crt_derdack.html | sort -u | head -40; echo '===td'; grep -oE '>[a-zA-Z0-9*._-]+\.derdack\.com<' /tmp/opencode/crt_derdack.html | sort -u
+===td
+>*.derdack.com<
+>signals.derdack.com<
+>www.derdack.com<
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://connect.signl4.com/api/docs/v1/swagger.json" -o /tmp/opencode/v1.json; wc -c /tmp/opencode/v1.json; python3 -c "
+import json
+d=json.load(open('/tmp/opencode/v1.json'))
+paths=d.get('paths',{})
+for p in sorted(paths):
+    if any(k in p.lower() for k in ['ea','reseller','prepaid','subscription','license','inventory','script','invoice','report','file','attachment','signl']):
+        print(p, sorted(paths[p].keys()))
+" | head -80
+493618 /tmp/opencode/v1.json
+/alerts/acknowledgeAll ['post']
+/alerts/closeAll ['post']
+/alerts/report ['get']
+/alerts/{alertId}/attachments ['get']
+/alerts/{alertId}/attachments/{attachmentId} ['get']
+/categories/{teamId} ['get', 'post']
+/categories/{teamId}/metrics ['get']
+/categories/{teamId}/{categoryId} ['delete', 'get', 'put']
+/categories/{teamId}/{categoryId}/metrics ['get']
+/categories/{teamId}/{categoryId}/subscriptions ['get', 'post']
+/events/{webhookIdOrTeamId} ['post']
+/prepaid/balance ['get']
+/prepaid/settings ['get', 'put']
+/prepaid/transactions ['get']
+/prepaid/{subscriptionId}/prepaidSettings ['put']
+/scripts/instances ['get', 'post']
+/scripts/instances/{instanceId} ['delete', 'get', 'put']
+/scripts/instances/{instanceId}/data ['put']
+/scripts/instances/{instanceId}/disable ['post']
+/scripts/instances/{instanceId}/enable ['post']
+/scripts/inventory ['get']
+/scripts/inventory/parsed ['get']
+/scripts/inventory/parsed/{scriptId} ['get']
+/subscriptions ['get']
+/subscriptions/{subscriptionId} ['get']
+/subscriptions/{subscriptionId}/channelPrices ['get']
+/subscriptions/{subscriptionId}/features ['get']
+/subscriptions/{subscriptionId}/inboundVoiceNumberLicenses ['get']
+/subscriptions/{subscriptionId}/prepaidBalance ['get']
+/subscriptions/{subscriptionId}/prepaidSettings ['get']
+/subscriptions/{subscriptionId}/prepaidTransactions ['get']
+/subscriptions/{subscriptionId}/profile ['put']
+/subscriptions/{subscriptionId}/settings ['get', 'put']
+/subscriptions/{subscriptionId}/stakeholderLicenses ['get']
+/subscriptions/{subscriptionId}/teams ['get']
+/subscriptions/{subscriptionId}/userLicenses ['get']
+/teams ['get', 'post']
+/teams/{teamId} ['delete', 'get']
+/teams/{teamId}/alertReports ['get']
+/teams/{teamId}/alertReports/{fileName} ['get']
+/teams/{teamId}/alertSettings ['get', 'post']
+/teams/{teamId}/dutyReports ['get']
+/teams/{teamId}/dutyReports/{fileName} ['get']
+/teams/{teamId}/dutysummary ['get']
+/teams/{teamId}/eventSources ['get']
+/teams/{teamId}/memberships ['get', 'post']
+/teams/{teamId}/memberships/resendInviteMail ['post']
+/teams/{teamId}/memberships/{userId} ['delete', 'put']
+/teams/{teamId}/profile ['put']
+/teams/{teamId}/schedules ['get', 'post']
+/teams/{teamId}/schedules/deleteRange ['post']
+/teams/{teamId}/schedules/multiple ['post']
+/teams/{teamId}/schedules/{dutyId} ['delete']
+/teams/{teamId}/schedules/{scheduleId} ['get']
+/teams/{teamId}/setupProgress ['get']
+/users/{userId}/profile ['put']
+[0m
+[0m$ [0mfor p in /manage /manage/Home /manage/login /manage/logout /manage/swagger /manage/swagger/index.html /manage/api /manage/health /manage/Identity/Account/Login; do
+  code=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 10 "https://account.signl4.com$p")
+  echo "$p -> $code"
+  sleep 1
+done
+/manage -> 302 https://connect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=QVslIZomarW4dsL3NmK45tIfO8W9OyA6g3vUKZyS3ig&code_challenge_method=S256&response_mode=form_post&nonce=639251916686829428.ZWFkYmE0ZDYtNGZmNC00NjdlLWE1YmItYTEzNzM5OTFkYzg0NzhkNmY0MjMtNWRlNS00NGE2LWFkNDctNjEzMmQ2NjIyYTZk&state=CfDJ8P0bhSkvNP5HkPto7qc9KqMPYxQmLP61IoqHSLY_izRils1x3AginvkzpVFQWBfefSUhl6-PbFdOgkGAN58Zy5HKfRq1N2svs3SZOYVDN0usiUazNrOoh2aC6Qs7vGBWdo-u8GjxfsMleOi_JZEd3cuVT93XHMOhIPsvVKEhCyL4XgUPt8HyGUzhsGLJdaG5UrBk8A8MlSY0MPg1NuBOgOCUzPFrTSwPca9HsNpKSqf0aNU0vvvMAt5hP0UyR4BAacW1RMNeiPE79qfsNtFa9f2TaoTtiYmfsKFnRuzimtuy7WyQ86a0sYSYBn-2ur9ieU21FzmOGF_LCNjbC35rUVxUd8XjI2Jkrh-stAAg6NLVoY1B6xFyXE7rHeAE7VWGeLwmXFyp2-KZ1blk2W6qxs8&x-client-SKU=ID_NET10_0&x-client-ver=8.19.2.0
+/manage/Home -> 302 https://connect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=GVXlssevCUg54KZkNSJCc6DZbFMLvob8QlnOktJnxDc&code_challenge_method=S256&response_mode=form_post&nonce=639251916699639958.NzRjZjJiOGEtYTA2Ny00MmJlLTgzYjgtOGYzN2MyNTIxYzA2YTQxYjNiNDYtZmRhMy00NTE5LTkxNjctYmJlZjM4ZmYwN2Fj&state=CfDJ8P0bhSkvNP5HkPto7qc9KqN26hIVOqlWgLPJpbS3DfpHB-OGhfoSAoA73D52BxrevzbJBxV3wk50xVFwRGKnfnNif6dS013zL1VfRvN8xrfF3KYB1ehsxZxmIlQ_XILh0kcMzu1Yn5jhyrXkMa2YeVugGn1jBN7U-Nwp72jOQGq7yz2Jkc-nvPj3knhrRchV2mliCYG9aloB2ZDCyzMjMp9Z3fy8SRbMOyxRgygs3K9xX5lUae44C7KhjRmUNZebDr1dwHSLO_TTZlNF8E2HVWC5HcdVTbINimps-rokm37Eyx5Mnhcoy58L8ovuKZzxTsif5VNcBmdQdSc7HR26keMw8fq9nitVNLKxuS6zcbVEPAKOE8eFxQEWbFYsurzFmp4rnmGKlnVjizLhTPbNkEE&x-client-SKU=ID_NET10_0&x-client-ver=8.19.2.0
+/manage/login -> 404 
+/manage/logout -> 404 
+/manage/swagger -> 404 
+/manage/swagger/index.html -> 404 
+/manage/api -> 404 
+/manage/health -> 200 
+/manage/Identity/Account/Login -> 404
+[0m
+[0m$ [0mpython3 - <<'EOF'
+import socket
+base="signl4.com"
+for h in ["reseller","billing","portal","admin","app","mobile","m","manager","api-mobile","ea","enterprise","alerts","s4","sms","inbound","outbound","webhook","events","prepaid","account2","manage"]:
+    fq=f"{h}.{base}"
+    try:
+        ip=socket.gethostbyname(fq)
+        print(fq,"->",ip)
+    except Exception as e:
+        pass
+print("done")
+EOF
+admin.signl4.com -> 132.220.132.233
+done
+[0m
+Wev — `/manage/health` → 200 new, and V1 swagger surfaces an unprobed tenant-agnostic prepaid cluster (`/prepaid/balance|settings|transactions`). Let me sweep for scope-hinted hosts (reseller_portal, mobile_api, ea_manage) passively and confirm route parity.
+[0m$ [0mfor p in /api/v1/prepaid/balance /api/v1/prepaid/settings /api/v1/prepaid/transactions /api/v1/events/foo; do
+  c=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS --max-time 10 "https://connect.signl4.com$p")
+  d=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "https://connect.signl4.com$p")
+  da=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "https://devapi.signl4.com$p")
+  echo "$p OPT=$c GET=$d devapiGET=$da"
+  sleep 1
+done
+/api/v1/prepaid/balance OPT=405 GET=401 devapiGET=401
+/api/v1/prepaid/settings OPT=405 GET=401 devapiGET=401
+/api/v1/prepaid/transactions OPT=405 GET=401 devapiGET=401
+/api/v1/events/foo OPT=405 GET=400 devapiGET=400
+[0m
+[0m$ [0mfor p in / /manage /signin-oidc /identity/ /.well-known/openid-configuration /api /api/v1 /swagger /swagger.json /api/docs/v1/swagger.json /webhook/docs/v1/swagger.json /health; do
+  c=$(curl -sk -o /tmp/opencode/body.txt -w '%{http_code}' --max-time 12 "https://admin.signl4.com$p")
+  ct=$(curl -sk -o /dev/null -w '%{content_type}' --max-time 12 "https://admin.signl4.com$p")
+  echo "$p -> $c [$ct]"
+  sleep 1
+done
+/ -> 000 []
+/manage -> 000 []
+/signin-oidc -> 000 []
+/identity/ -> 000 []
+
+
+<shell_metadata>
+shell tool terminated command after exceeding timeout 120000 ms. If this command is expected to take longer and is not waiting for interactive input, retry with a larger timeout value in milliseconds.
+</shell_metadata>
+[0m
+[0m$ [0mfor port in 443 80; do
+  c=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 6 "https://admin.signl4.com:$port/" 2>/dev/null)
+  c2=$(curl -s -o /dev/null -w '%{http_code}' --max-time 6 "http://admin.signl4.com:$port/" 2>/dev/null)
+  echo "port $port https=$c http=$c2"
+done; getent hosts admin.signl4.com; python3 -c "import socket; print(socket.gethostbyaddr('132.220.132.233'))" 2>&1 | head -1
+port 443 https=000 http=000
+port 80 https=000 http=000
+132.220.132.233 admin.signl4.com
+('mail.signl4.com', [], ['132.220.132.233'])
+[0m
+**STEP 1 — DELTA**
+- NEW `admin.signl4.com` → 132.220.132.233, PTR **`mail.signl4.com`**; 80/443 TCP-dead (000) — new resolving name, inert web estate (mail host)
+- NEW `account.signl4.com/manage/health` → 200 unauthenticated (ASP.NET Core health probe on the OIDC portal; only 200-path on /manage besides authorize-redirects)
+- NEW V1 swagger exposes **tenant-agnostic preashad cluster** `/prepaid/balance|settings|transactions` (GET/PUT, no `{subscriptionId}` in path); live on connect+devapi (OPT 405, GET 401) — extends the prepaid BOLA family beyond `/prepaid/{id}/prepaidSettings`
+- NEW `connect+devapi /api/v1/events/{id}` unauth **GET → 400** (not 401) — event-ingress handler executes pre-auth on GET
+- CHANGED crt.sh re-check: derdack.com only `*.derdack.com`/signals/www; enterprisealert.com empty — CT surface stable, no new names
+
+**STEP 2 — PRIORITIZE**
+- [PRIO] account/connect/…/api identity family (forgery chain), 7.9, a=5 b=10 t=9 g=3 c=9 f=1
+- [PRIO] connect/api V1-V3 BOLA cluster (userId/document/prepaid), 6.5, a=6 b=8 t=7 g=3 c=6 f=3
+- [PRIO] admin.signl4.com (new resolving host), 3.9, a=2 b=6 t=3 g=3 c=5 f=10
+
+**STEP 3 — HYPOTHESES**
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 90
+reasoning: 6 identity hosts serve byte-identical JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account discovery claims issuer=connect (mint-mismatch), byte-identical 12-scope set (incl public_api_ea_manage/alerting, mobile_api, reseller_portal), grants incl password/implicit/device_code/CIBA, plain+S256 PKCE, response_modes query/fragment; account portal (client 692A0A56) live-proves the web OIDC flow (this cycle: /manage & /manage/Home → authorize w/ PKCE S256 form_post, x-client-ver 8.19.2.0); all /identity/connect/* twin-clean, no fail-open
+evidence_needed: valid client_secret OR leaked X-S4-Api-Key/Bearer from any of the 6 hosts
+verify_steps: (passive done) discovery deep-diff re-verified; account/manage authorize params reconfirmed; ReturnUrl/OIDC-callback inert; (AUTH_HELPED) account-host password grant → Bearer → GET connect/api/v2/teams 401→200 proves cross-env acceptance
+impact: minted EA-manage/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + EA management + reseller portal; CRITICAL once any credential leaks
+testability: AUTH_HELPED
+
+[HYP] V1+V2 bulk alert acknowledge/close/paged/report honors arbitrary userId query
+class: IDOR
+asset: connect.signl4.com/api/v1/v2/alerts/acknowledgeAll,closeAll,paged,report
+confidence: 65
+reasoning: userId query param confirmed in BOTH V1 and V2 swagger; routes live (OPT 405 / anon 401 handler-deferred); "in behave of the user" 403 typo confirms coded impersonation; same backend across V1/V2/V3 (appId ec6c57ca)
+evidence_needed: authenticated A/B — report?userId=<other> dataset diff vs omitted; acknowledgeAll?userId=<other> scope under operator-owned X-S4-Api-Key
+verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other> + POST /api/v2/alerts/paged?maxResults=1&userId=<other> (route/parenthood already confirmed)
+impact: per-user alert/response-metrics disclosure + cross-user ack/close with audit-attribution spoofing within tenant; MEDIUM-HIGH
+testability: AUTH_HELPED
+
+[HYP] Tenant-agnostic /api/v1/prepaid/{balance,transactions,settings} resolve resource from auth-context only
+class: IDOR
+asset: connect.signl4.com/api/v1/prepaid/balance, /prepaid/transactions, /prepaid/settings
+confidence: 45
+reasoning: V1 swagger documents these GET/PUT routes WITHOUT any {subscriptionId} path/query dependency; same group as /prepaid/{id}... family whose auth is handler-deferred; if subscription is derived from the API-key's team scope rather than an explicit tenant-bound credential, cross-subscription prepaid balance/transaction history may be readable by any team key in any subscription
+evidence_needed: authenticated GET /api/v1/prepaid/balance under a team-level key in subscription A vs B; diff dataset/labeling
+verify_steps: (AUTH_HELPED) GET /api/v1/prepaid/balance and /prepaid/transactions with operator-owned X-S4-Api-Key; passive confirm of Allow sets on connect+devapi done (OPT 405, GET 401 parity)
+impact: financial/billing disclosure (prepaid balance, transaction ledger) across tenants; MEDIUM
+testability: AUTH_HELPED
+
+**STEP 4 — SELF-CRITIQUE**
+- [PARKED] admin.signl4.com estate: PTR = mail.signl4.com, 80/443 TCP-dead — no web surface; same inert class as lab/s4dev fleet; value ≈ 0
+- [PARKED] /api/v1/events/{id} GET→400 differential: handler runs pre-auth on GET but POST is the only real ingress and is teamSecret-gated; no returned data, no oracle — non-finding (noted as recon)
+- [PARKED] account/manage/health 200: default ASP.NET health probe, non-sensitive; header/endpoint-only, REJECTED class
+- [FINAL] Cross-env forgery (90) > V1/V2 userId IDOR (65) > changePassword BOLA (62) > signlReports fileName traversal (50) > prepaid context IDOR (45)
+
+**STEP 5 — NEXT ACTION**
+[NEXT] RAG: search SIGNL4 helpcenter + GitHub org (github.com/signl4, Derdack org) + docs for the consumer host of `reseller_portal` / `public_api_ea_manage` / `mobile_api` scopes (keywords "reseller portal", "mobile api", "EA API") — identify any NEW hostname consuming these scopes that is not in the CT-known 13 (admin.signl4.com was the only DNS-resolving candidate this cycle and is a dead mail host)
+
+**STEP 6 — LEARNING**
+- [LEARN] ACCEPTED OTHER @ admin.signl4.com: resolves 132.220.132.233 with PTR mail.signl4.com; 80/443 both 000 — inert mail/admin address, no web surface
+- [LEARN] ACCEPTED AUTH @ connect+devapi /api/v1/prepaid/*: tenant-agnostic prepaid cluster (balance/settings/transactions) live-registered (OPT 405) + GET 401 parity — handler-deferred as family; new BOLA subset under the billing surface
+- [LEARN] ACCEPTED OTHER @ connect+devapi /api/v1/events/{id}: unauth GET → 400 (not 401) — handler executes pre-auth on GET, POST-only real ingress; no data exposure, non-finding
+- [LEARN] ACCEPTED MISCONFIG @ account.signl4.com/manage: /health → 200 unauth — only app-200 path on portal besides authorize-redirects; ASP.NET default beam, LOW
+- [LEARN] REJECTED MISCONFIG @ crt.sh: derdack.com certs limited to wildcard/signals/www, enterprisealert.com empty — CT expansion transparent, no new names this cycle
+
+**STEP 7 — RISK**
+[RISK] derdack: 90 — unchanged. 6 identity hosts share one byte-identical prod RS256 key with account-host mint-mismatch against a byte-identical scope/grant surface (incl password/implicit/plain-PKCE); every high-value vector (forgery, V1/V3 userId+BOLA, prepaid/billing, changePassword) sits behind handler-deferred auth and is AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise remains one leaked client_secret/API-key away; no new exposure found this cycle (admin host inert).

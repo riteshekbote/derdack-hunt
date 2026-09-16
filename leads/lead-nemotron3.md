@@ -6136,3 +6136,4 @@ testability: AUTH_HELPED
 [LEARN] CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
 [RISK] derdack: 85 — Cross-env token forgery chain spans 6 identity hosts with shared RS256 key, shared client_id, plain PKCE, and exclusive EA management scopes on account IdP; handler-deferred auth across V1/V2/V3 APIs enables token acceptance without route-level validation; only blocker is client_secret acquisition (AUTH_HELPED). Active attack surface on live production APIs with billing, alerting, and tenant management scope.
 ## 2026-09-16 18:53:51 UTC [target] (model nemotron3)
+## 2026-09-16 21:41:07 UTC [target] (model nemotron3)

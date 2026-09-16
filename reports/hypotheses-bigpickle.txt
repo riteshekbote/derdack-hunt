@@ -1,28 +1,30 @@
-## 2026-09-16 18:36:23 UTC [target] (model bigpickle)
+## 2026-09-16 21:45:10 UTC [target] (model bigpickle)
 [HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account mint-mismatch
 class: AUTH
 asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
 confidence: 90
-reasoning: 6 identity hosts serve byte-identical JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account discovery claims issuer=connect.signl4.com/identity (mint-mismatch) with byte-identical 12-scope set (incl public_api_ea_manage/alerting, mobile_api, reseller_portal), grants incl password/device_code/CIBA/implicit, plain+S256 PKCE, JAR on/PAR off; account portal (client 692A0A56) live-proves web PKCE form_post OIDC; all /identity/connect/* twin-clean across envs (10th+ observation, no fail-open)
-evidence_needed: valid client_secret (password grant) OR leaked X-S4-Api-Key/Bearer from any of the 6 hosts
-verify_steps: (passive done) discovery deep-diff re-verified; ReturnUrl/OIDC-callback inert; (AUTH_HELPED) account-host password grant → Bearer → GET connect/api/v2/teams 401→200 proves cross-env acceptance
+reasoning: 6 identity hosts serve byte-identical JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account discovery claims issuer=connect (mint-mismatch), byte-identical 12-scope set (incl public_api_ea_manage/alerting, mobile_api, reseller_portal), grants incl password/implicit/device_code/CIBA, plain+S256 PKCE, response_modes query/fragment; account portal (client 692A0A56) live-proves the web OIDC flow (this cycle: /manage & /manage/Home → authorize w/ PKCE S256 form_post, x-client-ver 8.19.2.0); all /identity/connect/* twin-clean, no fail-open
+evidence_needed: valid client_secret OR leaked X-S4-Api-Key/Bearer from any of the 6 hosts
+verify_steps: (passive done) discovery deep-diff re-verified; account/manage authorize params reconfirmed; ReturnUrl/OIDC-callback inert; (AUTH_HELPED) account-host password grant → Bearer → GET connect/api/v2/teams 401→200 proves cross-env acceptance
 impact: minted EA-manage/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + EA management + reseller portal; CRITICAL once any credential leaks
 testability: AUTH_HELPED
-[HYP] V2 users/{userId}/changePassword honors arbitrary userId via handler-side auth only
+[HYP] V1+V2 bulk alert acknowledge/close/paged/report honors arbitrary userId query
 class: IDOR
-asset: connect.signl4.com/api/v2/users/{userId}/changePassword
-confidence: 62
-reasoning: OPTIONS live this cycle → 405 Allow:PUT (route registered, PUT-only); anon 405 not 401 = auth validation deferred to handler, mirroring /api/v2/teams handler-deferred pattern confirmed 10th+ cycles; V1 swagger "in behave of the user" 403 typo proves operator-impersonation is a coded feature; shared prod backend (appId ec6c57ca)
-evidence_needed: authenticated A/B — PUT changePassword?userId=<sibling> vs caller-self under operator-owned X-S4-Api-Key; diff status then login proof
-verify_steps: (AUTH_HELPED) PUT /api/v2/users/{target}/changePassword with currentPassword=newPassword for own + sibling user; passive route-confirm done (Allow:PUT)
-impact: password reset of sibling tenant users → full tenant ATO; HIGH
+asset: connect.signl4.com/api/v1/v2/alerts/acknowledgeAll,closeAll,paged,report
+confidence: 65
+reasoning: userId query param confirmed in BOTH V1 and V2 swagger; routes live (OPT 405 / anon 401 handler-deferred); "in behave of the user" 403 typo confirms coded impersonation; same backend across V1/V2/V3 (appId ec6c57ca)
+evidence_needed: authenticated A/B — report?userId=<other> dataset diff vs omitted; acknowledgeAll?userId=<other> scope under operator-owned X-S4-Api-Key
+verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other> + POST /api/v2/alerts/paged?maxResults=1&userId=<other> (route/parenthood already confirmed)
+impact: per-user alert/response-metrics disclosure + cross-user ack/close with audit-attribution spoofing within tenant; MEDIUM-HIGH
 testability: AUTH_HELPED
-[HYP] V3 signlReports/{fileName} trusts path filename for storage lookup
+[HYP] Tenant-agnostic /api/v1/prepaid/{balance,transactions,settings} resolve resource from auth-context only
 class: IDOR
-asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}
-confidence: 50
-reasoning: OPTIONS live this cycle → 405 Allow:GET (route registered); V3 OpenAPI (200+ paths) documents file-download family; fileName/attachmentId are path-segfragments, traversal+cross-tenant guessing candidates; global security:[{}] empty on V1/V2/V3 (spec under-declares every namespace)
-evidence_needed: authenticated request showing %2f-vs-/ decoding differs from objectId validation
-verify_steps: (AUTH_HELPED) GET /api/v3/teams/{teamId}/signlReports/..%2f..%2fetc%2fpasswd vs .%2e variants with X-S4-Api-Key; passive OPTIONS route-confirm done
-impact: cross-tenant report disclosure, potential LFI; HIGH
+asset: connect.signl4.com/api/v1/prepaid/balance, /prepaid/transactions, /prepaid/settings
+confidence: 45
+reasoning: V1 swagger documents these GET/PUT routes WITHOUT any {subscriptionId} path/query dependency; same group as /prepaid/{id}... family whose auth is handler-deferred; if subscription is derived from the API-key's team scope rather than an explicit tenant-bound credential, cross-subscription prepaid balance/transaction history may be readable by any team key in any subscription
+evidence_needed: authenticated GET /api/v1/prepaid/balance under a team-level key in subscription A vs B; diff dataset/labeling
+verify_steps: (AUTH_HELPED) GET /api/v1/prepaid/balance and /prepaid/transactions with operator-owned X-S4-Api-Key; passive confirm of Allow sets on connect+devapi done (OPT 405, GET 401 parity)
+impact: financial/billing disclosure (prepaid balance, transaction ledger) across tenants; MEDIUM
 testability: AUTH_HELPED
+[NEXT] RAG: search SIGNL4 helpcenter + GitHub org (github.com/signl4, Derdack org) + docs for the consumer host of `reseller_portal` / `public_api_ea_manage` / `mobile_api` scopes (keywords "reseller portal", "mobile api", "EA API") — identify any NEW hostname consuming these scopes that is not in the CT-known 13 (admin.signl4.com was the only DNS-resolving candidate this cycle and is a dead mail host)
+[RISK] derdack: 90 — unchanged. 6 identity hosts share one byte-identical prod RS256 key with account-host mint-mismatch against a byte-identical scope/grant surface (incl password/implicit/plain-PKCE); every high-value vector (forgery, V1/V3 userId+BOLA, prepaid/billing, changePassword) sits behind handler-deferred auth and is AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise remains one leaked client_secret/API-key away; no new exposure found this cycle (admin host inert).
