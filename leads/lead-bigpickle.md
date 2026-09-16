@@ -4535,3 +4535,31 @@ testability: AUTH_HELPED
 [LEARN] REJECTED OATH @ account.signl4.com/manage/signin-oidc: unauthenticated GET → 302 fixed /manage/Home; no attacker-controlled redirect parameter observed.
 [LEARN] ACCEPTED OTHER @ account.signl4.com/manage: ASP.NET Core OpenIDConnect 8.19.2.0 portal (client 692A0A56, PKCE S256 form_post); devaccount twin → devconnect authorize with identical client/scopes.
 [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key; account-host IdP mints tokens claiming connect issuer (mint-mismatch) against a byte-identical scope/grant surface incl implicit+password+plain-PKCE; account portal proves live OIDC client attached to that key family; every high-value vector (forgery, V1 userId IDOR, V3 file-download BOLA) is permanently AUTH_HELPED — full EA multi-tenant compromise sits one leaked client_secret/API-key away.
+## 2026-09-16 10:07:14 UTC [target] (model bigpickle)
+[HYP] Cross-env token forgery via shared-signing-key IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 90
+reasoning: 6 identity hosts (connect/devconnect/api/devapi/account/devaccount) serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account IdP discovery claims issuer=connect.signl4.com/identity (mint-mismatch) while advertising byte-identical 12-scope set incl EA manage/alerting + mobile_api + reseller_portal, grants incl password/device_code/CIBA/implicit, plain+S256 PKCE, JAR on / PAR off; account portal (client 692A0A56) live-proves web PKCE flow; all /identity/connect/{token,deviceauthorization,backchannel-authentication,par} twin-clean across envs (no fail-open)
+evidence_needed: valid client_secret OR leaked X-S4-Api-Key/Bearer from any of the 6 identity hosts
+verify_steps: (passive, done this cycle) discovery deep-diff account+connect re-confirmed twin-clean; ReturnUrl/OIDC-callback diff tested and inert; (AUTH_HELPED) password-grant on account host → Bearer → GET connect/api/v2/teams, 401→200 proves cross-env acceptance
+impact: minted EA-manage/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + Enterprise Alert management + reseller portal; CRITICAL once any credential leaks
+testability: AUTH_HELPED
+[HYP] V2 users/{userId}/changePassword honors arbitrary userId → cross-user ATO within tenant
+class: IDOR
+asset: connect.signl4.com/api/v2/users/{userId}/changePassword
+confidence: 55
+reasoning: V2 swagger documents PUT /v2/users/{userId}/changePassword with userId as path param + request body; V1 swagger "in behave of the user" 403 text proves operator-impersonation exists as a coded feature; handler-deferred auth = 401 anon (live), so authorization is handler-side and may validate team membership rather than caller==target; V2 = shared prod backend (appId ec6c57ca) with connect host
+evidence_needed: authenticated A/B — PUT changePassword?userId=<otherTeamUser> vs omitted on operator-owned key; diff status, then login proof
+verify_steps: (AUTH_HELPED) PUT /api/v2/users/{target}/changePassword with currentPassword=newPassword against operator's own + sibling user under X-S4-Api-Key; passive pre-check done (401 anon, route registered on connect+devapi parity)
+impact: password reset of sibling tenant users → full tenant ATO; HIGH
+testability: AUTH_HELPED
+[HYP] V1+v2 bulk alert acknowledge/close/paged/report honors arbitrary userId query
+class: IDOR
+asset: connect.signl4.com/api/v1/v2/alerts/acknowledgeAll,closeAll,paged,report
+confidence: 65
+reasoning: userId query param confirmed in BOTH V1 and V2 swagger across acknowledgeAll/closeAll/paged/report; routes live-verified 405 Allow:GET,POST + anon 401 (handler-deferred); "in behave of the user" typo confirms a coded impersonation path; identical backend across V1/V2/V3 namespaces (appId ec6c57ca); devapi staging parity live
+evidence_needed: authenticated A/B diff of report?userId=<other> dataset vs omitted; acknowledgeAll?userId=<other> status/scope
+verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other> + POST /api/v2/alerts/paged?maxResults=1&userId=<other> with operator-owned X-S4-Api-Key (passive route/parenthood confirm done)
+impact: per-user alert/response-metrics disclosure + cross-user ack/close with audit-attribution spoofing within tenant; MEDIUM-HIGH
+testability: AUTH_HELPED

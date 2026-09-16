@@ -996,3 +996,5 @@ www.derdack.com
 - NEW devaccount.signl4.com/identity mirrors prod with issuer = `devconnect.signl4.com/identity`, same custom claims, identical JWKS
 - CHANGED Cross-env token forgery chain now spans 6 identity hosts (was 4) — all share byte-identical RS256 key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED 
 - CHANGED No new live probes executed since last KB cycle (5 hours ago) — estate stable
+
+## 2026-09-16 10:07:26 UTC
