@@ -4191,3 +4191,90 @@ impact: cross-user alert lifecycle manipulation within a tenant; MEDIUM-HIGH
 testability: AUTH_HELPED
 [NEXT] PROBE: OPTIONS https://connect.signl4.com/api/v1/alerts/acknowledgeAll and /api/v1/alerts/closeAll (+ same on devapi.signl4.com for staging parity) — confirm route registration and Allow set (expect 405 Allow:POST if routed, 404 if absent); 1rps.
 [RISK] derdack: 89 — unchanged; 6 identity hosts share byte-identical prod RS256 signing key, account host adds exclusive EA-manage/reseller scopes + issuer mismatch across host boundaries, password/device/CIBA grants secret-gated everywhere; full EA multi-tenant compromise achievable the moment any client_secret leaks from any cluster; all evasion paths permanently AUTH_HELPED.
+## 2026-09-16 00:26:42 UTC [target] (model bigpickle)
+[RISK] derdack: 89 (+1) — 6 identity hosts all sharing RS256 signing key; account host adds 5 Enterprise Alert scopes (ea_manage, ea_alerting, reseller_portal, mobile_api) plus custom subscription/branch/stakeholder claims; issuer mismatch across host boundaries; password grant enabled but secret-gated on all hosts; attack surface expanded materially — if any client_secret from any of the 3 IdP clusters leaks, full EA management access is achievable across prod+staging+account environments
+[HYP] Cross-env token forgery chain now spans 6 identity hosts + shared prod backend appId
+class: AUTH
+asset: account.signl4.com/identity/connect/token + api.signl4.com/api/v2
+confidence: 89
+reasoning: 6 identity hosts serve byte-identical RS256 JWKS (kid 91EE4F3C); account+connect+api share appId ec6c57ca (same backend); account exposes 5 extra EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api) + custom subscription/branch/stakeholder claims; issuer mismatch (account claims connect issuer); password grant secret-gated on all hosts; introspection/token/devices all 401-anon gated
+evidence_needed: any valid client_secret OR leaked X-S4-Api-Key/Bearer token
+verify_steps: (AUTH_HELPED) POST /identity/connect/token password grant with stolen creds on account host, then use minted Bearer on connect/api/v2 routes; or authorize code flow via account/manage
+impact: cross-environment auth bypass with EA-manage scopes accepted by prod API backend → full multi-tenant alert CRUD + EA management + reseller portal; CRITICAL when credential obtained
+testability: AUTH_HELPED
+[HYP] V1 bulk alert acknowledge/close honors arbitrary userId within tenant
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll,closeAll
+confidence: 55
+reasoning: V1 swagger documents POST /alerts/acknowledgeAll + /alerts/closeAll with userId as query param; 403 typo "in behave of the user" confirms impersonation feature; V1 is oldest namespace; guard may check team membership only
+evidence_needed: authenticated A/B with valid X-S4-Api-Key comparing userId=<other> vs omitted
+verify_steps: (AUTH_HELPED) POST /api/v1/alerts/acknowledgeAll?userId=<other> with X-S4-Api-Key header vs without; compare status codes
+impact: cross-user alert lifecycle manipulation within tenant; MEDIUM-HIGH
+testability: AUTH_HELPED
+[HYP] V1 /alerts/paged|report userId scoping leaks per-user alert data within tenant
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/paged,report
+confidence: 45
+reasoning: V1 swagger documents userId on both; if scoping trusts the param, caller reads other users' alert volume/response metrics inside the tenant
+evidence_needed: authenticated comparison GET report with userId=<other> vs omitted
+verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other> with X-S4-Api-Key; diff dataset
+impact: per-user alert/response-metrics disclosure within tenant; LOW-MEDIUM
+testability: AUTH_HELPED
+[HYP] Cross-env token forgery via account-hosted IdP (issuer mismatch + shared RS256 key across 6 hosts)
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 88
+reasoning: 6 identity hosts serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account IdP claims issuer=connect.signl4.com/identity (cross-host mint-mismatch); account exposes 5 EA scopes absent from connect (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api) + custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder); code_challenge_methods includes plain; password+device_code+CIBA grants on all hosts, all client_secret-gated; api/connect share backend appId cid-v1:ec6c57ca
+evidence_needed: any valid client_secret OR leaked X-S4-Api-Key/Bearer token from any of the 6 identity hosts
+verify_steps: (passive) OPTIONS/GET /identity/connect/{introspect,revocation,deviceauthorization,backchannel-authentication,par} on all 6 hosts — diff Allow/status per host to find fail-open registration; (AUTH_HELPED) password-grant on account host with stolen creds → Bearer → GET /api/v2/teams (401→200 proves cross-env acceptance)
+impact: minted Bearer tokens with EA-manage scopes accepted by prod API backend → multi-tenant alert CRUD + EA management + reseller portal access; CRITICAL when a credential is obtained
+testability: AUTH_HELPED
+[HYP] V3 report/attachment file-download family trusts fileName for path
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}, /dutyReports/{fileName}, /signls/{signlId}/attachments/{attachmentId}
+confidence: 50
+reasoning: V3 swagger (200+ paths) documents the file-download family; all live-verified anon→401; fileName/attachmentId in path are prime traversal + cross-tenant object-guessing candidates; V1 swagger lists equivalent report downloads
+evidence_needed: authenticated request proving traversal decoding (%2f vs /) differs from objectId validation — requires operator-owned key only
+verify_steps: (AUTH_HELPED) GET /api/v3/teams/{teamId}/signlReports/..%2f..%2f..%2fetc%2fpasswd and /signlReports/.%2e/%2e%2e/ comparators with X-S4-Api-Key; passive-first pre-check: OPTIONS same routes on devapi for staging Allow parity
+impact: cross-tenant report/invoice disclosure, potential LFI if traversal decodes; HIGH
+testability: AUTH_HELPED
+[HYP] V1 bulk alert acknowledge/close honors arbitrary userId within tenant
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll,closeAll
+confidence: 55
+reasoning: V1 swagger documents POST acknowledgeAll/closeAll with userId as query param; 403 response typo "in behave of the user" confirms impersonation feature exists; V1 is the oldest namespace on the shared handler-deferred auth backend; guard may check team membership only, not caller identity
+evidence_needed: authenticated A/B comparing userId=<other> vs omitted on a key the operator owns
+verify_steps: (passive-first) OPTIONS /api/v1/alerts/acknowledgeAll (+ /closeAll) on connect+devapi — expect 405 Allow:POST if routed, 404 if absent; (AUTH_HELPED) POST with/without userId, diff status codes
+impact: cross-user alert lifecycle manipulation within a tenant; MEDIUM-HIGH
+testability: AUTH_HELPED
+[NEXT] PROBE: OPTIONS https://connect.signl4.com/api/v1/alerts/acknowledgeAll and /api/v1/alerts/closeAll (+ same on devapi.signl4.com for staging parity) — confirm route registration and Allow set (expect 405 Allow:POST if routed, 404 if absent); 1rps.
+[RISK] derdack: 89 — unchanged; 6 identity hosts share byte-identical prod RS256 signing key, account host adds exclusive EA-manage/reseller scopes + issuer mismatch across host boundaries, password/device/CIBA grants secret-gated everywhere; full EA multi-tenant compromise achievable the moment any client_secret leaks from any cluster; all evasion paths permanently AUTH_HELPED.
+[HYP] V1 bulk alert acknowledge/close honors arbitrary userId within tenant
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll, closeAll
+confidence: 62
+reasoning: Live probes confirm both routes registered with 405 Allow:GET,POST on connect AND devapi; V1 swagger documents non-required `userId` query param on both; prior swagger-language shows an "in behave of the user" 403 typo (impersonation feature exists); V1 is oldest namespace on the shared handler-deferred backend which returns 401 for anon GET (auth enforced at handler, not router)
+evidence_needed: authenticated A/B on operator-owned key — POST acknowledgeAll with userId=<otherTeamUser> vs omitted; diff status codes and ack scope
+verify_steps: (AUTH_HELPED) POST /api/v1/alerts/acknowledgeAll?userId=<other> with X-S4-Api-Key vs without; same for closeAll; passive pre-check already done (routes live, handler 401-anon)
+impact: cross-user alert lifecycle manipulation within tenant (ack/close other users' alerts, audit-log attribution spoofing); MEDIUM-HIGH
+testability: AUTH_HELPED
+[HYP] Cross-env token forgery via account-hosted IdP (issuer mismatch + shared RS256 key across 6 hosts)
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 88
+reasoning: 6 identity hosts serve byte-identical RS256 JWKS (kid 91EE4F3C...); account IdP claims issuer=connect.signl4.com/identity; account exposes EA scopes absent from connect (reseller_portal, public_api_ea_manage/ea_alerting, mobile_api) + custom subscription/branch/stakeholder claims; plain PKCE permitted; password/device/CIBA grants all client_secret-gated; THIS CYCLE: connect|devaccount|account /identity/connect endpoint matrix byte-identical — no fail-open registration on any host
+evidence_needed: any valid client_secret OR leaked X-S4-Api-Key/Bearer token from any of the 6 hosts
+verify_steps: (AUTH_HELPED) password-grant on account host with stolen creds → Bearer → GET connect/api/v2/teams (401→200 proves cross-env acceptance); passive endpoint diff re-run (done, twin-clean)
+impact: minted Bearer with EA-manage scopes accepted by prod backend → multi-tenant alert CRUD + EA management + reseller portal; CRITICAL when credential obtained
+testability: AUTH_HELPED
+[HYP] V1 /alerts/report|paged userId scoping leaks per-user alert metrics within tenant
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/report, paged
+confidence: 50
+reasoning: report live (405 Allow:GET, anon GET 401); swagger documents userId query on both; paged also takes maxResults — if scoping trusts the param, caller reads other users' alert volume/response-metrics
+evidence_needed: authenticated GET report?userId=<other> vs omitted diff dataset
+verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other> + POST /api/v1/alerts/paged?maxResults=1&userId=<other> with operator-owned X-S4-Api-Key
+impact: per-user alert/response-metrics disclosure within tenant; LOW-MEDIUM
+testability: AUTH_HELPED
+[NEXT] RAG: parse `connect.signl4.com/api/docs/v1/swagger.json` descriptions for `/alerts/acknowledgeAll`, `/alerts/closeAll`, `/alerts/paged`, `/alerts/report` to locate the "in behave of the user" 403 text and determine operator-vs-editor `userId` semantics (decides whether impersonation is a documented feature vs unchecked param)
+[RISK] derdack: 89 — unchanged; V1 userId IDOR family now live-verified on prod+staging but remains AUTH_HELPED (no key to prove cross-user scope); identity endpoint diff across account/devaccount/connect is twin-clean (no fail-open); no new credential leak path found; the cross-env forgery chain (6 hosts, shared RS256, EA scopes, issuer mismatch) stays the top finding, permanently blocked on client_secret/AUTH_HELPED

@@ -960,3 +960,14 @@ www.derdack.com
 - CHANGED Cross-env token forgery chain now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 +
 - CHANGED "Blazor assembly disclosure" hypothesis (AUTH, 50) permanently CLOSED — no DLL/boot-manifest surface exists
 - CHANGED No new live probes executed since last KB cycle (5 hours ago) — estate stable
+
+## 2026-09-16 00:28:00 UTC
+- NEW account.signl4.com/identity confirmed as 6th live IdentityServer (OIDC discovery 200) with byte-identical RS256 JWKS shared across all 6 identity hosts
+- NEW account.signl4.com/identity issuer mismatch — claims connect.signl4.com/identity despite being hosted on account subdomain (cross-host token minting with foreign issuer)
+- NEW account.signl4.com/identity exposes 5 Enterprise Alert scopes absent from connect: reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api
+- NEW account.signl4.com/identity custom claims: subscription_id, branch_id, is_branch_manager, is_stakeholder, active
+- NEW account.signl4.com/identity allows plain PKCE (code_challenge_methods_supported: ["plain", "S256"])
+- NEW devaccount.signl4.com/identity mirrors prod with issuer = devconnect.signl4.com/identity, same custom claims, identical JWKS
+- CHANGED Cross-env token forgery chain now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 +
+- CHANGED "Blazor assembly disclosure" hypothesis (AUTH, 50) permanently CLOSED — no DLL/boot-manifest surface exists on fix/devfix
+- CHANGED No new live probes executed since last KB cycle (5 hours ago) — estate stable
