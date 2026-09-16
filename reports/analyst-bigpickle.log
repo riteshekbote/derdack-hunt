@@ -24129,3 +24129,138 @@ testability: AUTH_HELPED
 
 **STEP 7 — RISK**
 [RISK] derdack: 90 — unchanged. 6 identity hosts share one byte-identical prod RS256 key with account-host mint-mismatch against a byte-identical scope/grant surface (incl password/implicit/plain-PKCE); every high-value vector (forgery, V1/V3 userId+BOLA, prepaid/billing, changePassword) sits behind handler-deferred auth and is AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise remains one leaked client_secret/API-key away; no new exposure found this cycle (admin host inert).
+===== ANALYST bigpickle 2026-09-16 23:51:54 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m◈ [0mExa Web Search "SIGNL4 "reseller portal" Enterprise Alert API OAuth scope"
+[0m◈ [0mExa Web Search "signl4 "public_api_ea_manage" OR "public_api_ea_alerting" scope API"
+[0m◈ [0mExa Web Search "Enterprise Alert SIGNL4 reseller portal branch_id subscription_id claims"
+RAG closed (negative: no consumer host for EA scopes in public docs). Executing fresh passive probes: CT re-sweep + events-namespace route registration check.
+[0m
+[0m$ [0mfor u in "connect.signl4.com/api/v2/events" "connect.signl4.com/api/v2/events/zzz-test-secret" "devapi.signl4.com/api/v2/events" "devapi.signl4.com/api/v2/events/zzz-test-secret" "account.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&response_type=code&scope=openid&redirect_uri=https%3A%2F%2Fevil.example.com&response_mode=query&prompt=none" "account.signl4.com/identity/connect/authorize?client_id=00000000-0000-0000-0000-000000000000&response_type=code&scope=openid&redirect_uri=https%3A%2F%2Fevil.example.com&response_mode=query&prompt=none"; do echo "== $u"; curl -sS -o /dev/null -m 20 -X OPTIONS -D - "https://$u" 2>&1 | rg -i "HTTP/|allow|x-s4|appid|content-type|location" | head -8; printf '%-4s' ""; done
+== connect.signl4.com/api/v2/events
+/bin/bash: line 1: rg: command not found
+    == connect.signl4.com/api/v2/events/zzz-test-secret
+/bin/bash: line 1: rg: command not found
+    == devapi.signl4.com/api/v2/events
+/bin/bash: line 1: rg: command not found
+    == devapi.signl4.com/api/v2/events/zzz-test-secret
+/bin/bash: line 1: rg: command not found
+    == account.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&response_type=code&scope=openid&redirect_uri=https%3A%2F%2Fevil.example.com&response_mode=query&prompt=none
+/bin/bash: line 1: rg: command not found
+    == account.signl4.com/identity/connect/authorize?client_id=00000000-0000-0000-0000-000000000000&response_type=code&scope=openid&redirect_uri=https%3A%2F%2Fevil.example.com&response_mode=query&prompt=none
+/bin/bash: line 1: rg: command not found
+[0m
+[0m% [0mWebFetch https://crt.sh/?q=%25.signl4.com&output=json
+crt.sh json landed in a file. Let me re-run the probes with grep (rg absent) and check the CT dump.
+[0m
+[0m$ [0mfor u in "connect/api/v2/events" "connect/api/v2/events/zzz-test-secret" "devapi/api/v2/events" "devapi/api/v2/events/zzz-test-secret"; do host=$(echo "$u" | cut -d/ -f1); path=$(echo "$u" | cut -d/ -f2-); echo "== $u"; curl -sS -o /dev/null -m 20 -X OPTIONS -D - "https://$host/$path" 2>&1 | grep -iE "HTTP/|allow:|appid|x-s4" | head -6; done; echo; echo "== authorize client 692A0A56 (valid) prompt=none response_mode=query"; curl -sS -o /dev/null -m 20 -D - "https://account.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&response_type=code&scope=openid&redirect_uri=https%3A%2F%2Fevil.example.com&response_mode=query&prompt=none" 2>&1 | grep -iE "HTTP/|location:" | head -4; echo "== authorize fabricated client prompt=none response_mode=query"; curl -sS -o /dev/null -m 20 -D - "https://account.signl4.com/identity/connect/authorize?client_id=00000000-0000-0000-0000-000000000000&response_type=code&scope=openid&redirect_uri=https%3A%2F%2Fevil.example.com&response_mode=query&prompt=none" 2>&1 | grep -iE "HTTP/|location:" | head -4
+== connect/api/v2/events
+== connect/api/v2/events/zzz-test-secret
+== devapi/api/v2/events
+== devapi/api/v2/events/zzz-test-secret
+
+== authorize client 692A0A56 (valid) prompt=none response_mode=query
+HTTP/2 302 
+location: https://account.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqOjBpPrq-m4HFU-VBUxSeJtSu4ZKA7YUP3hvVa-9XnEYlAr-7266vVsAkGl1N1FcV_6nttTFkdpk_eVvVaDzcsM4txqtvbhS57Zv7e3MmY17IPWBlAiw-1ciqYHi49tCP-qe-l86-684BNsT_ZnOjBO7hz-2CRvwSj_YLIF3SgsUmsuVDmsR22RrpTUZ0o4T1mauGBu8XU2cXV-iUIuqjd0OGX7r2ag7RH9cwOl_FMlKCt8nT-6-h4jU9cZR8HAIA462w4PoHiZCzLyVvqUG_kgfKd46z-I6XPAftdf6AmuLgURxCpSC08_4UGfwRPUSxIV9H5dhyTebdALtyRdleYNp5b5w7kaRk65xn02ovOu820apj6ICahlcYHbzxriQwHsnBSaCWzQ8FjOjYXC1dsy4RvPrb1zSfEi_7uJdOX3-1_GYKnvtdSXovjTPgCC6B1-kI6LE17YLKDe7W-brUVY
+== authorize fabricated client prompt=none response_mode=query
+HTTP/2 302 
+location: https://account.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqMfQ0Dj2ahI6qvyjxQoM1UxFlDIRYTOJ6a-E4JShvDhxEW_h-sK2lbuDxnOnvJauyPDSMizO9ix9qxSAUnUzV758axVOAu2qTB8CJ8rC5IXru4y6VgZgTGhKE6j5Hkd31J2DV3DXyl80UUI3YCirTYvPyKHaZYg2KW5SZroRaMursLpYxT4aEQ6EixQYkYnlg8YJqsnXBHpYr2W3idbTnP13doLQWCv6yzqcsElkYcF0L8ZU_FMviu5N3syvjP-_C_CRPhCpB6y9K5TFFiOVbGFS83twn47VOwUTLs5MSON_hb5ntVuWiyGzlvgZ5hXA68iRBDyPRQxtRHZJhNu2cjPOXhXuwCHADa9Jd2-RPx1LP_OaeX1WvqicM4WNGw9n49LzuXQN6Xzbv7LLKKoKEZ9pu9BkqhQIP1aDDskkjrJvi1sFJD7PFmVlVv-UC1rCDK5M8WmC6wlRKqdxCxYoaKDh0ZBAzYZcGzNcoPNhw28Gg
+[0m
+[0m$ [0mfor u in "https://connect.signl4.com/api/v2/events" "https://connect.signl4.com/api/v2/events/zzz-test-secret" "https://devapi.signl4.com/api/v2/events" "https://devapi.signl4.com/api/v2/events/zzz-test-secret"; do echo "== $u"; curl -sS -m 20 -o /tmp/opencode/body.txt -D /tmp/opencode/hdr.txt -X OPTIONS "$u" 2>&1; echo "exit=$?"; grep -aiE "HTTP/[0-9]|^allow|^content-length|^content-type" /tmp/opencode/hdr.txt | head -6; grep -aiE "HTTP/[0-9]|allow" /tmp/opencode/hdr.txt | head -6; echo "body: $(cat /tmp/opencode/body.txt | head -c 200)"; done
+== https://connect.signl4.com/api/v2/events
+exit=0
+HTTP/2 404 
+content-length: 0
+HTTP/2 404 
+body: 
+== https://connect.signl4.com/api/v2/events/zzz-test-secret
+exit=0
+HTTP/2 405 
+content-length: 0
+allow: GET, POST
+HTTP/2 405 
+allow: GET, POST
+body: 
+== https://devapi.signl4.com/api/v2/events
+exit=0
+HTTP/2 404 
+content-length: 0
+HTTP/2 404 
+body: 
+== https://devapi.signl4.com/api/v2/events/zzz-test-secret
+exit=0
+HTTP/2 405 
+content-length: 0
+allow: GET, POST
+HTTP/2 405 
+allow: GET, POST
+body:
+[0m
+[0m• [0mParse crt.sh JSON dump[90m Explore Agent[0m
+events namespace map gap filled (base 404, leaf registered, staging parity). Now extracting CT results — delegating the large dump to a subagent.
+[0m✓ [0mParse crt.sh JSON dump[90m Explore Agent[0m
+CT + probes + RAG complete. Delta assembled — emitting structured analysis.
+
+## STEP 1 — DELTA
+- NEW events-namespace route map complete: `/api/v2/events` base → 404 unregistered, leaf `{id}` → 405 `Allow: GET, POST` on **both** connect + devapi (staging parity; 5th namespace with identical handler-deferred auth, after v1/v2/v3/webhook)
+- NEW OATH negative: account authorize with `response_mode=query&prompt=none` yields identical 302→`/identity/home/error?errorId=CfDJ8…` (Data-Protection token) for both real client 692A0A56 and all-zero fabricated client — no client_id enumeration differential, no redirect/error echo
+- NEW CT re-sweep (*.signl4.com): 14 distinct names, **zero new live hosts** — only new token `www.vps.signl4.com` (variant of inert vps host); connect/devconnect/api/devapi/account/devaccount are wildcard-`*.signl4.com`-covered so invisible as individual SANs
+- NEW RAG negative: no public-doc consumer host exists for `reseller_portal`/`public_api_ea_manage`/`mobile_api` (docs.signl4.com + apis.io + GitHub org) — EA-scope host hunt closed; `admin.signl4.com` remains only DNS candidate, dead mail host
+- CHANGED events contract clarified: `POST /api/v2/events/{webhookIdOrTeamId}` auth = `X-S4-Api-Key` **carrying the team/webhook secret** (docs + api-evangelist OpenAPI) — the "API key" for events == team secret; subscription-wide "global API key" variant documented (2023-04 blog)
+
+## STEP 2 — PRIORITIZE
+[PRIO] account.signl4.com/identity/connect/token, 7.35, business=10+tech=9 (OAuth/JWT/plain-PKCE, gate_ease=1, fresh)
+[PRIO] connect.signl4.com/api/v2/events/{id}, 6.85, attack_surface=8 (secret-in-path family, gate_ease=4, fresh=9)
+[PRIO] connect.signl4.com/api/v1/alerts/{acknowledgeAll,closeAll,paged,report}, 6.10, business=8+IDOR, gate_ease=2
+
+## STEP 3 — HYPOTHESES
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 90
+reasoning: 6 identity hosts serve byte-identical JWKS (kid 91EE4F3C); account discovery claims issuer=connect with byte-identical 12-scope set (EA manage/alerting, mobile_api, reseller_portal), grants incl password/implicit/device_code/CIBA, plain+S256 PKCE; account portal (client 692A0A56) live-proves web OIDC form_post; authorize re-verified no redirect_uri echo this cycle (both valid+fabricated client → same Data-Protection errorId); events route confirmed handler-deferred across 5 namespaces
+evidence_needed: valid client_secret OR leaked X-S4-Api-Key/Bearer from any of the 6 hosts
+verify_steps: (passive done) discovery deep-diff, authorize differential, events/webhook/v1/v2/v3 route parity; (AUTH_HELPED) account-host password grant → Bearer → GET connect/api/v2/teams 401→200
+impact: minted EA-manage/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + EA management + reseller portal; CRITICAL once any credential leaks
+testability: AUTH_HELPED
+
+[HYP] V1 bulk alert acknowledge/close/paged/report honors arbitrary userId query param
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll,closeAll,paged,report
+confidence: 65
+reasoning: userId query param documented in BOTH V1+V2 swagger (4 endpoints); "in behave of the user" 403 typo confirms coded impersonation; routes live (OPT 405 anon / handler-deferred); shared backend appId ec6c57ca
+evidence_needed: authenticated A/B — report?userId=<other> dataset diff vs omitted under operator X-S4-Api-Key
+verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other>; POST /api/v2/alerts/paged
+impact: per-user alert/response-metrics disclosure + cross-user ack/close w/ audit-attribution spoofing within tenant; MEDIUM-HIGH
+testability: AUTH_HELPED
+
+[HYP] V2 users/{userId}/changePassword honors arbitrary userId via handler-side auth only
+class: IDOR
+asset: connect.signl4.com/api/v2/users/{userId}/changePassword
+confidence: 62
+reasoning: PUT-only route (Allow:PUT) live; anon 405 not 401 = auth deferred, mirroring events/v1/v2/v3 handler-deferred family confirmed this cycle; V1 "behave of the user" typo proves operator-impersonation is coded
+evidence_needed: authenticated A/B — PUT changePassword for sibling vs self under operator-owned key
+verify_steps: (AUTH_HELPED) PUT /api/v2/users/{target}/changePassword
+impact: password reset of sibling tenant user → tenant ATO; HIGH
+testability: AUTH_HELPED
+
+## STEP 4 — SELF-CRITIQUE
+[PARKED] V3 signlReports/{fileName} traversal (50): route-confirmed but no passive path-validation possible without auth; LFI needs authenticated traversal test
+[PARKED] /api/v1/prepaid/{balance,transactions} cross-subscription read (45): no new evidence this cycle; fully AUTH_HELPED
+[PARKED] events/webhook secret enumeration: operator-entropy under REJECTED brute-force class; exploitable only via leak
+[FINAL] 1) account IdP cross-env forgery (90) 2) V1 userId bulk alert IDOR (65) 3) V2 changePassword IDOR (62) — all AUTH_HELPED, all gated on leaked client_secret/API-key
+
+## STEP 5 — NEXT ACTION
+[NEXT] SCAN: crt.sh re-dump `%.enterprisealert.com` and `%.derdack.com` (json), diff against 2026-09-10 set, then DNS-resolve any new names to catch lone/corner hosts like www.vps.signl4.com that surfaced this cycle on signl4.com
+
+## STEP 6 — LEARNING
+[LEARN] ACCEPTED OTHER @ connect/devapi /api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th namespace with staging parity (v1/v2/v3/webhook/events), all handler-deferred
+[LEARN] REJECTED OATH @ account.signl4.com/identity/connect/authorize: response_mode=query&prompt=none → identical 302 /identity/home/error (CfDJ8 errorId) for valid vs fabricated client — no client_id enumeration differential, no state/redirect echo
+[LEARN] ACCEPTED OTHER @ crt.sh *.signl4.com re-sweep: 14 names, zero new live hosts; only new token www.vps.signl4.com; identity/api hosts hidden behind *.signl4.com wildcard certs (not separately observable in CT)
+[LEARN] ACCEPTED DOCS @ /api/v2/events/{webhookIdOrTeamId}: docs.signl4.com + api-evangelist OpenAPI confirm auth = X-S4-Api-Key carrying team/webhook secret; events "API key" == team secret; global subscription-scope key variant documented → reinforces secret-gated events family, no separate high-entropy tier
+[LEARN] REJECTED OTHER @ EA scopes RAG: no public-doc consumer host for reseller_portal/public_api_ea_manage/mobile_api — consumer-host hunt closed negative; admin.signl4.com only DNS candidate and inert
+
+## STEP 7 — RISK
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/plain-PKCE); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, changePassword, billing BOLA) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle closed 3 avenues (authorize differential, EA-scope host, signl4 CT) with no new exposure.

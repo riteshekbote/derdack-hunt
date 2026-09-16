@@ -2510,3 +2510,12 @@
 ## RANKED HYPOTHESES 2026-09-16 21:45:19 UTC
 - [90] account.signl4.com/identity/connect/token: Cross-env token forgery via 6-host shared RS256 IdP family with account mint-mismatch (from art/lead_bigpickle.txt)
 - NEXT(hypotheses-bigpickle.txt): RAG: search SIGNL4 helpcenter + GitHub org (github.com/signl4, Derdack org) + docs for the consumer host of `reseller_portal` / `public_api_ea_manage` / `mobile
+
+## RANKED HYPOTHESES 2026-09-16 23:51:54 UTC
+- [90] account.signl4.com/identity/connect/token: Cross-env token forgery via 6-host shared RS256 IdP family with account mint-mismatch (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): SCAN: crt.sh re-dump `%.enterprisealert.com` and `%.derdack.com` (json), diff against 2026-09-10 set, then DNS-resolve any new names to catch lone/corner hosts 
+- LEARN: ACCEPTED OTHER @ connect/devapi /api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th namesp
+- LEARN: REJECTED OATH @ account.signl4.com/identity/connect/authorize: response_mode=query&prompt=none → identical 302 /identity/home/error (CfDJ8 errorId) for valid vs
+- LEARN: ACCEPTED OTHER @ crt.sh *.signl4.com re-sweep: 14 names, zero new live hosts; only new token www.vps.signl4.com; identity/api hosts hidden behind *.signl4.com w
+- LEARN: ACCEPTED DOCS @ /api/v2/events/{webhookIdOrTeamId}: docs.signl4.com + api-evangelist OpenAPI confirm auth = X-S4-Api-Key carrying team/webhook secret; events "A
+- LEARN: REJECTED OTHER @ EA scopes RAG: no public-doc consumer host for reseller_portal/public_api_ea_manage/mobile_api — consumer-host hunt closed negative; admin.sign
