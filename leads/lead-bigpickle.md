@@ -4692,3 +4692,33 @@ testability: AUTH_HELPED
 [LEARN] ACCEPTED DOCS @ /api/v2/events/{webhookIdOrTeamId}: docs.signl4.com + api-evangelist OpenAPI confirm auth = X-S4-Api-Key carrying team/webhook secret; events "API key" == team secret; global subscription-scope key variant documented → reinforces secret-gated events family, no separate high-entropy tier
 [LEARN] REJECTED OTHER @ EA scopes RAG: no public-doc consumer host for reseller_portal/public_api_ea_manage/mobile_api — consumer-host hunt closed negative; admin.signl4.com only DNS candidate and inert
 [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/plain-PKCE); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, changePassword, billing BOLA) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle closed 3 avenues (authorize differential, EA-scope host, signl4 CT) with no new exposure.
+## 2026-09-17 02:37:06 UTC [target] (model bigpickle)
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 88
+reasoning: 6 identity hosts (connect/devconnect/api/devapi/account/devaccount) serve byte-identical RS256 JWKS kid 91EE4F3C; account discovery claims issuer=connect with byte-identical 12-scope set; grants incl password/implicit/device_code/CIBA/token-exchange + plain PKCE; token_endpoint_auth_methods only client_secret_basic/post (no public client); authorize verified no redirect_uri/state echo.
+evidence_needed: any valid client_secret OR leaked X-S4-Api-Key/Bearer from one host.
+verify_steps: (passive done) discovery deep-diff + JWKS deep-equal; (AUTH_HELPED) `POST account.signl4.com/identity/connect/token` password grant → Bearer → `GET connect.signl4.com/api/v2/teams` 401→200.
+impact: EA-manage/reseller/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + EA management; CRITICAL once one credential leaks.
+testability: AUTH_HELPED
+[HYP] V1 bulk alert acknowledge/close/paged/report honors arbitrary userId query param
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/{acknowledgeAll,closeAll,paged,report}
+confidence: 62
+reasoning: userId query param documented in V1+V2 swagger on 4 endpoints; 403 description "in behave of the user" confirms coded impersonation; routes live (OPT 405 / anon handler-deferred); shared backend appId ec6c57ca.
+evidence_needed: authenticated A/B — `report?userId=<other>` dataset diff vs omitted under operator key.
+verify_steps: (AUTH_HELPED) `GET /api/v1/alerts/report?userId=<other>`; `POST /api/v2/alerts/paged?maxResults=1&userId=<other>`.
+impact: per-user alert/response-metrics disclosure + cross-user ack/close with audit-attribution spoofing; MEDIUM-HIGH.
+testability: AUTH_HELPED
+[HYP] V2 users/{id}/changePassword honors arbitrary userId via handler-side auth only
+class: IDOR
+asset: connect.signl4.com/api/v2/users/{userId}/changePassword
+confidence: 58
+reasoning: PUT-only route (Allow:PUT) live; anon OPTIONS 405-not-401 mirrors handler-deferred family; V1 impersonation typo proves operator-impersonation is coded.
+evidence_needed: authenticated A/B — PUT changePassword for sibling vs self under operator-owned key.
+verify_steps: (AUTH_HELPED) `PUT /api/v2/users/{target}/changePassword`.
+impact: sibling-tenant password reset → tenant ATO; HIGH.
+testability: AUTH_HELPED
+[NEXT] HUMAN: obtain a self-registered SIGNL4 trial/operator `X-S4-Api-Key` (legitimate low-priv account) to convert the standing AUTH_HELPED IDOR/BOLA hypotheses (V1 alerts userId, V2 changePassword, V3 invoice/BOLA) into validated findings — this is the sole blocker across all top survivors.
+[RISK] derdack: 90 — 6 identity hosts share one byte-identical prod RS256 key with account-host issuer mismatch against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/plain-PKCE/JAR), and every high-value vector (forgery, V1/V3 userId+BOLA, changePassword, billing) sits behind handler-deferred AUTH_HELPED auth; full multi-tenant EA/SIGNL4 compromise is one leaked client_secret/API-key/team-secret away. This cycle closed request_uri SSRF and re-confirmed the derdack CT/DNS surface is static.

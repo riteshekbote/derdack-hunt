@@ -2519,3 +2519,7 @@
 - LEARN: ACCEPTED OTHER @ crt.sh *.signl4.com re-sweep: 14 names, zero new live hosts; only new token www.vps.signl4.com; identity/api hosts hidden behind *.signl4.com w
 - LEARN: ACCEPTED DOCS @ /api/v2/events/{webhookIdOrTeamId}: docs.signl4.com + api-evangelist OpenAPI confirm auth = X-S4-Api-Key carrying team/webhook secret; events "A
 - LEARN: REJECTED OTHER @ EA scopes RAG: no public-doc consumer host for reseller_portal/public_api_ea_manage/mobile_api — consumer-host hunt closed negative; admin.sign
+
+## RANKED HYPOTHESES 2026-09-17 02:37:15 UTC
+- [88] account.signl4.com/identity/connect/token: Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: obtain a self-registered SIGNL4 trial/operator `X-S4-Api-Key` (legitimate low-priv account) to convert the standing AUTH_HELPED IDOR/BOLA hypotheses (V1 
