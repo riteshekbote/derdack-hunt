@@ -1015,3 +1015,7 @@ www.derdack.com
 ## 2026-09-16 23:51:54 UTC
 
 ## 2026-09-17 02:37:15 UTC
+
+## 2026-09-17 07:59:25 UTC
+- CHANGED Confidence on cross-env token forgery (account IdP issuer mismatch + plain PKCE + EA scopes) dropped from 90→88; next action shifted from PROBE to HUMAN (obtain legitimate X-S4-Api-Key to unblock AUTH
+- CHANGED V1 behave-as hypothesis permanently invalidated — only a 403 response typo ("in behave of the user"), no request parameter exists
