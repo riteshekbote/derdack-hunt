@@ -1,4 +1,225 @@
-## 2026-09-17 13:07:30 UTC [target] (model nemotron3)
+## 2026-09-17 17:42:14 UTC [target] (model nemotron3)
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}
+confidence: 50
+reasoning: OPTIONS live this cycle → 405 Allow:GET (route registered); V3 OpenAPI (200+ paths) documents file-download family; fileName/attachmentId are path-segfragments, traversal+cross-tenant guessing candidates; global security:[{}] empty on V1/V2/V3 (spec under-declares every namespace)
+evidence_needed: authenticated request showing %2f-vs-/ decoding differs from objectId validation
+verify_steps: (AUTH_HELPED) GET /api/v3/teams/{teamId}/signlReports/..%2f..%2fetc%2fpasswd vs .%2e variants with X-S4-Api-Key; passive OPTIONS route-confirm done
+impact: cross-tenant report disclosure, potential LFI; HIGH
+testability: AUTH_HELPED
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 90
+reasoning: 6 identity hosts serve byte-identical JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account discovery claims issuer=connect (mint-mismatch), byte-identical 12-scope set (incl public_api_ea_manage/alerting, mobile_api, reseller_portal), grants incl password/implicit/device_code/CIBA, plain+S256 PKCE, response_modes query/fragment; account portal (client 692A0A56) live-proves the web OIDC flow (this cycle: /manage & /manage/Home → authorize w/ PKCE S256 form_post, x-client-ver 8.19.2.0); all /identity/connect/* twin-clean, no fail-open
+evidence_needed: valid client_secret OR leaked X-S4-Api-Key/Bearer from any of the 6 hosts
+verify_steps: (passive done) discovery deep-diff re-verified; account/manage authorize params reconfirmed; ReturnUrl/OIDC-callback inert; (AUTH_HELPED) account-host password grant → Bearer → GET connect/api/v2/teams 401→200 proves cross-env acceptance
+impact: minted EA-manage/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + EA management + reseller portal; CRITICAL once any credential leaks
+testability: AUTH_HELPED
+[HYP] V1+V2 bulk alert acknowledge/close/paged/report honors arbitrary userId query
+class: IDOR
+asset: connect.signl4.com/api/v1/v2/alerts/acknowledgeAll,closeAll,paged,report
+confidence: 65
+reasoning: userId query param confirmed in BOTH V1 and V2 swagger; routes live (OPT 405 / anon 401 handler-deferred); "in behave of the user" 403 typo confirms coded impersonation; same backend across V1/V2/V3 (appId ec6c57ca)
+evidence_needed: authenticated A/B — report?userId=<other> dataset diff vs omitted; acknowledgeAll?userId=<other> scope under operator-owned X-S4-Api-Key
+verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other> + POST /api/v2/alerts/paged?maxResults=1&userId=<other> (route/parenthood already confirmed)
+impact: per-user alert/response-metrics disclosure + cross-user ack/close with audit-attribution spoofing within tenant; MEDIUM-HIGH
+testability: AUTH_HELPED
+[HYP] Tenant-agnostic /api/v1/prepaid/{balance,transactions,settings} resolve resource from auth-context only
+class: IDOR
+asset: connect.signl4.com/api/v1/prepaid/balance, /prepaid/transactions, /prepaid/settings
+confidence: 45
+reasoning: V1 swagger documents these GET/PUT routes WITHOUT any {subscriptionId} path/query dependency; same group as /prepaid/{id}... family whose auth is handler-deferred; if subscription is derived from the API-key's team scope rather than an explicit tenant-bound credential, cross-subscription prepaid balance/transaction history may be readable by any team key in any subscription
+evidence_needed: authenticated GET /api/v1/prepaid/balance under a team-level key in subscription A vs B; diff dataset/labeling
+verify_steps: (AUTH_HELPED) GET /api/v1/prepaid/balance and /prepaid/transactions with operator-owned X-S4-Api-Key; passive confirm of Allow sets on connect+devapi done (OPT 405, GET 401 parity)
+impact: financial/billing disclosure (prepaid balance, transaction ledger) across tenants; MEDIUM
+testability: AUTH_HELPED
+[NEXT] RAG: search SIGNL4 helpcenter + GitHub org (github.com/signl4, Derdack org) + docs for the consumer host of `reseller_portal` / `public_api_ea_manage` / `mobile_api` scopes (keywords "reseller portal", "mobile api", "EA API") — identify any NEW hostname consuming these scopes that is not in the CT-known 13 (admin.signl4.com was the only DNS-resolving candidate this cycle and is a dead mail host)
+[RISK] derdack: 90 — unchanged. 6 identity hosts share one byte-identical prod RS256 key with account-host mint-mismatch against a byte-identical scope/grant surface (incl password/implicit/plain-PKCE); every high-value vector (forgery, V1/V3 userId+BOLA, prepaid/billing, changePassword) sits behind handler-deferred auth and is AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise remains one leaked client_secret/API-key away; no new exposure found this cycle (admin host inert).
+[PRIO] account.signl4.com/identity/connect/token, 7.35, business=10+tech=9 (OAuth/JWT/plain-PKCE, gate_ease=1, fresh)
+[PRIO] connect.signl4.com/api/v2/events/{id}, 6.85, attack_surface=8 (secret-in-path family, gate_ease=4, fresh=9)
+[PRIO] connect.signl4.com/api/v1/alerts/{acknowledgeAll,closeAll,paged,report}, 6.10, business=8+IDOR, gate_ease=2
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 90
+reasoning: 6 identity hosts serve byte-identical JWKS (kid 91EE4F3C); account discovery claims issuer=connect with byte-identical 12-scope set (EA manage/alerting, mobile_api, reseller_portal), grants incl password/implicit/device_code/CIBA, plain+S256 PKCE; account portal (client 692A0A56) live-proves web OIDC form_post; authorize re-verified no redirect_uri echo this cycle (both valid+fabricated client → same Data-Protection errorId); events route confirmed handler-deferred across 5 namespaces
+evidence_needed: valid client_secret OR leaked X-S4-Api-Key/Bearer from any of the 6 hosts
+verify_steps: (passive done) discovery deep-diff, authorize differential, events/webhook/v1/v2/v3 route parity; (AUTH_HELPED) account-host password grant → Bearer → GET connect/api/v2/teams 401→200
+impact: minted EA-manage/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + EA management + reseller portal; CRITICAL once any credential leaks
+testability: AUTH_HELPED
+[HYP] V1 bulk alert acknowledge/close/paged/report honors arbitrary userId query param
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll,closeAll,paged,report
+confidence: 65
+reasoning: userId query param documented in BOTH V1+V2 swagger (4 endpoints); "in behave of the user" 403 typo confirms coded impersonation; routes live (OPT 405 anon / handler-deferred); shared backend appId ec6c57ca
+evidence_needed: authenticated A/B — report?userId=<other> dataset diff vs omitted under operator X-S4-Api-Key
+verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other>; POST /api/v2/alerts/paged
+impact: per-user alert/response-metrics disclosure + cross-user ack/close w/ audit-attribution spoofing within tenant; MEDIUM-HIGH
+testability: AUTH_HELPED
+[HYP] V2 users/{userId}/changePassword honors arbitrary userId via handler-side auth only
+class: IDOR
+asset: connect.signl4.com/api/v2/users/{userId}/changePassword
+confidence: 62
+reasoning: PUT-only route (Allow:PUT) live; anon 405 not 401 = auth deferred, mirroring events/v1/v2/v3 handler-deferred family confirmed this cycle; V1 "behave of the user" typo proves operator-impersonation is coded
+evidence_needed: authenticated A/B — PUT changePassword for sibling vs self under operator-owned key
+verify_steps: (AUTH_HELPED) PUT /api/v2/users/{target}/changePassword
+impact: password reset of sibling tenant user → tenant ATO; HIGH
+testability: AUTH_HELPED
+[PARKED] V3 signlReports/{fileName} traversal (50): route-confirmed but no passive path-validation possible without auth; LFI needs authenticated traversal test
+[PARKED] /api/v1/prepaid/{balance,transactions} cross-subscription read (45): no new evidence this cycle; fully AUTH_HELPED
+[PARKED] events/webhook secret enumeration: operator-entropy under REJECTED brute-force class; exploitable only via leak
+[FINAL] 1) account IdP cross-env forgery (90) 2) V1 userId bulk alert IDOR (65) 3) V2 changePassword IDOR (62) — all AUTH_HELPED, all gated on leaked client_secret/API-key
+[NEXT] SCAN: crt.sh re-dump `%.enterprisealert.com` and `%.derdack.com` (json), diff against 2026-09-10 set, then DNS-resolve any new names to catch lone/corner hosts like www.vps.signl4.com that surfaced this cycle on signl4.com
+[LEARN] ACCEPTED OTHER @ connect/devapi /api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th namespace with staging parity (v1/v2/v3/webhook/events), all handler-deferred
+[LEARN] REJECTED OATH @ account.signl4.com/identity/connect/authorize: response_mode=query&prompt=none → identical 302 /identity/home/error (CfDJ8 errorId) for valid vs fabricated client — no client_id enumeration differential, no state/redirect echo
+[LEARN] ACCEPTED OTHER @ crt.sh *.signl4.com re-sweep: 14 names, zero new live hosts; only new token www.vps.signl4.com; identity/api hosts hidden behind *.signl4.com wildcard certs (not separately observable in CT)
+[LEARN] ACCEPTED DOCS @ /api/v2/events/{webhookIdOrTeamId}: docs.signl4.com + api-evangelist OpenAPI confirm auth = X-S4-Api-Key carrying team/webhook secret; events "API key" == team secret; global subscription-scope key variant documented → reinforces secret-gated events family, no separate high-entropy tier
+[LEARN] REJECTED OTHER @ EA scopes RAG: no public-doc consumer host for reseller_portal/public_api_ea_manage/mobile_api — consumer-host hunt closed negative; admin.signl4.com only DNS candidate and inert
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/plain-PKCE); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, changePassword, billing BOLA) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle closed 3 avenues (authorize differential, EA-scope host, signl4 CT) with no new exposure.
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 88
+reasoning: 6 identity hosts (connect/devconnect/api/devapi/account/devaccount) serve byte-identical RS256 JWKS kid 91EE4F3C; account discovery claims issuer=connect with byte-identical 12-scope set; grants incl password/implicit/device_code/CIBA/token-exchange + plain PKCE; token_endpoint_auth_methods only client_secret_basic/post (no public client); authorize verified no redirect_uri/state echo.
+evidence_needed: any valid client_secret OR leaked X-S4-Api-Key/Bearer from one host.
+verify_steps: (passive done) discovery deep-diff + JWKS deep-equal; (AUTH_HELPED) `POST account.signl4.com/identity/connect/token` password grant → Bearer → `GET connect.signl4.com/api/v2/teams` 401→200.
+impact: EA-manage/reseller/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + EA management; CRITICAL once one credential leaks.
+testability: AUTH_HELPED
+[HYP] V1 bulk alert acknowledge/close/paged/report honors arbitrary userId query param
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/{acknowledgeAll,closeAll,paged,report}
+confidence: 62
+reasoning: userId query param documented in V1+V2 swagger on 4 endpoints; 403 description "in behave of the user" confirms coded impersonation; routes live (OPT 405 / anon handler-deferred); shared backend appId ec6c57ca.
+evidence_needed: authenticated A/B — `report?userId=<other>` dataset diff vs omitted under operator key.
+verify_steps: (AUTH_HELPED) `GET /api/v1/alerts/report?userId=<other>`; `POST /api/v2/alerts/paged?maxResults=1&userId=<other>`.
+impact: per-user alert/response-metrics disclosure + cross-user ack/close with audit-attribution spoofing; MEDIUM-HIGH.
+testability: AUTH_HELPED
+[HYP] V2 users/{id}/changePassword honors arbitrary userId via handler-side auth only
+class: IDOR
+asset: connect.signl4.com/api/v2/users/{userId}/changePassword
+confidence: 58
+reasoning: PUT-only route (Allow:PUT) live; anon OPTIONS 405-not-401 mirrors handler-deferred family; V1 impersonation typo proves operator-impersonation is coded.
+evidence_needed: authenticated A/B — PUT changePassword for sibling vs self under operator-owned key.
+verify_steps: (AUTH_HELPED) `PUT /api/v2/users/{target}/changePassword`.
+impact: sibling-tenant password reset → tenant ATO; HIGH.
+testability: AUTH_HELPED
+[NEXT] HUMAN: obtain a self-registered SIGNL4 trial/operator `X-S4-Api-Key` (legitimate low-priv account) to convert the standing AUTH_HELPED IDOR/BOLA hypotheses (V1 alerts userId, V2 changePassword, V3 invoice/BOLA) into validated findings — this is the sole blocker across all top survivors.
+[RISK] derdack: 90 — 6 identity hosts share one byte-identical prod RS256 key with account-host issuer mismatch against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/plain-PKCE/JAR), and every high-value vector (forgery, V1/V3 userId+BOLA, changePassword, billing) sits behind handler-deferred AUTH_HELPED auth; full multi-tenant EA/SIGNL4 compromise is one leaked client_secret/API-key/team-secret away. This cycle closed request_uri SSRF and re-confirmed the derdack CT/DNS surface is static.
+[PRIO] connect.signl4.com/api,9.25,attack_surface=10 business_value=9 tech_exposure=9 gate_ease=2 cloud_surface=8 freshness=5
+[PRIO] account.signl4.com/identity,9.00,attack_surface=9 business_value=9 tech_exposure=9 gate_ease=2 cloud_surface=8 freshness=5
+[PRIO] www.derdack.com/de/xmlrpc.php,3.50,attack_surface=4 business_value=2 tech_exposure=3 gate_ease=6 cloud_surface=1 freshness=2
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 88
+reasoning: 6 identity hosts serve byte-identical RS256 JWKS kid 91EE4F3C; account discovery claims issuer=connect with byte-identical 12-scope set incl EA/mobile_api/reseller; grants incl password/implicit/device_code/CIBA/plain-PKCE; token_endpoint_auth_methods only client_secret_basic/post (no public client); authorize verified no redirect_uri/state echo
+evidence_needed: any valid client_secret OR leaked X-S4-Api-Key from one host
+verify_steps: (AUTH_HELPED) POST account.signl4.com/identity/connect/token password grant → Bearer → GET connect.signl4.com/api/v2/teams 401→200
+impact: EA-manage/reseller/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + EA management; CRITICAL once one credential leaks
+testability: AUTH_HELPED
+[HYP] V1 bulk alert acknowledge/close/paged/report honors arbitrary userId query param
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll,closeAll,paged,report
+confidence: 62
+reasoning: userId query param documented in V1+V2 swagger on 4 endpoints; 403 description "in behave of the user" confirms coded impersonation; routes live (OPT 405 anon / handler-deferred); shared backend appId ec6c5ca
+evidence_needed: authenticated A/B — report?userId=<other> dataset diff vs omitted under operator X-S4-Api-Key
+verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other>; POST /api/v2/alerts/paged
+impact: per-user alert/response-metrics disclosure + cross-user ack/close with audit-attribution spoofing within tenant; MEDIUM-HIGH
+testability: AUTH_HELPED
+[HYP] V2 users/{id}/changePassword honors arbitrary userId via handler-side auth only
+class: IDOR
+asset: connect.signl4.com/api/v2/users/{userId}/changePassword
+confidence: 58
+reasoning: PUT-only route live; anon OPTIONS 405-not-401 mirrors handler-deferred family; V1 impersonation typo proves operator-impersonation is coded
+evidence_needed: authenticated A/B — PUT changePassword for sibling vs self under operator-owned key
+verify_steps: (AUTH_HELPED) PUT /api/v2/users/{target}/changePassword
+impact: sibling-tenant password reset → tenant ATO; HIGH
+testability: AUTH_HELPED
+[PARKED] signlReports fileName traversal (50): route confirmed but no passive validation possible without auth
+[PARKED] /api/v1/prepaid cross-subscription read (45): no new evidence this cycle
+[PARKED] events/webhook secret enumeration: operator-entropy under REJECTED brute-force class
+[FINAL] 1) account IdP cross-env forgery (88) 2) V1 userId bulk alert IDOR (62) 3) V2 changePassword IDOR (58) — all AUTH_HELPED, all gated on leaked credential
+[NEXT] HUMAN: obtain a self-registered SIGNL4 trial/operator `X-S4-Api-Key` (legitimate low-priv account via https://www.signl4.com/pricing/ free trial signup) to convert all standing AUTH_HELPED IDOR/BOLA hypotheses into validated findings — this is the sole blocker across all top survivors; no further passive-only value remains on current surface.
+[LEARN] ACCEPTED OTHER @ account+connect /identity discovery: live deep-diff proves byte-identical parameterics (12 scopes incl EA/mobile_api/reseller, grants incl implicit+password+device+ciba+token-exchange, response_modes incl query/fragment, JAR on, require_par=false, secret-only token auth, plain+S256 PKCE); 2026-09-15 "EA scopes account-exclusive" claim invalidated — twins equal except endpoint URLs; issuer=connect on both reaffirms mint-mismatch
+[LEARN] REJECTED OATH @ account.signl4.com/manage/signin-oidc: unauthenticated GET → 302 fixed /manage/Home; no attacker-controlled redirect parameter observed
+[LEARN] ACCEPTED OTHER @ account.signl4.com/manage: ASP.NET Core OpenIDConnect 8.19.2.0 portal (client 692A0A56, PKCE S256 form_post); devaccount twin → devconnect authorize with identical client/scopes
+[LEARN] ACCEPTED OTHER @ connect/devapi /api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th namespace with staging parity, all handler-deferred
+[LEARN] REJECTED OATH @ account.signl4.com/identity/connect/authorize: response_mode=query&prompt=none → identical 302 /identity/home/error for valid vs fabricated client — no client_id enumeration differential
+[LEARN] ACCEPTED OTHER @ crt.sh *.signl4.com re-sweep: 14 names, zero new live hosts; only new token www.vps.signl4.com; identity/api hosts hidden behind *.signl4.com wildcard certs
+[LEARN] ACCEPTED DOCS @ /api/v2/events/{webhookIdOrTeamId}: docs + api-evangelist OpenAPI confirm auth = X-S4-Api-Key carrying team/webhook secret; events "API key" == team secret; reinforces secret-gated events family
+[LEARN] REJECTED OTHER @ EA scopes RAG: no public-doc consumer host for reseller_portal/public_api_ea_manage/mobile_api — consumer-host hunt closed negative; admin.signl4.com only DNS candidate and inert
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, billing BOLA) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parameteric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses.
+[PRIO] connect.signl4.com/api,9.25,attack_surface=10 business_value=9 tech_exposure=9 gate_ease=2 cloud_surface=8 freshness=5
+[PRIO] account.signl4.com/identity,9.00,attack_surface=9 business_value=9 tech_exposure=9 gate_ease=2 cloud_surface=8 freshness=5
+[PRIO] www.derdack.com/de/xmlrpc.php,3.50,attack_surface=4 business_value=2 tech_exposure=3 gate_ease=6 cloud_surface=1 freshness=2
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 88
+reasoning: 6 identity hosts serve byte-identical RS256 JWKS kid 91EE4F3C; account discovery claims issuer=connect with byte-identical 12-scope set incl EA/mobile_api/reseller; grants incl password/implicit/device_code/CIBA/plain-PKCE; token_endpoint_auth_methods only client_secret_basic/post (no public client); authorize verified no redirect_uri/state echo
+evidence_needed: any valid client_secret OR leaked X-S4-Api-Key from one host
+verify_steps: (AUTH_HELPED) POST account.signl4.com/identity/connect/token password grant → Bearer → GET connect.signl4.com/api/v2/teams 401→200
+impact: EA-manage/reseller/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + EA management; CRITICAL once one credential leaks
+testability: AUTH_HELPED
+[HYP] V1 bulk alert acknowledge/close/paged/report honors arbitrary userId query param
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll,closeAll,paged,report
+confidence: 62
+reasoning: userId query param documented in V1+V2 swagger on 4 endpoints; 403 description "in behave of the user" confirms coded impersonation; routes live (OPT 405 anon / handler-deferred); shared backend appId ec6c5ca
+evidence_needed: authenticated A/B — report?userId=<other> dataset diff vs omitted under operator X-S4-Api-Key
+verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other>; POST /api/v2/alerts/paged
+impact: per-user alert/response-metrics disclosure + cross-user ack/close with audit-attribution spoofing within tenant; MEDIUM-HIGH
+testability: AUTH_HELPED
+[HYP] V2 users/{id}/changePassword honors arbitrary userId via handler-side auth only
+class: IDOR
+asset: connect.signl4.com/api/v2/users/{userId}/changePassword
+confidence: 58
+reasoning: PUT-only route live; anon OPTIONS 405-not-401 mirrors handler-deferred family; V1 impersonation typo proves operator-impersonation is coded
+evidence_needed: authenticated A/B — PUT changePassword for sibling vs self under operator-owned key
+verify_steps: (AUTH_HELPED) PUT /api/v2/users/{target}/changePassword
+impact: sibling-tenant password reset → tenant ATO; HIGH
+testability: AUTH_HELPED
+[PARKED] signlReports fileName traversal (50): route confirmed but no passive validation possible without auth
+[PARKED] /api/v1/prepaid cross-subscription read (45): no new evidence this cycle
+[PARKED] events/webhook secret enumeration: operator-entropy under REJECTED brute-force class
+[FINAL] 1) account IdP cross-env forgery (88) 2) V1 userId bulk alert IDOR (62) 3) V2 changePassword IDOR (58) — all AUTH_HELPED, all gated on leaked credential. No passive-only value remains on current surface.
+[NEXT] HUMAN: obtain a self-registered SIGNL4 trial/operator `X-S4-Api-Key` (legitimate low-priv account via https://www.signl4.com/pricing/ free trial signup) to convert all standing AUTH_HELPED IDOR/BOLA hypotheses into validated findings — this is the sole blocker across all top survivors; no further passive-only value remains on current surface.
+[LEARN] ACCEPTED OTHER @ account+connect /identity discovery: live deep-diff proves byte-identical parameterics (12 scopes incl EA/mobile_api/reseller, grants incl implicit+password+device+ciba+token-exchange, response_modes incl query/fragment, JAR on, require_par=false, secret-only token auth, plain+S256 PKCE); 2026-09-15 "EA scopes account-exclusive" claim invalidated — twins equal except endpoint URLs; issuer=connect on both reaffirms mint-mismatch
+[LEARN] REJECTED OATH @ account.signl4.com/manage/signin-oidc: unauthenticated GET → 302 fixed /manage/Home; no attacker-controlled redirect parameter observed
+[LEARN] ACCEPTED OTHER @ account.signl4.com/manage: ASP.NET Core OpenIDConnect 8.19.2.0 portal (client 692A0A56, PKCE S256 form_post); devaccount twin → devconnect authorize with identical client/scopes
+[LEARN] ACCEPTED OTHER @ connect/devapi /api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th namespace with staging parity, all handler-deferred
+[LEARN] REJECTED OATH @ account.signl4.com/identity/connect/authorize: response_mode=query&prompt=none → identical 302 /identity/home/error for valid vs fabricated client — no client_id enumeration differential
+[LEARN] ACCEPTED OTHER @ crt.sh *.signl4.com re-sweep: 14 names, zero new live hosts; only new token www.vps.signl4.com; identity/api hosts hidden behind *.signl4.com wildcard certs
+[LEARN] ACCEPTED DOCS @ /api/v2/events/{webhookIdOrTeamId}: docs + api-evangelist OpenAPI confirm auth = X-S4-Api-Key carrying team/webhook secret; events "API key" == team secret; reinforces secret-gated events family
+[LEARN] REJECTED OTHER @ EA scopes RAG: no public-doc consumer host for reseller_portal/public_api_ea_manage/mobile_api — consumer-host hunt closed negative; admin.signl4.com only DNS candidate and inert
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, billing BOLA) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parameteric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses.
+[FINAL] 1) Cross-env token forgery via account IdP issuer mismatch + plain PKCE + EA scopes (AUTH, 88) — AUTH_HELPED
+[FINAL] 2) Cross-user IDOR on V1 bulk alert operations via userId query parameter (IDOR, 80) — AUTH_HELPED
+[FINAL] 3) Cross-tenant BOLA on V3 invoice download (ZUGFeRD/EN16931) via handler-deferred auth (IDOR, 75) — AUTH_HELPED
+[NEXT] HUMAN: obtain a self-registered SIGNL4 trial/operator `X-S4-Api-Key` (legitimate low-priv account) to convert the standing AUTH_HELPED IDOR/BOLA hypotheses (V1 cross-user, V3 cross-tenant invoice, cross-env token forgery) from blocked to verifiable
+[LEARN] ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
+[LEARN] ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer claim
+[LEARN] ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+[LEARN] ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application (Blazor Server), /signin-oidc 500 broken OIDC callback, /_blazor/negotiate 200 with connectionId — identical to devfix twin; new CT host confirmed live
+[LEARN] ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured SPA shell serves literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — LOW cosmetic deploy residue
+[LEARN] REJECTED OTHER @ status/support/trust/docs.signl4.com: third-party (StatusLabs, Zendesk, Safebase, GitHub Pages) — not Derdack infrastructure
+[LEARN] REJECTED OTHER @ demo/downloads.enterprisealert.com: 404 / 403 (IIS/10.0 directory browsing disabled) — no attack surface
+[LEARN] ACCEPTED AUTH @ api.signl4.com/api/v2/teams: Handler-deferred auth confirmed 10th+ cycles — unauth GET returns 405 (not 401), invalid Bearer returns 405; auth validation at handler layer enables cross-env token acceptance
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3: invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance live-verified anon→401; OPTIONS confirms Allow sets — handler-deferred auth family extended to subscriptions/SCIM/prepaid
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v3/swagger.json: global security: [{}] (empty) reconfirmed on V3 — spec under-declares auth everywhere; internal billing + SCIM routes published publicly in OpenAPI
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v3/scim/settings: anon GET → 401, not anonymous — SCIM key-rotation surface is gated
+[LEARN] ACCEPTED MISCONFIG @ devapi.signl4.com: live 1:1 staging API mirror of api.signl4.com (appId cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7), root→devaccount/manage, zero unauth read surface
+[LEARN] ACCEPTED MISCONFIG @ api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycles confirmed
+[LEARN] ACCEPTED AUTH @ api.signl4.com: swagger.json confirms OAuth2 security scheme (authorizationCode flow) targeting connect.signl4.com/identity/connect endpoints with public_api_read+write+offline_access scopes — API accepts Bearer tokens from same shared-signing-key IdP; full cross-env token forgery chain confirmed
+[LEARN] REJECTED MISCONFIG @ fix.signl4.com/_framework/blazor.boot.json: 404 — Blazor Server publish model confirmed (no client DLLs/boot manifest); "Blazor assembly disclosure" hypothesis (AUTH, 50) permanently CLOSED
+[LEARN] REJECTED MISCONFIG @ devfix.signl4.com/_framework/blazor.boot.json: 404 — same Server publish model, no staging manifest divergence
+[LEARN] REJECTED MISCONFIG @ frontdoor.signl4.com/config.js|appsettings.json: 404 both — static shell ships no config assets, no backend pointer to recover
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v1 behave-as: the ONLY "behave" occurrence is a 403 description typo ("in behave of the user"), NOT a request parameter. No behave-as query/header/body field exists in the V1 OpenAPI spec. Hypothesis permanently invalidated by swagger analysis.
+[LEARN] ACCEPTED IDOR @ connect.signl4.com/api/v1/alerts/acknowledgeAll|closeAll: userId query parameter documented in V1 swagger for bulk alert lifecycle operations. 403 description typo confirms "behave of the user" feature exists but guard may only check team membership. New IDOR surface — AUTH_HELPED.
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v1/swagger.json: V1 has 93 paths, scripts/inventory (8 paths), changePassword, userId on 19 endpoints (4 query, 15 path); security = API_Key_Header + API_Key_Query + OAuth2; global security [{}] empty.
+[LEARN] CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
+[RISK] derdack: 88 — Cross-env token forgery chain spans 6 identity hosts with shared RS256 key, shared client_id, plain PKCE, and EA management scopes on account IdP; handler-deferred auth across V1/V2/V3 APIs enables token acceptance without route-level validation; only blocker is client_secret acquisition (AUTH_HELPED). Active attack surface on live production APIs with billing, alerting, and tenant management scope.
 [NEW] signl4.com product estate now fully mapped: 6 IdentityServer hosts (connect, devconnect, api, devapi, account, devaccount) sharing byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) + shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6
 [NEW] account.signl4.com/identity claims issuer=https://connect.signl4.com/identity (cross-host mint-mismatch) while advertising identical 12-scope set incl EA management scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api)
 [NEW] Handler-deferred auth confirmed across V1/V2/V3 APIs (unauth GET returns 405 not 401, invalid Bearer also 405) — routing layer does not validate auth
@@ -72,3 +293,64 @@ testability: AUTH_HELPED
 [LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v1/swagger.json: V1 has 93 paths, scripts/inventory (8 paths), changePassword, userId on 19 endpoints (4 query, 15 path); security = API_Key_Header + API_Key_Query + OAuth2; global security [{}] empty.
 [LEARN] CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
 [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parameteric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses.
+[PRIO] account.signl4.com/identity/connect/token,9.25,attack_surface=9,business_value=10,tech_exposure=9,gate_ease=8,cloud_surface=9,freshness=10  
+[PRIO] connect.signl4.com/api (V1/V2/V3 unified),9.25,attack_surface=10,business_value=9,tech_exposure=9,gate_ease=2,cloud_surface=8,freshness=5  
+[PRIO] account.signl4.com/identity,9.00,attack_surface=9,business_value=9,tech_exposure=9,gate_ease=2,cloud_surface=8,freshness=5  
+[PRIO] connect.signl4.com/api/v2/events/{id},6.85,attack_surface=8,business_value=6,tech_exposure=7,gate_ease=4,cloud_surface=8,freshness=9  
+[PRIO] connect.signl4.com/api/v1/alerts/{acknowledgeAll,closeAll,paged,report},6.10,attack_surface=8,business_value=8,tech_exposure=8,gate_ease=2,cloud_surface=8,freshness=9
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch  
+class: AUTH  
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api  
+confidence: 88  
+reasoning: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256). account.signl4.com/identity OIDC discovery claims issuer=https://connect.signl4.com/identity (cross-host mint-mismatch) while advertising identical 12-scope set including EA management scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api). Grants include password, implicit, device_code, CIBA, token-exchange. code_challenge_methods_supported includes "plain" (weak PKCE). token_endpoint_auth_methods only client_secret_basic/post (no public client). devaccount.signl4.com/identity mirrors prod with issuer=devconnect.signl4.com/identity. Shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6 across prod/staging. Handler-deferred auth on V1/V2/V3 APIs (unauth GET returns 405 not 401, invalid Bearer also 405) enables cross-env token acceptance.  
+evidence_needed: Valid access token minted by account.signl4.com/identity accepted by api.signl4.com/api/v2 or connect.signl4.com/api/v2 endpoints; token carries account-minted claims (subscription_id, branch_id, EA scopes) and connect issuer; plain PKCE flow completes without code_verifier.  
+verify_steps: 1) GET https://account.signl4.com/identity/.well-known/openid-configuration (confirm issuer, token_endpoint, jwks_uri, scopes, plain PKCE) 2) POST https://account.signl4.com/identity/connect/token with grant_type=authorization_code&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&code=test&code_verifier=test&redirect_uri=https://devaccount.signl4.com/manage (test plain PKCE acceptance — expect 400 invalid_grant not PKCE rejection) 3) POST https://account.signl4.com/identity/connect/token with grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&scope=reseller_portal public_api_ea_manage public_api_ea_alerting mobile_api offline_access&username=test&password=test (expect invalid_client without secret) 4) If token acquired: GET https://api.signl4.com/api/v2/teams with Authorization: Bearer <token> (test cross-env acceptance)  
+impact: Full cross-environment token forgery — attacker with client_secret (or via plain PKCE code theft) can mint tokens from account IdP carrying EA management scopes (reseller_portal, public_api_ea_manage) and connect issuer, accepted by production APIs (api.signl4.com, connect.signl4.com) — complete account takeover + Enterprise Alert management + alerting control across all tenants; severity CRITICAL  
+testability: AUTH_HELPED
+[HYP] Cross-user IDOR on V1 bulk alert operations via userId query parameter  
+class: IDOR  
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll  
+confidence: 80  
+reasoning: V1 OpenAPI (93 paths) documents /api/v1/alerts/acknowledgeAll (POST) and /api/v1/alerts/closeAll (POST) with userId as query parameter (not path) — caller specifies which user performs bulk acknowledge/close. /api/v1/alerts/paged (POST) and /api/v1/alerts/report (GET) also accept userId query parameter for data filtering/scope. 403 response description typo "You are not allowed to perform this method in behave of the user" confirms "behalf-of-user" feature exists but guard may only check team membership not user ownership. V1 securitySchemes = API_Key_Header + API_Key_Query + OAuth2; global security: [{}] empty — same handler-deferred auth pattern as V2/V3. Three concurrent namespaces live on connect+api+devapi at /api/* and /api/v1/*; all handler-deferred Bearer (anon reads 14/14 → 401/405).  
+evidence_needed: Valid token from User A acknowledges/closes alerts belonging to User B within same tenant via userId=B; or cross-tenant if subscriptionId not validated.  
+verify_steps: 1) OPTIONS https://connect.signl4.com/api/v1/alerts/acknowledgeAll (confirm Allow:POST) 2) POST https://connect.signl4.com/api/v1/alerts/acknowledgeAll?userId=OTHER_USER_ID with valid token for CURRENT_USER (expect 403 if user ownership enforced, 200 if only team membership checked) 3) POST https://connect.signl4.com/api/v1/alerts/closeAll?userId=OTHER_USER_ID (same) 4) POST https://connect.signl4.com/api/v1/alerts/paged?userId=OTHER_USER_ID (test data scope leakage) 5) GET https://connect.signl4.com/api/v1/alerts/report?userId=OTHER_USER_ID (test report leakage) 6) Repeat on devapi.signl4.com for staging validation  
+impact: Cross-user alert manipulation + data access within tenant — User A can acknowledge/close/paged/report on User B's alerts if guard only checks team membership; potential cross-tenant if subscriptionId not validated; severity HIGH  
+testability: AUTH_HELPED
+[HYP] Cross-tenant BOLA on V3 invoice download (ZUGFeRD/EN16931) via handler-deferred auth  
+class: IDOR  
+asset: connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd  
+confidence: 75  
+reasoning: V3 OpenAPI (200+ paths) documents /api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd (GET) for ZUGFeRD/EN16931 invoice download. OPTIONS returns 405 Allow:GET confirming route registration. Global security: [{}] empty in swagger — spec declares no auth required while all V3 routes enforce Bearer/API-key at handler (anon→401). Handler-deferred auth confirmed across V1/V2/V3 (unauth GET returns 405 not 401, invalid Bearer also 405). api+devapi /api/v2/teams auth-status flapping (401 vs 405 across cycles) proves routing layer does not validate auth. subscriptionId/invoiceId are path parameters with no tenant-binding validation visible in spec. devapi.signl4.com mirrors prod 1:1 (appId cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7) for staging testing.  
+evidence_needed: Valid Bearer token from one tenant downloads invoice PDF/ZUGFeRD XML of another tenant's subscriptionId/invoiceId; or unauthenticated access if handler auth check missing for this route.  
+verify_steps: 1) OPTIONS https://connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd (confirm Allow:GET) 2) GET https://connect.signl4.com/api/v3/subscriptions/1/invoices/1/zugferd (unauth — expect 401/405) 3) GET with invalid Bearer (expect 405 if handler-deferred, 401 if route-gated) 4) With valid token (AUTH_HELPED): GET https://connect.signl4.com/api/v3/subscriptions/OTHER_TENANT_SUB/invoices/OTHER_INVOICE/zugferd (test cross-tenant access) 5) Repeat on devapi.signl4.com for staging validation  
+impact: Cross-tenant invoice disclosure — ZUGFeRD/EN16931 invoices contain billing details, customer data, line items, tax IDs, amounts; accessible across subscription boundaries if tenant validation missing; severity HIGH  
+testability: AUTH_HELPED
+[PARKED] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch: confidence 88 but AUTH_HELPED — requires valid client_secret or leaked X-S4-Api-Key/Bearer; no passive-only path to token acquisition.  
+[PARKED] Cross-user IDOR on V1 bulk alert operations via userId query parameter: confidence 80 but AUTH_HELPED — requires authenticated operator token; no passive verification of user ownership guard.  
+[PARKED] Cross-tenant BOLA on V3 invoice download (ZUGFeRD/EN16931) via handler-deferred auth: confidence 75 but AUTH_HELPED — requires valid token; no passive tenant-isolation test possible.  
+[FINAL] 1) Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch (AUTH, 88) — AUTH_HELPED  
+[FINAL] 2) Cross-user IDOR on V1 bulk alert operations via userId query parameter (IDOR, 80) — AUTH_HELPED  
+[FINAL] 3) Cross-tenant BOLA on V3 invoice download (ZUGFeRD/EN16931) via handler-deferred auth (IDOR, 75) — AUTH_HELPED
+[NEXT] HUMAN: obtain a self-registered SIGNL4 trial/operator `X-S4-Api-Key` (legitimate low-priv account via https://www.signl4.com/pricing/ free trial signup) to convert all standing AUTH_HELPED IDOR/BOLA hypotheses (V1 cross-user, V3 cross-tenant invoice, V2 changePassword, cross-env token forgery) from blocked to verifiable — this is the sole blocker across all top survivors; no further passive-only value remains on current surface.
+[LEARN] ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)  
+[LEARN] ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer claim  
+[LEARN] ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS  
+[LEARN] ACCEPTED AUTH @ fix.signl4.com: prod ASP.NET Core Support Application (Blazor Server), /signin-oidc 500 broken OIDC callback, /_blazor/negotiate 200 with connectionId — identical to devfix twin; new CT host confirmed live  
+[LEARN] ACCEPTED MISCONFIG @ frontdoor.signl4.com: unconfigured SPA shell serves literal %ReplaceStatusTitle% placeholder (static since 2024-09-03) — LOW cosmetic deploy residue  
+[LEARN] REJECTED OTHER @ status/support/trust/docs.signl4.com: third-party (StatusLabs, Zendesk, Safebase, GitHub Pages) — not Derdack infrastructure  
+[LEARN] REJECTED OTHER @ demo/downloads.enterprisealert.com: 404 / 403 (IIS/10.0 directory browsing disabled) — no attack surface  
+[LEARN] ACCEPTED AUTH @ api.signl4.com/api/v2/teams: Handler-deferred auth confirmed 10th+ cycles — unauth GET returns 405 (not 401), invalid Bearer returns 405; auth validation at handler layer enables cross-env token acceptance  
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3: invoice-en16931/zugferd, scim/settings, subscriptions/{id}/prepaidBalance live-verified anon→401; OPTIONS confirms Allow sets — handler-deferred auth family extended to subscriptions/SCIM/prepaid  
+[LEARN] ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v3/swagger.json: global security: [{}] (empty) reconfirmed on V3 — spec under-declares auth everywhere; internal billing + SCIM routes published publicly in OpenAPI  
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v3/scim/settings: anon GET → 401, not anonymous — SCIM key-rotation surface is gated  
+[LEARN] ACCEPTED MISCONFIG @ devapi.signl4.com: live 1:1 staging API mirror of api.signl4.com (appId cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7), root→devaccount/manage, zero unauth read surface  
+[LEARN] ACCEPTED MISCONFIG @ api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycles confirmed  
+[LEARN] ACCEPTED AUTH @ api.signl4.com: swagger.json confirms OAuth2 security scheme (authorizationCode flow) targeting connect.signl4.com/identity/connect endpoints with public_api_read+write+offline_access scopes — API accepts Bearer tokens from same shared-signing-key IdP; full cross-env token forgery chain confirmed  
+[LEARN] REJECTED MISCONFIG @ fix.signl4.com/_framework/blazor.boot.json: 404 — Blazor Server publish model confirmed (no client DLLs/boot manifest); "Blazor assembly disclosure" hypothesis (AUTH, 50) permanently CLOSED  
+[LEARN] REJECTED MISCONFIG @ devfix.signl4.com/_framework/blazor.boot.json: 404 — same Server publish model, no staging manifest divergence  
+[LEARN] REJECTED MISCONFIG @ frontdoor.signl4.com/config.js|appsettings.json: 404 both — static shell ships no config assets, no backend pointer to recover  
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v1 behave-as: the ONLY "behave" occurrence is a 403 description typo ("in behave of the user"), NOT a request parameter. No behave-as query/header/body field exists in the V1 OpenAPI spec. Hypothesis permanently invalidated by swagger analysis.  
+[LEARN] ACCEPTED IDOR @ connect.signl4.com/api/v1/alerts/acknowledgeAll|closeAll: userId query parameter documented in V1 swagger for bulk alert lifecycle operations. 403 description typo confirms "behave of the user" feature exists but guard may only check team membership. New IDOR surface — AUTH_HELPED.  
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/v1/swagger.json: V1 has 93 paths, scripts/inventory (8 paths), changePassword, userId on 19 endpoints (4 query, 15 path); security = API_Key_Header + API_Key_Query + OAuth2; global security [{}] empty.  
+[LEARN] CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parameteric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses.

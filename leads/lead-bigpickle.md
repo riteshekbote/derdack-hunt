@@ -4812,3 +4812,28 @@ testability: AUTH_HELPED
 [LEARN] ACCEPTED DOCS @ /api/v2/events/{webhookIdOrTeamId}: docs + api-evangelist OpenAPI confirm auth = X-S4-Api-Key carrying team/webhook secret; events "API key" == team secret; reinforces secret-gated events family
 [LEARN] REJECTED OTHER @ EA scopes RAG: no public-doc consumer host for reseller_portal/public_api_ea_manage/mobile_api — consumer-host hunt closed negative; admin.signl4.com only DNS candidate and inert
 [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, billing BOLA) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parameteric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses.
+## 2026-09-17 17:39:36 UTC [target] (model bigpickle)
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 88
+reasoning: 6 identity hosts serve byte-identical RS256 JWKS (kid 91EE4F3C); account discovery claims issuer=connect; byte-identical 12-scope set incl EA/mobile_api/reseller; grants incl password/implicit/device_code/CIBA/plain-PKCE; token auth secret-only; authorize shows no redirect_uri/state echo
+evidence_needed: any valid client_secret OR an X-S4-Api-Key from one host
+verify_steps: (AUTH_HELPED) POST account.signl4.com/identity/connect/token password grant → Bearer → GET connect.signl4.com/api/v2/teams, expect 401→200
+impact: EA-manage/reseller/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + EA management; CRITICAL once any credential leaks
+testability: AUTH_HELPED
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll,closeAll,paged,report
+confidence: 62
+reasoning: userId query param on 4 V1 endpoints; 403 typo "in behave of the user" confirms coded impersonation; route handler-deferred (anon 405-not-401)
+evidence_needed: authenticated A/B — report?userId=<other> vs omitted under operator key
+verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other>; POST /api/v1/alerts/paged
+impact: per-user alert/metrics disclosure + audit-attribution spoofing within tenant; MEDIUM-HIGH
+testability: AUTH_HELPED
+class: IDOR
+asset: connect.signl4.com/api/v2/users/{userId}/changePassword
+confidence: 58
+reasoning: PUT-only route live; anon OPTIONS 405-not-401 mirrors handler-deferred family; V1 impersonation typo proves coded impersonation
+evidence_needed: authenticated A/B — PUT changePassword for sibling vs self under operator key
+verify_steps: (AUTH_HELPED) PUT /api/v2/users/{target}/changePassword
+impact: sibling-tenant password reset → tenant ATO; HIGH
+testability: AUTH_HELPED

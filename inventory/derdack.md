@@ -1033,3 +1033,17 @@ www.derdack.com
 - CHANGED derdack.com WordPress surface: dev MultiViews benign (static namespace echo), www WP REST auth gates intact, blog/techblog HTTPS→HTTP downgrade has no session-theft mechanism (secure+host-only cookies
 - CHANGED Cross-env token forgery chain spans 6 identity hosts (was 4); account IdP mint-mismatch + plain PKCE + EA scopes = CRITICAL once any credential leaks
 - CHANGED All top hypotheses now AUTH_HELPED — blocked solely on obtaining legitimate X-S4-Api-Key / client_secret
+
+## 2026-09-17 17:42:27 UTC
+- NEW signl4.com product estate now fully mapped: 6 IdentityServer hosts (connect, devconnect, api, devapi, account, devaccount) sharing byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE
+- NEW account.signl4.com/identity claims issuer=https://connect.signl4.com/identity (cross-host mint-mismatch) while advertising identical 12-scope set incl EA management scopes (reseller_portal, public_api
+- NEW Handler-deferred auth confirmed across V1/V2/V3 APIs (unauth GET returns 405 not 401, invalid Bearer also 405) — routing layer does not validate auth
+- NEW V1 API documents userId query parameter on /alerts/acknowledgeAll, /alerts/closeAll, /alerts/paged, /alerts/report; 403 description "in behave of the user" confirms coded impersonation feature
+- NEW V2 API has PUT /users/{userId}/changePassword with handler-deferred auth (OPTIONS 405 Allow:PUT, anon 405)
+- NEW V3 API has file-download family (/teams/{teamId}/signlReports/{fileName}, /dutyReports/{fileName}, /signls/{signlId}/attachments/{attachmentId}) with path-based fileName/attachmentId
+- NEW Webhook contract: POST /{teamSecret} no security scheme, 404 vs 201 oracle, status-keyword query config; teamSecret is operator-chosen (not high-entropy fixed)
+- NEW API key dual pipeline live: ?x-s4-api-key= query param returns 403 "API Key is invalid" vs 401 when absent; header X-S4-Api-Key also works
+- CHANGED signl4.derdack.com permanently unreachable (8+ cycles TCP timeout) — attack surface value = 0; full pivot to signl4.com product estate
+- CHANGED derdack.com WordPress surface: dev MultiViews benign (static namespace echo), www WP REST auth gates intact, blog/techblog HTTPS→HTTP downgrade has no session-theft mechanism (secure+host-only cookies
+- CHANGED Cross-env token forgery chain spans 6 identity hosts (was 4); account IdP mint-mismatch + plain PKCE + EA scopes = CRITICAL once any credential leaks
+- CHANGED All top hypotheses now AUTH_HELPED — blocked solely on obtaining legitimate X-S4-Api-Key / client_secret

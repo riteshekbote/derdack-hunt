@@ -24694,3 +24694,104 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, billing BOLA) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parameteric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses.
+===== ANALYST bigpickle 2026-09-17 17:42:27 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -sS -o /tmp/opencode/vps_root.txt -w "vps.signl4.com / => %{http_code} | %{content_type} | %{time_total}s | final:%{url_effective}\n" --max-time 15 "https://vps.signl4.com/" -k ; curl -sS -o /tmp/opencode/vpsv_root.txt -w "www.vps.signl4.com / => %{http_code} | %{content_type} | %{time_total}s | final:%{url_effective}\n" --max-time 15 "https://www.vps.signl4.com/" -k
+vps.signl4.com / => 200 | text/html | 0.281290s | final:https://vps.signl4.com/
+curl: (6) Could not resolve host: www.vps.signl4.com
+www.vps.signl4.com / => 000 |  | 0.127743s | final:https://www.vps.signl4.com/
+[0m
+[0m$ [0mcurl -sS -D /tmp/opencode/vps_headers.txt -o /tmp/opencode/vps_body.txt --max-time 15 "https://vps.signl4.com/" -k ; wc -c /tmp/opencode/vps_body.txt; grep -iE "server:|x-powered|x-|set-cookie|location|www-authenticate|content-security|strict-transport" /tmp/opencode/vps_headers.txt | head -40
+163 /tmp/opencode/vps_body.txt
+server: nginx
+[0m
+[0m$ [0mcat /tmp/opencode/vps_body.txt; echo; echo "---HEADERS---"; cat /tmp/opencode/vps_headers.txt
+<html><head><META HTTP-EQUIV="Cache-control" CONTENT="no-cache"><META HTTP-EQUIV="refresh" CONTENT="0;URL=/cgi-sys/defaultwebpage.cgi"></head><body></body></html>
+
+---HEADERS---
+HTTP/2 200 
+server: nginx
+date: Thu, 17 Sep 2026 17:39:08 GMT
+content-type: text/html
+content-length: 163
+last-modified: Mon, 18 May 2026 15:54:49 GMT
+accept-ranges: bytes
+cache-control: no-cache, no-store, must-revalidate
+pragma: no-cache
+expires: 0
+[0m
+[0m$ [0mcurl -sS -o /tmp/opencode/vps_cgi.txt -w "vps /cgi-sys/defaultwebpage.cgi => %{http_code} | %{content_type} | %{size_download}B\n" --max-time 15 "https://vps.signl4.com/cgi-sys/defaultwebpage.cgi" -k; curl -sS -o /tmp/opencode/vps_ssl.txt -w "vps /cgi-sys/suspendedpage.cgi => %{http_code} | %{content_type}\n" --max-time 15 "https://vps.signl4.com/cgi-sys/suspendedpage.cgi" -k; head -c 400 /tmp/opencode/vps_cgi.txt
+vps /cgi-sys/defaultwebpage.cgi => 200 | text/html | 6926B
+vps /cgi-sys/suspendedpage.cgi => 200 | text/html
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=1">
+    <title>Default Web Site Page
+[0m
+[0m$ [0mgetent hosts vps.signl4.com; echo "---"; curl -sS -o /tmp/opencode/vps_wp.txt -w "vps /wp-login.php => %{http_code} | %{content_type}\n" --max-time 10 "https://vps.signl4.com/wp-login.php" -k; curl -sS -o /tmp/opencode/vps_alt.txt -w "vps /robots.txt => %{http_code} | %{content_type}\n" --max-time 10 "https://vps.signl4.com/robots.txt" -k
+72.167.227.27   vps.signl4.com
+---
+vps /wp-login.php => 404 | text/html
+vps /robots.txt => 404 | text/html
+[0m
+**STEP 1 — DELTA**
+- [NEW] `vps.signl4.com` (the only new CT token since 09-16 sweep) probed read-only: 200 → cPanel `/cgi-sys/defaultwebpage.cgi` default vhost on 72.167.227.27 (Network Solutions range, same provider as www.signl4.com); `/wp-login.php`+`/robots.txt` 404. Inert, no Derdack app behind it.
+- [NEW] Both agents (bigpickle + nemotron3) now converge on the identical [NEXT]: obtain a legitimate trial `X-S4-Api-Key` — no divergent passive work remains.
+- [CHANGED] Top hypothesis confidence stable (88 both agents, was 90→88 last cycle); estate otherwise unchanged since 2026-09-16.
+
+**STEP 2 — PRIORITIZE**
+- [PRIO] connect.signl4.com/api,9.25,attack_surface=10 business_value=9 tech_exposure=9 gate_ease=2 cloud_surface=8 freshness=5
+- [PRIO] account.signl4.com/identity,9.00,attack_surface=9 business_value=9 tech_exposure=9 gate_ease=2 cloud_surface=8 freshness=5
+- [PRIO] vps.signl4.com,0.50,attack_surface=1 business_value=1 tech_exposure=1 gate_ease=10 cloud_surface=1 freshness=6
+
+**STEP 3 — HYPOTHESES**
+- [HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+confidence: 88
+reasoning: 6 identity hosts serve byte-identical RS256 JWKS (kid 91EE4F3C); account discovery claims issuer=connect; byte-identical 12-scope set incl EA/mobile_api/reseller; grants incl password/implicit/device_code/CIBA/plain-PKCE; token auth secret-only; authorize shows no redirect_uri/state echo
+evidence_needed: any valid client_secret OR an X-S4-Api-Key from one host
+verify_steps: (AUTH_HELPED) POST account.signl4.com/identity/connect/token password grant → Bearer → GET connect.signl4.com/api/v2/teams, expect 401→200
+impact: EA-manage/reseller/mobile_api Bearer accepted by prod backend → multi-tenant alert CRUD + EA management; CRITICAL once any credential leaks
+testability: AUTH_HELPED
+- [HYP] V1 bulk alert ack/close/paged/report honors arbitrary userId query param
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll,closeAll,paged,report
+confidence: 62
+reasoning: userId query param on 4 V1 endpoints; 403 typo "in behave of the user" confirms coded impersonation; route handler-deferred (anon 405-not-401)
+evidence_needed: authenticated A/B — report?userId=<other> vs omitted under operator key
+verify_steps: (AUTH_HELPED) GET /api/v1/alerts/report?userId=<other>; POST /api/v1/alerts/paged
+impact: per-user alert/metrics disclosure + audit-attribution spoofing within tenant; MEDIUM-HIGH
+testability: AUTH_HELPED
+- [HYP] V2 users/{id}/changePassword honors arbitrary userId via handler-side auth only
+class: IDOR
+asset: connect.signl4.com/api/v2/users/{userId}/changePassword
+confidence: 58
+reasoning: PUT-only route live; anon OPTIONS 405-not-401 mirrors handler-deferred family; V1 impersonation typo proves coded impersonation
+evidence_needed: authenticated A/B — PUT changePassword for sibling vs self under operator key
+verify_steps: (AUTH_HELPED) PUT /api/v2/users/{target}/changePassword
+impact: sibling-tenant password reset → tenant ATO; HIGH
+testability: AUTH_HELPED
+
+**STEP 4 — SELF-CRITIQUE**
+- [PARKED] signlReports fileName traversal (50): route confirmed, no passive validation without auth
+- [PARKED] /api/v1/prepaid cross-subscription read (45): no new evidence this cycle
+- [PARKED] events/webhook secret enumeration: operator-entropy, REJECTED brute-force class
+- [REJECTED] vps.signl4.com: cPanel default vhost — not Derdack app, below confidence floor
+- [FINAL] 1) account IdP cross-env forgery (88) 2) V1 userId bulk alert IDOR (62) 3) V2 changePassword IDOR (58) — all AUTH_HELPED, all gated on one credential. No passive-only value remains on current surface.
+
+**STEP 5 — NEXT ACTION**
+- [NEXT] HUMAN: self-register a SIGNL4 free trial operator at https://www.signl4.com/pricing/ (trial signup), then fetch `X-S4-Api-Key` from account portal — single unblock for all top survivors: (a) GET /api/v1/alerts/report?userId=<sibling> A/B, (b) PUT /api/v2/users/{target}/changePassword, (c) password-grant token against account IdP then /api/v2/teams.
+
+**STEP 6 — LEARNING**
+- [LEARN] REJECTED OTHER @ vps.signl4.com: cPanel `/cgi-sys/defaultwebpage.cgi` default vhost (72.167.227.27, Network Solutions shared range) — CT token resolved to parked host, zero Derdack application surface; no new estate growth confirmed.
+
+**STEP 7 — RISK**
+- [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against an identical scope/grant surface (password/implicit/device_code/CIBA/plain-PKCE/JAR); events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, billing BOLA) is handler-deferred AUTH_HELPED — multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; CT-swept growth this cycle (vps) confirmed inert, no risk reduction.
