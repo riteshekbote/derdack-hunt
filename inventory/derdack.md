@@ -1047,3 +1047,13 @@ www.derdack.com
 - CHANGED derdack.com WordPress surface: dev MultiViews benign (static namespace echo), www WP REST auth gates intact, blog/techblog HTTPS→HTTP downgrade has no session-theft mechanism (secure+host-only cookies
 - CHANGED Cross-env token forgery chain spans 6 identity hosts (was 4); account IdP mint-mismatch + plain PKCE + EA scopes = CRITICAL once any credential leaks
 - CHANGED All top hypotheses now AUTH_HELPED — blocked solely on obtaining legitimate X-S4-Api-Key / client_secret
+
+## 2026-09-17 20:38:24 UTC
+- NEW account.signl4.com/identity OIDC discovery live-confirmed: byte-identical parameterics to connect.signl4.com/identity (12 scopes incl EA management, password/device_code/CIBA/token-exchange grants, pl
+- NEW account.signl4.com/identity issuer mismatch confirmed: claims `https://connect.signl4.com/identity` despite being hosted on account subdomain — cross-host token minting with foreign issuer
+- NEW account.signl4.com/identity JWKS byte-identical to connect/api/devconnect/devapi/devaccount (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — 6th identity host in shared RS256 key family
+- CHANGED Cross-env token forgery chain now spans 6 identity hosts (was 4) — all share byte-identical RS256 key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED 
+- CHANGED V1 API handler-deferred auth live-confirmed: unauth GET /api/v1/alerts/acknowledgeAll returns 405 (not 401), invalid Bearer also 405 — routing layer does not validate auth
+- CHANGED V3 invoice endpoint handler-deferred auth live-confirmed: unauth GET /api/v3/subscriptions/test/invoices/test/zugferd returns 405, invalid Bearer also 405
+- CHANGED V1 swagger static analysis exhausted: userId query param on 4 endpoints (acknowledgeAll, closeAll, paged, report); "behave-as" invalidated (403 typo only); remaining V1 value requires authenticated op
+- CHANGED No new live probes from other agents since last cycle — estate stable
