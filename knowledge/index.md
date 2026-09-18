@@ -615,3 +615,7 @@
 - 2026-09-18 ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — oracle confirmed
 - 2026-09-18 REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
 - 2026-09-18 CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
+- 2026-09-18 ACCEPTED AUTH @ connect.signl4.com V1 acknowledgeAll + V2 changePassword: anon POST/PUT with valid JSON body + fabricated userId → 401 (both anon and invalid Bearer) — auth enforced at handler entry, before userId/body processing; impersonation param unreachable anonymously; AUTH_HELPED confirmed for IDOR verification
+- 2026-09-18 ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/*/invoices/*/zugferd: GET 401, POST 411 sink — route-gated stable, no handler-deferred flapping anomaly on this family
+- 2026-09-18 ACCEPTED AUTH @ connect.signl4.com/webhook/{fabricated}: 404 envelope re-confirmed byte-stable — oracle remains the lone unauth differential, exploitability still leak-only
+- 2026-09-18 REJECTED OTHER @ full estate: re-probe cycle produced zero new paths/verbs/differentials; all probes 401/404/411/405 consistent with KB — passive surface confirmed exhausted, no drift

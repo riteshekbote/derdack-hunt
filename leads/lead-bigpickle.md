@@ -5027,3 +5027,37 @@ evidence_needed: valid token; request foreign subscription/invoice ids.
 verify_steps: 1) GET /1/invoices/1/zugferd unauth (401) 2) repeat with token cross-tenant (AUTH_HELPED).
 impact: cross-tenant invoice/PII disclosure; HIGH
 testability: AUTH_HELPED
+## 2026-09-18 10:51:11 UTC [target] (model bigpickle)
+[HYP] Cross-user alert manipulation via V1 userId impersonation on bulk lifecycle ops
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll?userId=
+confidence: 80
+reasoning: V1 swagger documents userId query param on acknowledgeAll/closeAll/paged/report; 403 typo "in behave of the user" proves coded impersonation; handler-deferred auth family confirmed (anon 401 with valid body, never reaches param logic); guard likely teams-scoped, cross-user boundary unproven
+evidence_needed: valid X-S4-Api-Key/Bearer; POST ?userId=OTHER_USER → observe 403 (guarded) vs 200/202 (IDOR)
+verify_steps: 1) POST /api/v1/alerts/acknowledgeAll?userId=<own> w/ own token (baseline 200) 2) repeat userId=<second-user-id> (403=guarded, 200=IDOR) 3) replicate on devapi staging for cross-env parity
+impact: cross-user acknowledge/close (alert integrity + audit blur) within tenant; possible cross-tenant if sub/user not bound; HIGH
+testability: AUTH_HELPED
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family + account mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account IdP claims issuer=connect; discovery parameterics identical incl password/implicit/device/plain-PKCE grants + EA mgmt scopes; account portal live-proves client 692A0A56; APIs accept any token signed by shared key
+evidence_needed: client_secret or any X-S4-Api-Key/team-secret to mint+validate cross-host token
+verify_steps: 1) POST /identity/connect/token authz_code client 692A0A56-… code=test verifier=test redirect=devaccount/manage → expect invalid_grant (AUTH_HELPED) 2) if token: GET api.signl4.com/api/v2/teams Bearer
+impact: tokens minted by account IdP w/ EA management scope + connect issuer accepted by prod APIs → multi-tenant account takeover + Enterprise Alert control; CRITICAL
+testability: AUTH_HELPED
+[HYP] Cross-tenant BOLA on V3 ZUGFeRD invoice download
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd
+confidence: 75
+reasoning: route registered (OPTIONS Allow:GET), anon GET 401; subscription/invoice path ids with no visible tenant binding; invoices carry billing+PII; same handler-deferred family elsewhere flips 405↔401 (inconsistent gate)
+evidence_needed: valid token; foreign subscription/invoice id → 200 vs 403
+verify_steps: 1) GET /subs/{A}/inv/{b}/zugferd own token (baseline) 2) iterate low/foreign ids for 200 (BOLA) or 403
+impact: cross-tenant invoice/PII disclosure; HIGH
+testability: AUTH_HELPED
+[NEXT] HUMAN: register a legitimate free-trial SIGNL4 account (https://www.signl4.com/pricing/ trial) to obtain an operator `X-S4-Api-Key`; convert the three [FINAL] AUTH_HELPED hypotheses (V1 userId IDOR, V3 invoice BOLA, V2 changePassword) from blocked to verifiable — sole remaining blocker; passive surface is fully exhausted (V1/V2/V3/webhook/events mapped, V4 absent, 6-host identity estate stable, no drift, no credential anywhere in 4+ public corpora)
+[LEARN] ACCEPTED AUTH @ connect.signl4.com V1 acknowledgeAll + V2 changePassword: anon POST/PUT with valid JSON body + fabricated userId → 401 (both anon and invalid Bearer) — auth enforced at handler entry, before userId/body processing; impersonation param unreachable anonymously; AUTH_HELPED confirmed for IDOR verification
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/*/invoices/*/zugferd: GET 401, POST 411 sink — route-gated stable, no handler-deferred flapping anomaly on this family
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook/{fabricated}: 404 envelope re-confirmed byte-stable — oracle remains the lone unauth differential, exploitability still leak-only
+[LEARN] REJECTED OTHER @ full estate: re-probe cycle produced zero new paths/verbs/differentials; all probes 401/404/411/405 consistent with KB — passive surface confirmed exhausted, no drift
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical 12-scope/9-grant surface incl EA management scopes and password/implicit/device/plain-PKCE grants; account portal live-proves client 692A0A56; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA) is handler-deferred and sits one leaked client_secret/API-key/team-secret from full multi-tenant EA/SIGNL4 compromise; this cycle's re-probes confirm zero anonymous access and no drift — risk unchanged, fully gated on credential acquisition.
