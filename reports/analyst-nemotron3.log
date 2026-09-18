@@ -18389,3 +18389,35 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parametric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover.
+===== ANALYST nemotron3 2026-09-18 22:48:44 UTC =====
+[0m
+> build · nemotron-3-ultra-free
+[0m
+[93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
+[0m✗ [0mcat << 'EOF' > /tmp/delta_analysis.txt
+STEP 1 — DELTA
+
+[NEW] vps.signl4.com dangling A-record confirmed: GoDaddy authoritative NS (domaincontrol.com) → 72.167.227.27 (secureserver.net shared host); HTTPS 200 nginx "Default Web Site Page" with cert CN=server.d1g.secureserver.net; fabricated-host test returns byte-identical response proving no vhost config — classic subdomain takeover vector (CRITICAL, PASSIVE)
+
+[NEW] V4 API namespace confirmed absent: connect.signl4.com/api/v4 → 404, /api/docs/v4/swagger.json → 404 — sole unprobed namespace gap closed
+
+[CHANGED] api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET → 401 (was 405 prior cycle), invalid Bearer → 401 — handler/routing auth layer unstable across cycles
+
+[CHANGED] connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET → 401, invalid Bearer → 401 — route-gated this cycle (differs from V1/V2 handler-deferred pattern)
+
+[CHANGED] connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET → 401, invalid Bearer → 401 — route-gated this cycle (differs from V2 teams flapping)
+
+[CHANGED] www.vps.signl4.com: NXDOMAIN (CT cert token only, no DNS record)
+
+[CHANGED] go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN config, not Derdack defect
+
+[CHANGED] admin.signl4.com: TCP timeout on 132.220.132.233 — inert
+
+[CHANGED] Cross-env token forgery chain spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
+
+[CHANGED] Full estate identity/API/CT surface stable with zero drift; passive route maps exhausted
+
+[NO_DELTA] derdack.com WordPress surface: dev MultiViews benign (static namespace echo), www WP REST auth gates intact, blog/techblog HTTPS→HTTP downgrade no session-theft (secure+host-only cookies), /de/ & /ea/ XML-RPC POST-exposed but mutating methods auth-gated (faultCode 403)
+EOF
+cat /tmp/delta_analysis.txt failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.

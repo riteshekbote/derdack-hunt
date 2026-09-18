@@ -1,57 +1,11 @@
-## 2026-09-18 20:30:05 UTC [target] (model nemotron3)
-[PRIO] vps.signl4.com,9.50,attack_surface=10,business_value=9,tech_exposure=10,gate_ease=10,cloud_surface=10,freshness=10
-[PRIO] account.signl4.com/identity/connect/token,9.20,attack_surface=10,business_value=10,tech_exposure=10,gate_ease=2,cloud_surface=10,freshness=9
-[PRIO] connect.signl4.com/api/v1/alerts/acknowledgeAll,7.80,attack_surface=8,business_value=8,tech_exposure=7,gate_ease=2,cloud_surface=8,freshness=9
-[PRIO] connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd,7.50,attack_surface=7,business_value=8,tech_exposure=8,gate_ease=2,cloud_surface=8,freshness=9
-[PRIO] connect.signl4.com/api/v2/users/{userId}/changePassword,7.30,attack_surface=7,business_value=9,tech_exposure=7,gate_ease=2,cloud_surface=8,freshness=9
-[PRIO] connect.signl4.com/webhook/{teamSecret},6.80,attack_surface=6,business_value=7,tech_exposure=6,gate_ease=1,cloud_surface=7,freshness=8
-[HYP] Subdomain takeover via dangling A-record on vps.signl4.com
-class: MISCONFIG
-asset: vps.signl4.com
-confidence: 95
-reasoning: DNS A-record resolves to 72.167.227.27 (GoDaddy shared hosting `secureserver.net`), serves default nginx "Default Web Site Page" with unrelated certificate `CN=server.d1g.secureserver.net`; fabricated-host test returns byte-identical response proving no virtual-host configuration — classic unclaimed subdomain on shared provider
-evidence_needed: Confirm GoDaddy account can claim `vps.signl4.com` via standard shared-hosting onboarding; verify no Derdack-owned content serves on this host
-verify_steps: 1) GET https://vps.signl4.com/ (confirm 200, default page, unrelated cert) 2) GET http://vps.signl4.com/ (confirm HTTP also serves default page) 3) Check DNS history: `dig vps.signl4.com @ns1.domaincontrol.com` (confirm authoritative GoDaddy NS) 4) Attempt to register `vps.signl4.com` on GoDaddy shared hosting (passive: verify "domain already exists" or claimable)
-impact: Full subdomain takeover — attacker serves arbitrary content under `vps.signl4.com` (Derdack brand), enabling phishing, credential harvesting, OAuth redirect_uri abuse, CSP bypass via trusted subdomain; severity CRITICAL
-testability: PASSIVE
-[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
-class: AUTH
-asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
-confidence: 88
-reasoning: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256). account.signl4.com/identity OIDC discovery claims issuer=https://connect.signl4.com/identity (cross-host mint-mismatch) while advertising identical 12-scope set including EA management scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api). Grants include password, implicit, device_code, CIBA, token-exchange. code_challenge_methods_supported includes "plain" (weak PKCE). token_endpoint_auth_methods only client_secret_basic/post (no public client). Shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6 across prod/staging. Handler-deferred auth on V1/V2/V3 APIs (unauth GET returns 405 not 401, invalid Bearer also 405 on flapping cycles) enables cross-env token acceptance.
-evidence_needed: Valid access token minted by account.signl4.com/identity accepted by api.signl4.com/api/v2 or connect.signl4.com/api/v2 endpoints; token carries account-minted claims (subscription_id, branch_id, EA scopes) and connect issuer; plain PKCE flow completes without code_verifier.
-verify_steps: 1) GET https://account.signl4.com/identity/.well-known/openid-configuration (confirm issuer, token_endpoint, jwks_uri, scopes, plain PKCE) 2) POST https://account.signl4.com/identity/connect/token with grant_type=authorization_code&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&code=test&code_verifier=test&redirect_uri=https://devaccount.signl4.com/manage (test plain PKCE acceptance — expect 400 invalid_grant not PKCE rejection) 3) POST https://account.signl4.com/identity/connect/token with grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&scope=reseller_portal public_api_ea_manage public_api_ea_alerting mobile_api offline_access&username=test&password=test (expect invalid_client without secret) 4) If token acquired: GET https://api.signl4.com/api/v2/teams with Authorization: Bearer <token> (test cross-env acceptance)
-impact: Full cross-environment token forgery — attacker with client_secret (or via plain PKCE code theft) can mint tokens from account IdP carrying EA management scopes (reseller_portal, public_api_ea_manage) and connect issuer, accepted by production APIs (api.signl4.com, connect.signl4.com) — complete account takeover + Enterprise Alert management + alerting control across all tenants; severity CRITICAL
-testability: AUTH_HELPED
-[HYP] Cross-user IDOR on V1 bulk alert operations via userId query parameter
-class: IDOR
-asset: connect.signl4.com/api/v1/alerts/acknowledgeAll
-confidence: 80
-reasoning: V1 OpenAPI (93 paths) documents /api/v1/alerts/acknowledgeAll (POST) and /api/v1/alerts/closeAll (POST) with userId as query parameter (not path) — caller specifies which user performs bulk acknowledge/close. /api/v1/alerts/paged (POST) and /api/v1/alerts/report (GET) also accept userId query parameter for data filtering/scope. 403 response description typo "You are not allowed to perform this method in behave of the user" confirms "behalf-of-user" feature exists but guard may only check team membership not user ownership. V1 securitySchemes = API_Key_Header + API_Key_Query + OAuth2; global security: [{}] empty — same handler-deferred auth pattern as V2/V3. Three concurrent namespaces live on connect+api+devapi at /api/* and /api/v1/*; all handler-deferred Bearer (anon reads 14/14 → 401/405).
-evidence_needed: Valid token from User A acknowledges/closes alerts belonging to User B within same tenant via userId=B; or cross-tenant if subscriptionId not validated.
-verify_steps: 1) OPTIONS https://connect.signl4.com/api/v1/alerts/acknowledgeAll (confirm Allow:POST) 2) POST https://connect.signl4.com/api/v1/alerts/acknowledgeAll?userId=OTHER_USER_ID with valid token for CURRENT_USER (expect 403 if user ownership enforced, 200 if only team membership checked) 3) POST https://connect.signl4.com/api/v1/alerts/closeAll?userId=OTHER_USER_ID (same) 4) POST https://connect.signl4.com/api/v1/alerts/paged?userId=OTHER_USER_ID (test data scope leakage) 5) GET https://connect.signl4.com/api/v1/alerts/report?userId=OTHER_USER_ID (test report leakage) 6) Repeat on devapi.signl4.com for staging validation
-impact: Cross-user alert manipulation + data access within tenant — User A can acknowledge/close/paged/report on User B's alerts if guard only checks team membership; potential cross-tenant if subscriptionId not validated; severity HIGH
-testability: AUTH_HELPED
-[PARKED] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch: confidence 88 but AUTH_HELPED — requires valid client_secret or leaked X-S4-Api-Key/Bearer; no passive-only path to token acquisition.
-[PARKED] Cross-user IDOR on V1 bulk alert operations via userId query parameter: confidence 80 but AUTH_HELPED — requires authenticated operator token; no passive verification of user ownership guard.
-[FINAL] 1) Subdomain takeover via dangling A-record on vps.signl4.com (MISCONFIG, 95) — PASSIVE
-[FINAL] 2) Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch (AUTH, 88) — AUTH_HELPED
-[FINAL] 3) Cross-user IDOR on V1 bulk alert operations via userId query parameter (IDOR, 80) — AUTH_HELPED
-[NEXT] PROBE: GET https://vps.signl4.com/ (confirm 200 default nginx page, unrelated cert CN=server.d1g.secureserver.net) + GET http://vps.signl4.com/ + dig vps.signl4.com @ns1.domaincontrol.com (verify GoDaddy authoritative NS) — all passive, read-only, <=1 rps
-[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response proves dangling → subdomain takeover candidate
-[LEARN] REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS)
-[LEARN] REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
-[LEARN] REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
-[LEARN] ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
-[LEARN] ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
-[LEARN] ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer claim
-[LEARN] ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
-[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th namespace with staging parity, all handler-deferred
-[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid billing route family
-[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
-[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
-[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Content-Length before auth
-[LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — oracle confirmed
-[LEARN] REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
-[LEARN] CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
-[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parametric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover.
+## 2026-09-18 22:47:54 UTC [target] (model nemotron3)
+[NEW] vps.signl4.com dangling A-record confirmed: GoDaddy authoritative NS (domaincontrol.com) → 72.167.227.27 (secureserver.net shared host); HTTPS 200 nginx "Default Web Site Page" with cert CN=server.d1g.secureserver.net; fabricated-host test returns byte-identical response proving no vhost config — classic subdomain takeover vector (CRITICAL, PASSIVE)
+[NEW] V4 API namespace confirmed absent: connect.signl4.com/api/v4 → 404, /api/docs/v4/swagger.json → 404 — sole unprobed namespace gap closed
+[CHANGED] api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET → 401 (was 405 prior cycle), invalid Bearer → 401 — handler/routing auth layer unstable across cycles
+[CHANGED] connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET → 401, invalid Bearer → 401 — route-gated this cycle (differs from V1/V2 handler-deferred pattern)
+[CHANGED] connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET → 401, invalid Bearer → 401 — route-gated this cycle (differs from V2 teams flapping)
+[CHANGED] www.vps.signl4.com: NXDOMAIN (CT cert token only, no DNS record)
+[CHANGED] go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN config, not Derdack defect
+[CHANGED] admin.signl4.com: TCP timeout on 132.220.132.233 — inert
+[CHANGED] Cross-env token forgery chain spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
+[CHANGED] Full estate identity/API/CT surface stable with zero drift; passive route maps exhausted

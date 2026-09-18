@@ -5173,3 +5173,33 @@ impact: attacker content on trusted subdomain → phishing, parent-domain cookie
 testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
 [NEXT] HUMAN: File the `vps.signl4.com` dangling-DNS finding (GoDaddy `domaincontrol.com` NS → `72.167.227.27` secureserver.net, cPanel default vhost, cert CN=server.d1g.it, fabricated-vhost byte-identical proof sha256 `9278d16e…`); request authorization to confirm claimability by adding the domain on that shared host. If approved, concurrently register a free-trial SIGNL4 account (https://www.signl4.com/pricing/) to unblock the entire AUTH_HELPED queue (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA). Passive surface remains exhausted — no new read-only probes return signal.
 [RISK] derdack: 91 — unchanged: CRITICAL cross-env token-forgery chain (6 RS256-shared identity hosts, account-host mint-mismatch, password/plain-PKCE + EA mgmt scopes) and handler-deferred billing/PII BOLA remain fully gated on one leaked client_secret/API-key; the lone credential-free finding (vps.signl4.com dangling) is stable and awaiting human claim-confirmation; this cycle added only a dead CT host (www.enterprisealert.com) and two empty CT sweeps — no risk delta.
+## 2026-09-18 22:48:33 UTC [target] (model bigpickle)
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts (connect/devconnect/api/devapi/account/devaccount) serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`); account IdP advertises issuer=connect while minting on account host; discovery parameterics byte-identical (12 scopes incl EA mgmt, password/implicit/device/CIBA/token-exchange, plain+S256 PKCE); APIs accept any shared-key-signed token (handler-deferred auth); blocked only on client_secret/API-key.
+evidence_needed: leaked client_secret or operator X-S4-Api-Key → mint+validate a cross-host token.
+verify_steps: 1) GET account/identity/.well-known/openid-configuration vs connect (parity, done) 2) POST /identity/connect/token code=test verifier=test redirect=devaccount/manage → expect invalid_grant (AUTH_HELPED) 3) if token: GET api.signl4.com/api/v2/teams Bearer.
+impact: EA-management-scoped tokens minted w/ connect issuer accepted by prod APIs → multi-tenant account takeover; CRITICAL.
+testability: AUTH_HELPED
+[HYP] Cross-tenant BOLA on V3 ZUGFeRD invoice download
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
+confidence: 75
+reasoning: route registered (OPTIONS Allow:GET); anon + invalid-Bearer → 401 route-gated; path IDs carry no visible tenant binding; invoices embed billing+PII; sibling V1/V2 families flip 405↔401 across cycles (gate-layer inconsistency).
+evidence_needed: valid token; foreign subscription/invoice id → 200 vs own-id 403/404.
+verify_steps: 1) GET own subscription/invoice Bearer baseline 2) iterate low/foreign IDs for 200 vs 403 3) replicate on devapi.
+impact: cross-tenant invoice/PII disclosure; HIGH.
+testability: AUTH_HELPED
+[HYP] Dangling DNS — vps.signl4.com A-record points at unclaimed GoDaddy shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 70
+reasoning: GoDaddy NS (`domaincontrol.com`) → 72.167.227.27 (secureserver.net, cPanel default vhost, cert CN=server.d1g.it no signl4 SAN); fabricated `<rand>.signl4.com` same IP → byte-identical body sha256 `9278d16ed2fdcd5dc651615b0b8adc6b55fb667a` (re-verified this cycle) proving no vhost claimed; `*.signl4.com` NXDOMAIN so no wildcard interference.
+evidence_needed: addon/parked-domain claim ability on that shared host → attacker control under signl4.com.
+verify_steps: 1) GET https://vps.signl4.com/ → 200 default (done) 2) --resolve fake<rand>.signl4.com → byte-identical (done this cycle) 3) claim confirmation HUMAN_ONLY.
+impact: attacker content on trusted subdomain → phishing, parent-domain cookie ops vs account/connect portals, OAuth redirect_uri abuse if allowlisted; HIGH.
+testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
+[NEXT] HUMAN: File the `vps.signl4.com` dangling-DNS finding (GoDaddy NS `domaincontrol.com` → `72.167.227.27`, cPanel default vhost, cert CN=server.d1g.it, fabricated-vhost byte-identical proof sha256 `9278d16ed2fdcd5dc651615b0b8adc6b55fb667a` fresh 2026-09-18) and request authorization to confirm claimability by adding the domain on that shared host; concurrently seek a legitimate X-S4-Api-Key/client_secret (free-trial SIGNL4 account) to unblock the entire AUTH_HELPED queue.
+[RISK] derdack: 91 — unchanged: CRITICAL cross-env token-forgery chain (6 RS256-shared identity hosts, account-host mint-mismatch, password/plain-PKCE + EA mgmt scopes) and handler-deferred billing/PII BOLA remain gated on one leaked client_secret/API-key; lone credential-free finding (vps.signl4.com dangling) is proof-complete and awaits human claim-confirmation; this cycle added only a control-test that closed a would-be go.signl4.com escalation (shared-edge 1034, no defect) — no risk delta.

@@ -25848,3 +25848,140 @@ testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
 
 ### STEP 7 — RISK
 [RISK] derdack: 91 — unchanged: CRITICAL cross-env token-forgery chain (6 RS256-shared identity hosts, account-host mint-mismatch, password/plain-PKCE + EA mgmt scopes) and handler-deferred billing/PII BOLA remain fully gated on one leaked client_secret/API-key; the lone credential-free finding (vps.signl4.com dangling) is stable and awaiting human claim-confirmation; this cycle added only a dead CT host (www.enterprisealert.com) and two empty CT sweeps — no risk delta.
+===== ANALYST bigpickle 2026-09-18 22:48:44 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor h in vps.signl4.com status.signl4.com docs.signl4.com trust.signl4.com support.signl4.com go.signl4.com bot.signl4.com www.vps.signl4.com; do echo "== $h"; dig +short "$h" | head -5; done
+== vps.signl4.com
+72.167.227.27
+== status.signl4.com
+status.adminlabs.com.
+135.181.151.105
+== docs.signl4.com
+signl4.github.io.
+185.199.108.153
+185.199.109.153
+185.199.110.153
+185.199.111.153
+== trust.signl4.com
+signl.portals.safebase.io.
+104.18.5.130
+104.18.4.130
+== support.signl4.com
+signl4.zendesk.com.
+216.198.53.6
+216.198.54.6
+== go.signl4.com
+23851773.group23.sites.hubspot.net.
+group23.sites.hscoscdn20.net.
+199.60.103.254
+199.60.103.2
+== bot.signl4.com
+d3621wuhnmo5q9.cloudfront.net.
+3.170.19.79
+3.170.19.83
+3.170.19.66
+3.170.19.40
+== www.vps.signl4.com
+[0m
+[0m$ [0mecho "== go headers"; curl -sSI --max-time 10 https://go.signl4.com/ | head -20; echo "== go body"; curl -sS --max-time 10 https://go.signl4.com/ | head -c 600; echo; echo "== vps fresh body hash"; curl -sS --max-time 10 https://vps.signl4.com/ | sha256sum | head -c 40; echo; echo "== fake host same vps IP body hash"; curl -sS --max-time 10 --resolve bqjw3o8kv.signl4.com:443:72.167.227.27 https://bqjw3o8kv.signl4.com/ | sha256sum | head -c 40; echo
+== go headers
+HTTP/2 403 
+date: Fri, 18 Sep 2026 22:47:53 GMT
+content-type: text/plain; charset=UTF-8
+content-length: 17
+cache-control: private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+expires: Thu, 01 Jan 1970 00:00:01 GMT
+referrer-policy: same-origin
+x-frame-options: SAMEORIGIN
+server: cloudflare
+cf-ray: a3d3e521bcaa990a-IAD
+
+== go body
+error code: 1034
+
+== vps fresh body hash
+curl: (60) SSL: no alternative certificate subject name matches target host name 'vps.signl4.com'
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4
+== fake host same vps IP body hash
+curl: (60) SSL: no alternative certificate subject name matches target host name 'bqjw3o8kv.signl4.com'
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4
+[0m
+[0m$ [0mecho "== vps -k body hash"; curl -skS --max-time 10 https://vps.signl4.com/ | sha256sum | head -c 40; echo; echo "== fake -k same vps IP hash"; curl -skS --max-time 10 --resolve bqjw3o8kv.signl4.com:443:72.167.227.27 https://bqjw3o8kv.signl4.com/ | sha256sum | head -c 40; echo; echo "== go: fake host same hubspot IP"; curl -sS --max-time 10 --resolve hg7kpqw2.signl4.com:443:199.60.103.254 https://hg7kpqw2.signl4.com/ | head -c 200; echo; echo "== go: real host verbose status"; curl -sS -o /dev/null -w 'code=%{http_code} ip=%{remote_ip}\n' --max-time 10 https://go.signl4.com/
+== vps -k body hash
+9278d16ed2fdcd5dc651615b0b8adc6b55fb667a
+== fake -k same vps IP hash
+9278d16ed2fdcd5dc651615b0b8adc6b55fb667a
+== go: fake host same hubspot IP
+error code: 1034
+
+== go: real host verbose status
+code=403 ip=199.60.103.2
+[0m
+STEP 1 — DELTA
+- NEW control-test: `go.signl4.com` DNS → HubSpot CNAME `23851773.group23.sites.hubspot.net` (hscoscdn20.net), but HTTP "error code: 1034" is NOT host-specific — fabricated `hg7kpqw2.signl4.com` forced to 199.60.103.254 returns byte-identical 1034 → Cloudflare edge/shared-IP-wide block on the HubSpot CDN range; no go-host-level deactivation signal (would-be "HubSpot dangling" correction of KB REJECT rejected).
+- CHANGED `vps.signl4.com` dangling re-confirmed live: fresh byte-identity on fabricated host sha256 `9278d16ed2fdcd5dc651615b0b8adc6b55fb667a` + TLS subject mismatch (CN=server.d1g.it, no signl4 SAN) → no signl4 vhost/cert claimed on 72.167.227.27.
+- CHANGED sibling CNAME map re-checked (status→adminlabs.com, docs→signl4.github.io, trust→safebase portals, support→zendesk, go→hubspot, bot→cloudfront): all point at live third-party platforms, none dangling-looking except vps.
+- NO_DELTA identity/API estate (6-host RS256 family + V1/V2/V3/webhook/events route maps) and derdack WP/X-RPC surface — stable vs 2026-09-18 20:30 lead.
+
+STEP 2 — PRIORITIZE
+- [PRIO] account.signl4.com/identity/connect/token,6.95,a7b9t9g2c6f7
+- [PRIO] connect.signl4.com/api/v3/subscriptions/{id}/invoices/{id}/zugferd,6.45,a7b9t7g2c6f5
+- [PRIO] vps.signl4.com,5.40,a3b7t2g10c3f8
+
+STEP 3 — HYPOTHESES
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts (connect/devconnect/api/devapi/account/devaccount) serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`); account IdP advertises issuer=connect while minting on account host; discovery parameterics byte-identical (12 scopes incl EA mgmt, password/implicit/device/CIBA/token-exchange, plain+S256 PKCE); APIs accept any shared-key-signed token (handler-deferred auth); blocked only on client_secret/API-key.
+evidence_needed: leaked client_secret or operator X-S4-Api-Key → mint+validate a cross-host token.
+verify_steps: 1) GET account/identity/.well-known/openid-configuration vs connect (parity, done) 2) POST /identity/connect/token code=test verifier=test redirect=devaccount/manage → expect invalid_grant (AUTH_HELPED) 3) if token: GET api.signl4.com/api/v2/teams Bearer.
+impact: EA-management-scoped tokens minted w/ connect issuer accepted by prod APIs → multi-tenant account takeover; CRITICAL.
+testability: AUTH_HELPED
+[HYP] Cross-tenant BOLA on V3 ZUGFeRD invoice download
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
+confidence: 75
+reasoning: route registered (OPTIONS Allow:GET); anon + invalid-Bearer → 401 route-gated; path IDs carry no visible tenant binding; invoices embed billing+PII; sibling V1/V2 families flip 405↔401 across cycles (gate-layer inconsistency).
+evidence_needed: valid token; foreign subscription/invoice id → 200 vs own-id 403/404.
+verify_steps: 1) GET own subscription/invoice Bearer baseline 2) iterate low/foreign IDs for 200 vs 403 3) replicate on devapi.
+impact: cross-tenant invoice/PII disclosure; HIGH.
+testability: AUTH_HELPED
+[HYP] Dangling DNS — vps.signl4.com A-record points at unclaimed GoDaddy shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 70
+reasoning: GoDaddy NS (`domaincontrol.com`) → 72.167.227.27 (secureserver.net, cPanel default vhost, cert CN=server.d1g.it no signl4 SAN); fabricated `<rand>.signl4.com` same IP → byte-identical body sha256 `9278d16ed2fdcd5dc651615b0b8adc6b55fb667a` (re-verified this cycle) proving no vhost claimed; `*.signl4.com` NXDOMAIN so no wildcard interference.
+evidence_needed: addon/parked-domain claim ability on that shared host → attacker control under signl4.com.
+verify_steps: 1) GET https://vps.signl4.com/ → 200 default (done) 2) --resolve fake<rand>.signl4.com → byte-identical (done this cycle) 3) claim confirmation HUMAN_ONLY.
+impact: attacker content on trusted subdomain → phishing, parent-domain cookie ops vs account/connect portals, OAuth redirect_uri abuse if allowlisted; HIGH.
+testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] go.signl4.com "HubSpot-dangling": fabricated-host control proves the CF-1034 is a shared-IP edge restriction, byte-identical for unregistered signl4 names → no host-specific deactivation; not actionable; KB REJECT stands.
+- [PARKED] status.signl4.com StatusLabs "status-page-not-found": third-party platform re-claim not demonstrable; third-party/inert REJECT stands.
+- [PARKED] Cross-env token forgery / V3 BOLA: AUTH_HELPED, no new passive evidence; retained at 88/75.
+- [FINAL] vps.signl4.com takeover (70, proof complete, HUMAN confirm) > account token forgery (88, AUTH_HELPED) > V3 invoice BOLA (75, AUTH_HELPED).
+
+STEP 5 — NEXT ACTION
+[NEXT] HUMAN: File the `vps.signl4.com` dangling-DNS finding (GoDaddy NS `domaincontrol.com` → `72.167.227.27`, cPanel default vhost, cert CN=server.d1g.it, fabricated-vhost byte-identical proof sha256 `9278d16ed2fdcd5dc651615b0b8adc6b55fb667a` fresh 2026-09-18) and request authorization to confirm claimability by adding the domain on that shared host; concurrently seek a legitimate X-S4-Api-Key/client_secret (free-trial SIGNL4 account) to unblock the entire AUTH_HELPED queue.
+
+STEP 6 — LEARNING
+- [LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: dangling re-confirmed — fresh byte-identical default-vhost sha256 `9278d16ed2fdcd5dc651615b0b8adc6b55fb667a` on fabricated host + TLS subject CN=server.d1g.it (no signl4 SAN) → no signl4 vhost/cert claimed on the shared host.
+- [LEARN] REJECTED MISCONFIG @ go.signl4.com: "HubSpot dangling" invalidated by control — fabricated `.signl4.com` forced to HubSpot CDN IP returns byte-identical CF error 1034 → block is shared-edge/shared-IP, not a host-specific deactivation; no defect.
+- [LEARN] ACCEPTED OTHER @ full estate: sibling CNAME map (status/docs/trust/support/go/bot) all point at live third-party platforms; vps remains the only dangling record; identity/API/derdack surface zero-drift.
+
+STEP 7 — RISK
+[RISK] derdack: 91 — unchanged: CRITICAL cross-env token-forgery chain (6 RS256-shared identity hosts, account-host mint-mismatch, password/plain-PKCE + EA mgmt scopes) and handler-deferred billing/PII BOLA remain gated on one leaked client_secret/API-key; lone credential-free finding (vps.signl4.com dangling) is proof-complete and awaits human claim-confirmation; this cycle added only a control-test that closed a would-be go.signl4.com escalation (shared-edge 1034, no defect) — no risk delta.

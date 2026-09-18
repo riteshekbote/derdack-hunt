@@ -2880,3 +2880,7 @@
 - LEARN: ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — o
 - LEARN: REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
 - LEARN: CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signi
+
+## RANKED HYPOTHESES 2026-09-18 22:48:44 UTC
+- [88] account.signl4.com/identity/connect/token: Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: File the `vps.signl4.com` dangling-DNS finding (GoDaddy NS `domaincontrol.com` → `72.167.227.27`, cPanel default vhost, cert CN=server.d1g.it, fabricated
