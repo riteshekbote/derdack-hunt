@@ -1067,3 +1067,15 @@ www.derdack.com
 - CHANGED No new live probes from other agents since last cycle — estate stable
 - CHANGED signl4.derdack.com permanently unreachable (8+ cycles TCP timeout) — attack surface value = 0; full pivot to signl4.com product estate
 - CHANGED derdack.com WordPress surface: dev MultiViews benign (static namespace echo), www WP REST auth gates intact, blog/techblog HTTPS→HTTP downgrade has no session-theft mechanism (secure+host-only cookies
+
+## 2026-09-18 01:24:17 UTC
+- NEW V4 API namespace confirmed absent: `connect.signl4.com/api/v4` → 404, `/api/docs/v4/swagger.json` → 404 (sole unprobed namespace gap closed)
+- NEW `connect.signl4.com/api/v2/events/{id}` live-verified: OPTIONS → 405 Allow: GET,POST; unauth GET → 401; invalid Bearer → 401 (5th namespace with staging parity, handler-deferred auth)
+- NEW `connect.signl4.com/api/prepaid/{id}/prepaidSettings` live-verified: OPTIONS → 405 Allow: PUT; unauth GET → 405; PUT no body → 411; PUT invalid Bearer → 401 (billing route family, handler-deferred)
+- NEW `account.signl4.com/identity` OIDC discovery live-confirmed: issuer=`https://connect.signl4.com/identity` (cross-host mint-mismatch), plain PKCE (`code_challenge_methods_supported:["plain","S256"]`), 
+- NEW `devaccount.signl4.com/identity` mirrors prod: issuer=`https://devconnect.signl4.com/identity`, identical scopes/claims/grants/PKCE/JWKS — staging parity confirmed
+- CHANGED `api.signl4.com/api/v2/teams` auth-status: unauth GET → 401 (was 405 prior cycle), invalid Bearer → 401 (flapping re-confirmed 10th+ cycles, handler/routing auth layer unstable)
+- CHANGED `connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd`: unauth GET → 401, invalid Bearer → 401 (route-gated, not handler-deferred like V1/V2 teams)
+- CHANGED `connect.signl4.com/api/v1/alerts/acknowledgeAll`: unauth GET → 401, invalid Bearer → 401 (route-gated this cycle, differs from V2 teams flapping)
+- CHANGED Cross-env token forgery chain now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 key + client_id `692A0A56-892F-4AE2-8259-76DA398990B6`
+- CHANGED All top hypotheses AUTH_HELPED — blocked solely on legitimate credential (X-S4-Api-Key / client_secret / team-secret) acquisition

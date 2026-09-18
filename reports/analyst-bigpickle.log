@@ -25087,3 +25087,107 @@ rg -o -i '(src|href)="[^"]*"|swagger[^"]*\.json|api/docs/[vVv0-9]*[^"'"'"' ]*' /
 [93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
 [0m✗ [0mRead /tmp/v4ui.html failed
 [91m[1mError: [0mThe user rejected permission to use this specific tool call.
+===== ANALYST bigpickle 2026-09-18 01:24:17 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor host in devapi api; do
+  for path in "/api/v4" "/api/docs/v4/swagger.json"; do
+    echo "=== GET https://$host.signl4.com$path ==="
+    curl -s -o /tmp/opencode/v4_${host}.txt -w "code=%{http_code} size=%{size_download}\n" "https://$host.signl4.com$path"
+    head -c 200 /tmp/opencode/v4_${host}.txt; echo; sleep 1
+  done
+done
+=== GET https://devapi.signl4.com/api/v4 ===
+code=404 size=0
+
+=== GET https://devapi.signl4.com/api/docs/v4/swagger.json ===
+code=404 size=0
+
+=== GET https://api.signl4.com/api/v4 ===
+code=404 size=0
+
+=== GET https://api.signl4.com/api/docs/v4/swagger.json ===
+code=404 size=0
+[0m
+[0m$ [0mfor path in "/api/v4" "/api/v4/" "/api/docs/v4/swagger.json" "/api/v4/swagger.json" "/api/v4/openapi.json"; do
+  echo "=== GET https://connect.signl4.com$path ==="
+  curl -s -o /tmp/opencode/v4_connect.txt -w "code=%{http_code} size=%{size_download}\n" "https://connect.signl4.com$path"
+  head -c 300 /tmp/opencode/v4_connect.txt; echo; sleep 1
+done
+=== GET https://connect.signl4.com/api/v4 ===
+code=404 size=0
+
+=== GET https://connect.signl4.com/api/v4/ ===
+code=404 size=0
+
+=== GET https://connect.signl4.com/api/docs/v4/swagger.json ===
+code=404 size=0
+
+=== GET https://connect.signl4.com/api/v4/swagger.json ===
+code=404 size=0
+
+=== GET https://connect.signl4.com/api/v4/openapi.json ===
+code=404 size=0
+[0m
+[0m$ [0mecho "=== OPTIONS https://connect.signl4.com/api/v4 ==="; curl -s -o /tmp/opencode/v4opt.txt -w "code=%{http_code} allow=%header{allow}\n" -X OPTIONS "https://connect.signl4.com/api/v4"; head -c 200 /tmp/opencode/v4opt.txt; echo; sleep 1
+echo "=== OPTIONS https://connect.signl4.com/api/v4/teams ==="; curl -s -o /tmp/opencode/v4opt2.txt -w "code=%{http_code} allow=%header{allow}\n" -X OPTIONS "https://connect.signl4.com/api/v4/teams"; head -c 200 /tmp/opencode/v4opt2.txt; echo
+=== OPTIONS https://connect.signl4.com/api/v4 ===
+code=404 allow=
+
+=== OPTIONS https://connect.signl4.com/api/v4/teams ===
+code=404 allow=
+[0m
+STEP 1 — DELTA:
+- [NEW] V4 namespace conclusively absent: GET/OPTIONS on `connect/api/devapi /api/v4`, `/api/v4/`, `/api/docs/v4/swagger.json`, `/api/v4/swagger.json`, `/api/v4/openapi.json`, and connect `/api/v4/teams` all return 404 empty-body with no `Allow:` header — the sole unmapped namespace gap is closed.
+- [CHANGED] All API namespaces fully mapped (V1/V2/V3 + webhook + events, V4 non-existent) across connect/api/devapi; zero anonymous read surface remains on the entire API estate.
+
+STEP 2 — PRIORITIZE:
+- [PRIO] connect.signl4.com/api (V1/V2/V3),9,gate_ease+business_value
+- [PRIO] account.signl4.com/identity,8,tech_exposure+cloud_surface
+- [PRIO] devapi.signl4.com (staging 1:1 mirror),7,freshness
+
+STEP 3 — HYPOTHESES:
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity
+confidence: 88
+reasoning: 6 identity hosts (connect/devconnect/api/devapi/account/devaccount) serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account-hosted IdP claims issuer=connect.signl4.com/identity (mint-mismatch); discovery parameterics byte-identical incl password/implicit/device/CIBA/token-exchange grants, plain+S256 PKCE, EA scopes (reseller_portal, public_api_ea_manage/alerting, mobile_api); account portal live-proves OIDC client 692A0A56; handler-deferred auth on APIs accepts any token signed by that key.
+evidence_needed: client_secret or any leaked X-S4-Api-Key/Bearer to mint and validate a cross-host token.
+verify_steps: 1) POST account.signl4.com/identity/connect/token grant_type=authorization_code&client_id=692A0A56-&code=test&code_verifier=test&redirect_uri=https://devaccount.signl4.com/manage (expect 400 invalid_grant, NOT PKCE rejection) 2) POST password grant with EA scopes (expect invalid_client w/o secret) 3) if token obtained: GET api.signl4.com/api/v2/teams with Bearer.
+impact: Full cross-environment token forgery — tokens minted by account IdP with EA management scopes + connect issuer accepted by prod APIs; account takeover + Enterprise Alert management/alerting control across tenants; CRITICAL
+testability: AUTH_HELPED
+[HYP] Cross-user IDOR via V1 userId query param on bulk alert operations
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll
+confidence: 80
+reasoning: V1 OpenAPI (93 paths) documents userId as query param on acknowledgeAll/closeAll/paged/report; 403 typo "in behave of the user" confirms coded impersonation; guard may check team membership only; handler-deferred auth (anon 405).
+evidence_needed: authenticated token to POST ?userId=OTHER_USER and observe 403 vs 200.
+verify_steps: 1) OPTIONS /api/v1/alerts/acknowledgeAll (Allow:POST) 2) POST ?userId=OTHER with own valid token (403=guarded, 200=IDOR) 3) replicate on devapi staging.
+impact: Cross-user alert manipulation/data read within tenant; potential cross-tenant; HIGH
+testability: AUTH_HELPED
+[HYP] Cross-tenant BOLA on V3 ZUGFeRD invoice download
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
+confidence: 75
+reasoning: Route registered (OPTIONS 405 Allow:GET); handler-deferred auth (anon→405/401); subscriptionId/invoiceId path params without visible tenant binding; invoices carry billing/PII.
+evidence_needed: valid token to request another tenant's subscription/invoice ids.
+verify_steps: 1) GET /api/v3/subscriptions/1/invoices/1/zugferd unauth (expect 401/405) 2) with valid token cross-tenant (AUTH_HELPED).
+impact: Cross-tenant invoice/PII disclosure; HIGH
+testability: AUTH_HELPED
+
+STEP 4 — SELF-CRITIQUE:
+- [PARKED] V1 acknowledgeAll/closeAll userId IDOR (80): AUTH_HELPED, no passive validation of ownership guard.
+- [PARKED] Cross-env token forgery (88): AUTH_HELPED, blocked on credential.
+- [PARKED] V3 invoice BOLA (75): AUTH_HELPED, blocked on credential.
+- [FINAL] 1) Cross-env token forgery (AUTH, 88) 2) V1 userId bulk IDOR (IDOR, 80) 3) V3 invoice BOLA (IDOR, 75) — all AUTH_HELPED; V4 confirmed absent so no fresh passive namespace value remains.
+
+STEP 5 — NEXT ACTION:
+[NEXT] HUMAN: register a legitimate free-trial SIGNL4 account (https://www.signl4.com/pricing/ trial) to obtain an operator `X-S4-Api-Key` and convert all standing AUTH_HELPED survivors (V1 userId IDOR, V3 invoice BOLA, V2 changePassword, cross-env token forgery) from blocked to verifiable — sole remaining blocker; passive surface exhausted.
+
+STEP 6 — LEARNING:
+[LEARN] REJECTED OTHER @ connect/api/devapi /api/v4: bare 404 empty body + no Allow on GET/OPTIONS (incl /api/v4/teams) and no swagger at any path confirms V4 namespace does not exist — the last unmapped API namespace is closed; routing-family fingerprint (404-empty = unregistered) consistent across hosts.
+[LEARN] ACCEPTED OTHER @ connect.signl4.com: V1/V2/V3/webhook/events mapped with staging parity; V4 now confirmed absent — API estate namespace map FULLY complete, no anonymous surface anywhere.
+
+STEP 7 — RISK:
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical 12-scope grant surface incl EA management scopes and password/implicit/device/plain-PKCE grants; account portal live-proves the OIDC client; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; V4 absence this cycle removes the last passive-only avenue; no drift on parity/flapping/issuer-mismatch facts.
