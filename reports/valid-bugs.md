@@ -64,3 +64,7 @@
   - | 1 | Cross-env JWKS key reuse | **VALID** | 8.1 |
   - | 2 | Password grant on staging IdP | **VALID** | 7.3 |
   - | 5 | /de/ XML-RPC exposed | **VALID** | 7.5 |
+
+- 2 lead(s) marked VALID at 2026-09-18 23:43:24 UTC
+  - **VERDICT: VALID**
+  - | devconnect↔prod signing key + client reuse | **VALID** | 8.1 High | Yes — bugs.olivermaicher.eu |
