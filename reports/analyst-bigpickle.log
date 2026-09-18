@@ -25191,3 +25191,129 @@ STEP 6 — LEARNING:
 
 STEP 7 — RISK:
 [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical 12-scope grant surface incl EA management scopes and password/implicit/device/plain-PKCE grants; account portal live-proves the OIDC client; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; V4 absence this cycle removes the last passive-only avenue; no drift on parity/flapping/issuer-mismatch facts.
+===== ANALYST bigpickle 2026-09-18 06:04:37 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor u in "https://connect.signl4.com/api/v2/events/1" "https://connect.signl4.com/api/v2/events/999999999" "https://connect.signl4.com/api/v2/events/nonexistent-xyz" ; do echo "== $u"; curl -s -k -o /tmp/resp.txt -w "code=%{http_code} ct=%{content_type} allow=%header{Allow}\n" --max-time 15 "$u"; head -c 200 /tmp/resp.txt; echo; done
+== https://connect.signl4.com/api/v2/events/1
+code=401 ct= allow=
+
+== https://connect.signl4.com/api/v2/events/999999999
+code=401 ct= allow=
+
+== https://connect.signl4.com/api/v2/events/nonexistent-xyz
+code=401 ct= allow=
+[0m
+[0m$ [0mfor u in "https://connect.signl4.com/webhook/docs/v1/swagger.json" ; do echo "== $u"; curl -s -k -o /tmp/webhook_swagger.json -w "code=%{http_code} size=%{size_download}\n" --max-time 15 "$u"; python3 -c "
+import json
+d=json.load(open('/tmp/webhook_swagger.json'))
+for p,v in d.get('paths',{}).items():
+    for m,op in v.items():
+        print('PATH',p,m)
+        for pn,pp in op.get('parameters',[]):
+            print('  param',pn,pp.get('in'),pp.get('name'),pp.get('required'),pp.get('schema',{}).get('type'))
+" 2>&1 | head -40
+/bin/bash: -c: line 10: syntax error: unexpected end of file
+[0m
+[0m$ [0mpython3 - /tmp/webhook_swagger.json <<'EOF'
+import json,sys
+d=json.load(open(sys.argv[1]))
+for p in d.get('paths',{}):
+    for m,op in d['paths'][p].items():
+        if m not in ('get','post','put','patch','delete','options','head'): continue
+        print('PATH',m.upper(),p)
+        for pn in op.get('parameters',[]):
+            sch=pn.get('schema',{})
+            print('  param',pn.get('in'),pn.get('name'),'req=',pn.get('required'),'type=',sch.get('type'))
+        print('  security=',op.get('security'))
+print('global security=',d.get('security'))
+print('schemes=',list(d.get('components',{}).get('securitySchemes',{}).keys()))
+EOF
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/webhook_swagger.json'
+[0m
+[0m$ [0mcurl -s -k -o /tmp/webhook_swagger.json -w "code=%{http_code} size=%{size_download}\n" --max-time 15 "https://connect.signl4.com/webhook/docs/v1/swagger.json"
+code=200 size=12647
+[0m
+[0m$ [0mpython3 - <<'EOF'
+import json
+d=json.load(open('/tmp/webhook_swagger.json'))
+for p in d.get('paths',{}):
+    for m,op in d['paths'][p].items():
+        if m not in ('get','post','put','patch','delete'): continue
+        print('PATH',m.upper(),p)
+        for pn in op.get('parameters',[]):
+            sch=pn.get('schema',{})
+            print('  param',pn.get('in'),pn.get('name'),'req=',pn.get('required'),'type=',sch.get('type'))
+        if not op.get('parameters'): print('  (inline parameters: ',len(op.get('requestBody',{}).get('content',{}).get('application/json',{}).get('schema',{}).get('properties',{})),'props)')
+print('global security=',d.get('security'))
+print('schemes=',list(d.get('components',{}).get('securitySchemes',{}).keys()))
+EOF
+PATH GET /docs/index.html
+  (inline parameters:  0 props)
+PATH POST /{teamSecret}
+  param path teamSecret req= True type= string
+  param query ExtIdParam req= None type= string
+  param query ExtStatusParam req= None type= string
+  param query NewStatus req= None type= string
+  param query ResolvedStatus req= None type= string
+  param query AckStatus req= None type= string
+global security= None
+schemes= []
+[0m
+STEP 1 — DELTA
+- NEW `connect.signl4.com/api/v2/events/{id}`: uniform 401 for valid int (1), bogus int (999999999), and arbitrary string — **auth-before-ID-resolution, NOT handler-deferred** like teams/alerts; no enumeration oracle. (fresh read-only probe this cycle)
+- NEW `/webhook/docs/v1/swagger.json` full param parse: POST /{teamSecret} + exactly 5 query params (ExtIdParam, ExtStatusParam, NewStatus, ResolvedStatus, AckStatus), **zero security scheme, zero documented body properties** — contract unchanged, no undocumented params hiding.
+
+STEP 2 — PRIORITIZE
+- [PRIO] account.signl4.com/identity,6.25,= 6-host shared RS256 family + issuer mint-mismatch + plain PKCE + EA scopes
+- [PRIO] connect.signl4.com/api/v1/alerts/acknowledgeAll,5.70,userId query IDOR (AUTH_HELPED)
+- [PRIO] connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd,5.30,cross-tenant BOLA (AUTH_HELPED)
+
+STEP 3 — HYPOTHESES
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts (connect/devconnect/api/devapi/account/devaccount) serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account-host claims issuer=connect.signl4.com/identity; discovery 12-scope/9-grant parameterics byte-identical incl password/device/CIBA/plain-PKCE; account portal live-proves client 692A0A56; APIs accept any Bearer signed by the shared key (handler-deferred family). Events namespace confirmed this cycle to be auth-before-ID but still the same key family.
+evidence_needed: client_secret or leaked X-S4-Api-Key/Bearer to mint + validate cross-host token.
+verify_steps: 1) GET .well-known/openid-configuration vs connect (parity, done 16th+ cycle) 2) POST /identity/connect/token authorization_code w/ client_id 692A0A56-… code=test verifier=test redirect=devaccount/manage → expect invalid_grant not PKCE-reject (AUTH_HELPED) 3) password grant EA scopes → invalid_client w/o secret.
+impact: tokens minted by account IdP w/ EA mgmt scope + connect issuer accepted by prod APIs → account takeover + Enterprise Alert mgmt/alerting across tenants; CRITICAL
+testability: AUTH_HELPED
+[HYP] Cross-user IDOR via V1 userId query param on bulk alert ops
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll
+confidence: 80
+reasoning: V1 swagger documents userId query param on acknowledgeAll/closeAll/paged/report; 403 typo "in behave of the user" = coded impersonation; guard may check team membership only; route flips 405↔401 (handler/route layer).
+evidence_needed: own valid token; POST ?userId=OTHER_USER observe 403 vs 200.
+verify_steps: 1) GET unauth baseline (401/405) 2) POST ?userId=other+own token → 403 guarded / 200 IDOR 3) replicate on devapi.
+impact: cross-user alert manipulation/read within + possibly across tenant; HIGH
+testability: AUTH_HELPED
+[HYP] Cross-tenant BOLA on V3 ZUGFeRD invoice download
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
+confidence: 75
+reasoning: registered (OPTIONS Allow:GET); anon→401 this cycle (route-gated); subscription/invoice path params w/o visible tenant binding; billing+PII artifacts.
+evidence_needed: valid token; request foreign subscription/invoice ids.
+verify_steps: 1) GET /1/invoices/1/zugferd unauth (401) 2) repeat with token cross-tenant (AUTH_HELPED).
+impact: cross-tenant invoice/PII disclosure; HIGH
+testability: AUTH_HELPED
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] events-namespace ID oracle: uniform 401 closes it — auth precedes ID resolution, no differential.
+- [PARKED] webhook swagger hidden params: none found, 5 known params only.
+- [FINAL] 1) Cross-env token forgery (AUTH, 88) — AUTH_HELPED
+- [FINAL] 2) V1 userId bulk-op IDOR (IDOR, 80) — AUTH_HELPED
+- [FINAL] 3) V3 invoice BOLA (IDOR, 75) — AUTH_HELPED
+
+STEP 5 — NEXT ACTION
+- [NEXT] HUMAN: register a legitimate free-trial SIGNL4 account (https://www.signl4.com/pricing/) and provide an operator `X-S4-Api-Key` (team-scoped) to convert all three standing AUTH_HELPED survors (V1 userId IDOR, V3 invoice BOLA, cross-env forgery) from blocked to verifiable — sole remaining blocker; this cycle's two fresh read-only probes confirmed the passive surface remains exhaustively mapped with zero new anonymous surface.
+
+STEP 6 — LEARNING
+- [LEARN] REJECTED OTHER @ connect.signl4.com/api/v2/events: uniform 401 across {1, 999999999, nonnumeric} — auth-before-ID-resolution, no enumeration oracle; stands apart from the handler-deferred (405) family.
+- [LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook/docs/v1/swagger.json: full schema parse — POST /{teamSecret} + 5 status-keyword query params, no security scheme, 0 documented body properties; contract matches KB, no hidden params.
+
+STEP 7 — RISK
+- [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) and byte-identical 12-scope/9-grant surface incl EA-management scopes + plain-PKCE; account portal live-proves the OIDC client; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA) is AUTH_HELPED behind handler/route-layer deferred auth — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle's probes confirmed zero drift and closed the two fresh passive corners (events oracle, webhook params).

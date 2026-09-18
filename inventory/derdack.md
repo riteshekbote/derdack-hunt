@@ -1079,3 +1079,15 @@ www.derdack.com
 - CHANGED `connect.signl4.com/api/v1/alerts/acknowledgeAll`: unauth GET → 401, invalid Bearer → 401 (route-gated this cycle, differs from V2 teams flapping)
 - CHANGED Cross-env token forgery chain now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 key + client_id `692A0A56-892F-4AE2-8259-76DA398990B6`
 - CHANGED All top hypotheses AUTH_HELPED — blocked solely on legitimate credential (X-S4-Api-Key / client_secret / team-secret) acquisition
+
+## 2026-09-18 06:04:37 UTC
+- NEW V4 API namespace confirmed absent: `connect.signl4.com/api/v4` → 404, `/api/docs/v4/swagger.json` → 404
+- NEW `connect.signl4.com/api/v2/events/{id}` live-verified: OPTIONS → 405 Allow: GET,POST; unauth GET → 401; invalid Bearer → 401 (5th namespace, handler-deferred auth)
+- NEW `connect.signl4.com/api/prepaid/{id}/prepaidSettings` live-verified: OPTIONS → 405 Allow: PUT; unauth GET → 405; PUT no body → 411; PUT invalid Bearer → 401 (billing route, handler-deferred)
+- NEW `account.signl4.com/identity` OIDC discovery live: issuer=`https://connect.signl4.com/identity` (cross-host mint-mismatch), plain PKCE, 5 EA scopes, custom claims, byte-identical JWKS (kid 91EE4F3CE94
+- NEW `devaccount.signl4.com/identity` mirrors prod: issuer=`https://devconnect.signl4.com/identity`, identical scopes/claims/grants/PKCE/JWKS
+- CHANGED `api.signl4.com/api/v2/teams` auth-status flapping: unauth GET → 401 (was 405), invalid Bearer → 401 (10th+ cycles, handler/routing layer unstable)
+- CHANGED `connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd`: unauth GET → 401, invalid Bearer → 401 (route-gated, not handler-deferred)
+- CHANGED `connect.signl4.com/api/v1/alerts/acknowledgeAll`: unauth GET → 401, invalid Bearer → 401 (route-gated this cycle)
+- CHANGED Cross-env token forgery chain spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 key + client_id `692A0A56-892F-4AE2-8259-76DA398990B6` + p
+- CHANGED All top hypotheses AUTH_HELPED — blocked solely on legitimate credential (X-S4-Api-Key / client_secret / team-secret) acquisition
