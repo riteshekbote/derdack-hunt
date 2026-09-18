@@ -25741,3 +25741,110 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 [RISK] derdack: 91 — adds a live, non-credential-gated dangling-DNS takeover candidate (`vps.signl4.com`) under the signl4.com brand to the existing CRITICAL cross-env token-forgery chain (6 RS256-shared identity hosts, account-host mint-mismatch, password/plain-PKCE, EA mgmt scopes) and handler-deferred billing/PII BOLA routes; takeover enables phishing and parent-domain cookie attacks on the same accounts that guard the forgery chain, while the forgery/BOLA paths remain fully gated on one leaked client_secret or API key.
+===== ANALYST bigpickle 2026-09-18 20:30:47 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -s --max-time 30 "https://crt.sh/?q=%25.enterprisealert.com&output=json" | python3 -c "import sys,json; rows=json.load(sys.stdin); names=set(); [names.add(n.strip()) for r in rows for n in r['name_value'].split('\n')]; print('\n'.join(sorted(names)))" 2>/dev/null | head -60
+*.enterprisealert.com
+demo.enterprisealert.com
+downloads.enterprisealert.com
+enterprisealert.com
+www.enterprisealert.com
+[0m
+[0m$ [0mcurl -s --max-time 30 "https://crt.sh/?q=%25.derdack.com&output=json" | python3 -c "import sys,json; rows=json.load(sys.stdin); names=set(); [names.add(n.strip()) for r in rows for n in r['name_value'].split('\n')]; print('\n'.join(sorted(names)))" 2>/dev/null | head -60
+*.derdack.com
+derdack.com
+signals.derdack.com
+www.derdack.com
+[0m
+`www.enterprisealert.com` appears in CT but was never in the inventory. Checking its DNS + HTTP.
+[0m$ [0mfor h in enterprisealert.com www.enterprisealert.com; do echo "== $h =="; dig +short NS $h 2>/dev/null | head -5; dig +short A $h 2>/dev/null; dig +short CNAME $h 2>/dev/null; done
+== enterprisealert.com ==
+ns1-04.azure-dns.com.
+ns2-04.azure-dns.net.
+ns3-04.azure-dns.org.
+ns4-04.azure-dns.info.
+== www.enterprisealert.com ==
+51.4.206.217
+[0m
+[0m$ [0mcurl -s -k --max-time 15 -o /dev/null -w "www.enterprisealert.com https %{http_code} size=%{size_download} ip=%{remote_ip} ssl=%{ssl_verify_result}\n" https://www.enterprisealert.com/ ; curl -s -k --max-time 15 -o /dev/null -w "enterprisealert.com https %{http_code} size=%{size_download} ip=%{remote_ip}\n" https://enterprisealert.com/
+www.enterprisealert.com https 000 size=0 ip= ssl=0
+enterprisealert.com https 000 size=0 ip=
+[0m
+[0m$ [0mecho "== apex A =="; dig +short A enterprisealert.com; echo "== www A =="; dig +short A www.enterprisealert.com; echo "== www 80 =="; curl -s --max-time 12 -o /dev/null -w "%{http_code} ip=%{remote_ip}\n" http://www.enterprisealert.com/ ; echo "== 443 direct =="; curl -s --max-time 8 -k -o /dev/null -w "%{http_code}\n" --resolve www.enterprisealert.com:443:51.4.206.217 https://www.enterprisealert.com/ ; echo "== whois-ish rDNS =="; nslookup 51.4.206.217 2>/dev/null | tail -4
+== apex A ==
+== www A ==
+51.4.206.217
+== www 80 ==
+000 ip=
+== 443 direct ==
+000
+== whois-ish rDNS ==
+** server can't find 217.206.4.51.in-addr.arpa: NXDOMAIN
+[0m
+`www.enterprisealert.com` → 51.4.206.217 (Azure UK South, same fleet family as s4dev1-8) is TCP-dead on 80/443; apex is NS-only (no A). Inert, not dangling. Quick vps re-verify to close the cycle.
+[0m$ [0mcurl -s --max-time 12 -k -o /tmp/vps.html -w "vps https %{http_code} cert_cn=%{ssl_verify_result}\n" https://vps.signl4.com/ ; sha256sum /tmp/vps.html 2>/dev/null; grep -o "<title>[^<]*</title>" /tmp/vps.html 2>/dev/null | head -1; dig +short A vps.signl4.com
+vps https 200 cert_cn=20
+9278d16ed2fdcd5dc651615b0b8adc6b55fb667a9d106a9891b861d4561d9a24  /tmp/vps.html
+72.167.227.27
+[0m
+## 2026-09-18 23:40 UTC [bigpickle] cycle close
+
+### STEP 1 — DELTA
+- NEW `www.enterprisealert.com` (CT-only name, absent from inventory) → A `51.4.206.217` (Azure UK South, s4dev-fleet family); TCP-dead on both 80/443 (http_code 000, no RTT) — inert, not dangling (A is Derdack-owned Azure, unroutable).
+- NEW `enterprisealert.com` apex = NS-only, **no A record** (nameservers `ns1..4-04.azure-dns.*`) — no apex web asset.
+- NEW crt.sh re-sweep: enterprisealert.com set = {apex, www, demo, downloads, \*.wildcard}; derdack.com set = {signals, www, apex, \*.wildcard} — zero new names vs prior sweeps.
+- CHANGED `vps.signl4.com` dangling reconfirmed stable: 200 default page, body sha256 `9278d16ed2fd…` byte-identical to prior cycle, A=`72.167.227.27`, cert CN=server.d1g.it (unclaimed vhost).
+
+### STEP 2 — PRIORITIZE
+- [PRIO] `account.signl4.com/identity`, 7.35 (a8 b10 t9 g2 c8 f4) — 6-host shared-RS256 forgery chain, issuer mint-mismatch, EA scopes.
+- [PRIO] `connect.signl4.com/api/v3` (ZUGFeRD/billing + file-download), 6.80 (a8 b9 t7 g2 c7 f5) — BOLA surface, handler-deferred family.
+- [PRIO] `vps.signl4.com`, 6.60 (a6 b7 t3 g10 c5 f9) — only live non-credential-gated candidate, proof complete.
+
+### STEP 3 — HYPOTHESES
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`); account IdP advertises issuer=connect while minting on account host; discovery parameterics byte-identical (12 scopes incl EA mgmt, password/implicit/device/CIBA/token-exchange, plain+S256 PKCE); APIs accept any shared-key-signed token (handler-deferred auth); blocked only on client_secret/API-key.
+evidence_needed: leaked client_secret or operator X-S4-Api-Key → mint+validate cross-host token.
+verify_steps: 1) GET account/identity/.well-known/openid-configuration (parity, done) 2) POST /identity/connect/token code=test verifier=test → expect invalid_grant 3) if token: GET api.signl4.com/api/v2/teams Bearer.
+impact: EA-management-scoped tokens minted w/ connect issuer accepted by prod APIs → multi-tenant account takeover; CRITICAL.
+testability: AUTH_HELPED
+[HYP] Cross-tenant BOLA on V3 ZUGFeRD invoice download
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
+confidence: 75
+reasoning: route registered (OPTIONS Allow:GET); anon and invalid-Bearer → 401 route-gated; no visible tenant binding in path IDs; invoices carry billing+PII; sibling family flips 405↔401 across cycles.
+evidence_needed: valid token; foreign subscription/invoice id → 200 vs own-id 403/404.
+verify_steps: 1) GET own subscription/invoice Bearer baseline 2) iterate low/foreign IDs for 200 vs 403 3) replicate on devapi.
+impact: cross-tenant invoice/PII disclosure; HIGH.
+testability: AUTH_HELPED
+[HYP] Dangling DNS — vps.signl4.com A-record points at unclaimed third-party shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 70
+reasoning: GoDaddy authoritative NS (`domaincontrol.com`) → 72.167.227.27 (secureserver.net shared host); nginx cPanel default page + unrelated LE cert CN=server.d1g.it; fabricated `<rand>.signl4.com` forced to same IP returns byte-identical body (sha256 9278d16e…re-verified) proving no vhost claimed; `*.signl4.com` NXDOMAIN so no wildcard interference; state stable across ≥2 cycles.
+evidence_needed: addon/parked-domain claim ability on that shared host → attacker control under signl4.com.
+verify_steps: 1) GET https://vps.signl4.com/ → 200 default (done) 2) --resolve fake<rand>.signl4.com → byte-identical (done) 3) claim confirmation HUMAN_ONLY.
+impact: attacker content on trusted subdomain → phishing, parent-domain cookie tossing against account/connect portals, OAuth redirect_uri abuse if allowlisted; HIGH.
+testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
+
+### STEP 4 — SELF-CRITIQUE
+- [PARKED] www.enterprisealert.com: TCP-dead Azure slab (51.4.206.217), no HTTP surface — same inert class as s4dev1-8 fleet; nothing testable.
+- [PARKED] enterprisealert.com apex: NS-only — no asset.
+- [PARKED] go.signl4.com / admin.signl4.com / www.vps.signl4.com: carried inert/third-party, re-confirmed nothing.
+- [FINAL] 1) Cross-env token forgery (AUTH, 88) — strongest, AUTH_HELPED. 2) V3 ZUGFeRD BOLA (IDOR, 75) — AUTH_HELPED. 3) vps.signl4.com dangling (MISCONFIG, 70) — passive proof complete, claim HUMAN_ONLY.
+
+### STEP 5 — NEXT ACTION
+[NEXT] HUMAN: File the `vps.signl4.com` dangling-DNS finding (GoDaddy `domaincontrol.com` NS → `72.167.227.27` secureserver.net, cPanel default vhost, cert CN=server.d1g.it, fabricated-vhost byte-identical proof sha256 `9278d16e…`); request authorization to confirm claimability by adding the domain on that shared host. If approved, concurrently register a free-trial SIGNL4 account (https://www.signl4.com/pricing/) to unblock the entire AUTH_HELPED queue (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA). Passive surface remains exhausted — no new read-only probes return signal.
+
+### STEP 6 — LEARNING
+- [LEARN] ACCEPTED OTHER @ www.enterprisealert.com: A=51.4.206.217 Azure UK South, TCP-dead 80/443 — inert staging sibling, zero surface.
+- [LEARN] REJECTED OTHER @ enterprisealert.com apex: NS-only, no A — no resolvable asset.
+- [LEARN] REJECTED OTHER @ crt.sh re-sweep: enterprisealert.com + derdack.com sets unchanged (2nd consecutive stable sweep for both domains).
+- [LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: dangling reconfirmed byte-identical (sha256 9278d16e…) across cycles — stable, non-drift candidate.
+
+### STEP 7 — RISK
+[RISK] derdack: 91 — unchanged: CRITICAL cross-env token-forgery chain (6 RS256-shared identity hosts, account-host mint-mismatch, password/plain-PKCE + EA mgmt scopes) and handler-deferred billing/PII BOLA remain fully gated on one leaked client_secret/API-key; the lone credential-free finding (vps.signl4.com dangling) is stable and awaiting human claim-confirmation; this cycle added only a dead CT host (www.enterprisealert.com) and two empty CT sweeps — no risk delta.
