@@ -5095,3 +5095,51 @@ testability: AUTH_HELPED
 [LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook/{fabricated}: 404 envelope re-confirmed byte-stable — oracle remains the lone unauth differential, exploitability still leak-only
 [LEARN] REJECTED OTHER @ full estate: re-probe cycle produced zero new paths/verbs/differentials; all probes 401/404/411/405 consistent with KB — passive surface confirmed exhausted, no drift
 [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical 12-scope/9-grant surface incl EA management scopes and password/implicit/device/plain-PKCE grants; account portal live-proves client 692A0A56; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA) is handler-deferred and sits one leaked client_secret/API-key/team-secret from full multi-tenant EA/SIGNL4 compromise; this cycle's re-probes confirm zero anonymous access and no drift — risk unchanged, fully gated on credential acquisition.
+## 2026-09-18 18:04:33 UTC [target] (model bigpickle)
+[NEW] vps.signl4.com — DNS A (GoDaddy authoritative `domaincontrol.com`) → 72.167.227.27 (`27.227.167.72.host.secureserver.net`, GoDaddy shared host); HTTPS 200 nginx "Default Web Site Page" (`/cgi-sys/defaultwebpage.cgi`); TLS cert `CN=server.d1g.it`; vhost unclaimed — fabricated `fake12345xyz.signl4.com` resolved to same IP returns byte-identical body (sha256 `9278d16e…`) and same cert serial `06C736636A…` → dangling subdomain takeover candidate.
+[NEW] www.vps.signl4.com — NXDOMAIN (CT cert token only, no DNS record).
+[NEW] go.signl4.com — Cloudflare 403 `error code: 1034` (CF/origin config, no Derdack defect).
+[NEW] admin.signl4.com — 132.220.132.233 TCP timeout (inert, re-confirmed).
+[CHANGED] identity/API estate (connect/api/devconnect/devapi/account/devaccount), fix/frontdoor, derdack WP/X-RP surface — stable, zero drift vs 2026-09-18 14:44 lead.
+[PRIO] account.signl4.com/identity, 7.35 (a8 b10 t9 g2 c8 f4)
+[PRIO] connect.signl4.com/api/v3 (ZUGFeRD/billing + file-download), 6.80 (a8 b9 t7 g2 c7 f5)
+[PRIO] vps.signl4.com, 6.60 (a6 b7 t3 g10 c5 f9)
+[HYP] Dangling DNS — vps.signl4.com A-record points at unclaimed third-party shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 70
+reasoning: A=72.167.227.27 is GoDaddy shared hosting (rDNS `host.secureserver.net`); server serves cPanel default page and a Let's Encrypt cert for unrelated `CN=server.d1g.it`; a randomized signl4.com hostname forced to the same IP returns byte-identical response and identical cert serial, proving no vhost is configured for vps.signl4.com; authoritative NS = `pdns09/pdns10.domaincontrol.com` (GoDaddy), no wildcard (`*.signl4.com` NXDOMAIN).
+evidence_needed: ability to add `vps.signl4.com` as addon/parked domain on that shared server (or provider statement the hosting plan was deleted) → attacker-controlled content under signl4.com.
+verify_steps: 1) `GET https://vps.signl4.com/` → 200 default page (confirmed) 2) `curl -k --resolve fake<rand>.signl4.com:443:72.167.227.27 https://fake<rand>.signl4.com/` → sha256 equals vps body (confirmed) 3) `dig +short NS signl4.com` → domaincontrol.com (confirmed); claim/registration is HUMAN_ONLY.
+impact: attacker hosts arbitrary content on trusted signl4.com subdomain → phishing, parent-domain cookie tossing (`Domain=.signl4.com`) against account/connect portals, and potential OAuth redirect_uri abuse if vps appears in any client allowlist; HIGH.
+testability: PASSIVE for the dangling proof; HUMAN_ONLY for claim confirmation.
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts (connect/devconnect/api/devapi/account/devaccount) serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`); account IdP advertises `issuer=https://connect.signl4.com/identity`; discovery parameterics byte-identical incl 12 scopes (EA mgmt), password/device/CIBA/token-exchange grants, plain+S256 PKCE; account portal live-proves client `692A0A56-892F-4AE2-8259-76DA398990B6`; APIs accept any token signed by the shared key (handler-deferred auth).
+evidence_needed: leaked client_secret or any operator `X-S4-Api-Key`/team-secret to mint+validate a cross-host token.
+verify_steps: 1) `GET https://account.signl4.com/identity/.well-known/openid-configuration` vs connect (parity, done) 2) `POST https://account.signl4.com/identity/connect/token` authorization_code client 692A0A56… code=test verifier=test redirect=devaccount/manage → expect `invalid_grant` (AUTH_HELPED) 3) if token: `GET https://api.signl4.com/api/v2/teams` Bearer.
+impact: tokens minted by account IdP carrying EA management scope + connect issuer accepted by prod APIs → multi-tenant account takeover and Enterprise Alert control; CRITICAL.
+testability: AUTH_HELPED.
+[HYP] Cross-tenant BOLA on V3 ZUGFeRD invoice download
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
+confidence: 75
+reasoning: route registered (OPTIONS `Allow:GET`); anon and invalid-Bearer → 401; subscription/invoice path IDs with no visible tenant binding; invoices carry billing+PII; same API family has shown handler-deferred gate inconsistency across cycles.
+evidence_needed: valid token; foreign subscription/invoice id returning 200 vs own-id 403.
+verify_steps: 1) `GET /api/v3/subscriptions/{own}/invoices/{x}/zugferd` Bearer (baseline) 2) iterate foreign/low subscription+invoice IDs for 200 (BOLA) vs 403 3) replicate on devapi.
+impact: cross-tenant invoice/PII disclosure; HIGH.
+testability: AUTH_HELPED.
+[PARKED] go.signl4.com CF 403 error 1034: third-party CDN/origin config, no Derdack logic flaw.
+[PARKED] www.vps.signl4.com: NXDOMAIN — no resolvable asset.
+[PARKED] admin.signl4.com / bot.signl4.com / vps.signl4.com prior inert classifications: re-confirmed no surface beyond the new dangling record.
+[PARKED] Cross-env token forgery / V3 BOLA: already AUTH_HELPED, no new passive evidence this cycle; retained not re-scored down.
+[FINAL]
+[NEXT] HUMAN: Report the `vps.signl4.com` dangling A-record (GoDaddy `domaincontrol.com` → `72.167.227.27` secureserver.net, cPanel default vhost, cert `CN=server.d1g.it`) as a subdomain-takeover candidate and obtain authorization to confirm claimability by adding the domain on that shared host; this is a non-credential-gated HIGH finding, unlike the AUTH_HELPED queue.
+[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response proves dangling → subdomain takeover candidate.
+[LEARN] REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS).
+[LEARN] REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect.
+[LEARN] REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert.
+[LEARN] ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted.
+[RISK] derdack: 91 — adds a live, non-credential-gated dangling-DNS takeover candidate (`vps.signl4.com`) under the signl4.com brand to the existing CRITICAL cross-env token-forgery chain (6 RS256-shared identity hosts, account-host mint-mismatch, password/plain-PKCE, EA mgmt scopes) and handler-deferred billing/PII BOLA routes; takeover enables phishing and parent-domain cookie attacks on the same accounts that guard the forgery chain, while the forgery/BOLA paths remain fully gated on one leaked client_secret or API key.

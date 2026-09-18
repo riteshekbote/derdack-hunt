@@ -25489,3 +25489,255 @@ STEP 6 — LEARNING
 STEP 7 — RISK
 
 [RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical 12-scope/9-grant surface incl EA management scopes and password/implicit/device/plain-PKCE grants; account portal live-proves client 692A0A56; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA) is handler-deferred and sits one leaked client_secret/API-key/team-secret from full multi-tenant EA/SIGNL4 compromise; this cycle's re-probes confirm zero anonymous access and no drift — risk unchanged, fully gated on credential acquisition.
+===== ANALYST bigpickle 2026-09-18 18:04:45 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor h in www.vps.signl4.com vps.signl4.com bot.signl4.com; do echo "== $h =="; curl -sS -o /dev/null -w "HEAD %{http_code} %{time_total}s\n" --max-time 15 -I "https://$h/" 2>&1; done
+== www.vps.signl4.com ==
+curl: (6) Could not resolve host: www.vps.signl4.com
+HEAD 000 0.063614s
+== vps.signl4.com ==
+curl: (60) SSL: no alternative certificate subject name matches target host name 'vps.signl4.com'
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+HEAD 000 0.193375s
+== bot.signl4.com ==
+HEAD 403 0.190419s
+[0m
+[0m$ [0mecho "== vps.signl4.com insecure =="; curl -skS -o /dev/null -w "GET %{http_code} %{time_total}s\n" --max-time 15 "https://vps.signl4.com/"; echo "== cert SAN =="; echo | timeout 12 openssl s_client -connect vps.signl4.com:443 -servername vps.signl4.com 2>/dev/null | openssl x509 -noout -subject -ext subjectAltName 2>/dev/null | head -20
+== vps.signl4.com insecure ==
+GET 200 0.188721s
+== cert SAN ==
+subject=CN = server.d1g.it
+X509v3 Subject Alternative Name: 
+    DNS:server.d1g.it
+[0m
+[0m$ [0mecho "== headers =="; curl -skS -D - -o /tmp/opencode/vps_body.html --max-time 15 "https://vps.signl4.com/" | head -40; echo; echo "== body (first 1200 chars) =="; head -c 1200 /tmp/opencode/vps_body.html; echo; echo "== dns =="; getent hosts vps.signl4.com; getent hosts www.vps.signl4.com; echo "--"; getent hosts server.d1g.it
+== headers ==
+HTTP/2 200 
+server: nginx
+date: Fri, 18 Sep 2026 17:59:50 GMT
+content-type: text/html
+content-length: 163
+last-modified: Mon, 18 May 2026 15:54:49 GMT
+accept-ranges: bytes
+cache-control: no-cache, no-store, must-revalidate
+pragma: no-cache
+expires: 0
+
+
+== body (first 1200 chars) ==
+<html><head><META HTTP-EQUIV="Cache-control" CONTENT="no-cache"><META HTTP-EQUIV="refresh" CONTENT="0;URL=/cgi-sys/defaultwebpage.cgi"></head><body></body></html>
+
+== dns ==
+72.167.227.27   vps.signl4.com
+--
+72.167.227.27   server.d1g.it
+[0m
+[0m$ [0mecho "== HTTP port 80 =="; curl -sS -D - -o /tmp/opencode/vps80.html --max-time 15 "http://vps.signl4.com/" | head -25; echo "== 80 body =="; head -c 400 /tmp/opencode/vps80.html; echo; echo "== defaultwebpage =="; curl -skS -D - -o /tmp/opencode/vps_cgi.html --max-time 15 "https://vps.signl4.com/cgi-sys/defaultwebpage.cgi" | head -15; head -c 800 /tmp/opencode/vps_cgi.html; echo; echo "== dns type =="; (dig +short vps.signl4.com A 2>/dev/null || nslookup vps.signl4.com 2>/dev/null | tail -5)
+== HTTP port 80 ==
+HTTP/1.1 301 Moved Permanently
+Server: nginx
+Date: Fri, 18 Sep 2026 18:00:15 GMT
+Content-Type: text/html
+Content-Length: 162
+Connection: keep-alive
+Location: https://vps.signl4.com/
+
+== 80 body ==
+<html>
+<head><title>301 Moved Permanently</title></head>
+<body>
+<center><h1>301 Moved Permanently</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+== defaultwebpage ==
+HTTP/2 200 
+server: nginx
+date: Fri, 18 Sep 2026 18:00:15 GMT
+content-type: text/html
+vary: Accept-Encoding
+
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=1">
+    <title>Default Web Site Page</title>
+    <style type="text/css">
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 14px;
+            line-height: 1.428571429;
+            background-color: #ffffff;
+            color: #2F3230;
+            padding: 0;
+            margin: 0;
+        }
+        section, footer {
+            display: block;
+            padding: 0;
+            margin: 0;
+ 
+== dns type ==
+72.167.227.27
+[0m
+[0m$ [0mecho "== reverse dns =="; getent hosts 72.167.227.27; (dig +short -x 72.167.227.27 2>/dev/null || true); echo "== cert issuer/dates =="; echo | timeout 12 openssl s_client -connect vps.signl4.com:443 -servername vps.signl4.com 2>/dev/null | openssl x509 -noout -issuer -dates -serial 2>/dev/null; echo "== whois =="; (whois 72.167.227.27 2>/dev/null | grep -iE "orgname|org-name|netname|descr|country|cidr|org" | head -15) || echo "whois unavailable"
+== reverse dns ==
+72.167.227.27   27.227.167.72.host.secureserver.net
+27.227.167.72.host.secureserver.net.
+== cert issuer/dates ==
+issuer=C = US, O = Let's Encrypt, CN = YR2
+notBefore=Aug 22 23:48:24 2026 GMT
+notAfter=Nov 20 23:48:23 2026 GMT
+serial=06C736636A0582A583EAB1C9FC4ACE805964
+== whois ==
+[0m
+[0m$ [0mfor h in signl4.com www.signl4.com connect.signl4.com api.signl4.com account.signl4.com devconnect.signl4.com devapi.signl4.com devaccount.signl4.com fix.signl4.com frontdoor.signl4.com status.signl4.com support.signl4.com trust.signl4.com docs.signl4.com demo.enterprisealert.com downloads.enterprisealert.com vps.signl4.com bot.signl4.com go.signl4.com admin.signl4.com; do ip=$(getent hosts "$h" | awk '{print $1}' | head -1); echo "$h -> ${ip:-NXDOMAIN}"; done
+signl4.com -> 160.153.0.44
+www.signl4.com -> 160.153.0.44
+connect.signl4.com -> 20.160.37.197
+api.signl4.com -> 20.160.37.197
+account.signl4.com -> 20.160.37.197
+devconnect.signl4.com -> 108.143.123.104
+devapi.signl4.com -> 108.143.123.104
+devaccount.signl4.com -> 108.143.123.104
+fix.signl4.com -> 20.160.37.197
+frontdoor.signl4.com -> 20.106.1.32
+status.signl4.com -> 135.181.151.105
+support.signl4.com -> 216.198.54.6
+trust.signl4.com -> 2606:4700::6812:582
+docs.signl4.com -> 2606:50c0:8000::153
+demo.enterprisealert.com -> 4.207.244.99
+downloads.enterprisealert.com -> 40.71.11.142
+vps.signl4.com -> 72.167.227.27
+bot.signl4.com -> 2600:9000:21da:de00:e:3255:4040:93a1
+go.signl4.com -> 2606:2c40::c73c:67fe
+admin.signl4.com -> 132.220.132.233
+[0m
+[0m$ [0mfor h in admin.signl4.com go.signl4.com; do echo "== $h =="; curl -sS -D - -o /tmp/opencode/${h%%.*}.html -w "\nFINAL %{http_code} %{remote_ip} %{time_total}s\n" --max-time 15 -H "User-Agent: Mozilla/5.0" "https://$h/" 2>&1 | head -20; echo "-- body --"; head -c 500 /tmp/opencode/${h%%.*}.html 2>/dev/null; echo; done
+== admin.signl4.com ==
+curl: (28) Connection timed out after 15002 milliseconds
+
+FINAL 000  15.002081s
+-- body --
+
+== go.signl4.com ==
+HTTP/2 403 
+date: Fri, 18 Sep 2026 18:01:40 GMT
+content-type: text/plain; charset=UTF-8
+content-length: 17
+cache-control: private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+expires: Thu, 01 Jan 1970 00:00:01 GMT
+referrer-policy: same-origin
+x-frame-options: SAMEORIGIN
+server: cloudflare
+cf-ray: a3d241db68e51974-DFW
+
+
+FINAL 403 199.60.103.254 0.089857s
+-- body --
+error code: 1034
+[0m
+[0m$ [0mecho "== fabricated host vs vps: same default? =="; curl -skS -o /tmp/opencode/fake.html -w "fake: %{http_code} size=%{size_download}\n" --max-time 15 --resolve fake12345xyz.signl4.com:443:72.167.227.27 "https://fake12345xyz.signl4.com/"; curl -skS -o /tmp/opencode/real.html -w "vps : %{http_code} size=%{size_download}\n" --max-time 15 "https://vps.signl4.com/"; echo "sha256:"; sha256sum /tmp/opencode/fake.html /tmp/opencode/real.html; echo "== fake cert =="; echo | timeout 12 openssl s_client -connect 72.167.227.27:443 -servername fake12345xyz.signl4.com 2>/dev/null | openssl x509 -noout -subject -serial 2>/dev/null
+== fabricated host vs vps: same default? ==
+fake: 200 size=163
+vps : 200 size=163
+sha256:
+9278d16ed2fdcd5dc651615b0b8adc6b55fb667a9d106a9891b861d4561d9a24  /tmp/opencode/fake.html
+9278d16ed2fdcd5dc651615b0b8adc6b55fb667a9d106a9891b861d4561d9a24  /tmp/opencode/real.html
+== fake cert ==
+subject=CN = server.d1g.it
+serial=06C736636A0582A583EAB1C9FC4ACE805964
+[0m
+[0m$ [0mecho "== vps record type =="; dig +noall +answer vps.signl4.com ANY 2>/dev/null; dig +noall +answer CNAME vps.signl4.com 2>/dev/null; echo "== wildcard test =="; for h in zzq-random-9921.signl4.com random-abc-77.signl4.com; do printf "%s -> " "$h"; getent hosts "$h" | awk '{print $1}' | head -1; echo "${_:-NXDOMAIN}"; done; echo "== SOA/NS =="; dig +short NS signl4.com 2>/dev/null; dig +short SOA signl4.com 2>/dev/null
+== vps record type ==
+vps.signl4.com.		600	IN	A	72.167.227.27
+== wildcard test ==
+zzq-random-9921.signl4.com -> zzq-random-9921.signl4.com
+random-abc-77.signl4.com -> random-abc-77.signl4.com
+== SOA/NS ==
+pdns09.domaincontrol.com.
+pdns10.domaincontrol.com.
+pdns09.domaincontrol.com. dns.jomax.net. 2026083100 28800 7200 604800 600
+[0m
+[0m$ [0mfor h in zzq-random-9921.signl4.com random-abc-77.signl4.com; do printf "%-35s " "$h"; a=$(dig +short "$h" A 2>/dev/null); echo "${a:-NXDOMAIN}"; done; echo "== vps via NS trace =="; dig +noall +answer @pdns09.domaincontrol.com vps.signl4.com A 2>/dev/null
+zzq-random-9921.signl4.com          NXDOMAIN
+random-abc-77.signl4.com            NXDOMAIN
+== vps via NS trace ==
+vps.signl4.com.		600	IN	A	72.167.227.27
+[0m
+STEP 1 — DELTA
+[NEW] vps.signl4.com — DNS A (GoDaddy authoritative `domaincontrol.com`) → 72.167.227.27 (`27.227.167.72.host.secureserver.net`, GoDaddy shared host); HTTPS 200 nginx "Default Web Site Page" (`/cgi-sys/defaultwebpage.cgi`); TLS cert `CN=server.d1g.it`; vhost unclaimed — fabricated `fake12345xyz.signl4.com` resolved to same IP returns byte-identical body (sha256 `9278d16e…`) and same cert serial `06C736636A…` → dangling subdomain takeover candidate.
+[NEW] www.vps.signl4.com — NXDOMAIN (CT cert token only, no DNS record).
+[NEW] go.signl4.com — Cloudflare 403 `error code: 1034` (CF/origin config, no Derdack defect).
+[NEW] admin.signl4.com — 132.220.132.233 TCP timeout (inert, re-confirmed).
+[CHANGED] identity/API estate (connect/api/devconnect/devapi/account/devaccount), fix/frontdoor, derdack WP/X-RP surface — stable, zero drift vs 2026-09-18 14:44 lead.
+
+STEP 2 — PRIORITIZE
+[PRIO] account.signl4.com/identity, 7.35 (a8 b10 t9 g2 c8 f4)
+[PRIO] connect.signl4.com/api/v3 (ZUGFeRD/billing + file-download), 6.80 (a8 b9 t7 g2 c7 f5)
+[PRIO] vps.signl4.com, 6.60 (a6 b7 t3 g10 c5 f9)
+
+STEP 3 — HYPOTHESES
+[HYP] Dangling DNS — vps.signl4.com A-record points at unclaimed third-party shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 70
+reasoning: A=72.167.227.27 is GoDaddy shared hosting (rDNS `host.secureserver.net`); server serves cPanel default page and a Let's Encrypt cert for unrelated `CN=server.d1g.it`; a randomized signl4.com hostname forced to the same IP returns byte-identical response and identical cert serial, proving no vhost is configured for vps.signl4.com; authoritative NS = `pdns09/pdns10.domaincontrol.com` (GoDaddy), no wildcard (`*.signl4.com` NXDOMAIN).
+evidence_needed: ability to add `vps.signl4.com` as addon/parked domain on that shared server (or provider statement the hosting plan was deleted) → attacker-controlled content under signl4.com.
+verify_steps: 1) `GET https://vps.signl4.com/` → 200 default page (confirmed) 2) `curl -k --resolve fake<rand>.signl4.com:443:72.167.227.27 https://fake<rand>.signl4.com/` → sha256 equals vps body (confirmed) 3) `dig +short NS signl4.com` → domaincontrol.com (confirmed); claim/registration is HUMAN_ONLY.
+impact: attacker hosts arbitrary content on trusted signl4.com subdomain → phishing, parent-domain cookie tossing (`Domain=.signl4.com`) against account/connect portals, and potential OAuth redirect_uri abuse if vps appears in any client allowlist; HIGH.
+testability: PASSIVE for the dangling proof; HUMAN_ONLY for claim confirmation.
+
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts (connect/devconnect/api/devapi/account/devaccount) serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`); account IdP advertises `issuer=https://connect.signl4.com/identity`; discovery parameterics byte-identical incl 12 scopes (EA mgmt), password/device/CIBA/token-exchange grants, plain+S256 PKCE; account portal live-proves client `692A0A56-892F-4AE2-8259-76DA398990B6`; APIs accept any token signed by the shared key (handler-deferred auth).
+evidence_needed: leaked client_secret or any operator `X-S4-Api-Key`/team-secret to mint+validate a cross-host token.
+verify_steps: 1) `GET https://account.signl4.com/identity/.well-known/openid-configuration` vs connect (parity, done) 2) `POST https://account.signl4.com/identity/connect/token` authorization_code client 692A0A56… code=test verifier=test redirect=devaccount/manage → expect `invalid_grant` (AUTH_HELPED) 3) if token: `GET https://api.signl4.com/api/v2/teams` Bearer.
+impact: tokens minted by account IdP carrying EA management scope + connect issuer accepted by prod APIs → multi-tenant account takeover and Enterprise Alert control; CRITICAL.
+testability: AUTH_HELPED.
+
+[HYP] Cross-tenant BOLA on V3 ZUGFeRD invoice download
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
+confidence: 75
+reasoning: route registered (OPTIONS `Allow:GET`); anon and invalid-Bearer → 401; subscription/invoice path IDs with no visible tenant binding; invoices carry billing+PII; same API family has shown handler-deferred gate inconsistency across cycles.
+evidence_needed: valid token; foreign subscription/invoice id returning 200 vs own-id 403.
+verify_steps: 1) `GET /api/v3/subscriptions/{own}/invoices/{x}/zugferd` Bearer (baseline) 2) iterate foreign/low subscription+invoice IDs for 200 (BOLA) vs 403 3) replicate on devapi.
+impact: cross-tenant invoice/PII disclosure; HIGH.
+testability: AUTH_HELPED.
+
+STEP 4 — SELF-CRITIQUE
+[PARKED] go.signl4.com CF 403 error 1034: third-party CDN/origin config, no Derdack logic flaw.
+[PARKED] www.vps.signl4.com: NXDOMAIN — no resolvable asset.
+[PARKED] admin.signl4.com / bot.signl4.com / vps.signl4.com prior inert classifications: re-confirmed no surface beyond the new dangling record.
+[PARKED] Cross-env token forgery / V3 BOLA: already AUTH_HELPED, no new passive evidence this cycle; retained not re-scored down.
+[FINAL]
+1. vps.signl4.com dangling-DNS subdomain takeover (MISCONFIG, 70, PASSIVE→HUMAN claim)
+2. account.signl4.com/identity cross-env token forgery (AUTH, 88, AUTH_HELPED)
+3. connect.signl4.com/api/v3 ZUGFeRD invoice BOLA (IDOR, 75, AUTH_HELPED)
+
+STEP 5 — NEXT ACTION
+[NEXT] HUMAN: Report the `vps.signl4.com` dangling A-record (GoDaddy `domaincontrol.com` → `72.167.227.27` secureserver.net, cPanel default vhost, cert `CN=server.d1g.it`) as a subdomain-takeover candidate and obtain authorization to confirm claimability by adding the domain on that shared host; this is a non-credential-gated HIGH finding, unlike the AUTH_HELPED queue.
+
+STEP 6 — LEARNING
+[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response proves dangling → subdomain takeover candidate.
+[LEARN] REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS).
+[LEARN] REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect.
+[LEARN] REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert.
+[LEARN] ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted.
+
+STEP 7 — RISK
+[RISK] derdack: 91 — adds a live, non-credential-gated dangling-DNS takeover candidate (`vps.signl4.com`) under the signl4.com brand to the existing CRITICAL cross-env token-forgery chain (6 RS256-shared identity hosts, account-host mint-mismatch, password/plain-PKCE, EA mgmt scopes) and handler-deferred billing/PII BOLA routes; takeover enables phishing and parent-domain cookie attacks on the same accounts that guard the forgery chain, while the forgery/BOLA paths remain fully gated on one leaked client_secret or API key.

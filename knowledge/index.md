@@ -619,3 +619,8 @@
 - 2026-09-18 ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/*/invoices/*/zugferd: GET 401, POST 411 sink — route-gated stable, no handler-deferred flapping anomaly on this family
 - 2026-09-18 ACCEPTED AUTH @ connect.signl4.com/webhook/{fabricated}: 404 envelope re-confirmed byte-stable — oracle remains the lone unauth differential, exploitability still leak-only
 - 2026-09-18 REJECTED OTHER @ full estate: re-probe cycle produced zero new paths/verbs/differentials; all probes 401/404/411/405 consistent with KB — passive surface confirmed exhausted, no drift
+- 2026-09-18 ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response proves dangling → subdomain takeover candidate.
+- 2026-09-18 REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS).
+- 2026-09-18 REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect.
+- 2026-09-18 REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert.
+- 2026-09-18 ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted.

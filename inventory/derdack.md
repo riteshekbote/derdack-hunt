@@ -1115,3 +1115,10 @@ www.derdack.com
 - CHANGED `connect.signl4.com/api/v1/alerts/acknowledgeAll`: unauth GET 401, invalid Bearer 401 (route-gated this cycle, differs from V2 teams flapping)
 - CHANGED Cross-env token forgery chain spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 key + client_id `692A0A56-892F-4AE2-8259-76DA398990B6` + p
 - CHANGED All top hypotheses AUTH_HELPED — blocked solely on legitimate credential (X-S4-Api-Key / client_secret / team-secret) acquisition
+
+## 2026-09-18 18:04:45 UTC
+- NEW vps.signl4.com — DNS A (GoDaddy authoritative `domaincontrol.com`) → 72.167.227.27 (`27.227.167.72.host.secureserver.net`, GoDaddy shared host); HTTPS 200 nginx "Default Web Site Page" (`/cgi-sys/defa
+- NEW www.vps.signl4.com — NXDOMAIN (CT cert token only, no DNS record).
+- NEW go.signl4.com — Cloudflare 403 `error code: 1034` (CF/origin config, no Derdack defect).
+- NEW admin.signl4.com — 132.220.132.233 TCP timeout (inert, re-confirmed).
+- CHANGED identity/API estate (connect/api/devconnect/devapi/account/devaccount), fix/frontdoor, derdack WP/X-RP surface — stable, zero drift vs 2026-09-18 14:44 lead.
