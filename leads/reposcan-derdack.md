@@ -598,3 +598,5 @@ reasoning: requests.post(url + '?apiKey=' + password, ...) sends Enterprise Aler
 impact: LOW — API key exposure in logs. Standard recommendation is Authorization header.
 verify_steps: 1) Verify this script is used in production EA deployments. 2) Check EA REST API documentation for key transmission method.
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-19 06:44:35 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
