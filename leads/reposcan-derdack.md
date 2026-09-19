@@ -561,3 +561,40 @@ TARGET_ORG not configured for derdack; skipping public-org deep scan.
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
 ## REPOSCAN 2026-09-18 23:40:53 UTC
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-19 01:52:58 UTC
+[HYP] Hardcoded Checkmk admin credentials with internal IP leak
+class: SECRET
+asset: Derdack/derdack-plugin-checkmk/2-way/Main.js:90-94
+confidence: 95
+reasoning: var username = "cmkadmin"; var password = "CNlydVqZ"; var serverURL = "http://192.168.88.107:8080/cmk/check_mk/api/v0/"; Credentials are real-looking (not placeholder), used in Authorization header on lines 317, 360. Internal RFC1918 IP 192.168.88.107 leaked.
+impact: HIGH — Exposed admin creds to Checkmk monitoring system; internal network topology disclosed. If Checkmk instance is internet-accessible or creds reused, full monitoring compromise.
+verify_steps: 1) Check if 192.168.88.107:8080 is accessible externally. 2) Confirm password "CNlydVqZ" still valid for cmkadmin. 3) Check git history for when this was committed (may be stale demo but pattern indicates real deployment).
+[HYP] Hardcoded SIGNL4 team secret in Google IoT integration
+class: SECRET
+asset: signl4/signl4-integration-google-iot/index.js:19
+confidence: 85
+reasoning: request.post('https://connect.signl4.com/webhook/96sbq38s', ...). Team secret "96sbq38s" appears in 2 files (index.js and signl4-alert-v100.node:148). Not a placeholder — real webhook secret committed to public repo.
+impact: HIGH — Anyone with this secret can send spoofed alerts to the SIGNL4 team or potentially read team data depending on API scope.
+verify_steps: 1) POST a test payload to https://connect.signl4.com/webhook/96sbq38s and check if alert is received. 2) Verify team still exists in SIGNL4.
+[HYP] eval() on untrusted callback strings — code injection vector
+class: OTHER
+asset: Derdack/derdack-plugin-checkmk/2-way/Main.js:52-68 (and 3 other Main.js files)
+confidence: 75
+reasoning: Four eval() calls on appContext.state.callbackSaveState, callbackSetStatusError, callbackSetStatusOK, callbackSendMail — all from EA framework context objects. Pattern is identical across derdack-2wayREST-samples (Logic Monitor, zendesk, Dynatrace) and derdack-plugin-checkmk. If appContext is attacker-influenced (e.g. via malicious EA plugin config), arbitrary code execution is possible.
+impact: MEDIUM — Requires control over Enterprise Alert plugin configuration. Could lead to full server-side code execution in EA scripting host context.
+verify_steps: 1) Confirm EA scripting host uses Node.js eval semantics. 2) Check if appContext callbacks can be externally influenced. 3) Test if a malicious EA REST source config can inject JS.
+[HYP] SSRF via weak redirect validation in Jira integration
+class: SSRF
+asset: signl4/signl4-integration-jira/jira.php:12-16
+confidence: 70
+reasoning: strpos("connect.signl4.com", $sValue) == 0 checks if $sValue is a substring of "connect.signl4.com" starting at position 0. This passes for $sValue = "c", "co", "connect", etc. curl_init($sSignlUrl) is then called with this user-controlled URL. An attacker can set redirect=connect.evil.com and the check passes (strpos returns false which is not == 0, but redirect=connect passes).
+impact: MEDIUM — Requires PHP deployment. Could allow outbound HTTP requests from the Jira-integrated server to attacker-controlled endpoints.
+verify_steps: 1) Deploy jira.php on a PHP server. 2) Send request with redirect=http://attacker.com/test. 3) Verify if strpos logic allows bypass.
+[HYP] API key passed in URL query parameter
+class: MISCONFIG
+asset: Derdack/derdack-plugin-checkmk/notifications/derdack:104,114
+confidence: 90
+reasoning: requests.post(url + '?apiKey=' + password, ...) sends Enterprise Alert REST API key as URL query parameter. Query parameters are logged in server access logs, proxy logs, browser history, and potentially in analytics tools.
+impact: LOW — API key exposure in logs. Standard recommendation is Authorization header.
+verify_steps: 1) Verify this script is used in production EA deployments. 2) Check EA REST API documentation for key transmission method.
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
