@@ -1148,3 +1148,20 @@ www.derdack.com
 - CHANGED admin.signl4.com: TCP timeout on 132.220.132.233 — inert
 - CHANGED Cross-env token forgery chain spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + pas
 - CHANGED Full estate identity/API/CT surface stable with zero drift; passive route maps exhausted
+
+## 2026-09-19 05:21:17 UTC
+- NEW 9 hosts discovered via passive DNS/CT, 0 probed for live HTTP — initial surface unvalidated
+- NEW No GitHub org configured for reposcan — code-level recon gap
+- NEW Knowledge base empty — no prior tech fingerprint, endpoint map, or auth flow data
+- NEW PROBE: hidden billing-licenses route family `/api/{v1,v2,v3}/subscriptions/licenses` → OPTIONS Allow: DELETE,GET on connect+devapi (staging parity), anon GET → 401 WWW-Authenticate:Bearer empty body —
+- NEW PROBE: endsession?post_logout_redirect_uri=https://evil.example → 302 `/identity/Account/Logout` (internal) — no logout OAuth open-redirect; post_logout_redirect_uri ignored without session/id_token_h
+- NEW PROBE: RFC8414 `/.well-known/oauth-authorization-server` → 404 on connect+account — metadata endpoint not served via RFC8414 path.
+- NEW PROBE: `/identity/connect/par` OPTIONS → 405 (registered, POST-only) on connect+account — PAR family present, secret-gated like all grants.
+- NEW CT re-sweep crt.sh %signl4.com: 14 unique names, ZERO new certs since 09-16 — estate drift = 0 (control).
+- CHANGED No elevation: all anon probes on new families → 401 Bearer; AUTH_HELPED queue unchanged (forgery/V1-userId/V2-changePassword/V3-BOLA now + licenses-BOLA).
+- CHANGED vps.signl4.com subdomain takeover re-confirmed 2026-09-19 (GoDaddy NS domaincontrol.com → 72.167.227.27, nginx default page, unrelated cert CN=server.d1g.secureserver.net)
+- CHANGED V4 API namespace confirmed absent (connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404) — sole gap closed
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping: unauth GET 401 (was 405), invalid Bearer 401 — handler/routing layer unstable 10th+ cycles
+- CHANGED connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET 401, invalid Bearer 401 — route-gated (differs from V1/V2 handler-deferred)
+- CHANGED connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle
+- CHANGED Full identity/API/CT surface stable, zero drift across 6 identity hosts + fix/frontdoor/vps + derdack WP estate

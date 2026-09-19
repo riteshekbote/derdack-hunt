@@ -1,14 +1,10 @@
-## 2026-09-19 00:50:58 UTC [target] (model nemotron3)
-[NEW] vps.signl4.com dangling A-record confirmed: GoDaddy authoritative NS (domaincontrol.com) → 72.167.227.27 (secureserver.net shared host); HTTPS 200 nginx "Default Web Site Page" with cert CN=server.d1g.secureserver.net; fabricated-host test returns byte-identical response proving no vhost config — classic subdomain takeover vector (CRITICAL, PASSIVE)
-[NEW] V4 API namespace confirmed absent: connect.signl4.com/api/v4 → 404, /api/docs/v4/swagger.json → 404 — sole unprobed namespace gap closed
-[CHANGED] api.signl4.com/api/v2/teams auth-status flapping re-confirmed 10th+ cycles: unauth GET → 401 (was 405 prior cycle), invalid Bearer → 401 — handler/routing auth layer unstable across cycles
-[CHANGED] connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET → 401, invalid Bearer → 401 — route-gated this cycle (differs from V1/V2 handler-deferred pattern)
-[CHANGED] connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET → 401, invalid Bearer → 401 — route-gated this cycle (differs from V2 teams flapping)
-[CHANGED] www.vps.signl4.com: NXDOMAIN (CT cert token only, no DNS record)
-[CHANGED] go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN config, not Derdack defect
-[CHANGED] admin.signl4.com: TCP timeout on 132.220.132.233 — inert
-[CHANGED] Cross-env token forgery chain spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
-[CHANGED] Full estate identity/API/CT surface stable with zero drift; passive route maps exhausted
+## 2026-09-19 05:20:54 UTC [target] (model nemotron3)
+[CHANGED] vps.signl4.com subdomain takeover re-confirmed 2026-09-19 (GoDaddy NS domaincontrol.com → 72.167.227.27, nginx default page, unrelated cert CN=server.d1g.secureserver.net)
+[CHANGED] V4 API namespace confirmed absent (connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404) — sole gap closed
+[CHANGED] api.signl4.com/api/v2/teams auth-status flapping: unauth GET 401 (was 405), invalid Bearer 401 — handler/routing layer unstable 10th+ cycles
+[CHANGED] connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET 401, invalid Bearer 401 — route-gated (differs from V1/V2 handler-deferred)
+[CHANGED] connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle
+[CHANGED] Full identity/API/CT surface stable, zero drift across 6 identity hosts + fix/frontdoor/vps + derdack WP estate
 [PRIO] vps.signl4.com,9.5,a=10 b=8 t=10 g=10 c=10 f=10
 [PRIO] account.signl4.com/identity/connect/token,8.8,a=10 b=10 t=10 g=2 c=10 f=8
 [PRIO] connect.signl4.com/api/v1/alerts/acknowledgeAll,8.0,a=9 b=9 t=9 g=2 c=9 f=8
@@ -23,10 +19,10 @@
 class: MISCONFIG
 asset: vps.signl4.com
 confidence: 95
-reasoning: DNS A-record resolves to 72.167.227.27 (GoDaddy shared hosting `secureserver.net`), serves default nginx "Default Web Site Page" with unrelated certificate `CN=server.d1g.secureserver.net`; fabricated-host test returns byte-identical response proving no virtual-host configuration — classic unclaimed subdomain on shared provider
-evidence_needed: Confirm GoDaddy account can claim `vps.signl4.com` via standard shared-hosting onboarding; verify no Derdack-owned content serves on this host
-verify_steps: 1) GET https://vps.signl4.com/ (confirm 200, default page, unrelated cert) 2) GET http://vps.signl4.com/ (confirm HTTP also serves default page) 3) Check DNS history: `dig vps.signl4.com @ns1.domaincontrol.com` (confirm authoritative GoDaddy NS) 4) Attempt to register `vps.signl4.com` on GoDaddy shared hosting (passive: verify "domain already exists" or claimable)
-impact: Full subdomain takeover — attacker serves arbitrary content under `vps.signl4.com` (Derdack brand), enabling phishing, credential harvesting, OAuth redirect_uri abuse, CSP bypass via trusted subdomain; severity CRITICAL
+reasoning: DNS A-record resolves to 72.167.227.27 (GoDaddy shared hosting secureserver.net), serves default nginx "Default Web Site Page" with unrelated certificate CN=server.d1g.secureserver.net; fabricated-host test returns byte-identical response proving no virtual-host configuration — classic unclaimed subdomain on shared provider
+evidence_needed: Confirm GoDaddy account can claim vps.signl4.com via standard shared-hosting onboarding; verify no Derdack-owned content serves on this host
+verify_steps: 1) GET https://vps.signl4.com/ (confirm 200, default page, unrelated cert) 2) GET http://vps.signl4.com/ (confirm HTTP also serves default page) 3) Check DNS history: dig vps.signl4.com @ns1.domaincontrol.com (confirm authoritative GoDaddy NS) 4) Attempt to register vps.signl4.com on GoDaddy shared hosting (passive: verify "domain already exists" or claimable)
+impact: Full subdomain takeover — attacker serves arbitrary content under vps.signl4.com (Derdack brand), enabling phishing, credential harvesting, OAuth redirect_uri abuse, CSP bypass via trusted subdomain; severity CRITICAL
 testability: PASSIVE
 [HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
 class: AUTH

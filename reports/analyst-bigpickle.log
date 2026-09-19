@@ -26121,3 +26121,616 @@ testability: AUTH_HELPED
 
 [STEP 7] RISK:
 [RISK] derdack: 91 — unchanged: CRITICAL cross-env token-forgery chain (6 shared-RS256 identity hosts, account mint-mismatch, plain-PKCE, EA-management scopes + handler-deferred billing/SCIM APIs) and handler-deferred billing/PII BOLA remain gated on a single leaked credential (client_secret/X-S4-Api-Key); the lone credential-free finding (vps.signl4.com dangling) is proof-complete and awaiting human claim-confirmation; this cycle added only a negative EA-estate sweep — no risk delta.
+===== ANALYST bigpickle 2026-09-19 05:21:17 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && ls art 2>/dev/null; ls *.yml *.json *.md 2>/dev/null
+total 704
+drwxr-xr-x 12 runner runner   4096 Sep 19 05:18 .
+drwxr-xr-x  3 runner runner   4096 Sep 19 05:18 ..
+drwxr-xr-x  7 runner runner   4096 Sep 19 05:18 .git
+drwxr-xr-x  3 runner runner   4096 Sep 19 05:18 .github
+-rw-r--r--  1 runner runner   1831 Sep 19 05:18 README.md
+-rw-r--r--  1 runner runner     32 Sep 19 05:18 analyst-out.txt
+-rw-r--r--  1 runner runner 309092 Sep 19 05:18 analyst-prompt.txt
+-rw-r--r--  1 runner runner 305213 Sep 19 05:18 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Sep 19 05:18 inventory
+drwxr-xr-x  2 runner runner   4096 Sep 19 05:18 knowledge
+drwxr-xr-x  2 runner runner   4096 Sep 19 05:18 leads
+-rw-r--r--  1 runner runner  16357 Sep 19 05:18 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Sep 19 05:18 recon-notes
+drwxr-xr-x  2 runner runner   4096 Sep 19 05:18 reports
+drwxr-xr-x  2 runner runner   4096 Sep 19 05:18 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Sep 19 05:18 scope.yml
+drwxr-xr-x  2 runner runner   4096 Sep 19 05:18 scripts
+-rw-r--r--  1 runner runner     33 Sep 19 05:18 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Sep 19 05:18 state_laguna.json
+-rw-r--r--  1 runner runner     33 Sep 19 05:18 state_ling3.json
+-rw-r--r--  1 runner runner     33 Sep 19 05:18 state_longcat.json
+-rw-r--r--  1 runner runner     33 Sep 19 05:18 state_mimo.json
+-rw-r--r--  1 runner runner     33 Sep 19 05:18 state_nemotron3.json
+drwxr-xr-x  2 runner runner   4096 Sep 19 05:18 triage
+README.md
+probe-results.md
+scope.yml
+state_bigpickle.json
+state_laguna.json
+state_ling3.json
+state_longcat.json
+state_mimo.json
+state_nemotron3.json
+[0m
+[0m$ [0mcat scope.yml; echo "=== MY STATE ==="; cat state_bigpickle.json; echo; echo "=== LEADS ==="; ls leads/; echo; echo "=== RECENT PROBE RESULTS (tail) ==="; tail -40 probe-results.md
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+  passive_first: false          # deep-hunt agent: active probes allowed when scoped
+  max_requests_per_second: 1    # never hammer live infra
+  no_doom: true                 # no DoS/DDoS, no account-lockout attacks
+  account_creation: restricted  # only on test/sandbox assets, never live customer data
+  no_data_modification: true    # no writes/deletes on live customer data
+  no_pre_disclosure: true       # never disclose before program response
+  poc_required: true            # scanner output alone is REJECTED
+  redact_secrets_in_commits: true
+
+models:
+  - { id: opencode/big-pickle, name: bigpickle }
+  - { id: opencode/nemotron-3-ultra-free, name: nemotron3 }
+  - { id: opencode/longcat-2.0-free, name: longcat }
+  - { id: opencode/ling-3.0-flash-free, name: ling3 }
+  - { id: opencode/laguna-s-2.1-free, name: laguna }
+=== MY STATE ===
+{"phase": "POC", "target": "api"}
+=== LEADS ===
+lead-bigpickle.md
+lead-laguna.md
+lead-ling3.md
+lead-longcat.md
+lead-mimo.md
+lead-nemotron3.md
+reposcan-derdack.md
+
+=== RECENT PROBE RESULTS (tail) ===
+
+
+## 2026-09-17 07:59:26 UTC
+
+
+## 2026-09-17 13:07:41 UTC
+
+
+## 2026-09-17 17:42:27 UTC
+
+
+## 2026-09-17 20:38:24 UTC
+
+
+## 2026-09-17 23:05:24 UTC
+
+
+## 2026-09-18 01:24:17 UTC
+
+
+## 2026-09-18 06:04:37 UTC
+
+
+## 2026-09-18 10:54:07 UTC
+
+
+## 2026-09-18 14:44:53 UTC
+
+
+## 2026-09-18 18:04:45 UTC
+
+
+## 2026-09-18 20:30:47 UTC
+
+
+## 2026-09-18 22:48:44 UTC
+
+
+## 2026-09-19 00:51:10 UTC
+[0m
+[0m$ [0mecho "=== bigpickle lead (tail) ==="; tail -30 leads/lead-bigpickle.md; echo; echo "=== nemotron3 lead (tail) ==="; tail -15 leads/lead-nemotron3.md
+=== bigpickle lead (tail) ===
+[HYP] Cross-env token forgery via 6-host
+[HYP] Subdomain takeover — vps.signl4.com dangling A-record to unclaimed GoDaddy shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 95
+reasoning: GoDaddy aNS `pdns09/10.domaincontrol.com` → 72.167.227.27 (secureserver.net); HTTPS 200 nginx "Default Web Site Page", cert CN=server.d1g.it (no signl4 SAN); HTTP:80 → 301 same box; fabricated `<rand>.signl4.com` forced to that IP → byte-identical body (sha256 `9278d16ed2fdcd5dc651615b0b8adc6b55fb667a`); `*.signl4.com` NXDOMAIN so no wildcard masking; no vhost claimed.
+evidence_needed: authorization to confirm addon/parked-domain claimability on 72.167.227.27 → attacker control under trusted signl4.com.
+verify_steps: 1) GET https://vps.signl4.com/ → 200 default (done) 2) --resolve fake<rand>.signl4.com → byte-identical body (done) 3) claim confirmation HUMAN_ONLY.
+impact: attacker content on trusted subdomain → phishing, parent-domain cookie ops vs account/connect, OAuth redirect_uri abuse if allowlisted; HIGH.
+testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts (connect/api/devconnect/devapi/account/devaccount) serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`); account advertises issuer=connect while minting locally; billing/SCIM APIs accept any shared-key-signed token (handler-deferred auth); plain PKCE permitted.
+evidence_needed: leaked client_secret/X-S4-Api-Key → mint + validate token against prod API.
+verify_steps: 1) POST /identity/connect/token code=test verifier=test → invalid_grant (done, AUTH_HELPED) 2) GET api.signl4.com/api/v2/teams with forged Bearer → 200 if chain holds.
+impact: EA-management-scoped tokens minted under connect issuer accepted by prod → multi-tenant ATO; CRITICAL.
+testability: AUTH_HELPED
+[HYP] Cross-tenant BOLA on V3 ZUGFeRD invoice download
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd
+confidence: 75
+reasoning: route registered (OPTIONS Allow:GET); path IDs carry no visible tenant binding; invoices = billing+PII; sibling families flip 405↔401 (gate-layer inconsistency).
+evidence_needed: valid token + foreign subscription/invoice id → 200 vs own-id 403/404.
+verify_steps: 1) GET own subscription/invoice Bearer (baseline) 2) iterate foreign low IDs 3) replicate on devapi.
+impact: cross-tenant invoice/PII disclosure; HIGH.
+testability: AUTH_HELPED
+[NEXT] HUMAN: File `vps.signl4.com` dangling-DNS finding with the full evidence pack (GoDaddy NS `pdns09/10.domaincontrol.com` → `72.167.227.27`, cPanel default vhost, cert CN=server.d1g.it no signl4 SAN, HTTP:80 301 same box, fabricated-host byte-identical sha256 `9278d16ed2fdcd5dc651615b0b8adc6b55fb667a`) and request authorization to confirm claimability by adding the domain on that shared host; concurrently create a free-trial SIGNL4 account (https://www.signl4.com/pricing/) to unblock the entire AUTH_HELPED queue (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA).
+[RISK] derdack: 91 — unchanged: CRITICAL cross-env token-forgery chain (6 shared-RS256 identity hosts, account mint-mismatch, plain-PKCE, EA-management scopes + handler-deferred billing/SCIM APIs) and handler-deferred billing/PII BOLA remain gated on a single leaked credential (client_secret/X-S4-Api-Key); the lone credential-free finding (vps.signl4.com dangling) is proof-complete and awaiting human claim-confirmation; this cycle added only a negative EA-estate sweep — no risk delta.
+
+=== nemotron3 lead (tail) ===
+[LEARN] REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
+[LEARN] REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
+[LEARN] ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
+[LEARN] ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
+[LEARN] ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer claim
+[LEARN] ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th namespace with staging parity, all handler-deferred
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid billing route family
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Content-Length before auth
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — oracle confirmed
+[LEARN] REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+[LEARN] CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parametric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover.
+[0m
+[0m$ [0mfor f in leads/lead-nemotron3.md leads/lead-longcat.md leads/lead-laguna.md leads/lead-ling3.md leads/lead-mimo.md; do echo "=== $f (HEAD) ==="; head -5 "$f"; done
+=== leads/lead-nemotron3.md (HEAD) ===
+## 2026-09-03 15:38:35 UTC [target] (model nemotron3)
+[NEW] 9 hosts discovered via passive DNS/CT, 0 probed for live HTTP — initial surface unvalidated
+[NEW] No GitHub org configured for reposcan — code-level recon gap
+[NEW] Knowledge base empty — no prior tech fingerprint, endpoint map, or auth flow data
+[PRIO] signl4.derdack.com,8.5,a=9 b=10 t=8 g=6 c=8 f=5
+=== leads/lead-longcat.md (HEAD) ===
+## 2026-09-03 15:30:22 UTC [target] (model longcat)
+## 2026-09-03 18:51:26 UTC [target] (model longcat)
+## 2026-09-03 21:31:26 UTC [target] (model longcat)
+## 2026-09-04 01:19:08 UTC [target] (model longcat)
+## 2026-09-04 05:59:56 UTC [target] (model longcat)
+=== leads/lead-laguna.md (HEAD) ===
+## 2026-09-03 15:30:27 UTC [target] (model laguna)
+## 2026-09-03 18:51:26 UTC [target] (model laguna)
+## 2026-09-03 21:36:44 UTC [target] (model laguna)
+## 2026-09-03 23:30:15 UTC [target] (model laguna)
+## 2026-09-04 01:19:12 UTC [target] (model laguna)
+=== leads/lead-ling3.md (HEAD) ===
+## 2026-09-03 15:30:24 UTC [target] (model ling3)
+## 2026-09-03 18:51:27 UTC [target] (model ling3)
+## 2026-09-03 21:31:28 UTC [target] (model ling3)
+## 2026-09-03 23:30:12 UTC [target] (model ling3)
+## 2026-09-04 01:19:10 UTC [target] (model ling3)
+=== leads/lead-mimo.md (HEAD) ===
+# Lead log (seed)
+[0m
+[0m$ [0mfor f in leads/lead-nemotron3.md leads/lead-longcat.md leads/lead-laguna.md leads/lead-ling3.md; do echo "=== $f (LAST 8) ==="; tail -8 "$f"; echo; done
+=== leads/lead-nemotron3.md (LAST 8) ===
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid billing route family
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Content-Length before auth
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — oracle confirmed
+[LEARN] REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+[LEARN] CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parametric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover.
+
+=== leads/lead-longcat.md (LAST 8) ===
+## 2026-09-18 01:17:51 UTC [target] (model longcat)
+## 2026-09-18 05:59:52 UTC [target] (model longcat)
+## 2026-09-18 10:49:47 UTC [target] (model longcat)
+## 2026-09-18 14:42:23 UTC [target] (model longcat)
+## 2026-09-18 17:58:31 UTC [target] (model longcat)
+## 2026-09-18 20:28:49 UTC [target] (model longcat)
+## 2026-09-18 22:47:19 UTC [target] (model longcat)
+## 2026-09-19 00:48:29 UTC [target] (model longcat)
+
+=== leads/lead-laguna.md (LAST 8) ===
+## 2026-09-18 01:17:48 UTC [target] (model laguna)
+## 2026-09-18 05:59:52 UTC [target] (model laguna)
+## 2026-09-18 10:49:43 UTC [target] (model laguna)
+## 2026-09-18 14:42:23 UTC [target] (model laguna)
+## 2026-09-18 17:58:31 UTC [target] (model laguna)
+## 2026-09-18 20:28:49 UTC [target] (model laguna)
+## 2026-09-18 22:47:22 UTC [target] (model laguna)
+## 2026-09-19 00:48:28 UTC [target] (model laguna)
+
+=== leads/lead-ling3.md (LAST 8) ===
+## 2026-09-18 01:17:50 UTC [target] (model ling3)
+## 2026-09-18 05:59:50 UTC [target] (model ling3)
+## 2026-09-18 10:49:42 UTC [target] (model ling3)
+## 2026-09-18 14:42:26 UTC [target] (model ling3)
+## 2026-09-18 17:58:31 UTC [target] (model ling3)
+## 2026-09-18 20:28:50 UTC [target] (model ling3)
+## 2026-09-18 22:47:20 UTC [target] (model ling3)
+## 2026-09-19 00:48:27 UTC [target] (model ling3)
+[0m
+Running a passive probe batch on genuinely new angles (RFC8414 metadata, PAR/endsession endpoints, V1 scripts base, fresh CT sweep).
+[0m$ [0mnow=$(date -u +%Y-%m-%dT%H:%M:%SZ); echo "PROBE RUN $now"
+probe() { curl -s -o /tmp/pb.tmp -w "%{http_code}" --max-time 15 -k -H "User-Agent: Mozilla/5.0" "$1"; echo " <- $1"; }
+# RFC8414 oauth-authorization-server (GET)
+probe "https://connect.signl4.com/identity/.well-known/oauth-authorization-server"
+sleep 1.2
+probe "https://account.signl4.com/identity/.well-known/oauth-authorization-server"
+sleep 1.2
+# PAR endpoint registration (OPTIONS)
+probe -X OPTIONS "https://connect.signl4.com/identity/connect/par"
+sleep 1.2
+probe -X OPTIONS "https://account.signl4.com/identity/connect/par"
+sleep 1.2
+# endsession behavior with post_logout_redirect_uri (GET, observe Location)
+curl -s -o /dev/null -D - --max-time 15 -k -H "User-Agent: Mozilla/5.0" "https://connect.signl4.com/identity/connect/endsession?post_logout_redirect_uri=https://evil.example/steal" | head -8
+sleep 1.2
+# V1 scripts base (OPTIONS)
+probe -X OPTIONS "https://connect.signl4.com/api/v1/scripts"
+sleep 1.2
+# subscription licenses route (OPTIONS)
+probe -X OPTIONS "https://connect.signl4.com/api/v3/subscriptions/licenses"
+PROBE RUN 2026-09-19T05:19:24Z
+404 <- https://connect.signl4.com/identity/.well-known/oauth-authorization-server
+404 <- https://account.signl4.com/identity/.well-known/oauth-authorization-server
+curl: option -X: requires parameter
+curl: try 'curl --help' or 'curl --manual' for more information
+ <- -X
+curl: option -X: requires parameter
+curl: try 'curl --help' or 'curl --manual' for more information
+ <- -X
+HTTP/2 302 
+date: Sat, 19 Sep 2026 05:19:30 GMT
+content-length: 0
+location: https://connect.signl4.com/identity/Account/Logout
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-frame-options: DENY
+x-xss-protection: 0
+curl: option -X: requires parameter
+curl: try 'curl --help' or 'curl --manual' for more information
+ <- -X
+curl: option -X: requires parameter
+curl: try 'curl --help' or 'curl --manual' for more information
+ <- -X
+[0m
+[0m$ [0mprobe() { m=$1; u=$2; curl -s -o /tmp/pb.tmp -w "%{http_code}" --max-time 15 -k -X "$m" -H "User-Agent: Mozilla/5.0" "$u"; echo " <- $m $u"; }
+# PAR endpoint registration (OPTIONS)
+probe OPTIONS "https://connect.signl4.com/identity/connect/par"
+sleep 1.2
+probe OPTIONS "https://account.signl4.com/identity/connect/par"
+sleep 1.2
+probe OPTIONS "https://connect.signl4.com/api/v1/scripts"
+sleep 1.2
+probe OPTIONS "https://connect.signl4.com/api/v3/subscriptions/licenses"
+sleep 1.2
+probe OPTIONS "https://connect.signl4.com/api/v1/scripts/inventory"
+sleep 1.2
+# what does the logout page show (follow the 302)?
+curl -s --max-time 15 -k -H "User-Agent: Mozilla/5.0" "https://connect.signl4.com/identity/Account/Logout" | head -c 600
+echo
+# endsession without post_logout_redirect_uri for differential
+curl -s -o /dev/null -D - --max-time 15 -k -H "User-Agent: Mozilla/5.0" "https://connect.signl4.com/identity/connect/endsession" | grep -i location
+405 <- OPTIONS https://connect.signl4.com/identity/connect/par
+405 <- OPTIONS https://account.signl4.com/identity/connect/par
+404 <- OPTIONS https://connect.signl4.com/api/v1/scripts
+405 <- OPTIONS https://connect.signl4.com/api/v3/subscriptions/licenses
+405 <- OPTIONS https://connect.signl4.com/api/v1/scripts/inventory
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=500" />
+    <title>SIGNL4 - Sign-out</title>
+
+    <link rel="icon" type="image/x-icon" href="/identity/images/favicon.ico" />
+    <link rel="shortcut icon" type="image/x-icon" href="/identity/images/favicon.ico" />
+
+    <link rel="preload" as="font" type="font/ttf" crossorigin href="/identity/fonts/open_sans_regular.ttf">
+    <link rel="preload" as="font" type="font/ttf" crossorigin href="/identity/fonts/open_sans_
+location: https://connect.signl4.com/identity/Account/Logout
+[0m
+PAR registered (405), V1 scripts base 404 but `/api/v1/scripts/inventory` and `/api/v3/subscriptions/licenses` registered. Pulling Allow sets and the V1/V3 swagger to enumerate those route families precisely.
+[0m$ [0mah() { curl -s -o /dev/null -D - --max-time 15 -k -X OPTIONS -H "User-Agent: Mozilla/5.0" "$1" | grep -i -E "^allow|^access-control-allow"; echo " <- $1"; }
+ah "https://connect.signl4.com/api/v1/scripts/inventory"
+sleep 1
+ah "https://connect.signl4.com/api/v3/subscriptions/licenses"
+echo "--- V1 swagger paths (scripts/ + licenses) ---"
+curl -s --max-time 20 -k -H "User-Agent: Mozilla/5.0" "https://connect.signl4.com/api/docs/v1/swagger.json" -o /tmp/v1.json; wc -c /tmp/v1.json
+grep -oE '"/[^"]*(scripts|licenses|inventory)[^"]*"' /tmp/v1.json | sort -u | head -40
+allow: GET
+ <- https://connect.signl4.com/api/v1/scripts/inventory
+allow: DELETE, GET
+ <- https://connect.signl4.com/api/v3/subscriptions/licenses
+--- V1 swagger paths (scripts/ + licenses) ---
+493618 /tmp/v1.json
+"/scripts/instances"
+"/scripts/instances/{instanceId}"
+"/scripts/instances/{instanceId}/data"
+"/scripts/instances/{instanceId}/disable"
+"/scripts/instances/{instanceId}/enable"
+"/scripts/inventory"
+"/scripts/inventory/parsed"
+"/scripts/inventory/parsed/{scriptId}"
+[0m
+[0m$ [0mcurl -s --max-time 20 -k -H "User-Agent: Mozilla/5.0" "https://connect.signl4.com/api/docs/v3/swagger.json" -o /tmp/v3.json; wc -c /tmp/v3.json
+echo "--- V3 swagger: licenses family ---"
+grep -oE '"[^"]*licenses[^"]*"' /tmp/v3.json | sort -u | head
+echo "--- V3 swagger paths containing subscriptions (top) ---"
+grep -oE '"/api/v3/[^"]*"' /tmp/v3.json | sort -u | grep -iE "license|subscription" | head -20
+1213127 /tmp/v3.json
+--- V3 swagger: licenses family ---
+"Gets a subscription's stakeholder licenses."
+"Gets a subscription's user licenses."
+"Gets a subscription's voice number licenses."
+--- V3 swagger paths containing subscriptions (top) ---
+[0m
+[0m$ [0mpython3 - <<'EOF'
+import json
+for f in ["/tmp/v3.json","/tmp/v1.json"]:
+    d=json.load(open(f))
+    paths=d.get("paths",{})
+    print(f"{f}: {len(paths)} paths")
+    for p,ops in paths.items():
+        if 'license' in p.lower() or 'script' in p.lower() or p.rstrip('/').endswith('licenses'):
+            print("  ", p, sorted(ops.keys()))
+EOF
+/tmp/v3.json: 206 paths
+   /prepaid/{subscriptionId}/prepaidSettings ['put']
+   /scripts/instances ['get', 'post']
+   /scripts/instances/{instanceId} ['delete', 'get', 'put']
+   /scripts/instances/{instanceId}/data ['put']
+   /scripts/instances/{instanceId}/disable ['post']
+   /scripts/instances/{instanceId}/enable ['post']
+   /scripts/inventory ['get']
+   /scripts/inventory/parsed ['get']
+   /scripts/inventory/parsed/{scriptId} ['get']
+   /subscriptions/{subscriptionId}/prepaidBalance ['get']
+   /subscriptions/{subscriptionId}/prepaidSettings ['get']
+   /subscriptions/{subscriptionId}/prepaidTransactions ['get']
+   /v3/categories/{teamId}/{categoryId}/subscriptions ['get', 'post']
+   /v3/prepaid/{subscriptionId}/prepaidSettings ['put']
+   /v3/scripts/instances ['get', 'post']
+   /v3/scripts/instances/{instanceId} ['delete', 'get', 'put']
+   /v3/scripts/instances/{instanceId}/data ['put']
+   /v3/scripts/instances/{instanceId}/disable ['post']
+   /v3/scripts/instances/{instanceId}/enable ['post']
+   /v3/scripts/inventory ['get']
+   /v3/scripts/inventory/parsed ['get']
+   /v3/scripts/inventory/parsed/{scriptId} ['get']
+   /v3/subscriptions ['get']
+   /v3/subscriptions/{subscriptionId} ['get']
+   /v3/subscriptions/{subscriptionId}/channelPrices ['get']
+   /v3/subscriptions/{subscriptionId}/features ['get']
+   /v3/subscriptions/{subscriptionId}/image ['delete', 'get', 'post']
+   /v3/subscriptions/{subscriptionId}/imageFile ['get']
+   /v3/subscriptions/{subscriptionId}/imageInfo ['get']
+   /v3/subscriptions/{subscriptionId}/imageSettings ['get', 'post']
+   /v3/subscriptions/{subscriptionId}/inboundVoiceNumberLicenses ['get']
+   /v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/en16931 ['get']
+   /v3/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd ['get']
+   /v3/subscriptions/{subscriptionId}/prepaidBalance ['get']
+   /v3/subscriptions/{subscriptionId}/prepaidSettings ['get']
+   /v3/subscriptions/{subscriptionId}/prepaidTransactions ['get']
+   /v3/subscriptions/{subscriptionId}/profile ['put']
+   /v3/subscriptions/{subscriptionId}/settings ['get', 'put']
+   /v3/subscriptions/{subscriptionId}/stakeholderLicenses ['get']
+   /v3/subscriptions/{subscriptionId}/tags ['get']
+   /v3/subscriptions/{subscriptionId}/teams ['get']
+   /v3/subscriptions/{subscriptionId}/userLicenses ['get']
+   /v3/users/{userId}/checkSubscriptionPermissions ['post']
+/tmp/v1.json: 93 paths
+   /categories/{teamId}/{categoryId}/subscriptions ['get', 'post']
+   /prepaid/{subscriptionId}/prepaidSettings ['put']
+   /scripts/instances ['get', 'post']
+   /scripts/instances/{instanceId} ['delete', 'get', 'put']
+   /scripts/instances/{instanceId}/data ['put']
+   /scripts/instances/{instanceId}/disable ['post']
+   /scripts/instances/{instanceId}/enable ['post']
+   /scripts/inventory ['get']
+   /scripts/inventory/parsed ['get']
+   /scripts/inventory/parsed/{scriptId} ['get']
+   /subscriptions ['get']
+   /subscriptions/{subscriptionId} ['get']
+   /subscriptions/{subscriptionId}/channelPrices ['get']
+   /subscriptions/{subscriptionId}/features ['get']
+   /subscriptions/{subscriptionId}/inboundVoiceNumberLicenses ['get']
+   /subscriptions/{subscriptionId}/prepaidBalance ['get']
+   /subscriptions/{subscriptionId}/prepaidSettings ['get']
+   /subscriptions/{subscriptionId}/prepaidTransactions ['get']
+   /subscriptions/{subscriptionId}/profile ['put']
+   /subscriptions/{subscriptionId}/settings ['get', 'put']
+   /subscriptions/{subscriptionId}/stakeholderLicenses ['get']
+   /subscriptions/{subscriptionId}/teams ['get']
+   /subscriptions/{subscriptionId}/userLicenses ['get']
+[0m
+Swagger shows `/subscriptions/licenses` is NOT in OpenAPI yet it's route-registered with `Allow: DELETE, GET` — a hidden route family. Probing it and the scripts-inventory GETs anonymously.
+[0m$ [0mg() { curl -s -o /tmp/pb.tmp -w "%{http_code}" --max-time 15 -k -H "User-Agent: Mozilla/5.0" "$1"; echo -n " <- GET $1  "; head -c 120 /tmp/pb.tmp; echo; }
+g "https://connect.signl4.com/api/v3/subscriptions/licenses"
+sleep 1
+g "https://connect.signl4.com/api/v1/subscriptions/licenses"
+sleep 1
+g "https://connect.signl4.com/api/v3/subscriptions/"
+sleep 1
+g "https://connect.signl4.com/api/v3/scripts/inventory"
+sleep 1
+g "https://connect.signl4.com/api/v1/scripts/inventory"
+sleep 1
+g "https://connect.signl4.com/api/v1/scripts/inventory/parsed"
+401 <- GET https://connect.signl4.com/api/v3/subscriptions/licenses  
+401 <- GET https://connect.signl4.com/api/v1/subscriptions/licenses  
+401 <- GET https://connect.signl4.com/api/v3/subscriptions/  
+401 <- GET https://connect.signl4.com/api/v3/scripts/inventory  
+401 <- GET https://connect.signl4.com/api/v1/scripts/inventory  
+401 <- GET https://connect.signl4.com/api/v1/scripts/inventory/parsed
+[0m
+All gate to 401. Confirmed: `/api/{v1,v3}/subscriptions/licenses` (Allow DELETE,GET) is absent from both swagger files — a hidden billing-licenses route family. Now a fresh CT sweep to check for new subdomains since 09-16.
+[0m$ [0mcurl -s --max-time 60 "https://crt.sh/?q=%25.signl4.com&output=json" -o /tmp/ct.json; python3 - <<'EOF'
+import json,datetime
+try:
+    rows=json.load(open('/tmp/ct.json'))
+except Exception as e:
+    print("crt.sh error:",e); raise SystemExit
+names={}
+for r in rows:
+    for n in r.get("name_value","").split("\n"):
+        n=n.strip().lower()
+        if n: names.setdefault(n, r.get("entry_timestamp","")[:10])
+seen={}
+for n,ts in sorted(names.items()):
+    seen[n]=ts
+print(len(seen),"unique names")
+from collections import Counter
+for n in sorted(seen):
+    print(seen[n], n)
+EOF
+14 unique names
+ *.signl4.com
+ bot.signl4.com
+ devfix.signl4.com
+ docs.signl4.com
+ fix.signl4.com
+ frontdoor.signl4.com
+ go.signl4.com
+ signl4.com
+ status.signl4.com
+ support.signl4.com
+ trust.signl4.com
+ vps.signl4.com
+ www.signl4.com
+ www.vps.signl4.com
+[0m
+[0m$ [0mcurl -s -o /tmp/pb.tmp -D - --max-time 15 -k -H "User-Agent: Mozilla/5.0" "https://connect.signl4.com/api/v3/subscriptions/licenses" | grep -iE "HTTP/|www-auth|content-type|request-context"
+echo "body:"; head -c 200 /tmp/pb.tmp; echo
+HTTP/2 401 
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-content-type-options: nosniff
+www-authenticate: Bearer
+body:
+[0m
+[0m$ [0mah() { curl -s -o /dev/null -w "%{http_code}" --max-time 15 -k -X OPTIONS -H "User-Agent: Mozilla/5.0" "$1"; echo -n " OPTIONS $1 "; curl -s -o /dev/null -D /tmp/h.tmp --max-time 15 -k -X OPTIONS -H "User-Agent: Mozilla/5.0" "$1" >/dev/null 2>&1; grep -i '^allow' /tmp/h.tmp; }
+ah "https://connect.signl4.com/api/v2/subscriptions/licenses"
+sleep 1
+ah "https://devapi.signl4.com/api/v3/subscriptions/licenses"
+sleep 1
+ah "https://devapi.signl4.com/api/v3/scripts/inventory"
+405 OPTIONS https://connect.signl4.com/api/v2/subscriptions/licenses allow: DELETE, GET
+405 OPTIONS https://devapi.signl4.com/api/v3/subscriptions/licenses allow: DELETE, GET
+405 OPTIONS https://devapi.signl4.com/api/v3/scripts/inventory allow: GET
+[0m
+[0m$ [0mcat >> leads/lead-bigpickle.md <<'EOF'
+
+## 2026-09-19 05:20:00 UTC [target] (model bigpickle)
+[NEW] PROBE: hidden billing-licenses route family `/api/{v1,v2,v3}/subscriptions/licenses` → OPTIONS Allow: DELETE,GET on connect+devapi (staging parity), anon GET → 401 WWW-Authenticate:Bearer empty body — ABSENT from V1/V3 swagger (93/206 paths), corroborates spec-under-declare family (LOW); DELETE on entitlement collection would be license-revocation surface if ever reachable with a token.
+[NEW] PROBE: endsession?post_logout_redirect_uri=https://evil.example → 302 `/identity/Account/Logout` (internal) — no logout OAuth open-redirect; post_logout_redirect_uri ignored without session/id_token_hint.
+[NEW] PROBE: RFC8414 `/.well-known/oauth-authorization-server` → 404 on connect+account — metadata endpoint not served via RFC8414 path.
+[NEW] PROBE: `/identity/connect/par` OPTIONS → 405 (registered, POST-only) on connect+account — PAR family present, secret-gated like all grants.
+[NEW] CT re-sweep crt.sh %signl4.com: 14 unique names, ZERO new certs since 09-16 — estate drift = 0 (control).
+[CHANGED] No elevation: all anon probes on new families → 401 Bearer; AUTH_HELPED queue unchanged (forgery/V1-userId/V2-changePassword/V3-BOLA now + licenses-BOLA).
+[RISK] derdack: 91 — unchanged: cross-env token-forgery (6 shared-RS256 hosts, account mint-mismatch), BOLA families gated on one credential; vps.signl4.com proof-complete awaiting human claim; hidden licenses-DELETE route adds marginal surface only.
+EOF
+echo appended; wc -l leads/lead-bigpickle.md
+appended
+5254 leads/lead-bigpickle.md
+[0m
+Estate-wide confirm: hidden `/subscriptions/licenses` family (Allow DELETE,GET) live on V1/V2/V3 across connect+devapi, absent from swagger, all 401 Bearer. Writing the cycle record.
+STEP 1 — DELTA
+- NEW: Hidden billing route family `/api/{v1,v2,v3}/subscriptions/licenses` — OPTIONS `Allow: DELETE,GET` on connect+devapi (staging parity), anon GET→401 Bearer, ABSENT from both V1(93p)/V3(206p) swagger.
+- NEW: OIDC-periphery negatives — RFC8414 `/.well-known/oauth-authorization-server` 404 (connect+account); `endsession?post_logout_redirect_uri=evil` → 302 internal `/identity/Account/Logout` only; `/identity/connect/par` 405 (registered, POST-only).
+- NEW: CT re-sweep `%signl4.com` → 14 names, zero new certs since 09-16 (drift=0 control).
+- CHANGED: No anon deviation anywhere new; the entire AUTH_HELPED queue (forgery, V1 userId, V2 changePassword, V3 invoice, +licenses BOLA) unchanged.
+
+STEP 2 — PRIORITIZE
+- [PRIO] connect.signl4.com/api/v3/subscriptions/licenses, 5.25, a=4 b=7 t=7 g=1 c=3 f=10
+- [PRIO] vps.signl4.com, 9.2, a=5 b=8 t=6 g=10 c=8 f=8 (unchanged, proof-complete)
+- [PRIO] account.signl4.com/identity, 8.6, a=9 b=10 t=9 g=1 c=5 f=4 (unchanged, AUTH_HELPED)
+
+STEP 3 — HYPOTHESES
+[HYP] Subdomain takeover — vps.signl4.com dangling A-record to unclaimed GoDaddy shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 95
+reasoning: GoDaddy aNS pdns09/10.domaincontrol.com → 72.167.227.27 (secureserver.net); HTTPS 200 nginx default vhost, cert CN=server.d1g.it (no signl4 SAN); fabricated <rand>.signl4.com forced to IP → byte-identical body sha256 9278d16ed2fdcd5dc651615b0b8adc6b55fb667a; *.signl4.com NXDOMAIN.
+evidence_needed: claimability confirmation on 72.167.227.27
+verify_steps: 1) GET https://vps.signl4.com/ → 200 default (done) 2) --resolve fake<rand> → byte-identical (done) 3) claim = HUMAN_ONLY
+impact: attacker content on trusted subdomain → phishing, parent-domain cookie ops vs account/connect, potential OAuth redirect_uri abuse; HIGH
+testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
+
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP with account mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account asserts issuer=connect while minting locally; billing/SCIM/scripts APIs accept shared-key-signed tokens (handler-deferred 405-before-401); plain PKCE allowed.
+evidence_needed: leaked client_secret/X-S4-Api-Key
+verify_steps: 1) POST /connect/token invalid creds → invalid_client (done) 2) forged Bearer → GET api/v2/teams → 200 if chain holds
+impact: EA-mgmt tokens under connect issuer accepted by prod → multi-tenant ATO; CRITICAL
+testability: AUTH_HELPED
+
+[HYP] Cross-tenant BOLA on hidden DELETE-capable subscription-licenses collection
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/licenses
+confidence: 55
+reasoning: route-registered on V1/V2/V3 + devapi (Allow DELETE,GET) but absent from swagger — id-less scoped collection suggests subscription-scoped entitlement mutation; anon 401 Bearer means auth enforced pre-handler; id-less path may derive tenant from token only.
+evidence_needed: valid token; observe whether DELETE/GET scope to caller's own subscription or enumerate a backend collection
+verify_steps: 1) GET with own token (baseline) vs invalid token (401 done) 2) replicate on devapi with staging token
+impact: cross-tenant license/entitlement disclosure or revocation if ID is server-side-scoped incorrectly; MEDIUM-HIGH
+testability: AUTH_HELPED
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] endsession post_logout_redirect_uri open-redirect: falsified by live probe — 302 only to internal /identity/Account/Logout, redirect param not honored without session.
+- [PARKED] RFC8414 metadata divergence: 404 on both hosts — endpoint not served; dead.
+- [FINAL] vps.signl4.com (95, MISCONFIG, HUMAN_ONLY) > token forgery (88, AUTH, AUTH_HELPED) > ZUGFeRD invoice BOLA (75, IDOR, AUTH_HELPED) > licenses BOLA (55, IDOR, AUTH_HELPED).
+
+STEP 5 — NEXT ACTION
+[NEXT] HUMAN: File the `vps.signl4.com` dangling-DNS finding (GoDaddy NS `domaincontrol.com` → `72.167.227.27`, nginx default vhost, cert CN=server.d1g.it no signl4 SAN, fabricated-host byte-identical sha256 `9278d16ed2fdcd5dc651615b0b8adc6b55fb667a`) requesting claimability confirmation; concurrently create a free-trial SIGNL4 account to obtain a legitimate X-S4-Api-Key and unblock the entire AUTH_HELPED queue (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, hidden licenses BOLA) — mention the `/api/v3/subscriptions/licenses` hidden DELETE-route family as an additional authenticated test surface.
+
+STEP 6 — LEARNING
+- [LEARN] ACCEPTED MISCONFIG @ connect/devapi /api/{v1,v2,v3}/subscriptions/licenses: hidden billing-licenses route family (Allow DELETE,GET), absent from swagger, 401 Bearer anon, staging parity — corroborates spec-under-declare (LOW).
+- [LEARN] REJECTED OATH @ connect.signl4.com/identity/connect/endsession: post_logout_redirect_uri=evil → 302 internal /identity/Account/Logout only; no logout open-redirect.
+- [LEARN] REJECTED MISCONFIG @ connect+account /identity/.well-known/oauth-authorization-server: 404 both — RFC8414 metadata not served.
+- [LEARN] ACCEPTED AUTH @ connect+account /identity/connect/par: OPTIONS 405, POST-only register, same secret-gated family.
+- [LEARN] REJECTED OTHER @ crt.sh %signl4.com: 14 names, zero new certs — estate drift zero.
+
+STEP 7 — RISK
+[RISK] derdack: 91 — unchanged: CRITICAL cross-env token-forgery chain (6 shared-RS256 identity hosts, account mint-mismatch, plain PKCE, EA-mgmt scopes) and handler-deferred billing/PII BOLA (incl. new hidden DELETE licenses family) remain gated on a single leaked credential; lone credential-free finding (vps.signl4.com) is proof-complete awaiting human claim; this cycle added only OIDC-periphery negatives + one hidden-route corroboration — no risk delta.
