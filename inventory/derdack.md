@@ -1214,3 +1214,10 @@ www.derdack.com
 - CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
 - CHANGED vps.signl4.com subdomain takeover re-confirmed via live probe: HTTPS 200 nginx default page, cert CN=server.d1g.it, reverse DNS secureserver.net, GoDaddy authoritative NS
 - CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted; signl4.derdack.com permanently unreachable; dev.derdack.com MultiViews benign static echo; blog/techblog HTTPS→HTTP
+
+## 2026-09-19 21:29:44 UTC
+- NEW docs.enterprisealert.com: A-record → Azure edge serving HTTP 404 with default *.web.core.windows.net cert + no hostname SAN — decommissioned/dangling Azure static hosting binding (confidence 45)
+- NEW us.derdack.com: 217.160.0.28 IONOS behind shared x-ws proxy, parked partner-iframe page, dot-prefix namespace untested but pattern matches dev.derdack.com parked-minimal
+- CHANGED vps.signl4.com subdomain takeover re-confirmed via live probe: HTTPS 200 nginx default page, cert CN=server.d1g.it, reverse DNS secureserver.net, GoDaddy authoritative NS
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
+- CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted; signl4.derdack.com permanently unreachable; dev.derdack.com MultiViews benign static echo; blog/techblog HTTPS→HTTP

@@ -1,30 +1,28 @@
-## 2026-09-19 19:07:50 UTC [target] (model bigpickle)
+## 2026-09-19 21:29:19 UTC [target] (model bigpickle)
 [HYP] Cross-env token forgery via 6-host shared RS256 IdP with account mint-mismatch
 class: AUTH
 asset: account.signl4.com/identity/connect/token
 confidence: 88
-reasoning: 6 identity hosts byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account asserts issuer=connect while minting locally; handler-deferred APIs accept shared-key tokens; plain PKCE; swagger confirms prod Bearer acceptance.
-evidence_needed: leaked client_secret 692A0A56 / X-S4-Api-Key (or human-furnished trial credential)
-verify_steps: 1) POST /identity/connect/token → invalid_client w/o secret (done) 2) with credential: mint token → GET api.signl4.com/api/v2/teams → 200 chain-hold
-impact: EA-mgmt + billing + SCIM-scoped tokens accepted by prod → multi-tenant ATO; CRITICAL
+reasoning: 6 identity hosts byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account asserts issuer=connect while minting; devaccount mirrors devconnect; handler-deferred APIs accept shared-key tokens; swagger confirms prod Bearer acceptance; auth-status flapping (401/405) persists on /teams proving handler-layer validation.
+evidence_needed: leaked client_secret / X-S4-Api-Key / team-secret (or trial credential)
+verify_steps: 1) POST /identity/connect/token → invalid_client w/o secret (done, stable) 2) with credential: mint token → GET api.signl4.com/api/v2/teams → 200 chain-hold
+impact: EA-management + billing + SCIM-scoped tokens accepted by prod → multi-tenant ATO; CRITICAL
 testability: AUTH_HELPED
 [HYP] Subdomain takeover — vps.signl4.com dangling A-record to unclaimed GoDaddy shared host
 class: MISCONFIG
 asset: vps.signl4.com
 confidence: 95
-reasoning: GoDaddy NS domaincontrol.com → 72.167.227.27 secureserver.net; HTTPS 200 nginx default page, cert CN=server.d1g.it (no signl4 SAN); fabricated `<rand>.signl4.com` → byte-identical body sha256 9278d16e…; *.signl4.com NXDOMAIN.
+reasoning: GoDaddy NS domaincontrol.com → 72.167.227.27 secureserver.net; HTTPS 200 nginx default page; cert CN=server.d1g.it (no signl4 SAN); fabricated `<rand>.signl4.com` → byte-identical body; *.signl4.com NXDOMAIN. de_derdack.com parked-minimal pattern matches.
 evidence_needed: human claimability of addon-domain on 72.167.227.27
 verify_steps: 1) GET https://vps.signl4.com/ → 200 default (done) 2) --resolve fabricated host → byte-identical (done) 3) claim = HUMAN_ONLY
-impact: attacker content on trusted signl4.com subdomain → phishing, parent-domain cookie ops, OAuth redirect_uri abuse; HIGH
+impact: attacker content on trusted signl4.com subdomain → phishing, parent-domain cookie/DSN ops, OAuth redirect_uri abuse; HIGH
 testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
 [HYP] Dangling Azure Storage binding on docs.enterprisealert.com
 class: MISCONFIG
 asset: docs.enterprisealert.com
-confidence: 45
-reasoning: A-record 52.239.221.33 (Azure); 404 `x-ms-error-code: WebContentNotFound` + `Server: Windows-Azure-Web/1.0` on `/`, `/index.html`, `/EA/`; TLS default platform cert, no SAN; zero wayback snapshots.
-evidence_needed: whether 404 = bound-but-empty storage account vs decommissioned; attacker claim of custom domain
-verify_steps: 1) GET / → 404 (done) 2) crt.sh+wayback absence (done) 3) claim = HUMAN_ONLY
-impact: attacker content on trusted EA FQDN → brand phishing; MEDIUM-LOW; no data exposure demonstrated
+confidence: 42
+reasoning: A-record 52.239.221.33 Azure edge; 404 `x-ms-error-code: WebContentNotFound` + `Windows-Azure-Web/1.0` on `/`,`/index.html`,`/EA/`; TLS default platform cert no SAN; zero wayback; BUT fresh LE wildcard renewal (2026-07-20) proves domain DNS actively lived — decommissioned-binding more likely than lost-domain.
+evidence_needed: whether 404 = bound-but-empty storage vs decommissioned; attacker claim of custom domain
+verify_steps: 1) GET / → 404 (done) 2) crt.sh/wayback (done) 3) claim = HUMAN_ONLY
+impact: attacker content on trusted EA FQDN → brand phishing, mail/DNS-adjacent abuse; MEDIUM-LOW
 testability: HUMAN_ONLY
-[NEXT] HUMAN: request one legitimate SIGNL4 trial team / X-S4-Api-Key (or client_secret for client 692A0A56-892F-4AE2-8259-76DA398990B6) to execute the queued AUTH_HELPED chain — 6-host forgery hold + V1 `/api/v1/alerts/acknowledgeAll?userId=` IDOR + V2 `/api/v2/users/{id}/changePassword` + V3 `zugferd`/fileName BOLA + `subscriptions/licenses` BOLA. Passive surface just re-proven 100% mapped (derdack + enterprisealert CT sweeps green, us.derdack.com closed benign, signl4 drift 0).
-[RISK] derdack: 91 — unchanged. vps.signl4.com takeover (95, proof-complete, claim human-only) + 6-host cross-env signing-key/client-reuse forgery chain (88, CRITICAL once one credential leaks) dominate; this cycle added zero new positive surface (us.derdack.com proven benign homologue, both CT sweeps fully mapped, docs binding parked on claim-impossibility) — net risk flat.
