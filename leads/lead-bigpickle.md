@@ -5451,3 +5451,30 @@ testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
 [LEARN] REJECTED OTHER @ enterprisealert.com CT re-sweep: crt.sh 429 (rate-limit) — no cert diff obtainable; DNS-only sweep produced only the 3 names above; estate drift minimal
 [LEARN] CHANGED estate map: enterprisealert.com live FQDNs now = docs(azure-404), www(dead), demo(404), downloads(403), s4dev1-8(504-inert) — full DNS surface enumerated, no anonymous read surface
 [RISK] derdack: 91 — unchanged: CRITICAL cross-env token-forgery chain (6 shared-RS256 identity hosts, account mint-mismatch, plain PKCE, EA-mgmt + handler-deferred billing/SCIM APIs) and V1/V2/V3 BOLA families remain gated on a single leaked/furnished credential; vps.signl4.com dangling-DNS proof-complete awaits human claim; this cycle added one LOW-MED hopped finding (docs.enterprisealert.com dangling Azure binding, claimability uncertain) and confirmed estate DNS map full — no positive risk delta
+## 2026-09-19 13:24:18 UTC [target] (model bigpickle)
+[HYP] Dangling Azure App Service binding on docs.enterprisealert.com
+class: MISCONFIG
+asset: docs.enterprisealert.com
+confidence: 50
+reasoning: A-record 52.239.221.33 (Azure) serves HTTP 404 with Server: Windows-Azure-Web/1.0 + x-ms-error-code WebContentNotFound on `/`, `/index.html`, `/EA/`; TLS presents default platform cert (no hostname SAN); hostname absent from all crt.sh cert issuance incl *.enterprisealert.com wildcard; archive.org has zero snapshots for the hostname and /docs path
+evidence_needed: proof an attacker-created Azure App Service can bind/claim the custom domain (requires DNS TXT/ownership validation post-2021)
+verify_steps: 1) GET https://docs.enterprisealert.com/index.html → 404 WebContentNotFound (done) 2) GET https://docs.enterprisealert.com/EA/ → 404 (done) 3) crt.sh absence + wayback absence (done) 4) claim = HUMAN_ONLY (create App Service + add custom domain w/ asuid TXT)
+impact: attacker app content under trusted Enterprise Alert FQDN → brand-trust phishing; MEDIUM (LOW-MED purely config); no data exposure demonstrated
+testability: HUMAN_ONLY
+[HYP] Subdomain takeover — vps.signl4.com dangling A-record to unclaimed GoDaddy shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 95
+reasoning: GoDaddy NS domaincontrol.com → 72.167.227.27 secureserver.net shared host; HTTPS 200 nginx default vhost, cert CN=server.d1g.it (no signl4 SAN); fabricated <rand>.signl4.com → byte-identical body sha256 9278d16ed2fdcd5dc651615b0b8adc6b55fb667a; *.signl4.com NXDOMAIN (no wildcard to block re-claim)
+evidence_needed: human claimability of addon-domain on 72.167.227.27
+impact: attacker content on trusted signl4.com subdomain → phishing, parent-domain cookie ops vs account/connect, OAuth redirect_uri abuse; HIGH
+testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP with account mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account asserts issuer=connect while minting locally; handler-deferred APIs accept shared-key-signed tokens; plain PKCE allowed; swagger confirms prod Bearer acceptance
+evidence_needed: leaked client_secret / X-S4-Api-Key (or human-furnished trial credential)
+verify_steps: 1) POST /identity/connect/token → invalid_client without secret (done) 2) with credential: mint token → GET api.signl4.com/api/v2/teams → 200 chain-hold
+impact: EA-management + billing + SCIM-scoped tokens accepted by prod → multi-tenant ATO; CRITICAL
+testability: AUTH_HELPED
