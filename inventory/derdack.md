@@ -1196,3 +1196,14 @@ www.derdack.com
 - CHANGED V2 /api/v2/users/{userId}/changePassword PUT-only, handler enforces Content-Length before auth (411→401) — AUTH_HELPED
 - CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
 - CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted; signl4.derdack.com permanently unreachable; dev.derdack.com MultiViews benign static echo; blog/techblog HTTPS→HTTP
+
+## 2026-09-19 16:51:18 UTC
+- NEW vps.signl4.com dangling A-record confirmed via live probe: HTTPS 200 nginx default page (`/cgi-sys/defaultwebpage.cgi`), cert CN=server.d1g.it (unrelated Let's Encrypt), reverse DNS `27.227.167.72.hos
+- NEW docs.enterprisealert.com: A-record → Azure edge serving HTTP 404 with default *.web.core.windows.net cert + no hostname SAN — decommissioned/dangling Azure static hosting binding (confidence 45)
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), shared
+- CHANGED V1 API userId query parameter on /alerts/acknowledgeAll|closeAll|paged|report — 403 description typo "in behave of the user" confirms impersonation feature coded; handler-deferred auth (unauth GET→405
+- CHANGED V3 invoice download /api/v3/subscriptions/{sub}/invoices/{inv}/zugferd — route-gated (unauth→401), file-download family with path-based fileName — AUTH_HELPED
+- CHANGED V2 /api/v2/users/{userId}/changePassword PUT-only, handler enforces Content-Length before auth (411→401) — AUTH_HELPED
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted; signl4.derdack.com permanently unreachable; dev.derdack
+- CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted; signl4.derdack.com permanently unreachable; dev.derdack.com MultiViews benign static echo; blog/techblog HTTPS→HTTP

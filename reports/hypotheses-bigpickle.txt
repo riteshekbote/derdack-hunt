@@ -1,27 +1,21 @@
-## 2026-09-19 13:24:18 UTC [target] (model bigpickle)
-[HYP] Dangling Azure App Service binding on docs.enterprisealert.com
-class: MISCONFIG
-asset: docs.enterprisealert.com
-confidence: 50
-reasoning: A-record 52.239.221.33 (Azure) serves HTTP 404 with Server: Windows-Azure-Web/1.0 + x-ms-error-code WebContentNotFound on `/`, `/index.html`, `/EA/`; TLS presents default platform cert (no hostname SAN); hostname absent from all crt.sh cert issuance incl *.enterprisealert.com wildcard; archive.org has zero snapshots for the hostname and /docs path
-evidence_needed: proof an attacker-created Azure App Service can bind/claim the custom domain (requires DNS TXT/ownership validation post-2021)
-verify_steps: 1) GET https://docs.enterprisealert.com/index.html → 404 WebContentNotFound (done) 2) GET https://docs.enterprisealert.com/EA/ → 404 (done) 3) crt.sh absence + wayback absence (done) 4) claim = HUMAN_ONLY (create App Service + add custom domain w/ asuid TXT)
-impact: attacker app content under trusted Enterprise Alert FQDN → brand-trust phishing; MEDIUM (LOW-MED purely config); no data exposure demonstrated
-testability: HUMAN_ONLY
-[HYP] Subdomain takeover — vps.signl4.com dangling A-record to unclaimed GoDaddy shared host
-class: MISCONFIG
-asset: vps.signl4.com
-confidence: 95
-reasoning: GoDaddy NS domaincontrol.com → 72.167.227.27 secureserver.net shared host; HTTPS 200 nginx default vhost, cert CN=server.d1g.it (no signl4 SAN); fabricated <rand>.signl4.com → byte-identical body sha256 9278d16ed2fdcd5dc651615b0b8adc6b55fb667a; *.signl4.com NXDOMAIN (no wildcard to block re-claim)
-evidence_needed: human claimability of addon-domain on 72.167.227.27
-impact: attacker content on trusted signl4.com subdomain → phishing, parent-domain cookie ops vs account/connect, OAuth redirect_uri abuse; HIGH
-testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
+## 2026-09-19 16:51:08 UTC [target] (model bigpickle)
 [HYP] Cross-env token forgery via 6-host shared RS256 IdP with account mint-mismatch
 class: AUTH
 asset: account.signl4.com/identity/connect/token
 confidence: 88
-reasoning: 6 identity hosts byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account asserts issuer=connect while minting locally; handler-deferred APIs accept shared-key-signed tokens; plain PKCE allowed; swagger confirms prod Bearer acceptance
+reasoning: 6 identity hosts byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account asserts issuer=connect while minting locally; handler-deferred APIs accept shared-key-signed tokens; plain PKCE allowed; swagger confirms prod Bearer acceptance.
 evidence_needed: leaked client_secret / X-S4-Api-Key (or human-furnished trial credential)
 verify_steps: 1) POST /identity/connect/token → invalid_client without secret (done) 2) with credential: mint token → GET api.signl4.com/api/v2/teams → 200 chain-hold
 impact: EA-management + billing + SCIM-scoped tokens accepted by prod → multi-tenant ATO; CRITICAL
 testability: AUTH_HELPED
+[HYP] Subdomain takeover — vps.signl4.com dangling A-record to unclaimed GoDaddy shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 95
+reasoning: GoDaddy NS domaincontrol.com → 72.167.227.27 secureserver.net; HTTPS 200 nginx default vhost, cert CN=server.d1g.it (no signl4 SAN); fabricated `<rand>.signl4.com` → byte-identical body sha256 9278d16ed2fdcd5dc651615b0b8adc6b55fb667a; *.signl4.com NXDOMAIN (no wildcard block).
+evidence_needed: human claimability of addon-domain on 72.167.227.27
+verify_steps: 1) GET https://vps.signl4.com/ → 200 default (done) 2) --resolve fake<rand>.signl4.com → byte-identical (done) 3) claim = HUMAN_ONLY
+impact: attacker content on trusted signl4.com subdomain → phishing, parent-domain cookie ops, OAuth redirect_uri abuse; HIGH
+testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
+[NEXT] HUMAN: obtain a legitimate SIGNL4 trial credential (X-S4-Api-Key or client_secret for client 692A0A56-892F-4AE2-8259-76DA398990B6) to execute the AUTH_HELPED queue — cross-env forgery chain hold + V1 `/api/v1/alerts/acknowledgeAll?userId=` IDOR + V2 `/api/v2/users/{id}/changePassword` + V3 `zugferd`/report-filename BOLA. Passive route maps are exhausted; no further anonymous differential exists.
+[RISK] derdack: 91 — unchanged. Top two leads (vps.signl4.com 95 configured-but-unclaimed; 6-host token-forgery chain 88 gated on one credential remains the CRITICAL multi-tenant ATO path) hold steady; this cycle closed the only mid-confidence new lead (docs Azure binding), killed the last WP SSRF candidate (get_head), and extended the DNS map with three inert hosts — net estate surface is fully exhausted with no positive risk delta.

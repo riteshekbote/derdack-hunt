@@ -5478,3 +5478,24 @@ evidence_needed: leaked client_secret / X-S4-Api-Key (or human-furnished trial c
 verify_steps: 1) POST /identity/connect/token → invalid_client without secret (done) 2) with credential: mint token → GET api.signl4.com/api/v2/teams → 200 chain-hold
 impact: EA-management + billing + SCIM-scoped tokens accepted by prod → multi-tenant ATO; CRITICAL
 testability: AUTH_HELPED
+## 2026-09-19 16:51:08 UTC [target] (model bigpickle)
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP with account mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account asserts issuer=connect while minting locally; handler-deferred APIs accept shared-key-signed tokens; plain PKCE allowed; swagger confirms prod Bearer acceptance.
+evidence_needed: leaked client_secret / X-S4-Api-Key (or human-furnished trial credential)
+verify_steps: 1) POST /identity/connect/token → invalid_client without secret (done) 2) with credential: mint token → GET api.signl4.com/api/v2/teams → 200 chain-hold
+impact: EA-management + billing + SCIM-scoped tokens accepted by prod → multi-tenant ATO; CRITICAL
+testability: AUTH_HELPED
+[HYP] Subdomain takeover — vps.signl4.com dangling A-record to unclaimed GoDaddy shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 95
+reasoning: GoDaddy NS domaincontrol.com → 72.167.227.27 secureserver.net; HTTPS 200 nginx default vhost, cert CN=server.d1g.it (no signl4 SAN); fabricated `<rand>.signl4.com` → byte-identical body sha256 9278d16ed2fdcd5dc651615b0b8adc6b55fb667a; *.signl4.com NXDOMAIN (no wildcard block).
+evidence_needed: human claimability of addon-domain on 72.167.227.27
+verify_steps: 1) GET https://vps.signl4.com/ → 200 default (done) 2) --resolve fake<rand>.signl4.com → byte-identical (done) 3) claim = HUMAN_ONLY
+impact: attacker content on trusted signl4.com subdomain → phishing, parent-domain cookie ops, OAuth redirect_uri abuse; HIGH
+testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
+[NEXT] HUMAN: obtain a legitimate SIGNL4 trial credential (X-S4-Api-Key or client_secret for client 692A0A56-892F-4AE2-8259-76DA398990B6) to execute the AUTH_HELPED queue — cross-env forgery chain hold + V1 `/api/v1/alerts/acknowledgeAll?userId=` IDOR + V2 `/api/v2/users/{id}/changePassword` + V3 `zugferd`/report-filename BOLA. Passive route maps are exhausted; no further anonymous differential exists.
+[RISK] derdack: 91 — unchanged. Top two leads (vps.signl4.com 95 configured-but-unclaimed; 6-host token-forgery chain 88 gated on one credential remains the CRITICAL multi-tenant ATO path) hold steady; this cycle closed the only mid-confidence new lead (docs Azure binding), killed the last WP SSRF candidate (get_head), and extended the DNS map with three inert hosts — net estate surface is fully exhausted with no positive risk delta.
