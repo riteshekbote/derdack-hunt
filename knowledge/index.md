@@ -640,3 +640,8 @@
 - 2026-09-19 ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — oracle confirmed
 - 2026-09-19 REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
 - 2026-09-19 CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
+- 2026-09-19 ACCEPTED MISCONFIG @ docs.enterprisealert.com: A-record → Azure edge serving HTTP 404 with default *.web.core.windows.net cert + no hostname SAN — decommissioned/dangling Azure static hosting binding, new passive surface (conf 45, claim gated on Azure DNS-TXT validation)
+- 2026-09-19 ACCEPTED OTHER @ www.enterprisealert.com: A-record 51.4.206.217 TCP-timeout on 80/443 — inert main-brand pointer, non-claimable Azure public IP
+- 2026-09-19 ACCEPTED MISCONFIG @ us.derdack.com: 217.160.0.28 IONOS behind shared x-ws proxy, parked partner-iframe page, files under dot-prefix namespace untested but pattern matches dev.derdack.com parked-minimal
+- 2026-09-19 REJECTED OTHER @ enterprisealert.com CT re-sweep: crt.sh 429 (rate-limit) — no cert diff obtainable; DNS-only sweep produced only the 3 names above; estate drift minimal
+- 2026-09-19 CHANGED estate map: enterprisealert.com live FQDNs now = docs(azure-404), www(dead), demo(404), downloads(403), s4dev1-8(504-inert) — full DNS surface enumerated, no anonymous read surface

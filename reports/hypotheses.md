@@ -2949,3 +2949,71 @@
 - LEARN: ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — o
 - LEARN: REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
 - LEARN: CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signi
+
+## RANKED HYPOTHESES 2026-09-19 09:39:12 UTC
+- [95] vps.signl4.com: Subdomain takeover via dangling A-record on vps.signl4.com (from art/lead_nemotron3.txt)
+- [95] vps.signl4.com: Cross-env token forgery via 6-host (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: File `vps.signl4.com` dangling-DNS finding with the full evidence pack (GoDaddy NS `pdns09/10.domaincontrol.com` → `72.167.227.27`, cPanel default vhost,
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://vps.signl4.com/ (confirm 200 default nginx page, unrelated cert CN=server.d1g.secureserver.net) + GET http://vps.signl4.com/ + dig vps.signl4
+- LEARN: REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
+- LEARN: REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
+- LEARN: ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
+- LEARN: ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5
+- LEARN: ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer c
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th name
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid bill
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Cont
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — o
+- LEARN: REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+- LEARN: CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signi
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid bill
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Cont
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — o
+- LEARN: REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+- LEARN: CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signi
+- LEARN: ACCEPTED MISCONFIG @ docs.enterprisealert.com: A-record → Azure edge serving HTTP 404 with default *.web.core.windows.net cert + no hostname SAN — decommissione
+- LEARN: ACCEPTED OTHER @ www.enterprisealert.com: A-record 51.4.206.217 TCP-timeout on 80/443 — inert main-brand pointer, non-claimable Azure public IP
+- LEARN: ACCEPTED MISCONFIG @ us.derdack.com: 217.160.0.28 IONOS behind shared x-ws proxy, parked partner-iframe page, files under dot-prefix namespace untested but patt
+- LEARN: REJECTED OTHER @ enterprisealert.com CT re-sweep: crt.sh 429 (rate-limit) — no cert diff obtainable; DNS-only sweep produced only the 3 names above; estate drif
+- LEARN: CHANGED estate map: enterprisealert.com live FQDNs now = docs(azure-404), www(dead), demo(404), downloads(403), s4dev1-8(504-inert) — full DNS surface enumerate
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response pr
+- LEARN: REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS)
+- LEARN: REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
+- LEARN: REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
+- LEARN: ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
+- LEARN: ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5
+- LEARN: ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer c
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th name
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid bill
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Cont
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — o
+- LEARN: REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+- LEARN: CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signi
+- LEARN: ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer c
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th name
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid bill
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Cont
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — o
+- LEARN: REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+- LEARN: CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signi
+- LEARN: ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer c
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th name
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid bill
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Cont
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — o
+- LEARN: REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+- LEARN: CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signi

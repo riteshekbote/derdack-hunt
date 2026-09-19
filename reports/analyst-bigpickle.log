@@ -26734,3 +26734,733 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 [RISK] derdack: 91 — unchanged: CRITICAL cross-env token-forgery chain (6 shared-RS256 identity hosts, account mint-mismatch, plain PKCE, EA-mgmt scopes) and handler-deferred billing/PII BOLA (incl. new hidden DELETE licenses family) remain gated on a single leaked credential; lone credential-free finding (vps.signl4.com) is proof-complete awaiting human claim; this cycle added only OIDC-periphery negatives + one hidden-route corroboration — no risk delta.
+===== ANALYST bigpickle 2026-09-19 09:39:12 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && ls -la inventory 2>/dev/null; ls -la *.yml 2>/dev/null
+total 716
+drwxr-xr-x 12 runner runner   4096 Sep 19 09:35 .
+drwxr-xr-x  3 runner runner   4096 Sep 19 09:35 ..
+drwxr-xr-x  7 runner runner   4096 Sep 19 09:35 .git
+drwxr-xr-x  3 runner runner   4096 Sep 19 09:35 .github
+-rw-r--r--  1 runner runner   1831 Sep 19 09:35 README.md
+-rw-r--r--  1 runner runner     32 Sep 19 09:35 analyst-out.txt
+-rw-r--r--  1 runner runner 314658 Sep 19 09:35 analyst-prompt.txt
+-rw-r--r--  1 runner runner 310779 Sep 19 09:35 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 inventory
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 knowledge
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 leads
+-rw-r--r--  1 runner runner  16386 Sep 19 09:35 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 recon-notes
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 reports
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Sep 19 09:35 scope.yml
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 scripts
+-rw-r--r--  1 runner runner     33 Sep 19 09:35 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Sep 19 09:35 state_laguna.json
+-rw-r--r--  1 runner runner     33 Sep 19 09:35 state_ling3.json
+-rw-r--r--  1 runner runner     33 Sep 19 09:35 state_longcat.json
+-rw-r--r--  1 runner runner     33 Sep 19 09:35 state_mimo.json
+-rw-r--r--  1 runner runner     33 Sep 19 09:35 state_nemotron3.json
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 triage
+total 164
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 .
+drwxr-xr-x 12 runner runner   4096 Sep 19 09:35 ..
+-rw-r--r--  1 runner runner 158569 Sep 19 09:35 derdack.md
+-rw-r--r-- 1 runner runner 3292 Sep 19 09:35 scope.yml
+[0m
+[0m$ [0mcat scope.yml 2>/dev/null | head -50
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+  passive_first: false          # deep-hunt agent: active probes allowed when scoped
+  max_requests_per_second: 1    # never hammer live infra
+  no_doom: true                 # no DoS/DDoS, no account-lockout attacks
+  account_creation: restricted  # only on test/sandbox assets, never live customer data
+  no_data_modification: true    # no writes/deletes on live customer data
+  no_pre_disclosure: true       # never disclose before program response
+  poc_required: true            # scanner output alone is REJECTED
+  redact_secrets_in_commits: true
+
+models:
+[0m
+[0m$ [0mcat state_bigpickle.json; echo; cat analyst-out.txt; echo; ls knowledge leads recon-notes triage reports 2>/dev/null
+{"phase": "POC", "target": "api"}
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && ls -la inventory 2>/dev/null; ls -la *.yml 2>/dev/null
+total 716
+drwxr-xr-x 12 runner runner   4096 Sep 19 09:35 .
+drwxr-xr-x  3 runner runner   4096 Sep 19 09:35 ..
+drwxr-xr-x  7 runner runner   4096 Sep 19 09:35 .git
+drwxr-xr-x  3 runner runner   4096 Sep 19 09:35 .github
+-rw-r--r--  1 runner runner   1831 Sep 19 09:35 README.md
+-rw-r--r--  1 runner runner     32 Sep 19 09:35 analyst-out.txt
+-rw-r--r--  1 runner runner 314658 Sep 19 09:35 analyst-prompt.txt
+-rw-r--r--  1 runner runner 310779 Sep 19 09:35 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 inventory
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 knowledge
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 leads
+-rw-r--r--  1 runner runner  16386 Sep 19 09:35 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 recon-notes
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 reports
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Sep 19 09:35 scope.yml
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 scripts
+-rw-r--r--  1 runner runner     33 Sep 19 09:35 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Sep 19 09:35 state_laguna.json
+-rw-r--r--  1 runner runner     33 Sep 19 09:35 state_ling3.json
+-rw-r--r--  1 runner runner     33 Sep 19 09:35 state_longcat.json
+-rw-r--r--  1 runner runner     33 Sep 19 09:35 state_mimo.json
+-rw-r--r--  1 runner runner     33 Sep 19 09:35 state_nemotron3.json
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 triage
+total 164
+drwxr-xr-x  2 runner runner   4096 Sep 19 09:35 .
+drwxr-xr-x 12 runner runner   4096 Sep 19 09:35 ..
+-rw-r--r--  1 runner runner 158569 Sep 19 09:35 derdack.md
+-rw-r--r-- 1 runner runner 3292 Sep 19 09:35 scope.yml
+[0m
+[0m$ [0mcat scope.yml 2>/dev/null | head -50
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+  passive_first: false          # deep-hunt agent: active probes allowed when scoped
+  max_requests_per_second: 1    # never hammer live infra
+  no_doom: true                 # no DoS/DDoS, no account-lockout attacks
+  account_creation: restricted  # only on test/sandbox assets, never live customer data
+  no_data_modification: true    # no writes/deletes on live customer data
+  no_pre_disclosure: true       # never disclose before program response
+  poc_required: true            # scanner output alone is REJECTED
+  redact_secrets_in_commits: true
+
+models:
+[0m
+
+knowledge:
+index.md
+
+leads:
+lead-bigpickle.md
+lead-laguna.md
+lead-ling3.md
+lead-longcat.md
+lead-mimo.md
+lead-nemotron3.md
+reposcan-derdack.md
+
+recon-notes:
+DEDICATED-DEEP.md
+
+reports:
+analyst-bigpickle.log
+analyst-laguna.log
+analyst-ling3.log
+analyst-longcat.log
+analyst-nemotron3.log
+hypotheses-bigpickle.txt
+hypotheses-laguna.txt
+hypotheses-ling3.txt
+hypotheses-longcat.txt
+hypotheses-nemotron3.txt
+hypotheses.md
+valid-bugs.md
+
+triage:
+run-2026-09-02-21-25.md
+run-2026-09-02-23-31.md
+run-2026-09-03-01-23.md
+run-2026-09-03-06-25.md
+run-2026-09-03-11-39.md
+run-2026-09-03-15-10.md
+run-2026-09-03-18-39.md
+run-2026-09-03-21-19.md
+run-2026-09-03-23-20.md
+run-2026-09-04-01-02.md
+run-2026-09-04-05-54.md
+run-2026-09-04-10-01.md
+run-2026-09-04-14-22.md
+run-2026-09-04-17-46.md
+run-2026-09-04-19-58.md
+run-2026-09-04-21-58.md
+run-2026-09-04-23-38.md
+run-2026-09-05-01-22.md
+run-2026-09-05-06-16.md
+run-2026-09-05-10-37.md
+run-2026-09-05-13-31.md
+run-2026-09-05-16-13.md
+run-2026-09-05-18-18.md
+run-2026-09-05-20-26.md
+run-2026-09-05-22-13.md
+run-2026-09-05-23-54.md
+run-2026-09-06-01-28.md
+run-2026-09-06-06-28.md
+run-2026-09-06-11-17.md
+run-2026-09-06-14-12.md
+run-2026-09-06-17-03.md
+run-2026-09-06-19-11.md
+run-2026-09-06-21-21.md
+run-2026-09-06-23-04.md
+run-2026-09-07-01-02.md
+run-2026-09-07-06-07.md
+run-2026-09-07-12-33.md
+run-2026-09-07-17-53.md
+run-2026-09-07-20-50.md
+run-2026-09-07-23-04.md
+run-2026-09-08-01-12.md
+run-2026-09-08-05-59.md
+run-2026-09-08-10-34.md
+run-2026-09-08-14-45.md
+run-2026-09-08-18-09.md
+run-2026-09-08-21-10.md
+run-2026-09-08-23-24.md
+run-2026-09-09-01-28.md
+run-2026-09-09-06-38.md
+run-2026-09-09-11-47.md
+run-2026-09-09-15-23.md
+run-2026-09-09-18-50.md
+run-2026-09-09-21-18.md
+run-2026-09-09-23-18.md
+run-2026-09-10-01-08.md
+run-2026-09-10-05-59.md
+run-2026-09-10-10-37.md
+run-2026-09-10-14-36.md
+run-2026-09-10-17-50.md
+run-2026-09-10-20-09.md
+run-2026-09-10-22-35.md
+run-2026-09-11-00-29.md
+run-2026-09-11-05-08.md
+run-2026-09-11-09-42.md
+run-2026-09-11-13-54.md
+run-2026-09-11-17-22.md
+run-2026-09-11-19-59.md
+run-2026-09-11-22-15.md
+run-2026-09-12-00-19.md
+run-2026-09-12-04-41.md
+run-2026-09-12-08-53.md
+run-2026-09-12-12-27.md
+run-2026-09-12-15-47.md
+run-2026-09-12-17-55.md
+run-2026-09-12-19-43.md
+run-2026-09-12-21-44.md
+run-2026-09-12-23-28.md
+run-2026-09-13-01-22.md
+run-2026-09-13-06-43.md
+run-2026-09-13-12-22.md
+run-2026-09-13-16-35.md
+run-2026-09-13-18-55.md
+run-2026-09-13-21-11.md
+run-2026-09-13-23-10.md
+run-2026-09-14-01-05.md
+run-2026-09-14-06-18.md
+run-2026-09-14-12-56.md
+run-2026-09-14-18-15.md
+run-2026-09-14-21-52.md
+run-2026-09-15-00-04.md
+run-2026-09-15-04-55.md
+run-2026-09-15-09-40.md
+run-2026-09-15-14-27.md
+run-2026-09-15-18-26.md
+run-2026-09-15-21-42.md
+run-2026-09-15-23-47.md
+run-2026-09-16-01-52.md
+run-2026-09-16-06-54.md
+run-2026-09-16-12-15.md
+run-2026-09-16-16-56.md
+run-2026-09-16-19-48.md
+run-2026-09-16-22-26.md
+run-2026-09-17-00-51.md
+run-2026-09-17-05-33.md
+run-2026-09-17-10-21.md
+run-2026-09-17-15-17.md
+run-2026-09-17-19-03.md
+run-2026-09-17-22-10.md
+run-2026-09-18-00-20.md
+run-2026-09-18-04-52.md
+run-2026-09-18-09-15.md
+run-2026-09-18-13-36.md
+run-2026-09-18-17-10.md
+run-2026-09-18-19-37.md
+run-2026-09-18-21-49.md
+run-2026-09-18-23-43.md
+run-2026-09-19-01-48.md
+run-2026-09-19-06-45.md
+[0m
+[0m$ [0mtail -80 probe-results.md
+## 2026-09-15 22:20:26 UTC
+
+
+## 2026-09-16 00:28:00 UTC
+
+
+## 2026-09-16 05:16:08 UTC
+https://signl4.derdack.com/api/v1/health -> ERR <urlopen error timed out>
+https://signl4.derdack.com/.well-known/openid-configuration -> ERR <urlopen error timed out>
+https://dev.derdack.com/ -> HTTP 403
+https://dev.derdack.com/api/ -> HTTP 404
+https://signals.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://signl4.derdack.com/.well-known/jwks.json -> ERR <urlopen error timed out>
+https://signl4.derdack.com/oauth/token -> ERR <urlopen error timed out>
+https://dev.derdack.com/actuator -> HTTP 404
+https://dev.derdack.com/actuator/env -> HTTP 404
+https://dev.derdack.com/swagger-ui.html -> HTTP 404
+https://dev.derdack.com/api/docs -> HTTP 404
+https://signl4.derdack.com/api/v1/user -> ERR <urlopen error timed out>
+
+## 2026-09-16 10:07:26 UTC
+
+
+## 2026-09-16 14:44:03 UTC
+
+
+## 2026-09-16 18:54:01 UTC
+
+
+## 2026-09-16 21:45:19 UTC
+
+
+## 2026-09-16 23:51:54 UTC
+
+
+## 2026-09-17 02:37:16 UTC
+
+
+## 2026-09-17 07:59:26 UTC
+
+
+## 2026-09-17 13:07:41 UTC
+
+
+## 2026-09-17 17:42:27 UTC
+
+
+## 2026-09-17 20:38:24 UTC
+
+
+## 2026-09-17 23:05:24 UTC
+
+
+## 2026-09-18 01:24:17 UTC
+
+
+## 2026-09-18 06:04:37 UTC
+
+
+## 2026-09-18 10:54:07 UTC
+
+
+## 2026-09-18 14:44:53 UTC
+
+
+## 2026-09-18 18:04:45 UTC
+
+
+## 2026-09-18 20:30:47 UTC
+
+
+## 2026-09-18 22:48:44 UTC
+
+
+## 2026-09-19 00:51:10 UTC
+
+
+## 2026-09-19 05:21:17 UTC
+[0m
+[0m$ [0mcat reports/valid-bugs.md 2>/dev/null | head -60; echo ===; cat reports/hypotheses-bigpickle.txt 2>/dev/null | head -80
+# Validated findings (running count 0)
+
+- 2 lead(s) marked VALID at 2026-09-03 23:20:09 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 3 lead(s) marked VALID at 2026-09-04 17:46:22 UTC
+  - | Q7 Reasonable triager? | **Yes** | Information disclosure of sensitive file paths on a live dev host is a valid finding |
+  - **Verdict: VALID**
+  - | dev.derdack.com MultiViews path disclosure | **VALID** | 5.3 | Report to bugs.olivermaicher.eu |
+
+- 1 lead(s) marked VALID at 2026-09-05 13:31:45 UTC
+  - Please paste the lead(s) you want me to triage, and I'll run each through the 7-Question Gate with verdict, reasoning, and (if VALID) proof steps, impact, CVSS 3.1, and reporting channel.
+
+- 2 lead(s) marked VALID at 2026-09-06 06:28:40 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 2 lead(s) marked VALID at 2026-09-08 10:34:26 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+
+- 4 lead(s) marked VALID at 2026-09-09 06:38:04 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+  - | 1 | Cross-Env JWKS Key + Client/Scope Reuse | **VALID** | 7.4 |
+  - | 6 | Staging IdP Directly Reachable | **VALID** | 6.5 |
+
+- 4 lead(s) marked VALID at 2026-09-10 10:37:58 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | Q7 Reasonable triager? | Yes — hardcoded real secrets in public code is a standard valid finding |
+  - **Verdict: VALID**
+
+- 14 lead(s) marked VALID at 2026-09-11 05:08:59 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: HOLD** — valid code defect, but impact gated on EA Scripting Host deployment and attacker ability to control event parameters; needs confirmatory evidence of production deployment
+  - **Verdict: HOLD** — valid code defect, but impact requires confirmation that parameters originate from external/user input in production
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | Cross-env JWKS key reuse (4 hosts) | **VALID** | 7.4 | HIGH |
+  - | 2 | Hardcoded SQL Server SA creds | **VALID** | 8.1 | HIGH |
+  - | 5 | Hardcoded Checkmk creds + internal IP | **VALID** | 7.5 | MEDIUM |
+  - | 6 | SIGNL4 secret logged at INFO (ioBroker) | **VALID** | 5.3 | MEDIUM |
+  - | 7 | Team secrets in public repos | **VALID** | 5.3 | MEDIUM |
+  - | 8 | PII in public CSV export | **VALID** | 5.3 | MEDIUM |
+
+- 7 lead(s) marked VALID at 2026-09-13 21:11:57 UTC
+  - | 1 | Cross-env JWKS key + client/scope reuse (devconnect + connect.signl4.com) | VALID | 7.4 | Reported |
+  - | 2 | Staging IdentityServer directly reachable (devconnect.signl4.com, password grant) | VALID | 6.5 | Reported |
+  - | 3 | Hardcoded SQL Server SA creds (`Derdack!`) in public EA plugin | VALID | 8.1 | Reported |
+  - | 4 | Hardcoded Checkmk admin creds + internal IP in public plugin | VALID | 7.5 | Reported |
+  - | 5 | SIGNL4 team secrets in public repos (Google IoT, Postman, DevTools) | VALID | 5.3 | Reported |
+  - | 6 | SIGNL4 secret logged at INFO level in ioBroker adapter | VALID | 5.3 | Reported |
+  - | 7 | PII + internal infra URLs in public CSV export | VALID | 5.3 | Reported |
+
+- 6 lead(s) marked VALID at 2026-09-14 21:52:08 UTC
+===
+## 2026-09-19 05:21:08 UTC [target] (model bigpickle)
+[HYP] Cross-env token forgery via 6-host
+[HYP] Subdomain takeover — vps.signl4.com dangling A-record to unclaimed GoDaddy shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 95
+reasoning: GoDaddy aNS `pdns09/10.domaincontrol.com` → 72.167.227.27 (secureserver.net); HTTPS 200 nginx "Default Web Site Page", cert CN=server.d1g.it (no signl4 SAN); HTTP:80 → 301 same box; fabricated `<rand>.signl4.com` forced to that IP → byte-identical body (sha256 `9278d16ed2fdcd5dc651615b0b8adc6b55fb667a`); `*.signl4.com` NXDOMAIN so no wildcard masking; no vhost claimed.
+evidence_needed: authorization to confirm addon/parked-domain claimability on 72.167.227.27 → attacker control under trusted signl4.com.
+verify_steps: 1) GET https://vps.signl4.com/ → 200 default (done) 2) --resolve fake<rand>.signl4.com → byte-identical body (done) 3) claim confirmation HUMAN_ONLY.
+impact: attacker content on trusted subdomain → phishing, parent-domain cookie ops vs account/connect, OAuth redirect_uri abuse if allowlisted; HIGH.
+testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts (connect/api/devconnect/devapi/account/devaccount) serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`); account advertises issuer=connect while minting locally; billing/SCIM APIs accept any shared-key-signed token (handler-deferred auth); plain PKCE permitted.
+evidence_needed: leaked client_secret/X-S4-Api-Key → mint + validate token against prod API.
+verify_steps: 1) POST /identity/connect/token code=test verifier=test → invalid_grant (done, AUTH_HELPED) 2) GET api.signl4.com/api/v2/teams with forged Bearer → 200 if chain holds.
+impact: EA-management-scoped tokens minted under connect issuer accepted by prod → multi-tenant ATO; CRITICAL.
+testability: AUTH_HELPED
+[HYP] Cross-tenant BOLA on V3 ZUGFeRD invoice download
+class: IDOR
+asset: connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd
+confidence: 75
+reasoning: route registered (OPTIONS Allow:GET); path IDs carry no visible tenant binding; invoices = billing+PII; sibling families flip 405↔401 (gate-layer inconsistency).
+evidence_needed: valid token + foreign subscription/invoice id → 200 vs own-id 403/404.
+verify_steps: 1) GET own subscription/invoice Bearer (baseline) 2) iterate foreign low IDs 3) replicate on devapi.
+impact: cross-tenant invoice/PII disclosure; HIGH.
+testability: AUTH_HELPED
+[NEXT] HUMAN: File `vps.signl4.com` dangling-DNS finding with the full evidence pack (GoDaddy NS `pdns09/10.domaincontrol.com` → `72.167.227.27`, cPanel default vhost, cert CN=server.d1g.it no signl4 SAN, HTTP:80 301 same box, fabricated-host byte-identical sha256 `9278d16ed2fdcd5dc651615b0b8adc6b55fb667a`) and request authorization to confirm claimability by adding the domain on that shared host; concurrently create a free-trial SIGNL4 account (https://www.signl4.com/pricing/) to unblock the entire AUTH_HELPED queue (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA).
+[RISK] derdack: 91 — unchanged: CRITICAL cross-env token-forgery chain (6 shared-RS256 identity hosts, account mint-mismatch, plain-PKCE, EA-management scopes + handler-deferred billing/SCIM APIs) and handler-deferred billing/PII BOLA remain gated on a single leaked credential (client_secret/X-S4-Api-Key); the lone credential-free finding (vps.signl4.com dangling) is proof-complete and awaiting human claim-confirmation; this cycle added only a negative EA-estate sweep — no risk delta.
+[LEARN] REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
+[LEARN] REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
+[LEARN] ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
+[LEARN] ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
+[LEARN] ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer claim
+[LEARN] ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th namespace with staging parity, all handler-deferred
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid billing route family
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Content-Length before auth
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — oracle confirmed
+[LEARN] REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+[LEARN] CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parametric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover.
+[NEW] 9 hosts discovered via passive DNS/CT, 0 probed for live HTTP — initial surface unvalidated
+[NEW] No GitHub org configured for reposcan — code-level recon gap
+[NEW] Knowledge base empty — no prior tech fingerprint, endpoint map, or auth flow data
+[PRIO] signl4.derdack.com,8.5,a=9 b=10 t=8 g=6 c=8 f=5
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid billing route family
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Content-Length before auth
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — oracle confirmed
+[LEARN] REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+[LEARN] CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parametric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover.
+[NEW] PROBE: hidden billing-licenses route family `/api/{v1,v2,v3}/subscriptions/licenses` → OPTIONS Allow: DELETE,GET on connect+devapi (staging parity), anon GET → 401 WWW-Authenticate:Bearer empty body — ABSENT from V1/V3 swagger (93/206 paths), corroborates spec-under-declare family (LOW); DELETE on entitlement collection would be license-revocation surface if ever reachable with a token.
+[NEW] PROBE: endsession?post_logout_redirect_uri=https://evil.example → 302 `/identity/Account/Logout` (internal) — no logout OAuth open-redirect; post_logout_redirect_uri ignored without session/id_token_hint.
+[NEW] PROBE: RFC8414 `/.well-known/oauth-authorization-server` → 404 on connect+account — metadata endpoint not served via RFC8414 path.
+[NEW] PROBE: `/identity/connect/par` OPTIONS → 405 (registered, POST-only) on connect+account — PAR family present, secret-gated like all grants.
+[NEW] CT re-sweep crt.sh %signl4.com: 14 unique names, ZERO new certs since 09-16 — estate drift = 0 (control).
+[CHANGED] No elevation: all anon probes on new families → 401 Bearer; AUTH_HELPED queue unchanged (forgery/V1-userId/V2-changePassword/V3-BOLA now + licenses-BOLA).
+[RISK] derdack: 91 — unchanged: cross-env token-forgery (6 shared-RS256 hosts, account mint-mismatch), BOLA families gated on one credential; vps.signl4.com proof-complete awaiting human claim; hidden licenses-DELETE route adds marginal surface only.
+[HYP] Subdomain takeover — vps.signl4.com dangling A-record to unclaimed GoDaddy shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 95
+reasoning: GoDaddy aNS pdns09/10.domaincontrol.com → 72.167.227.27 (secureserver.net); HTTPS 200 nginx default vhost, cert CN=server.d1g.it (no signl4 SAN); fabricated <rand>.signl4.com forced to IP → byte-identical body sha256 9278d16ed2fdcd5dc651615b0b8adc6b55fb667a; *.signl4.com NXDOMAIN.
+evidence_needed: claimability confirmation on 72.167.227.27
+verify_steps: 1) GET https://vps.signl4.com/ → 200 default (done) 2) --resolve fake<rand> → byte-identical (done) 3) claim = HUMAN_ONLY
+impact: attacker content on trusted subdomain → phishing, parent-domain cookie ops vs account/connect, potential OAuth redirect_uri abuse; HIGH
+testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP with account mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account asserts issuer=connect while minting locally; billing/SCIM/scripts APIs accept shared-key-signed tokens (handler-deferred 405-before-401); plain PKCE allowed.
+evidence_needed: leaked client_secret/X-S4-Api-Key
+[0m
+[0m$ [0mgrep -i "enterprisealert" inventory/derdack.md | head -40
+- NEW s4dev1..s4dev8.enterprisealert.com ALL resolve 4.207.244.99 (Azure): 404 root, 504 on /identity, /webhook, /api, /api/v2/alerts, 404 on /swagger — CSP-referenced staging alert fleet = live front + dea
+- NEW crt.sh CT-log sweep: 13 signl4.com + 4 enterprisealert.com subdomains; 8 previously-unknown LIVE hosts — fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com
+- NEW CT surface expanded by 8 live hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com) — all passively surfaced 2026-09-10, none yet probed for new defects beyond initi
+- NEW CT-log sweep (crt.sh) surfaced 8 previously-unknown live hosts under signl4.com/enterprisealert.com: fix.signl4.com (prod ASP.NET Core Support App, Blazor, /signin-oidc 500), frontdoor.signl4.com (unc
+- CHANGED 8 new CT hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com) unprobed beyond initial fingerprint
+- CHANGED 8 new CT hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com) unprobed beyond initial fingerprint — fix.signl4.com (prod ASP.NET Core Support App, Blazor, /signin-o
+- NEW demo.enterprisealert.com → 404
+- NEW downloads.enterprisealert.com → 403 (IIS/10.0, directory browsing disabled)
+- CHANGED 8 new CT hosts (fix, frontdoor, status, support, trust, docs, demo/downloads.enterprisealert.com) — status/support/trust/docs are third-party (StatusLabs, Zendesk, Safebase, GitHub Pages); demo/downlo
+- NEW demo/downloads.enterprisealert.com: 404 / 403 (IIS/10.0 directory browsing disabled) — no attack surface
+- NEW downloads.enterprisealert.com: `/` 403, `/site/`+`/EA/` 404 — no readable resources under wildcard ACAO; CORS data-theft unsubstantiated
+- NEW demo/downloads.enterprisealert.com: 404 / 403 (IIS/10.0 directory browsing disabled) — no attack surface
+- NEW downloads.enterprisealert.com: `/` 403, `/site/`+`/EA/` 404 — no readable resources under wildcard ACAO; CORS data-theft unsubstantiated
+- NEW demo/downloads.enterprisealert.com: 404 / 403 (IIS/10.0 directory browsing disabled) — no attack surface
+[0m
+[0m$ [0mfor h in enterprisealert.com www.enterprisealert.com; do echo "== $h =="; dig +short "$h" A; dig +short "$h" CNAME; done
+== enterprisealert.com ==
+== www.enterprisealert.com ==
+51.4.206.217
+[0m
+[0m$ [0mfor h in enterprisealert.com www.enterprisealert.com ea.enterprisealert.com login.enterprisealert.com portal.enterprisealert.com; do echo "== $h =="; curl -s -o /dev/null -w "code=%{http_code} ip=%{remote_ip} ssl=%{ssl_verify_result}\n" --max-time 12 "https://$h/" 2>&1; done
+== enterprisealert.com ==
+code=000 ip= ssl=0
+== www.enterprisealert.com ==
+code=000 ip= ssl=0
+== ea.enterprisealert.com ==
+code=000 ip= ssl=0
+== login.enterprisealert.com ==
+code=000 ip= ssl=0
+== portal.enterprisealert.com ==
+code=000 ip= ssl=0
+[0m
+[0m$ [0mdig +short www.enterprisealert.com A; dig www.enterprisealert.com A +noall +answer; dig www.enterprisealert.com ANY +noall +answer 2>/dev/null | head; echo "---whois-ish---"; dig +short www.enterprisealert.com CNAME; host www.enterprisealert.com 2>&1 | head
+51.4.206.217
+www.enterprisealert.com. 1782	IN	A	51.4.206.217
+www.enterprisealert.com. 300	IN	HINFO	"RFC8482" ""
+---whois-ish---
+www.enterprisealert.com has address 51.4.206.217
+[0m
+[0m$ [0mcurl -sv --max-time 20 "http://www.enterprisealert.com/" -o /dev/null 2>&1 | tail -20; echo "===HTTPS==="; curl -sv --max-time 20 "https://www.enterprisealert.com/" -o /dev/null 2>&1 | tail -20
+* Host www.enterprisealert.com:80 was resolved.
+* IPv6: (none)
+* IPv4: 51.4.206.217
+*   Trying 51.4.206.217:80...
+* Connection timed out after 20002 milliseconds
+* Closing connection
+===HTTPS===
+* Host www.enterprisealert.com:443 was resolved.
+* IPv6: (none)
+* IPv4: 51.4.206.217
+*   Trying 51.4.206.217:443...
+* Connection timed out after 20001 milliseconds
+* Closing connection
+[0m
+[0m✗ [0mWebFetch https://crt.sh/?q=%25.enterprisealert.com&output=json failed
+[91m[1mError: [0mStatusCode: non 2xx status code (429 GET https://crt.sh/?q=%25.enterprisealert.com&output=json)
+[0m
+[0m$ [0mfor s in account connect api app portal login my secure web support status docs mobile vps demo downloads downloads2 connect2 admin s4 s4prod alerting alerts eu us cs; do ip=$(dig +short "$s.enterprisealert.com" A 2>/dev/null | tail -1); [ -n "$ip" ] && echo "$s.enterprisealert.com -> $ip"; done; echo done
+docs.enterprisealert.com -> 52.239.221.33
+demo.enterprisealert.com -> 4.207.244.99
+downloads.enterprisealert.com -> 40.71.11.142
+done
+[0m
+[0m$ [0mfor s in account connect api app portal login my secure web mail status docs mobile s4 alerting eu us cs www; do ip=$(dig +short "$s.derdack.com" A 2>/dev/null | tail -1); [ -n "$ip" ] && echo "$s.derdack.com -> $ip"; done; echo done
+us.derdack.com -> 217.160.0.28
+www.derdack.com -> 217.160.0.28
+done
+[0m
+[0m$ [0mfor h in "docs.enterprisealert.com" "us.derdack.com"; do echo "== $h =="; curl -s -o /dev/null -w "code=%{http_code} ip=%{remote_ip} ssl=%{ssl_verify_result} time=%{time_total}\n" --max-time 15 "https://$h/" 2>&1; curl -s -I --max-time 15 "https://$h/" 2>&1 | head -12; done
+== docs.enterprisealert.com ==
+code=000 ip=52.239.221.33 ssl=1 time=0.178901
+== us.derdack.com ==
+code=403 ip=217.160.0.28 ssl=0 time=0.533778
+HTTP/2 403 
+content-type: text/html
+x-ws-origin: available
+x-ws-ratelimit-limit: 1000
+x-ws-ratelimit-remaining: 998
+date: Sat, 19 Sep 2026 09:37:08 GMT
+server: Apache
+[0m
+[0m$ [0mcurl -s --max-time 15 "https://us.derdack.com/" 2>&1 | head -c 600; echo; echo "=== http docs ==="; curl -s -o /dev/null -w "code=%{http_code} ip=%{remote_ip} url=%{url_effective}\n" -L --max-time 20 "http://docs.enterprisealert.com/" 2>&1; curl -sv --max-time 12 "https://docs.enterprisealert.com/" -o /dev/null 2>&1 | grep -E "Connected|SSL|error|HTTP/" | head
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8">
+  <style type="text/css">
+   html, body, #partner, iframe {
+                height:100%;
+                width:100%;
+                margin:0;
+                padding:0;
+                border:0;
+                outline:0;
+                font-size:100%;
+                vertical-align:baseline;
+                background:transparent;
+            }
+            body {
+                overflow:hidden;
+            }
+  </style>
+  <meta content="NOW" name="expires">
+  <meta content="index, follow, all" name="GOOGLEBOT">
+  <meta content="index, 
+=== http docs ===
+code=404 ip=52.239.221.33 url=http://docs.enterprisealert.com/
+* Connected to docs.enterprisealert.com (52.239.221.33) port 443
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / secp384r1 / RSASSA-PSS
+* SSL: no alternative certificate subject name matches target host name 'docs.enterprisealert.com'
+[0m
+[0m$ [0mecho | timeout 12 openssl s_client -connect docs.enterprisealert.com:443 -servername docs.enterprisealert.com 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName 2>/dev/null | head -20
+subject=C = US, ST = WA, L = Redmond, O = Microsoft Corporation, CN = *.web.core.windows.net
+issuer=C = US, O = Microsoft Corporation, CN = Microsoft TLS G2 RSA CA OCSP 04
+notBefore=Sep 16 20:42:19 2026 GMT
+notAfter=Dec 25 19:42:19 2026 GMT
+X509v3 Subject Alternative Name: 
+    DNS:*.web.core.windows.net, DNS:*.z1.web.core.windows.net, DNS:*.z2.web.core.windows.net, DNS:*.z3.web.core.windows.net, DNS:*.z4.web.core.windows.net, DNS:*.z5.web.core.windows.net, DNS:*.z6.web.core.windows.net, DNS:*.z7.web.core.windows.net, DNS:*.z8.web.core.windows.net, DNS:*.z9.web.core.windows.net, DNS:*.z10.web.core.windows.net, DNS:*.z11.web.core.windows.net, DNS:*.z12.web.core.windows.net, DNS:*.z13.web.core.windows.net, DNS:*.z14.web.core.windows.net, DNS:*.z15.web.core.windows.net, DNS:*.z16.web.core.windows.net, DNS:*.z17.web.core.windows.net, DNS:*.z18.web.core.windows.net, DNS:*.z19.web.core.windows.net, DNS:*.z20.web.core.windows.net, DNS:*.z21.web.core.windows.net, DNS:*.z22.web.core.windows.net, DNS:*.z23.web.core.windows.net, DNS:*.z24.web.core.windows.net, DNS:*.z25.web.core.windows.net, DNS:*.z26.web.core.windows.net, DNS:*.z27.web.core.windows.net, DNS:*.z28.web.core.windows.net, DNS:*.z29.web.core.windows.net, DNS:*.z30.web.core.windows.net, DNS:*.z31.web.core.windows.net, DNS:*.z32.web.core.windows.net, DNS:*.z33.web.core.windows.net, DNS:*.z34.web.core.windows.net, DNS:*.z35.web.core.windows.net, DNS:*.z36.web.core.windows.net, DNS:*.z37.web.core.windows.net, DNS:*.z38.web.core.windows.net, DNS:*.z39.web.core.windows.net, DNS:*.z40.web.core.windows.net, DNS:*.z41.web.core.windows.net, DNS:*.z42.web.core.windows.net, DNS:*.z43.web.core.windows.net, DNS:*.z44.web.core.windows.net, DNS:*.z45.web.core.windows.net, DNS:*.z46.web.core.windows.net, DNS:*.z47.web.core.windows.net, DNS:*.z48.web.core.windows.net, DNS:*.z49.web.core.windows.net, DNS:*.z50.web.core.windows.net, DNS:*.web.storage.azure.net, DNS:*.z1.web.storage.azure.net, DNS:*.z2.web.storage.azure.net, DNS:*.z3.web.storage.azure.net, DNS:*.z4.web.storage.azure.net, DNS:*.z5.web.storage.azure.net, DNS:*.z6.web.storage.azure.net, DNS:*.z7.web.storage.azure.net, DNS:*.z8.web.storage.azure.net, DNS:*.z9.web.storage.azure.net, DNS:*.z10.web.storage.azure.net, DNS:*.z11.web.storage.azure.net, DNS:*.z12.web.storage.azure.net, DNS:*.z13.web.storage.azure.net, DNS:*.z14.web.storage.azure.net, DNS:*.z15.web.storage.azure.net, DNS:*.z16.web.storage.azure.net, DNS:*.z17.web.storage.azure.net, DNS:*.z18.web.storage.azure.net, DNS:*.z19.web.storage.azure.net, DNS:*.z20.web.storage.azure.net, DNS:*.z21.web.storage.azure.net, DNS:*.z22.web.storage.azure.net, DNS:*.z23.web.storage.azure.net, DNS:*.z24.web.storage.azure.net, DNS:*.z25.web.storage.azure.net, DNS:*.z26.web.storage.azure.net, DNS:*.z27.web.storage.azure.net, DNS:*.z28.web.storage.azure.net, DNS:*.z29.web.storage.azure.net, DNS:*.z30.web.storage.azure.net, DNS:*.z31.web.storage.azure.net, DNS:*.z32.web.storage.azure.net, DNS:*.z33.web.storage.azure.net, DNS:*.z34.web.storage.azure.net, DNS:*.z35.web.storage.azure.net, DNS:*.z36.web.storage.azure.net, DNS:*.z37.web.storage.azure.net, DNS:*.z38.web.storage.azure.net, DNS:*.z39.web.storage.azure.net, DNS:*.z40.web.storage.azure.net, DNS:*.z41.web.storage.azure.net, DNS:*.z42.web.storage.azure.net, DNS:*.z43.web.storage.azure.net, DNS:*.z44.web.storage.azure.net, DNS:*.z45.web.storage.azure.net, DNS:*.z46.web.storage.azure.net, DNS:*.z47.web.storage.azure.net, DNS:*.z48.web.storage.azure.net, DNS:*.z49.web.storage.azure.net, DNS:*.z50.web.storage.azure.net
+[0m
+STEP 1 — DELTA
+- NEW docs.enterprisealert.com resolves 52.239.221.33 (Azure edge); HTTP `GET /` → 404 with TLS cert `CN=*.web.core.windows.net` (no docs SAN) — previously-unmapped live enterprisealert.com FQDN, distinct from docs.signl4.com (GitHub Pages)
+- NEW www.enterprisealert.com resolves 51.4.206.217 but TCP-dead on 80/443 (timeout) — main-brand www pointer inert
+- NEW us.derdack.com resolves 217.160.0.28 (IONOS), HTTP 403 root + served behind shared `x-ws-origin: available` proxy fingerprint; body = partner-iframe parking page
+- CHANGED enterprisealert.com DNS sweep: only new live A-records = docs/azure-404, dead www, plus known demo(4.207.244.99)/downloads(40.71.11.142); crt.sh 429 (rate-limited, no cert diff)
+
+STEP 2 — PRIORITIZE
+- [PRIO] docs.enterprisealert.com,6.4,a=5 b=6 t=3 g=10 c=8 f=9
+- [PRIO] www.enterprisealert.com,3.4,a=3 b=5 t=2 g=4 c=4 f=2
+- [PRIO] us.derdack.com,3.0,a=2 b=3 t=1 g=1 c=2 f=1
+
+STEP 3 — HYPOTHESES
+[HYP] Decommissioned docs subdomain dangling on Azure static hosting edge
+class: MISCONFIG
+asset: docs.enterprisealert.com
+confidence: 45
+reasoning: A-record 52.239.221.33 serves HTTP 404 (no index) over cert CN=*.web.core.windows.net / *.storage.azure.net family — Azure Static Web Apps/storage edge, not enterprisealert origin; hostname absent from SAN; KB previously mapped only demo/downloads/s4dev on enterprisealert.com, docs was NEVER probed; main docs content presumed decommissioned or never migrated.
+evidence_needed: prior content history (archive.org/docs.enterprisealert.com) + claimability confirmation on 52.239.221.33 (Azure custom-domain now requires DNS TXT validation post-2021, so re-binding is gated unless mapped via claimable CNAME/storage-account recreation)
+verify_steps: 1) GET https://docs.enterprisealert.com/ → 404 default (done) 2) GET https://docs.enterprisealert.com/index.html → 404-vs-200 storage-index differential 3) GET http://docs.enterprisealert.com/ → 404 (done) 4) claimability = HUMAN_ONLY
+impact: attacker content/serving under trusted Enterprise Alert FQDN if binding claimable → phishing against EA docs audience; MEDIUM if claimable, LOW purely-config otherwise
+testability: PASSIVE (fingerprint complete) / HUMAN_ONLY (claim)
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP with account mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 88
+reasoning: 6 identity hosts byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account asserts issuer=connect while minting locally; handler-deferred APIs accept shared-key-signed tokens; plain PKCE allowed; swagger confirms prod Bearer acceptance.
+evidence_needed: leaked client_secret / X-S4-Api-Key (or human-furnished trial credential)
+verify_steps: 1) POST /identity/connect/token → invalid_client without secret (done) 2) with credential: mint token → GET api.signl4.com/api/v2/teams → 200 chain-hold
+impact: EA-management + billing + SCIM-scoped tokens accepted by prod → multi-tenant ATO; CRITICAL
+testability: AUTH_HELPED
+[HYP] Subdomain takeover — vps.signl4.com dangling A-record to unclaimed GoDaddy shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 95
+reasoning: GoDaddy NS domaincontrol.com → 72.167.227.27 secureserver.net; HTTPS 200 nginx default vhost, cert CN=server.d1g.it, no signl4 SAN; fabricated <rand>.signl4.com forced to IP → byte-identical body (sha256 9278d16ed2fdcd5dc651615b0b8adc6b55fb667a); *.signl4.com NXDOMAIN.
+evidence_needed: claimability confirmation (addon-domain on the shared GoDaddy host)
+verify_steps: 1) GET https://vps.signl4.com/ → 200 default (done) 2) --resolve fake<rand>.signl4.com → byte-identical (done) 3) claim = HUMAN_ONLY
+impact: attacker content on trusted signl4.com subdomain → phishing, parent-domain cookie ops, OAuth redirect_uri abuse; HIGH
+testability: PASSIVE (proof complete) / HUMAN_ONLY (claim)
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] www.enterprisealert.com: Azure 51.4.206.217 TCP-dead both ports = inert class (same as admin.signl4.com), IP not claimable → no action
+- [PARKED] us.derdack.com: shared-proxy parked iframe like dev.derdack.com root, no unique content → minimal
+- [PARKED] enterprisealert.com CT diff: crt.sh 429 this cycle; only docs-404 / dead-www / parked-us emerged from DNS — no drift beyond those
+- [FINAL] Cross-env token forgery (88, AUTH_HELPED, human-furnished credential or leak) — resolved by HUMAN action, not probe
+- [FINAL] vps.signl4.com subdomain takeover (95, proof-complete) — awaiting human claim; strongest credential-free finding
+- [FINAL] docs.enterprisealert.com dangling Azure binding (45) — new passive finding, claimability uncertain, LOW-MED
+
+STEP 5 — NEXT ACTION
+[NEXT] PROBE: `GET https://docs.enterprisealert.com/index.html` + `GET https://docs.enterprisealert.com/EA/` (read-only) to differentiate Azure Storage-static-website vs AFD 404 (storage 404 body is `<?xml … 404 … blob>` shaped, AFD/custom 404 differs), then webfetch archive.org for docs.enterprisealert.com historical content to confirm decommissioned-docs hypothesis
+
+STEP 6 — LEARNING
+[LEARN] ACCEPTED MISCONFIG @ docs.enterprisealert.com: A-record → Azure edge serving HTTP 404 with default *.web.core.windows.net cert + no hostname SAN — decommissioned/dangling Azure static hosting binding, new passive surface (conf 45, claim gated on Azure DNS-TXT validation)
+[LEARN] ACCEPTED OTHER @ www.enterprisealert.com: A-record 51.4.206.217 TCP-timeout on 80/443 — inert main-brand pointer, non-claimable Azure public IP
+[LEARN] ACCEPTED MISCONFIG @ us.derdack.com: 217.160.0.28 IONOS behind shared x-ws proxy, parked partner-iframe page, files under dot-prefix namespace untested but pattern matches dev.derdack.com parked-minimal
+[LEARN] REJECTED OTHER @ enterprisealert.com CT re-sweep: crt.sh 429 (rate-limit) — no cert diff obtainable; DNS-only sweep produced only the 3 names above; estate drift minimal
+[LEARN] CHANGED estate map: enterprisealert.com live FQDNs now = docs(azure-404), www(dead), demo(404), downloads(403), s4dev1-8(504-inert) — full DNS surface enumerated, no anonymous read surface
+
+STEP 7 — RISK
+[RISK] derdack: 91 — unchanged: CRITICAL cross-env token-forgery chain (6 shared-RS256 identity hosts, account mint-mismatch, plain PKCE, EA-mgmt + handler-deferred billing/SCIM APIs) and V1/V2/V3 BOLA families remain gated on a single leaked/furnished credential; vps.signl4.com dangling-DNS proof-complete awaits human claim; this cycle added one LOW-MED hopped finding (docs.enterprisealert.com dangling Azure binding, claimability uncertain) and confirmed estate DNS map full — no positive risk delta

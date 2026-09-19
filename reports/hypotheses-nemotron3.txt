@@ -1,10 +1,15 @@
-## 2026-09-19 05:20:54 UTC [target] (model nemotron3)
-[CHANGED] vps.signl4.com subdomain takeover re-confirmed 2026-09-19 (GoDaddy NS domaincontrol.com → 72.167.227.27, nginx default page, unrelated cert CN=server.d1g.secureserver.net)
-[CHANGED] V4 API namespace confirmed absent (connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404) — sole gap closed
-[CHANGED] api.signl4.com/api/v2/teams auth-status flapping: unauth GET 401 (was 405), invalid Bearer 401 — handler/routing layer unstable 10th+ cycles
-[CHANGED] connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET 401, invalid Bearer 401 — route-gated (differs from V1/V2 handler-deferred)
-[CHANGED] connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle
-[CHANGED] Full identity/API/CT surface stable, zero drift across 6 identity hosts + fix/frontdoor/vps + derdack WP estate
+## 2026-09-19 09:39:00 UTC [target] (model nemotron3)
+[NEW] vps.signl4.com dangling A-record re-confirmed: GoDaddy NS (domaincontrol.com) → 72.167.227.27, nginx default page, unrelated cert CN=server.d1g.secureserver.net; fabricated-host byte-identical response proves unclaimed subdomain on shared hosting
+[NEW] V4 API namespace confirmed absent: connect.signl4.com/api/v4 → 404, /api/docs/v4/swagger.json → 404 — sole unprobed namespace gap closed
+[NEW] PROBE executed: hidden billing-licenses route family `/api/{v1,v2,v3}/subscriptions/licenses` → OPTIONS Allow: DELETE,GET on connect+devapi (staging parity), anon GET → 401 WWW-Authenticate:Bearer
+[NEW] PROBE executed: endsession?post_logout_redirect_uri=https://evil.example → 302 `/identity/Account/Logout` (internal) — no logout OAuth open-redirect; post_logout_redirect_uri ignored without session/id_token_hint
+[NEW] PROBE executed: RFC8414 `/.well-known/oauth-authorization-server` → 404 on connect+account — metadata endpoint not served via RFC8414 path
+[NEW] PROBE executed: `/identity/connect/par` OPTIONS → 405 (registered, POST-only) on connect+account — PAR family present, secret-gated like all grants
+[NEW] CT re-sweep crt.sh %signl4.com: 14 unique names, ZERO new certs since 09-16 — estate drift = 0 (control)
+[CHANGED] api.signl4.com/api/v2/teams auth-status flapping: unauth GET → 401 (was 405 prior cycle), invalid Bearer → 401 — handler/routing auth layer unstable across 10th+ cycles
+[CHANGED] connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET → 401, invalid Bearer → 401 — route-gated this cycle (differs from V1/V2 handler-deferred pattern)
+[CHANGED] connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET → 401, invalid Bearer → 401 — route-gated this cycle (differs from V2 teams flapping)
+[CHANGED] Full estate identity/API/CT surface stable with zero drift; passive route maps remain exhausted
 [PRIO] vps.signl4.com,9.5,a=10 b=8 t=10 g=10 c=10 f=10
 [PRIO] account.signl4.com/identity/connect/token,8.8,a=10 b=10 t=10 g=2 c=10 f=8
 [PRIO] connect.signl4.com/api/v1/alerts/acknowledgeAll,8.0,a=9 b=9 t=9 g=2 c=9 f=8
@@ -53,7 +58,29 @@ testability: AUTH_HELPED
 [LEARN] REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
 [LEARN] REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
 [LEARN] ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
-[LEARN] ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
+[LEARN] ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/
+[LEARN] ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer claim
+[LEARN] ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th namespace with staging parity, all handler-deferred
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid billing route family
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Content-Length before auth
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — oracle confirmed
+[LEARN] REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+[LEARN] CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parametric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover.
+[LEARN] ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer claim
+[LEARN] ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th namespace with staging parity, all handler-deferred
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid billing route family
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Content-Length before auth
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — oracle confirmed
+[LEARN] REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+[LEARN] CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
+[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parametric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover.
 [LEARN] ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer claim
 [LEARN] ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
 [LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th namespace with staging parity, all handler-deferred
