@@ -1221,3 +1221,14 @@ www.derdack.com
 - CHANGED vps.signl4.com subdomain takeover re-confirmed via live probe: HTTPS 200 nginx default page, cert CN=server.d1g.it, reverse DNS secureserver.net, GoDaddy authoritative NS
 - CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
 - CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted; signl4.derdack.com permanently unreachable; dev.derdack.com MultiViews benign static echo; blog/techblog HTTPS→HTTP
+
+## 2026-09-19 23:30:26 UTC
+- NEW vps.signl4.com subdomain takeover re-confirmed via live probe: HTTPS 200 nginx default page, cert CN=server.d1g.it, reverse DNS secureserver.net, GoDaddy authoritative NS
+- NEW docs.enterprisealert.com: A-record → Azure edge serving HTTP 404 with default *.web.core.windows.net cert + no hostname SAN — decommissioned/dangling Azure static hosting binding
+- NEW us.derdack.com: 217.160.0.28 IONOS behind shared x-ws proxy, parked partner-iframe page, dot-prefix namespace untested but pattern matches dev.derdack.com parked-minimal
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
+- CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted; signl4.derdack.com permanently unreachable; dev.derdack.com MultiViews benign static echo; blog/techblog HTTPS→HTTP
+- CHANGED V4 API namespace confirmed absent: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET 401, invalid Bearer 401 — route-gated (differs from V1/V2 handler-deferred)
+- CHANGED connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle (differs from V2 teams flapping)
