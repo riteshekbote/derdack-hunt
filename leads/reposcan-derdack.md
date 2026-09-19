@@ -602,3 +602,40 @@ TARGET_ORG not configured for derdack; skipping public-org deep scan.
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
 ## REPOSCAN 2026-09-19 11:39:16 UTC
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-19 14:50:24 UTC
+[HYP] Hardcoded Checkmk Admin Credentials in Sample Code
+class: SECRET
+asset: derdack-plugin-checkmk/2-way/Main.js:85-87
+confidence: 95
+reasoning: >
+impact: HIGH — Exposes Checkmk admin account; allows host acknowledgment/
+verify_steps: >
+[HYP] Hardcoded SQL Server Connection String with Database Name
+class: SECRET
+asset: derdack-alert-forwarding/Alert2Team.js:15
+confidence: 70
+reasoning: >
+impact: MEDIUM — Information disclosure; no direct credential exposure but
+verify_steps: >
+[HYP] Shell Command Injection via unsanitized event parameter
+class: SSRF
+asset: derdack-alert-augmentation/html-to-text/ps.js:40
+confidence: 80
+reasoning: >
+impact: HIGH — Remote code execution on the Enterprise Alert scripting host
+verify_steps: >
+[HYP] eval() on framework-provided callback strings
+class: OTHER
+asset: derdack-2wayREST-samples/zendesk/Main.js:48-55,
+confidence: 60
+reasoning: >
+impact: MEDIUM — Exploitation requires compromising the EA plugin loading
+verify_steps: >
+[HYP] Hardcoded internal IP address in sample code
+class: MISCONFIG
+asset: derdack-plugin-checkmk/2-way/Main.js:89
+confidence: 50
+reasoning: >
+impact: LOW — Information disclosure only; no direct exploitation path
+verify_steps: >
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
