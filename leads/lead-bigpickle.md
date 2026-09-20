@@ -5763,3 +5763,31 @@ evidence_needed: confirm remaining two handlers use the same searchParams patter
 verify_steps: DONE zendesk. Passive RAG: raw GET the other two Main.js for the same `searchParams.get("apiKey")` idiom.
 impact: third-party (Zendesk/Dynatrace/LogicMonitor) API keys leak via URL logging/referrers when customers follow the sample format — Low/Medium design.
 testability: PASSIVE
+## 2026-09-20 20:52:32 UTC [target] (model bigpickle)
+[HYP] 2wayREST samples persist third-party API keys in EA config and echo them verbatim into EA server logs
+class: MISCONFIG
+asset: github.com/Derdack/derdack-2wayREST-samples/{zendesk,Dynatrace,Logic Monitor}/Main.js
+confidence: 68
+reasoning: raw-verified 3/3 handlers — key read via `searchParams.get("apiKey")` from EA-config targetUrl; Dynatrace→`Api-Token` header, LogicMonitor→`Basic` header, zendesk→Basic; `onConfigureApp` logs `${appContext.config.targetUrl}` (key intact) to EA log; `onGetAppConfig` returns key to UI/state; per-request log strips params so transport is clean — exposure is at-rest/log/stored-config.
+evidence_needed: none further passive on source; residual = whether EA runtime log is operator-readable (presumed yes, EA-on-prem).
+verify_steps: DONE (raw GET ×3). No live probe possible without EA installation.
+impact: EA operator/sysadmin or log-agg reader recovers live Zendesk/Dynatrace/LogicMonitor API keys from stored EA config/logs → third-party tenant compromise — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] checkmk plugin (2024-maintained) reuses the apiKey/secret-in-URL-config anti-pattern
+class: MISCONFIG
+asset: github.com/Derdack/derdack-plugin-checkmk
+confidence: 45
+reasoning: org-sweep shows it is the most recently pushed Derdack repo (2024-05-27), JavaScript, EA↔checkmk webhook family — same org, same integration archetype as the two verified anti-pattern repos; not yet swept.
+evidence_needed: raw confirmation of apiKey/secret placement (URL query vs header) and any Logger/console echo of configured credentials.
+verify_steps: 1) GET api.github.com/repos/Derdack/derdack-plugin-checkmk/git/trees/master?recursive=1 → list JS files 2) raw GET entry points, grep `apiKey|secret|targetUrl|Authorization|Logger` patterns.
+impact: if confirmed — checkmk API/EA REST key exposure via config/URL/log in customer deployments — Medium.
+testability: PASSIVE
+[HYP] nagios plugin passes EA REST credentials via visible CLI/env, echoing into process listings
+class: MISCONFIG
+asset: github.com/Derdack/derdack-plugin-nagios
+confidence: 40
+reasoning: Shell-language plugin (org-sweep), likely takes EA REST endpoint + credentials as argv/env; unswept — process-listing/CI-log exposure of EA endpoint key would be the mechanism, mirroring User-Monitoring/2wayREST family behavior.
+evidence_needed: raw read of plugin script confirming credential handling mode.
+verify_steps: 1) GET api.github.com/repos/Derdack/derdack-plugin-nagios/git/trees/master?recursive=1 2) raw GET shell script, grep credential/url/apiKey handling.
+impact: if confirmed — EA REST key visible in `ps`/CI logs in customer monitoring hosts — Low/Medium.
+testability: PASSIVE

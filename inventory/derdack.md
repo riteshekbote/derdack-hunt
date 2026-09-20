@@ -1286,3 +1286,12 @@ www.derdack.com
 - NEW CT coverage complete: %derdack.com (4) + %enterprisealert.com (5) sweeps done — zero new live names, estate drift = 0
 - CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
 - CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
+
+## 2026-09-20 20:55:55 UTC
+- NEW vps.signl4.com subdomain takeover CONFIRMED: HTTPS 200 nginx default page (`/cgi-sys/defaultwebpage.cgi`), TLS cert CN=server.d1g.it (unrelated), GoDaddy authoritative NS (domaincontrol.com), fabricat
+- NEW docs.enterprisealert.com CNAME chain corrected: `derdackdownloads.z13.web.core.windows.net` (live Azure SWA, 404 WebContentNotFound) — NOT dangling A-record; takeover confidence ≤25
+- NEW us.derdack.com live: MultiViews `300 Multiple Choices` byte-identical to dev.derdack.com (/.well-known/→300 listing /.ssh//.bash_history//.viminfo/, /.ssh/→403, fabricated paths→300)
+- NEW s4dev1-8.enterprisealert.com CNAME → Azure AD App Proxy (`*.msappproxy.net`) → 4.207.244.99 — staging fleet App-Proxy-fronted, explains 404/504 inertness
+- NEW CT coverage complete: %derdack.com (4) + %enterprisealert.com (5) sweeps done — zero new live names, estate drift = 0
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi

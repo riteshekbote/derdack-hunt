@@ -29894,3 +29894,68 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 - [RISK] derdack: 89 — unchanged. This cycle only re-confirmed vendor-script secret-handling (Medium, deployment-side, no live leak) and zero estate drift. Residual exposure unchanged: vps.signl4.com dangling takeover proof-complete (95, HUMAN claim), 6-host shared-RS256/client_id forgery chain (88, CRITICAL on any credential leak), and the AUTH_HELPED BOLA/IDOR/impersonation queue all gated on one legitimate X-S4-Api-Key; passive surface across all three TLDs fully mapped and inert.
+===== ANALYST bigpickle 2026-09-20 20:55:55 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m% [0mWebFetch https://raw.githubusercontent.com/Derdack/derdack-2wayREST-samples/master/Dynatrace/Main.js
+[0m% [0mWebFetch https://raw.githubusercontent.com/Derdack/derdack-2wayREST-samples/master/Logic%20Monitor/Main.js
+Both handlers verified. Let me test one more fresh corpus expansion before writing up.
+[0m% [0mWebFetch https://api.github.com/orgs/Derdack/repos?per_page=100
+[0m✱ [0mGrep ""full_name": "Derdack/"[90m in /home/runner/.local/share/opencode/tool-output/tool_0c09701f7001SP8FSJQBjygM05 · 12 matches[0m
+STEP 1 — DELTA
+- NEW: org sweep confirms Derdack GitHub = exactly 12 public repos (KB baseline matches); only 5/12 swept for secret handling — oncall-holidayimport, oncall-whoisoncallexport, events-snmp, plugin-nagios, alert-forwarding, plugin-checkmk, alert-augmentation untouched.
+- NEW: Dynatrace/Main.js raw-verified — `dynaURL.searchParams.get("apiKey")` from EA-configured targetUrl, sent as `Authorization: Api-Token <key>`; `onConfigureApp` logs full `Configured Target Url: ${appContext.config.targetUrl}` incl. apiKey into EA server log.
+- NEW: LogicMonitor/Main.js raw-verified — identical `?apiKey=` pattern, `Authorization: Basic <key>`; same configure-time full-URL log line; `onGetAppConfig` returns config (key) verbatim to UI.
+- CHANGED: 2wayREST leak vector corrected — per-request `URL: ${url}` is logged AFTER param-strip (no transport/referrer leak; calls target https third parties with header auth). Real exposure = EA-persisted config + EA-server-log verbatim echo + operator copy-paste of the key-bearing URL.
+
+STEP 2 — PRIORITIZE
+- [PRIO] Derdack GitHub org EA-integration corpus, 5.8, gate_ease(public code)+freshness(checkmk pushed 2024; corpus 2018-2022)+tech_exposure(REST keys/Azure SP/webhook secrets)
+- [PRIO] vps.signl4.com takeover (nemotron3, already CONFIRMED 95) — no action needed this cycle, estate drift 0
+- [PRIO] connect.signl4.com API estate — exhausted, V1/V2/V3/webhook/events mapped, V4 absent, all anon→401/405/411; AUTH_HELPED remains blocked on client_secret/team-secret
+
+STEP 3 — HYPOTHESES
+[HYP] 2wayREST samples persist third-party API keys in EA config and echo them verbatim into EA server logs
+class: MISCONFIG
+asset: github.com/Derdack/derdack-2wayREST-samples/{zendesk,Dynatrace,Logic Monitor}/Main.js
+confidence: 68
+reasoning: raw-verified 3/3 handlers — key read via `searchParams.get("apiKey")` from EA-config targetUrl; Dynatrace→`Api-Token` header, LogicMonitor→`Basic` header, zendesk→Basic; `onConfigureApp` logs `${appContext.config.targetUrl}` (key intact) to EA log; `onGetAppConfig` returns key to UI/state; per-request log strips params so transport is clean — exposure is at-rest/log/stored-config.
+evidence_needed: none further passive on source; residual = whether EA runtime log is operator-readable (presumed yes, EA-on-prem).
+verify_steps: DONE (raw GET ×3). No live probe possible without EA installation.
+impact: EA operator/sysadmin or log-agg reader recovers live Zendesk/Dynatrace/LogicMonitor API keys from stored EA config/logs → third-party tenant compromise — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
+
+[HYP] checkmk plugin (2024-maintained) reuses the apiKey/secret-in-URL-config anti-pattern
+class: MISCONFIG
+asset: github.com/Derdack/derdack-plugin-checkmk
+confidence: 45
+reasoning: org-sweep shows it is the most recently pushed Derdack repo (2024-05-27), JavaScript, EA↔checkmk webhook family — same org, same integration archetype as the two verified anti-pattern repos; not yet swept.
+evidence_needed: raw confirmation of apiKey/secret placement (URL query vs header) and any Logger/console echo of configured credentials.
+verify_steps: 1) GET api.github.com/repos/Derdack/derdack-plugin-checkmk/git/trees/master?recursive=1 → list JS files 2) raw GET entry points, grep `apiKey|secret|targetUrl|Authorization|Logger` patterns.
+impact: if confirmed — checkmk API/EA REST key exposure via config/URL/log in customer deployments — Medium.
+testability: PASSIVE
+
+[HYP] nagios plugin passes EA REST credentials via visible CLI/env, echoing into process listings
+class: MISCONFIG
+asset: github.com/Derdack/derdack-plugin-nagios
+confidence: 40
+reasoning: Shell-language plugin (org-sweep), likely takes EA REST endpoint + credentials as argv/env; unswept — process-listing/CI-log exposure of EA endpoint key would be the mechanism, mirroring User-Monitoring/2wayREST family behavior.
+evidence_needed: raw read of plugin script confirming credential handling mode.
+verify_steps: 1) GET api.github.com/repos/Derdack/derdack-plugin-nagios/git/trees/master?recursive=1 2) raw GET shell script, grep credential/url/apiKey handling.
+impact: if confirmed — EA REST key visible in `ps`/CI logs in customer monitoring hosts — Low/Medium.
+testability: PASSIVE
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] EA SQL-Server fingerprint (Alert2Team.js/SNMP-MIB-Importer.js, conf 35): `(local)`/`.\sqlexpress` are local-machine descriptors, not network endpoints; only doc-corroboration possible, no attack surface.
+- [PARKED] EAWebService HTTPS-redirect enforcement (User Monitoring.ps1 residual): HUMAN-only, requires live EA build unreachable from here.
+- [FINAL] ranked: 2wayREST secret-at-rest/log (68) > User-Monitoring cleartext http+apiKey (75, verified) > SIGNL4 WebhookGateway team-secret LogDebug (75, verified) > azure SP ClientSecret console dump + Sentinel Contributor (70, verified) > checkmk sweep (45) > nagios sweep (40).
+
+STEP 5 — NEXT ACTION
+- [NEXT] RAG: GET https://api.github.com/repos/Derdack/derdack-plugin-checkmk/git/trees/master?recursive=1 (list JS entry points) then raw-GET entry files and grep `apiKey|secret|Authorization|Logger` to confirm/refute the 8th-repo anti-pattern; follow with nagios plugin tree if checkmk confirms.
+
+STEP 6 — LEARNING
+- [LEARN] ACCEPTED MISCONFIG @ github.com/Derdack/derdack-2wayREST-samples: 3/3 handlers verified — third-party keys parsed from `?apiKey=` in EA-configured targetUrl, persisted in 2wayREST app state, returned verbatim by onGetAppConfig, and echoed into EA server log at onConfigureApp; per-request URLs logged post-strip (no transport leak).
+- [LEARN] ACCEPTED OTHER @ github.com/api: Derdack org = exactly 12 public repos (prior "12 repos" claim confirmed); 5/12 swept, 7 unswept; derdack-plugin-checkmk (2024-05) and derdack-plugin-nagios are the next corpus targets.
+
+STEP 7 — RISK
+- [RISK] Derdack: 54 — apex issue remains the 6-host cross-env shared RS256 signing key + client_id 692A0A56 reuse (CRITICAL contingent on any credential leak; all AUTH_HELPED-blocked); verified deployment-side integration-sample anti-patterns (cleartext-HTTP apiKey, SP-secret console dump, webhook-secret log) are Medium but customer-tenant-only and proximity-gated; Derdack-hosted passive surface now fully exhausted with zero new read exposure across 18+ cycles.
