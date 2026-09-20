@@ -29490,3 +29490,63 @@ Output written to `reports/hypotheses-bigpickle.txt`, KB synced. Standing state:
 3. V1 alert `userId` IDOR family — **80**, AUTH_HELPED
 
 Remaining blocker is unchanged and credential-gated: a legitimate SIGNL4 trial `X-S4-Api-Key` (or that client_secret) is the only path to execute the AUTH_HELPED queue — no further anonymous probing adds value while the estate is static. Next cycle should re-probe vps once to classify the dark-state as transient or permanent.
+===== ANALYST bigpickle 2026-09-20 11:58:17 UTC =====
+[0m
+> build · big-pickle
+[0m
+STEP 1 — DELTA
+- [NEW] Derdack GitHub integration-script corpus yields 3 code-level observations (un-verified this cycle): SQL/DB-name fingerprint in Alert2Team.js:15 + SNMP-MIB-Importer.js:18; EA REST apiKey over cleartext HTTP in User Monitoring.ps1:21; Azure ClientSecret printed to stdout + over-broad Sentinel role in both registerClient.ps1 (azuremonitor:110, azuresentinel:119).
+- [CHANGED] Estate delta vs 07:02 lead is nil — docs.enterprisealert.com CNAME-corrected, us.derdack demoted to minimal-config twin, crt sweeps closed across all three roots, vps/forgery/BOLA queue standing. No new live hosts, no drift.
+
+STEP 2 — PRIORITIZE
+- [PRIO] registerClient.ps1 (azuremonitor+azuresentinel),5.75,0.25*3+0.25*7+0.15*4+0.15*9+0.10*6+0.10*7
+- [PRIO] connect.signl4.com/api/v1 (billing/license BOLA),5.75,0.25*8+0.25*9+0.15*4+0.15*1+0.10*5+0.10*2 (standing AUTH_HELPED)
+- [PRIO] vps.signl4.com,5.4,0.25*3+0.25*7+0.15*2+0.15*8+0.10*6+0.10*8 (proof-complete, HUMAN_ONLY claim)
+- [PRIO] User Monitoring.ps1,4.55,0.25*2+0.25*5+0.15*3+0.15*9+0.10*4+0.10*6
+
+STEP 3 — HYPOTHESES
+[HYP] Vendor Azure-registration script prints ClientSecret to console + assigns Contributor-wide role
+class: MISCONFIG
+asset: github.com/derdack/derdack-integration-azuremonitor/registerClient.ps1:110 (+ azuresentinel:119)
+confidence: 70
+reasoning: lead claims both scripts pipe generated object through `$config | Format-List` after registering an Azure AD service principal; Sentinel variant assigns documented role `"Azure Sentinel Contributor"` rather than a scoped role; script is Derdack-authored, used by EA operators to create monitor/sentinel principals.
+evidence_needed: raw-file confirmation that `ClientSecret` lands in stdout output and the exact role string is Contributor-scoped (not resource-scoped).
+verify_steps: 1) GET raw.githubusercontent.com/derdack/derdack-integration-azuremonitor/master/registerClient.ps1 → confirm $config|Format-List incl. ClientSecret property 2) same for -azuresentinel variant → confirm role assignment string 3) RAG docs.signl4.com/EA docs for recommended SP role — compare to script's actual grant.
+impact: shoulder-surf/CI-log/capture leaks a live Azure SP secret with Sentinel Contributor in customer tenant — Medium (proximity-gated).
+testability: PASSIVE
+[HYP] EA REST apiKey URL-embedded over cleartext HTTP in vendor monitoring script
+class: MISCONFIG
+asset: github.com/derdack/repo User Monitoring.ps1:21
+confidence: 55
+reasoning: lead cites `http://<EA_Server>/EAWebService/rest/events?apiKey=<REST_Endpoint_Key>` — apiKey in query string over HTTP; EA is deployed on customer infra, script is canonical vendor sample; cleartext transport → sniffing + access/proxy log capture.
+evidence_needed: raw-file confirmation of `http://` literal (vs https) and apiKey query placement; whether EA WebService enforces HTTPS-only.
+verify_steps: 1) RAG raw User Monitoring.ps1 → confirm line-21 literal 2) RAG EA docs for HTTPS redirect enforcement on EAWebService (AUTH_HELPED — requires a live EA build to test redirect).
+impact: attacker intercepting/log-capturing the REST endpoint key gets unauth alert read/injection on customer EA — Medium.
+testability: PASSIVE
+[HYP] EA SQL-Server fingerprint embedded in vendor JS/SNMP tools
+class: MISCONFIG
+asset: github.com/derdack Alert2Team.js:15, SNMP-MIB-Importer.js:18
+confidence: 35
+reasoning: lead cites `(local)` SQL Server + `.\sqlexpress` instance/db `EnterpriseAlert`; names are LOCAL-machine descriptors, not network endpoints; EA-on-MS-SQL is published architecture, so this corroborates docs rather than revealing new attack surface.
+evidence_needed: any network-reachable variant of these instances (none plausible from local names).
+verify_steps: external connection to `(local)`/`.\sqlexpress` is infeasible by definition; only doc-level corroboration possible.
+impact: none beyond confirming documented backend stack — Low.
+testability: PASSIVE
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] EA SQL-Server fingerprint (Alert2Team.js/SNMP-MIB-Importer.js): local-instance descriptors give no external vector; documented EA architecture → minimal-info, no verify path.
+- [PARKED] docs.enterprisealert.com takeover: owned-empty SWA, un-creatable account name, DNS-control claim gate — inert config only (already KB'd).
+- [PARKED] us.derdack.com MultiViews: identical minimal class to already-REJECTED dev twin — config note only.
+- [FINAL] 1) vps.signl4.com takeover (MISCONFIG 95, HUMAN_ONLY) 2) Cross-env token forgery, 6-host shared RS256 + issuer mint-mismatch (AUTH 88) 3) V1 license PUT BOLA (IDOR 55, AUTH_HELPED) 4) registerClient.ps1 ClientSecret stdout + over-broad role (MISCONFIG 70, code-level, PASSIVE-confirmable) 5) User Monitoring.ps1 HTTP apiKey (MISCONFIG 55).
+
+STEP 5 — NEXT ACTION
+- [NEXT] RAG: fetch raw.githubusercontent.com/derdack/derdack-integration-azuremonitor/master/registerClient.ps1 (+ -azuresentinel variant and User Monitoring.ps1) to confirm the three cited lines ($config|Format-List ClientSecret stdout; "Azure Sentinel Contributor" role; http:// EAWebService apiKey literal) before filing anything.
+
+STEP 6 — LEARNING
+- [LEARN] ACCEPTED OTHER @ derdack integration-script corpus: 3 code-level observations entered from agent RAG (SQL fingerprint, HTTP apiKey, ClientSecret stdout) — raw-file confirmation pending next-cycle RAG.
+- [LEARN] REJECTED MISCONFIG @ Alert2Team.js/SNMP-MIB-Importer.js SQL instances: `(local)`/`.\sqlexpress` are local descriptors → no external connect vector; EA-on-SQL-Server is documented architecture → minimal info, dropped.
+- [LEARN] ACCEPTED MISCONFIG @ registerClient.ps1 (azuremonitor/azuresentinel): secret-hygiene + least-privilege defect in vendor tooling — ClientSecret surfaces via Format-List stdout; Sentinel SP scoped at Contributor (pending raw confirm).
+- [LEARN] ACCEPTED OTHER @ full estate: identity/API/CT surface stable zero drift; all three roots CT-closed; passive route maps exhausted.
+
+STEP 7 — RISK
+- [RISK] derdack: 89 — unchanged from 91-dip: new script-level findings (Medium/Low) add no estate risk; standing exposure unchanged (vps 95 proof-complete HUMAN claim, 6-host forgery chain 88 CRITICAL-on-credential-leak, growing AUTH_HELPED BOLA queue). Residual value entirely credential-gated; passive surface fully mapped and inert.

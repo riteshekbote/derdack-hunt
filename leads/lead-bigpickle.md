@@ -5697,3 +5697,31 @@ confidence: 85
 reasoning: Both scripts execute `$config | Format-List` which prints the generated Azure `ClientSecret` to stdout in plaintext. Terminal logs, screen captures, or shoulder-surfing can expose it. Sentinel variant also assigns overly broad `"Azure Sentinel Contributor"` role.
 impact: Medium — Azure service principal secret exposure; Sentinel variant grants excessive permissions.
 verify_steps: Run the script in a test Azure tenant and observe console output for secret leakage.
+## 2026-09-20 11:57:32 UTC [target] (model bigpickle)
+[HYP] Vendor Azure-registration script prints ClientSecret to console + assigns Contributor-wide role
+class: MISCONFIG
+asset: github.com/derdack/derdack-integration-azuremonitor/registerClient.ps1:110 (+ azuresentinel:119)
+confidence: 70
+reasoning: lead claims both scripts pipe generated object through `$config | Format-List` after registering an Azure AD service principal; Sentinel variant assigns documented role `"Azure Sentinel Contributor"` rather than a scoped role; script is Derdack-authored, used by EA operators to create monitor/sentinel principals.
+evidence_needed: raw-file confirmation that `ClientSecret` lands in stdout output and the exact role string is Contributor-scoped (not resource-scoped).
+verify_steps: 1) GET raw.githubusercontent.com/derdack/derdack-integration-azuremonitor/master/registerClient.ps1 → confirm $config|Format-List incl. ClientSecret property 2) same for -azuresentinel variant → confirm role assignment string 3) RAG docs.signl4.com/EA docs for recommended SP role — compare to script's actual grant.
+impact: shoulder-surf/CI-log/capture leaks a live Azure SP secret with Sentinel Contributor in customer tenant — Medium (proximity-gated).
+testability: PASSIVE
+[HYP] EA REST apiKey URL-embedded over cleartext HTTP in vendor monitoring script
+class: MISCONFIG
+asset: github.com/derdack/repo User Monitoring.ps1:21
+confidence: 55
+reasoning: lead cites `http://<EA_Server>/EAWebService/rest/events?apiKey=<REST_Endpoint_Key>` — apiKey in query string over HTTP; EA is deployed on customer infra, script is canonical vendor sample; cleartext transport → sniffing + access/proxy log capture.
+evidence_needed: raw-file confirmation of `http://` literal (vs https) and apiKey query placement; whether EA WebService enforces HTTPS-only.
+verify_steps: 1) RAG raw User Monitoring.ps1 → confirm line-21 literal 2) RAG EA docs for HTTPS redirect enforcement on EAWebService (AUTH_HELPED — requires a live EA build to test redirect).
+impact: attacker intercepting/log-capturing the REST endpoint key gets unauth alert read/injection on customer EA — Medium.
+testability: PASSIVE
+[HYP] EA SQL-Server fingerprint embedded in vendor JS/SNMP tools
+class: MISCONFIG
+asset: github.com/derdack Alert2Team.js:15, SNMP-MIB-Importer.js:18
+confidence: 35
+reasoning: lead cites `(local)` SQL Server + `.\sqlexpress` instance/db `EnterpriseAlert`; names are LOCAL-machine descriptors, not network endpoints; EA-on-MS-SQL is published architecture, so this corroborates docs rather than revealing new attack surface.
+evidence_needed: any network-reachable variant of these instances (none plausible from local names).
+verify_steps: external connection to `(local)`/`.\sqlexpress` is infeasible by definition; only doc-level corroboration possible.
+impact: none beyond confirming documented backend stack — Low.
+testability: PASSIVE
