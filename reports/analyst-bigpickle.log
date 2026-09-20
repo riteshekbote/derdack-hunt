@@ -29786,3 +29786,111 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 - [RISK] derdack: 89 — live-estate exposure unchanged (vps takeover 95 HUMAN-claim, 6-host shared-RS256/client-id forgery chain 88 credential-gated, AUTH_HELPED BOLA queue). This cycle's code-corpus confirmations are deployment-side tooling (customer EA/Azure tenants), not Derdack-hosted infra — they harden the reporting bundle but do not raise exploitable live risk. Passive coverage remains complete across signl4.com/derdack.com/enterprisealert.com; any material risk change now hinges on one legitimate credential.
+===== ANALYST bigpickle 2026-09-20 18:15:14 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://api.github.com/orgs/derdack/repos?per_page=100" | grep -E '"(full_name|name)"' | head -60
+"name": "derdack-oncall-holidayimport",
+    "full_name": "Derdack/derdack-oncall-holidayimport",
+    "name": "derdack-oncall-whoisoncallexport",
+    "full_name": "Derdack/derdack-oncall-whoisoncallexport",
+    "name": "derdack-integration-SIGNL4",
+    "full_name": "Derdack/derdack-integration-SIGNL4",
+    "name": "derdack-events-snmp",
+    "full_name": "Derdack/derdack-events-snmp",
+    "name": "derdack-plugin-nagios",
+    "full_name": "Derdack/derdack-plugin-nagios",
+    "name": "derdack-alert-forwarding",
+    "full_name": "Derdack/derdack-alert-forwarding",
+    "name": "derdack-plugin-checkmk",
+    "full_name": "Derdack/derdack-plugin-checkmk",
+    "name": "derdack-alert-augmentation",
+    "full_name": "Derdack/derdack-alert-augmentation",
+    "name": "User-Monitoring",
+    "full_name": "Derdack/User-Monitoring",
+    "name": "derdack-integration-azuremonitor",
+    "full_name": "Derdack/derdack-integration-azuremonitor",
+    "name": "derdack-integration-azuresentinel",
+    "full_name": "Derdack/derdack-integration-azuresentinel",
+    "name": "derdack-2wayREST-samples",
+    "full_name": "Derdack/derdack-2wayREST-samples",
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://api.github.com/repos/Derdack/User-Monitoring/git/trees/HEAD?recursive=1" | grep '"path"' | head -40
+"path": "README.md",
+      "path": "User Monitoring.ps1",
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://api.github.com/repos/Derdack/derdack-2wayREST-samples/git/trees/HEAD?recursive=1" | grep '"path"' | head -40
+"path": "Dynatrace",
+      "path": "Dynatrace/Main.js",
+      "path": "Logic Monitor",
+      "path": "Logic Monitor/Main.js",
+      "path": "README.md",
+      "path": "zendesk",
+      "path": "zendesk/Main.js",
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://raw.githubusercontent.com/Derdack/User-Monitoring/HEAD/User%20Monitoring.ps1" | grep -n -iE "http|apiKey|rest" | head -30
+21:	$request = Invoke-RestMethod "http://<EA_Server>/EAWebService/rest/events?apiKey=<REST_Endpoint_Key>" -Method POST -ContentType "application/json" -Body "{'PROFNAME':'$PROFNAME','ADRNAME':'$ADRNAME','PROFSTATUS':'$PROFSTATUS', 'ADRMOBILE':'$ADRMOBILE','ADRPHONE':'$ADRPHONE'}"
+[0m
+[0m$ [0mcurl -s --max-time 20 "https://raw.githubusercontent.com/Derdack/derdack-2wayREST-samples/HEAD/zendesk/Main.js" | grep -n -iE "http|apiKey|rest|secret" | head -30
+214:    let apiKey = zendeskURL.searchParams.get("apiKey");
+215:    if (apiKey == undefined) {
+216:        Logger.writeLog(fnName, "could not find API in configured REST URL, please enter your Zendesk API URL in the format https://{yourZendeskEnvId}.zendesk.com?apiKey={yourCreatedZendeskAPIKey}");
+277:            "Authorization": `Basic ${apiKey}`,
+[0m
+STEP 1 — DELTA
+- [NEW] Re-verified `Derdack/User-Monitoring` `User Monitoring.ps1:21` raw GET: literal **`http://<EA_Server>/EAWebService/rest/events?apiKey=<REST_Endpoint_Key>`** — cleartext HTTP + key in query string; value is placeholder only (no live leak).
+- [NEW] `Derdack/derdack-2wayREST-samples/zendesk/Main.js:214-277`: integration key read from `zendeskURL.searchParams.get("apiKey")` then reused as Basic auth — third-party API key is URL-deployed by design across the 2wayREST family.
+- [NO_DELTA] signl4.com identity/API estate, vps takeover, docs.enterprisealert.com, us.derdack.com, CT sweeps — all stable vs 2026-09-20 15:19 state.
+
+STEP 2 — PRIORITIZE
+- [PRIO] api.signl4.com estate,7.0,attack_surface9+business8+tech6+gate5(auth-gated)+cloud7 → highest value but AUTH_HELPED/exhausted
+- [PRIO] github.com/Derdack integration-script corpus,5.4,attack_surface3+business7+tech3+gate8(public)+cloud7+freshness5
+- [PRIO] vps.signl4.com,5.9,attack_surface6+business6+tech2+gate10+cloud3+freshness8 (nemotron3 lead, already proof-complete)
+
+STEP 3 — HYPOTHESES
+[HYP] EA integration sample transmits REST endpoint key in cleartext HTTP URL query
+class: MISCONFIG
+asset: github.com/Derdack/User-Monitoring/User Monitoring.ps1:21
+confidence: 75
+reasoning: raw GET confirms literal `http://` (not https) and `apiKey=` in query string of `/EAWebService/rest/events`; Derdack-authored canonical operator sample; key captured in access/proxy logs and sniffable on mgmt LAN.
+evidence_needed: whether EAWebService enforces HTTPS redirect (needs live EA build, unreachable here); placeholder-only value rules out a live credential leak.
+verify_steps: DONE passive (raw-file GET). Residual HUMAN: run against disposable EA/test build to test HTTP→HTTPS redirect enforcement.
+impact: operator/sniffer/log observer acquires live EA REST key → unauth alert read/injection on customer Enterprise Alert — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
+
+[HYP] Azure-registration script prints live SP ClientSecret to console and assigns over-broad Sentinel role
+class: MISCONFIG
+asset: github.com/Derdack/derdack-integration-azuresentinel/registerClient.ps1 (+ derdack-integration-azuremonitor/registerClient.ps1)
+confidence: 70
+reasoning: raw verified — both scripts pipe the generated SP object through Format-List exposing `$spnPwd` (1y secret) to stdout; sentinel variant grants "Azure Sentinel Contributor" at subscription scope; Derdack-authored, operator-run in customer tenants.
+evidence_needed: end-to-end console-leak artifact requires a disposable tenant run.
+verify_steps: DONE passive (raw-file GETs). Residual HUMAN: run azuremonitor variant in a throwaway tenant, capture stdout for ClientSecret presence.
+impact: shoulder-surf/CI-log/capture exposes live Azure SP secret with Sentinel Contributor in customer tenant — Medium, proximity-gated.
+testability: PASSIVE (verified) with HUMAN residual
+
+[HYP] 2wayREST samples require live third-party API keys in URL query string
+class: MISCONFIG
+asset: github.com/Derdack/derdack-2wayREST-samples/{zendesk,Dynatrace,Logic Monitor}/Main.js:214
+confidence: 60
+reasoning: zendesk handler confirmed — reads key via `searchParams.get("apiKey")` from the configured REST URL and uses it as Basic auth; the documented format places the key in the URL (log/referrer-leak prone); Dynatrace/Logic-Monitor handlers expected identical.
+evidence_needed: confirm remaining two handlers use the same searchParams pattern.
+verify_steps: DONE zendesk. Passive RAG: raw GET the other two Main.js for the same `searchParams.get("apiKey")` idiom.
+impact: third-party (Zendesk/Dynatrace/LogicMonitor) API keys leak via URL logging/referrers when customers follow the sample format — Low/Medium design.
+testability: PASSIVE
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] EA SQL-Server fingerprint in Alert2Team.js/SNMP-MIB-Importer.js (conf 35): `(local)`/`.\sqlexpress` are local-machine descriptors, not network endpoints; EA-on-MSSQL is published architecture — no attack surface, below threshold.
+- [PARKED] Webhook team-secret enumeration (conf 40): operator-entropy secret, guessing = REJECTED brute-force class; oracle is leak-only exploitable.
+- [FINAL] survivors ranked: (1) User-Monitoring cleartext key 75, (2) azure SP console dump 70, (3) 2wayREST key-in-URL 60. None are Derdack-hosted runtime defects; all are vendor-authored operational templates in the Derdack org (in-scope code), Medium severity.
+
+STEP 5 — NEXT ACTION
+- [NEXT] HUMAN: register a free SIGNL4 trial to obtain ONE legitimate X-S4-Api-Key, then validate the top AUTH_HELPED queue — V1 `/api/v1/alerts/acknowledgeAll?userId=` impersonation, V2 `/api/v2/users/{userId}/changePassword`, V3 `/teams/{teamId}/signlReports/{fileName}` BOLA, and cross-env forgery acceptance — highest expected value of any single unblock.
+
+STEP 6 — LEARNING
+- [LEARN] ACCEPTED MISCONFIG @ github.com/Derdack/User-Monitoring: line-21 raw-verified — EA REST apiKey in cleartext `http://` query string; placeholder value only (no live leak); HTTPS-enforcement residuals HUMAN (live EA build unreachable).
+- [LEARN] ACCEPTED MISCONFIG @ github.com/Derdack/derdack-2wayREST-samples: zendesk/Main.js:214 raw-verified — integration key read from URL `?apiKey=` and reused as Basic auth; confirms cleartext-URL key placement is the documented vendor pattern.
+- [LEARN] ACCEPTED MISCONFIG @ github.com/Derdack/derdack-integration-azuresentinel|azuremonitor: Format-List ClientSecret console dump + subscription-scope Sentinel Contributor role raw-verified; end-to-end proof HUMAN (throwaway tenant run).
+
+STEP 7 — RISK
+- [RISK] derdack: 89 — unchanged. This cycle only re-confirmed vendor-script secret-handling (Medium, deployment-side, no live leak) and zero estate drift. Residual exposure unchanged: vps.signl4.com dangling takeover proof-complete (95, HUMAN claim), 6-host shared-RS256/client_id forgery chain (88, CRITICAL on any credential leak), and the AUTH_HELPED BOLA/IDOR/impersonation queue all gated on one legitimate X-S4-Api-Key; passive surface across all three TLDs fully mapped and inert.

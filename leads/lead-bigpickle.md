@@ -5735,3 +5735,31 @@ evidence_needed: none further passive — only open question is whether EA WebSe
 verify_steps: DONE (raw-file GETs). Residual: HUMAN — run registerClient.ps1 in a disposable test tenant to confirm console leak end-to-end; confirm EAWebService HTTPS-only in EA docs.
 impact: shoulder-surf/CI-log/screen-capture/access-log/proxy-log exposure of live EA REST keys and Azure SP secrets grants alert read/injection on customer EA + Sentinel read in customer tenant — Medium (deployment-side, proximity-gated; not Derdack-hosted infra).
 testability: PASSIVE
+## 2026-09-20 18:15:04 UTC [target] (model bigpickle)
+[HYP] EA integration sample transmits REST endpoint key in cleartext HTTP URL query
+class: MISCONFIG
+asset: github.com/Derdack/User-Monitoring/User Monitoring.ps1:21
+confidence: 75
+reasoning: raw GET confirms literal `http://` (not https) and `apiKey=` in query string of `/EAWebService/rest/events`; Derdack-authored canonical operator sample; key captured in access/proxy logs and sniffable on mgmt LAN.
+evidence_needed: whether EAWebService enforces HTTPS redirect (needs live EA build, unreachable here); placeholder-only value rules out a live credential leak.
+verify_steps: DONE passive (raw-file GET). Residual HUMAN: run against disposable EA/test build to test HTTP→HTTPS redirect enforcement.
+impact: operator/sniffer/log observer acquires live EA REST key → unauth alert read/injection on customer Enterprise Alert — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] Azure-registration script prints live SP ClientSecret to console and assigns over-broad Sentinel role
+class: MISCONFIG
+asset: github.com/Derdack/derdack-integration-azuresentinel/registerClient.ps1 (+ derdack-integration-azuremonitor/registerClient.ps1)
+confidence: 70
+reasoning: raw verified — both scripts pipe the generated SP object through Format-List exposing `$spnPwd` (1y secret) to stdout; sentinel variant grants "Azure Sentinel Contributor" at subscription scope; Derdack-authored, operator-run in customer tenants.
+evidence_needed: end-to-end console-leak artifact requires a disposable tenant run.
+verify_steps: DONE passive (raw-file GETs). Residual HUMAN: run azuremonitor variant in a throwaway tenant, capture stdout for ClientSecret presence.
+impact: shoulder-surf/CI-log/capture exposes live Azure SP secret with Sentinel Contributor in customer tenant — Medium, proximity-gated.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] 2wayREST samples require live third-party API keys in URL query string
+class: MISCONFIG
+asset: github.com/Derdack/derdack-2wayREST-samples/{zendesk,Dynatrace,Logic Monitor}/Main.js:214
+confidence: 60
+reasoning: zendesk handler confirmed — reads key via `searchParams.get("apiKey")` from the configured REST URL and uses it as Basic auth; the documented format places the key in the URL (log/referrer-leak prone); Dynatrace/Logic-Monitor handlers expected identical.
+evidence_needed: confirm remaining two handlers use the same searchParams pattern.
+verify_steps: DONE zendesk. Passive RAG: raw GET the other two Main.js for the same `searchParams.get("apiKey")` idiom.
+impact: third-party (Zendesk/Dynatrace/LogicMonitor) API keys leak via URL logging/referrers when customers follow the sample format — Low/Medium design.
+testability: PASSIVE
