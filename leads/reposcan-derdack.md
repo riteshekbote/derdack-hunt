@@ -715,3 +715,75 @@ reasoning: Both scripts execute `$config | Format-List` which prints the generat
 impact: Medium — Azure service principal secret exposure; Sentinel variant grants excessive permissions.
 verify_steps: Run the script in a test Azure tenant and observe console output for secret leakage.
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-20 07:17:31 UTC
+class: SECRET
+asset: derdack-oncall-holidayimport/HolidayImport.js:16
+confidence: 100
+reasoning: >
+impact: CRITICAL — if the server is/was internet-exposed or if this repo
+verify_steps: >
+class: SECRET
+asset: derdack-oncall-holidayimport/HolidayDeleteAll.js:22
+confidence: 100
+reasoning: >
+impact: CRITICAL — same as above; duplicate exposure of the same credential.
+verify_steps: Same as above.
+class: SECRET
+asset: derdack-plugin-checkmk/2-way/Main.js:90-94
+confidence: 100
+reasoning: >
+impact: CRITICAL — admin-level CheckMK access. If the internal server
+verify_steps: >
+class: OTHER (Command Injection)
+asset: derdack-alert-augmentation/html-to-text/ps.js:40
+confidence: 90
+reasoning: >
+impact: HIGH — Remote Code Execution on the Enterprise Alert server.
+verify_steps: >
+class: OTHER (Code Execution Pattern)
+asset: derdack-2wayREST-samples/*/Main.js and derdack-plugin-checkmk/2-way/Main.js
+confidence: 80
+reasoning: >
+impact: HIGH — Arbitrary code execution in the EA scripting host
+verify_steps: >
+class: OTHER (SQL Injection)
+asset: derdack-oncall-holidayimport/HolidayImport.js, HolidayDeleteAll.js,
+confidence: 85
+reasoning: >
+impact: HIGH — Database compromise. Depending on the SQL Server
+verify_steps: >
+class: SSRF
+asset: derdack-2wayREST-samples/Dynatrace/Main.js:242-266,
+confidence: 75
+reasoning: >
+impact: HIGH — Internal network scanning, data exfiltration from
+verify_steps: >
+class: MISCONFIG
+asset: derdack-integration-SIGNL4/js/WebhookGateway.js:41
+confidence: 95
+reasoning: >
+impact: MEDIUM — Credential disclosure via log files. If debug
+verify_steps: >
+class: MISCONFIG
+asset: derdack-plugin-checkmk/notifications/derdack:104,
+confidence: 85
+reasoning: >
+impact: MEDIUM — API keys in URLs are logged by web servers,
+verify_steps: >
+class: MISCONFIG
+asset: derdack-plugin-checkmk/2-way/Main.js:94
+confidence: 95
+reasoning: >
+impact: MEDIUM — Credential sniffing on the network segment.
+verify_steps: >
+class: MISCONFIG
+asset: derdack-oncall-holidayimport/HolidayImport.js:16
+confidence: 90
+reasoning: >
+impact: LOW — Reconnaissance value for targeted attacks against
+class: OTHER
+asset: derdack-alert-augmentation/html-to-text/ps.js:13
+confidence: 85
+reasoning: >
+impact: LOW — Useful for crafting targeted exploits against
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
