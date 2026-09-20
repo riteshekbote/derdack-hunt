@@ -5636,3 +5636,48 @@ testability: HUMAN_ONLY
 [LEARN] ACCEPTED MISCONFIG @ connect/api/devapi /api/v1/events/paged: GET → 400 empty-body identical across both appIds = parameter-validation sink family (not 401, not data-leaking); consistent, no differential.
 [LEARN] ACCEPTED AUTH @ connect/devapi /api/v1/subscriptions/{id}/userLicenses|inboundVoiceNumberLicenses (Allow:GET,PUT) + prepaid/transactions (Allow:GET,POST): billing license-write surface registered estate-wide, handler-deferred — extends AUTH_HELPED BOLA queue.
 [RISK] derdack: 91 — unchanged. V1 namespace closed benign (all reads 401, events/paged a designed sink), zero anonymous differential found; the estate's only residual actionable item at a checkable confidence remains the 6-host shared-RS256/client-id forgery chain (88, CRITICAL once any credential leaks, now augmented by the V1 license-entitlement write BOLA and the standing vps takeover proof). No positive new surface, no drift, passive proof exhausted.
+## 2026-09-20 01:35:14 UTC [target] (model bigpickle)
+[NEW] docs.enterprisealert.com is a CNAME chain (`→ derdackdownloads.z13.web.core.windows.net → web.blz23prdstr04a.store.core.windows.net`), NOT a bare A-record as recorded 2026-09-19; the Azure SWA account `derdackdownloads` still exists (name is Azure-globally-unique, resolves) → HTTP 404 WebContentNotFound = empty binding, not dangling control.
+[NEW] us.derdack.com live: MultiViews `300 Multiple Choices` with byte-identical dot-prefix echo to dev.derdack.com (/.well-known/→300 listing /.ssh//.bash_history//.viminfo/, /.ssh/→403, fabricated path→300 echo) behind same `x-ws-origin`/`x-ws-ratelimit` reverse proxy + root 403 — second host proving estate-wide parked-minimal config class.
+[NEW] s4dev1-8.enterprisealert.com CNAME chain → Azure AD Application Proxy (`*.msappproxy.net`) → 4.207.244.99 — staging alert fleet is App-Proxy-fronted, explaining the observed 404-root/504-backend inert pattern.
+[NEW] crt.sh responsive again: %enterprisealert.com = 5 names (root, www, demo, downloads, *.); %derdack.com = 4 names (root, www, signals, *.) — X.509 CT coverage across all three root domains now CLOSED, zero new live names since prior sweeps.
+[PRIO] connect.signl4.com/api/v1 (billing/license/scripts family),5.75,0.25a8+0.25b9+0.15t4+0.15g1+0.10c5+0.10f2 (standing AUTH_HELPED hold)
+[PRIO] docs.enterprisealert.com,4.65,0.25a4+0.25b5+0.15t3+0.15g3+0.10c6+0.10f9 — freshly demoted, claim dead this cycle
+[PRIO] vps.signl4.com,5.4,0.25a3+0.25b7+0.15t2+0.15g8+0.10c6+0.10f8 (proof-complete, HUMAN_ONLY claim)
+[HYP] us.derdack.com MultiViews multi-host parked-config exposure (estate-wide class)
+class: MISCONFIG
+asset: us.derdack.com (twin dev.derdack.com)
+confidence: 45
+reasoning: live probe 2026-09-20: /.well-known/ → 300 listing /.ssh//.bash_history//.viminfo/, /.ssh/ → 403, fabricated /.zzzz_notreal_zzzz/ → 300 echo (byte-identical to dev.derdack.com pattern); root 403 with x-ws-origin/x-ws-ratelimit Apache headers — same shared reverse-proxy parked-minimal fingerprint as dev.derdack.com (previously REJECTED minimal on dev).
+evidence_needed: any real sensitive file reachable under dot-prefix namespace; none found so far (all 403/404).
+verify_steps: GET https://us.derdack.com/ (403 done) → GET /.well-known/ (300 done) → GET /.ssh/, /.bash_history/, /.viminfo/ (403/404 done) → GET /backups/, /logs/ (parity with dev).
+impact: dot-prefix namesprace disclosure only; no readable files — LOW/informational config finding.
+testability: PASSIVE
+[HYP] Cross-tenant BOLA via V1 license/entitlement write surface (standing)
+class: IDOR
+asset: connect.signl4.com/api/v1/subscriptions/{subscriptionId}/userLicenses
+confidence: 55
+reasoning: V1 swagger documents GET,PUT /subscriptions/{id}/userLicenses + /inboundVoiceNumberLicenses + GET,POST /prepaid/transactions; OPTIONS Allow:GET,PUT / GET,POST live on connect+devapi; handler-deferred auth (405-before-401) family; global security `[{}]` empty; caller-supplied path ids, cross-tenant scoping unproven.
+evidence_needed: authenticated operator token; foreign-tenant id accepted → mutates another tenant's license entitlements/billing ledger.
+verify_steps: 1) OPTIONS /api/v1/subscriptions/x/userLicenses → 405 Allow:GET,PUT (done) 2) GET own vs foreign id → 200 vs 404/403 3) PUT foreign id crafted body → 401/403 vs 2xx (AUTH_HELPED).
+impact: cross-tenant license/entitlement + billing-ledger tampering on EA/SIGNL4 SaaS — HIGH.
+testability: AUTH_HELPED
+[HYP] Cross-tenant file download via path-based {fileName} in V3 reports family (standing)
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}
+confidence: 50
+reasoning: V3 swagger (200+ paths) documents /teams/{teamId}/signlReports/{fileName} + dutyReports/{fileName} + /signls/{signlId}/attachments/{attachmentId} with path-based names; anon → 401 (route-gated this cycle); fileName/teamId caller-supplied, traversal/scoping unproven.
+evidence_needed: authenticated token; foreign teamId or ../-style fileName returns another tenant's report bytes.
+verify_steps: with token GET /api/v3/teams/{foreignId}/signlReports/{name} and craft fileName variants (AUTH_HELPED).
+impact: cross-tenant report/attachment disclosure (alert history, duty reports) — HIGH.
+testability: AUTH_HELPED
+[PARKED] docs.enterprisealert.com subdomain takeover: CNAME target `derdackdownloads.z13.web.core.windows.net` is an existing, Azure-globally-unique SWA account name that cannot be recreated; 404 = empty owned binding; claim requires DNS control → reuse-confidence 45→25, covered only as inert config (2026-09-19 claim corrected: A-record→CNAME).
+[PARKED] us.derdack.com MultiViews: live-confirmed but identical minimal class to dev.derdack.com already REJECTED (static namespace echo, files 403/404) → config note, not standalone finding.
+[FINAL] 1) vps.signl4.com takeover (MISCONFIG 95) 2) Cross-env token forgery, 6-host shared RS256 + mint-mismatch (AUTH 88) 3) V1 license PUT BOLA (IDOR 55).
+[NEXT] HUMAN: register a legitimate SIGNL4 trial team to obtain a scoped X-S4-Api-Key (or client_secret 692A0A56-892F-4AE2-8259-76DA398990B6) to execute the AUTH_HELPED queue — V1 `/api/v1/subscriptions/{id}/userLicenses|inboundVoiceNumberLicenses` PUT BOLA, `/api/v1/prepaid/transactions` POST BOLA, `/api/v1/alerts/acknowledgeAll?userId=` IDOR, V2 `/api/v2/users/{userId}/changePassword`, V3 `/api/v3/teams/{teamId}/signlReports/{fileName}` + `/subscriptions/{s}/invoices/{i}/zugferd`. Passive proof of every remaining hypothesis is now exhausted (CT across signl4/derdack/enterprisealert closed, docs/US demoted, api namespace maps complete).
+[LEARN] ACCEPTED MISCONFIG @ docs.enterprisealert.com: CNAME chain ends at live Azure SWA account `derdackdownloads.z13.web.core.windows.net` (global-unique name, still resolves) → 404 WebContentNotFound = decommissioned-but-present empty binding; corrects prior "A-record" claim; not dangling-controlled.
+[LEARN] REJECTED OTHER @ docs.enterprisealert.com takeover: SWA account name un-creatable + claim gate = DNS control (Human) → takeover confidence ≤25, demoted to inert config.
+[LEARN] ACCEPTED MISCONFIG @ us.derdack.com: MultiViews 300 + x-ws reverse-proxy fingerprint byte-identical to dev.derdack.com — two-host evidence of estate-wide parked-minimal config class; no readable sensitive files (403/404).
+[LEARN] ACCEPTED OTHER @ s4dev1-8.enterprisealert.com: CNAME → Azure AD App Proxy (msappproxy.net) → 4.207.244.99 — App-Proxy-fronted staging fleet, consistent with 404/504 inertness; new fingerprint datum.
+[LEARN] ACCEPTED OTHER @ crt.sh: %derdack.com (4) + %enterprisealert.com (5) sweeps completed — CT coverage across all three roots now CLOSED, zero new live names, estate drift = 0.
+[RISK] derdack: 89 — down from 91: docs.enterprisealert.com takeover claim formally dead (owned-empty SWA, un-creatable account name), us.derdack.com demoted to minimal-config twin, all CT sweep gaps closed. Residual exposure unchanged: vps.signl4.com dangling-rec takeover proof-complete (95, HUMAN claim), 6-host shared-RS256/client-id forgery chain (88, CRITICAL once any credential leaks), and a growing AUTH_HELPED BOLA queue (V1 licenses/transactions, V3 reports/zugferd, V2 changePassword, V1 userId impersonation) all blocked solely on one legitimate credential. Passive surface across signl4.com/derdack.com/enterprisealert.com is fully mapped and inert; remaining value is credential-gated.

@@ -1,79 +1,45 @@
-## 2026-09-19 23:30:06 UTC [target] (model bigpickle)
-class: AUTH
-asset: account.signl4.com/identity → api.signl4.com/api/v2
-confidence: 88
-reasoning: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256). account.signl4.com/identity OIDC discovery claims issuer=https://connect.signl4.com/identity (cross-host mint-mismatch) while advertising identical 12-scope set including EA management scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api). Grants include password, implicit, device_code, CIBA, token-exchange. code_challenge_methods_supported includes "plain" (weak PKCE). token_endpoint_auth_methods only client_secret_basic/post (no public client). Shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6 across prod/staging. Handler-deferred auth on V1/V2/V3 APIs (unauth GET returns 405 not 401, invalid Bearer also 405 on flapping cycles) enables cross-env token acceptance.
-evidence_needed: Valid access token minted by account.signl4.com/identity accepted by api.signl4.com/api/v2 or connect.signl4.com/api/v2 endpoints; token carries account-minted claims (subscription_id, branch_id, EA scopes) and connect issuer; plain PKCE flow completes without code_verifier
-verify_steps: 1) GET https://account.signl4.com/identity/.well-known/openid-configuration (confirm issuer, token_endpoint, jwks_uri, scopes, plain PKCE) 2) POST https://account.signl4.com/identity/connect/token with grant_type=authorization_code&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&code=test&code_verifier=test&redirect_uri=https://devaccount.signl4.com/manage (test plain PKCE acceptance — expect 400 invalid_grant not PKCE rejection) 3) POST https://account.signl4.com/identity/connect/token with grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&scope=reseller_portal public_api_ea_manage public_api_ea_alerting mobile_api offline_access&username=test&password=test (expect invalid_client without secret) 4) If token acquired: GET https://api.signl4.com/api/v2/teams with Authorization: Bearer <token> (test cross-env acceptance)
-impact: Full cross-environment token forgery — attacker with client_secret (or via plain PKCE code theft) can mint tokens from account IdP carrying EA management scopes (reseller_portal, public_api_ea_manage) and connect issuer, accepted by production APIs (api.signl4.com, connect.signl4.com) — complete account takeover + Enterprise Alert management + alerting control across all tenants; severity CRITICAL
-testability: AUTH_HELPED
-[HYP] Cross-user IDOR on V1 bulk alert operations via userId query parameter
-class: IDOR
-asset: connect.signl4.com/api/v1/alerts/acknowledgeAll
-confidence: 80
-reasoning: V1 OpenAPI (93 paths) documents /api/v1/alerts/acknowledgeAll (POST) and /api/v1/alerts/closeAll (POST) with userId as query parameter (not path) — caller specifies which user performs bulk acknowledge/close. /api/v1/alerts/paged (POST) and /api/v1/alerts/report (GET) also accept userId query parameter for data filtering/scope. 403 response description typo "You are not allowed to perform this method in behave of the user" confirms "behalf-of-user" feature exists but guard may only check team membership not user ownership. V1 securitySchemes = API_Key_Header + API_Key_Query + OAuth2; global security: [{}] empty — same handler-deferred auth pattern as V2/V3. Three concurrent namespaces live on connect+api+devapi at /api/* and /api/v1/*; all handler-deferred Bearer (anon reads 14/14 → 401/405).
-evidence_needed: Valid token from User A acknowledges/closes alerts belonging to User B within same tenant via userId=B; or cross-tenant if subscriptionId not validated
-verify_steps: 1) OPTIONS https://connect.signl4.com/api/v1/alerts/acknowledgeAll (confirm Allow:POST) 2) POST https://connect.signl4.com/api/v1/alerts/acknowledgeAll?userId=OTHER_USER_ID with valid token for CURRENT_USER (expect 403 if user ownership enforced, 200 if only team membership checked) 3) POST https://connect.signl4.com/api/v1/alerts/closeAll?userId=OTHER_USER_ID (same) 4) POST https://connect.signl4.com/api/v1/alerts/paged?userId=OTHER_USER_ID (test data scope leakage) 5) GET https://connect.signl4.com/api/v1/alerts/report?userId=OTHER_USER_ID (test report leakage)
-impact: Cross-user alert manipulation + data access within tenant — User A can acknowledge/close/paged/report on User B's alerts if guard only checks team membership; potential cross-tenant if subscriptionId not validated; severity HIGH
-testability: AUTH_HELPED
-[PARKED] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch: confidence 88 but AUTH_HELPED — requires valid client_secret or leaked X-S4-Api-Key/Bearer; no passive-only path to token acquisition.
-[PARKED] Cross-user IDOR on V1 bulk alert operations via userId query parameter: confidence 80 but AUTH_HELPED — requires authenticated operator token; no passive verification of user ownership guard.
-[FINAL] 1) Subdomain takeover via dangling A-record on vps.signl4.com (MISCONFIG, 95) — PASSIVE
-[FINAL] 2) Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch (AUTH, 88) — AUTH_HELPED
-[FINAL] 3) Cross-user IDOR on V1 bulk alert operations via userId query parameter (IDOR, 80) — AUTH_HELPED
-[NEXT] PROBE: GET https://vps.signl4.com/ (confirm 200 default nginx page, unrelated cert CN=server.d1g.it) + GET http://vps.signl4.com/ (301→HTTPS) + dig vps.signl4.com @pdns09.domaincontrol.com (verify GoDaddy authoritative NS) — all passive, read-only, <=1 rps
-[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response proves dangling → subdomain takeover candidate
-[LEARN] REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS)
-[LEARN] REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
-[LEARN] REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
-[LEARN] ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
-[LEARN] ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
-[LEARN] ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer claim
-[LEARN] ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
-[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th namespace with staging parity, all handler-deferred
-[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid billing route family
-[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
-[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
-[LEARN] ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Content-Length before auth
-[LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — oracle confirmed
-[LEARN] REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
-[LEARN] CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signing key + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant enabled on staging; AUTH_HELPED blocked on client_secret
-[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parametric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover.
-[PRIO] connect.signl4.com/api/v1 (billing/license/scripts family),5.75,0.25a6+0.25b9+0.15t5+0.15g1+0.10c4+0.10f7
-[PRIO] vps.signl4.com,6.0,claim-complete standing (proof done, HUMAN_ONLY claim)
-[HYP] Cross-tenant BOLA via V1 license/entitlement write surface
+## 2026-09-20 01:35:14 UTC [target] (model bigpickle)
+[NEW] docs.enterprisealert.com is a CNAME chain (`→ derdackdownloads.z13.web.core.windows.net → web.blz23prdstr04a.store.core.windows.net`), NOT a bare A-record as recorded 2026-09-19; the Azure SWA account `derdackdownloads` still exists (name is Azure-globally-unique, resolves) → HTTP 404 WebContentNotFound = empty binding, not dangling control.
+[NEW] us.derdack.com live: MultiViews `300 Multiple Choices` with byte-identical dot-prefix echo to dev.derdack.com (/.well-known/→300 listing /.ssh//.bash_history//.viminfo/, /.ssh/→403, fabricated path→300 echo) behind same `x-ws-origin`/`x-ws-ratelimit` reverse proxy + root 403 — second host proving estate-wide parked-minimal config class.
+[NEW] s4dev1-8.enterprisealert.com CNAME chain → Azure AD Application Proxy (`*.msappproxy.net`) → 4.207.244.99 — staging alert fleet is App-Proxy-fronted, explaining the observed 404-root/504-backend inert pattern.
+[NEW] crt.sh responsive again: %enterprisealert.com = 5 names (root, www, demo, downloads, *.); %derdack.com = 4 names (root, www, signals, *.) — X.509 CT coverage across all three root domains now CLOSED, zero new live names since prior sweeps.
+[PRIO] connect.signl4.com/api/v1 (billing/license/scripts family),5.75,0.25a8+0.25b9+0.15t4+0.15g1+0.10c5+0.10f2 (standing AUTH_HELPED hold)
+[PRIO] docs.enterprisealert.com,4.65,0.25a4+0.25b5+0.15t3+0.15g3+0.10c6+0.10f9 — freshly demoted, claim dead this cycle
+[PRIO] vps.signl4.com,5.4,0.25a3+0.25b7+0.15t2+0.15g8+0.10c6+0.10f8 (proof-complete, HUMAN_ONLY claim)
+[HYP] us.derdack.com MultiViews multi-host parked-config exposure (estate-wide class)
+class: MISCONFIG
+asset: us.derdack.com (twin dev.derdack.com)
+confidence: 45
+reasoning: live probe 2026-09-20: /.well-known/ → 300 listing /.ssh//.bash_history//.viminfo/, /.ssh/ → 403, fabricated /.zzzz_notreal_zzzz/ → 300 echo (byte-identical to dev.derdack.com pattern); root 403 with x-ws-origin/x-ws-ratelimit Apache headers — same shared reverse-proxy parked-minimal fingerprint as dev.derdack.com (previously REJECTED minimal on dev).
+evidence_needed: any real sensitive file reachable under dot-prefix namespace; none found so far (all 403/404).
+verify_steps: GET https://us.derdack.com/ (403 done) → GET /.well-known/ (300 done) → GET /.ssh/, /.bash_history/, /.viminfo/ (403/404 done) → GET /backups/, /logs/ (parity with dev).
+impact: dot-prefix namesprace disclosure only; no readable files — LOW/informational config finding.
+testability: PASSIVE
+[HYP] Cross-tenant BOLA via V1 license/entitlement write surface (standing)
 class: IDOR
 asset: connect.signl4.com/api/v1/subscriptions/{subscriptionId}/userLicenses
 confidence: 55
-reasoning: V1 swagger documents GET,PUT on /subscriptions/{id}/userLicenses + /inboundVoiceNumberLicenses (license entitlement CRUD) and GET,POST on /prepaid/transactions (billing ledger); OPTIONS live-confirmed Allow:GET,PUT/GET,POST registrations on connect+devapi; handler-deferred auth (405 before 401) proven family-wide; global security `[{}]` empty in all three specs; ids are caller-supplied path params with no cross-tenant scoping proven.
-evidence_needed: authenticated operator token; PUT /api/v1/subscriptions/{otherTenantId}/userLicenses (or inboundVoiceNumberLicenses/prepaid/transactions POST) accepted for a tenant outside caller's subscription → alters another tenant's license entitlements/billing ledger; or 403 if owner-scoped.
-verify_steps: 1) OPTIONS https://connect.signl4.com/api/v1/subscriptions/x/userLicenses → 405 Allow:GET,PUT (done) 2) GET with valid team token → 200 (own) vs 404/403 (foreign id) 3) PUT foreign id with crafted body → 401/403 vs 2xx (AUTH_HELPED — requires trial credential)
-impact: cross-tenant license/entitlement modification + billing ledger write on SIGNL4/EA SaaS → business-logic/money-flow tampering; HIGH
+reasoning: V1 swagger documents GET,PUT /subscriptions/{id}/userLicenses + /inboundVoiceNumberLicenses + GET,POST /prepaid/transactions; OPTIONS Allow:GET,PUT / GET,POST live on connect+devapi; handler-deferred auth (405-before-401) family; global security `[{}]` empty; caller-supplied path ids, cross-tenant scoping unproven.
+evidence_needed: authenticated operator token; foreign-tenant id accepted → mutates another tenant's license entitlements/billing ledger.
+verify_steps: 1) OPTIONS /api/v1/subscriptions/x/userLicenses → 405 Allow:GET,PUT (done) 2) GET own vs foreign id → 200 vs 404/403 3) PUT foreign id crafted body → 401/403 vs 2xx (AUTH_HELPED).
+impact: cross-tenant license/entitlement + billing-ledger tampering on EA/SIGNL4 SaaS — HIGH.
 testability: AUTH_HELPED
-[HYP] Cross-env token forgery via 6-host shared RS256 IdP (standing)
-class: AUTH
-asset: account.signl4.com/identity/connect/token
-confidence: 88
-reasoning: 6 identity hosts byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account asserts issuer=connect while minting; handler-deferred APIs accept shared-key tokens; V1/V2/V3 all confirmed this cycle 401-gated with same appId family.
-evidence_needed: leaked client_secret / X-S4-Api-Key / team-secret (or trial credential)
-verify_steps: with credential: POST /identity/connect/token → mint → GET api.signl4.com/api/v1/subscriptions → 200 chain-hold
-impact: multi-tenant ATO incl EA-management scopes; CRITICAL
+[HYP] Cross-tenant file download via path-based {fileName} in V3 reports family (standing)
+class: IDOR
+asset: connect.signl4.com/api/v3/teams/{teamId}/signlReports/{fileName}
+confidence: 50
+reasoning: V3 swagger (200+ paths) documents /teams/{teamId}/signlReports/{fileName} + dutyReports/{fileName} + /signls/{signlId}/attachments/{attachmentId} with path-based names; anon → 401 (route-gated this cycle); fileName/teamId caller-supplied, traversal/scoping unproven.
+evidence_needed: authenticated token; foreign teamId or ../-style fileName returns another tenant's report bytes.
+verify_steps: with token GET /api/v3/teams/{foreignId}/signlReports/{name} and craft fileName variants (AUTH_HELPED).
+impact: cross-tenant report/attachment disclosure (alert history, duty reports) — HIGH.
 testability: AUTH_HELPED
-[HYP] Subdomain takeover — vps.signl4.com dangling A-record (standing, proof-complete)
-class: MISCONFIG
-asset: vps.signl4.com
-confidence: 95
-reasoning: GoDaddy NS domaincontrol.com → 72.167.227.27 secureserver.net; HTTPS 200 nginx default page; cert CN=server.d1g.it no signl4 SAN; fabricated `<rand>.signl4.com` byte-identical body; *.signl4.com NXDOMAIN.
-evidence_needed: human claimability of addon-domain; claim = HUMAN_ONLY
-verify_steps: proof complete (PASSIVE); claim HUMAN_ONLY
-impact: attacker content on trusted signl4.com subdomain → phishing + OAuth redirect_uri/cookie abuse; HIGH
-testability: HUMAN_ONLY
-[PARKED] V1/events/paged GET→400: identical empty-body 400 across connect+api+devapi (both appIds) = designed parameter-validation sink, no anon-read differential, no data in body — confidence <40.
-[PARKED] connect.api.docs/ Scalar portal: lists only the three already-dumped specs — no new schema, corroborates existing spec-under-declares finding, adds no new attack surface.
-[FINAL] 1) vps.signl4.com takeover (MISCONFIG 95, PASSIVE/HUMAN_ONLY) 2) Cross-env token forgery (AUTH 88, AUTH_HELPED) 3) V1 license PUT BOLA (IDOR 55, AUTH_HELPED).
-[NEXT] HUMAN: obtain one legitimate SIGNL4 trial team / X-S4-Api-Key (or client_secret 692A0A56-892F-4AE2-8259-76DA398990B6) to execute the AUTH_HELPED queue — now V1 `/subscriptions/{id}/userLicenses` + `inboundVoiceNumberLicenses` PUT BOLA and `prepaid/transactions` POST BOLA in addition to the standing 6-host forgery hold, V1 `/alerts/acknowledgeAll?userId=` IDOR, V2 `/users/{id}/changePassword`, V3 zugferd/BOLA. Passive proof of every remaining hypothesis is exhausted (V1 namespace closed benign this cycle).
-[LEARN] ACCEPTED OTHER @ connect/api/devapi /api/docs/: public Scalar portal (200) links V1/V2/V3 swagger.json only — no 4th spec, no new schema; corroborates published-internal-route finding.
-[LEARN] ACCEPTED AUTH @ connect/api/devapi /api/v1/*: full V1 gate-map now closed — all GET read routes (subscriptions n, licenses n, channelPrices, features, prepaid/balance|transactions, scripts/inventory|parsed, events/*, teams/alertReports|dutyReports, attachments, users/dutyStatus, categories) → 401 Bearer; zero anonymous read surface on V1.
-[LEARN] ACCEPTED MISCONFIG @ connect/api/devapi /api/v1/events/paged: GET → 400 empty-body identical across both appIds = parameter-validation sink family (not 401, not data-leaking); consistent, no differential.
-[LEARN] ACCEPTED AUTH @ connect/devapi /api/v1/subscriptions/{id}/userLicenses|inboundVoiceNumberLicenses (Allow:GET,PUT) + prepaid/transactions (Allow:GET,POST): billing license-write surface registered estate-wide, handler-deferred — extends AUTH_HELPED BOLA queue.
-[RISK] derdack: 91 — unchanged. V1 namespace closed benign (all reads 401, events/paged a designed sink), zero anonymous differential found; the estate's only residual actionable item at a checkable confidence remains the 6-host shared-RS256/client-id forgery chain (88, CRITICAL once any credential leaks, now augmented by the V1 license-entitlement write BOLA and the standing vps takeover proof). No positive new surface, no drift, passive proof exhausted.
+[PARKED] docs.enterprisealert.com subdomain takeover: CNAME target `derdackdownloads.z13.web.core.windows.net` is an existing, Azure-globally-unique SWA account name that cannot be recreated; 404 = empty owned binding; claim requires DNS control → reuse-confidence 45→25, covered only as inert config (2026-09-19 claim corrected: A-record→CNAME).
+[PARKED] us.derdack.com MultiViews: live-confirmed but identical minimal class to dev.derdack.com already REJECTED (static namespace echo, files 403/404) → config note, not standalone finding.
+[FINAL] 1) vps.signl4.com takeover (MISCONFIG 95) 2) Cross-env token forgery, 6-host shared RS256 + mint-mismatch (AUTH 88) 3) V1 license PUT BOLA (IDOR 55).
+[NEXT] HUMAN: register a legitimate SIGNL4 trial team to obtain a scoped X-S4-Api-Key (or client_secret 692A0A56-892F-4AE2-8259-76DA398990B6) to execute the AUTH_HELPED queue — V1 `/api/v1/subscriptions/{id}/userLicenses|inboundVoiceNumberLicenses` PUT BOLA, `/api/v1/prepaid/transactions` POST BOLA, `/api/v1/alerts/acknowledgeAll?userId=` IDOR, V2 `/api/v2/users/{userId}/changePassword`, V3 `/api/v3/teams/{teamId}/signlReports/{fileName}` + `/subscriptions/{s}/invoices/{i}/zugferd`. Passive proof of every remaining hypothesis is now exhausted (CT across signl4/derdack/enterprisealert closed, docs/US demoted, api namespace maps complete).
+[LEARN] ACCEPTED MISCONFIG @ docs.enterprisealert.com: CNAME chain ends at live Azure SWA account `derdackdownloads.z13.web.core.windows.net` (global-unique name, still resolves) → 404 WebContentNotFound = decommissioned-but-present empty binding; corrects prior "A-record" claim; not dangling-controlled.
+[LEARN] REJECTED OTHER @ docs.enterprisealert.com takeover: SWA account name un-creatable + claim gate = DNS control (Human) → takeover confidence ≤25, demoted to inert config.
+[LEARN] ACCEPTED MISCONFIG @ us.derdack.com: MultiViews 300 + x-ws reverse-proxy fingerprint byte-identical to dev.derdack.com — two-host evidence of estate-wide parked-minimal config class; no readable sensitive files (403/404).
+[LEARN] ACCEPTED OTHER @ s4dev1-8.enterprisealert.com: CNAME → Azure AD App Proxy (msappproxy.net) → 4.207.244.99 — App-Proxy-fronted staging fleet, consistent with 404/504 inertness; new fingerprint datum.
+[LEARN] ACCEPTED OTHER @ crt.sh: %derdack.com (4) + %enterprisealert.com (5) sweeps completed — CT coverage across all three roots now CLOSED, zero new live names, estate drift = 0.
+[RISK] derdack: 89 — down from 91: docs.enterprisealert.com takeover claim formally dead (owned-empty SWA, un-creatable account name), us.derdack.com demoted to minimal-config twin, all CT sweep gaps closed. Residual exposure unchanged: vps.signl4.com dangling-rec takeover proof-complete (95, HUMAN claim), 6-host shared-RS256/client-id forgery chain (88, CRITICAL once any credential leaks), and a growing AUTH_HELPED BOLA queue (V1 licenses/transactions, V3 reports/zugferd, V2 changePassword, V1 userId impersonation) all blocked solely on one legitimate credential. Passive surface across signl4.com/derdack.com/enterprisealert.com is fully mapped and inert; remaining value is credential-gated.

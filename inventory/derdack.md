@@ -1232,3 +1232,15 @@ www.derdack.com
 - CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
 - CHANGED connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET 401, invalid Bearer 401 — route-gated (differs from V1/V2 handler-deferred)
 - CHANGED connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle (differs from V2 teams flapping)
+
+## 2026-09-20 01:35:24 UTC
+- NEW docs.enterprisealert.com is a CNAME chain (`→ derdackdownloads.z13.web.core.windows.net → web.blz23prdstr04a.store.core.windows.net`), NOT a bare A-record as recorded 2026-09-19; the Azure SWA account
+- NEW us.derdack.com live: MultiViews `300 Multiple Choices` with byte-identical dot-prefix echo to dev.derdack.com (/.well-known/→300 listing /.ssh//.bash_history//.viminfo/, /.ssh/→403, fabricated path→30
+- NEW s4dev1-8.enterprisealert.com CNAME chain → Azure AD Application Proxy (`*.msappproxy.net`) → 4.207.244.99 — staging alert fleet is App-Proxy-fronted, explaining the observed 404-root/504-backend inert
+- NEW crt.sh responsive again: %enterprisealert.com = 5 names (root, www, demo, downloads, *.); %derdack.com = 4 names (root, www, signals, *.) — X.509 CT coverage across all three root domains now CLOSED, 
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping continues 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET 401, invalid Bearer 401 — route-gated (differs from V1/V2 handler-deferred)
+- CHANGED connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle (differs from V2 teams flapping)
+- CHANGED vps.signl4.com subdomain takeover re-confirmed via live probe: HTTPS 200 nginx default page, cert CN=server.d1g.it, reverse DNS secureserver.net, GoDaddy authoritative NS
+- CHANGED docs.enterprisealert.com: A-record → Azure edge serving HTTP 404 with default *.web.core.windows.net cert + no hostname SAN — decommissioned/dangling Azure static hosting binding
+- CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted; signl4.derdack.com permanently unreachable; dev.derdack.com MultiViews benign static echo; blog/techblog HTTPS→HTTP
