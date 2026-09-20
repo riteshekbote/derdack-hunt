@@ -647,3 +647,71 @@ TARGET_ORG not configured for derdack; skipping public-org deep scan.
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
 ## REPOSCAN 2026-09-19 23:41:30 UTC
 TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-20 01:54:14 UTC
+class: SECRET
+asset: derdack-oncall-holidayimport/HolidayDeleteAll.js:22
+confidence: 100
+reasoning: Line 22 contains `Server=sqlserver.derdack-support.local;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017` — plaintext `sa` (SQL sysadmin) password and internal DNS hostname. Identical in HolidayImport.js:16. This is not a placeholder; the scripts have `BOOL_DRY_RUN = false`, indicating live use.
+impact: Critical — `sa` grants full SQL Server admin. Internal hostname reveals infrastructure. Credential reuse likely.
+verify_steps: Confirm `sqlserver.derdack-support.local` resolves; attempt login with `sa`/`Derdack!` against Derdack's support DB.
+class: SECRET
+asset: derdack-plugin-checkmk/2-way/Main.js:90-94
+confidence: 100
+reasoning: Lines 90-91: `username = "cmkadmin"`, `password = "CNlydVqZ"`. Line 94: `serverURL = "http://192.168.88.107:8080/cmk/check_mk/api/v0/"` — credentials transmitted in cleartext over HTTP. Internal IP `192.168.88.107` exposed.
+impact: Critical — Checkmk admin access; credentials sent unencrypted. Internal network topology leaked.
+verify_steps: Confirm `192.168.88.107` is reachable or was reachable at commit time; test `cmkadmin`/`CNlydVqZ` against any live Checkmk instance.
+class: OTHER
+asset: derdack-alert-augmentation/html-to-text/ps.js:40,143
+confidence: 95
+reasoning: Line 40: `strCommand = "powershell.exe \"node.exe '" + SCRIPTING_HOST_DIR + "html_text.js' '" + htmlString + "'\""` — `htmlString` from event parameters is interpolated into a shell command with no escaping. Attacker-controlled HTML containing `'\"` can break out and execute arbitrary commands. Line 143: `alertID` and `executor` also unsanitized in shell command.
+impact: Critical — Remote code execution on the Enterprise Alert scripting host server.
+verify_steps: Craft an event parameter containing `'; rm -rf / #` and trigger the script in a test environment.
+class: OTHER
+asset: derdack-alert-forwarding/Alert2Team.js:28,72
+confidence: 90
+reasoning: Line 28: `sExecutor` is concatenated directly into a SQL WHERE clause: `WHERE RemoteJobsHistory.ProfileName='" + sExecutor + "'"`. Line 72: `sTeamnames` built from DB results and concatenated into an UPDATE. No parameterized queries used.
+impact: High — SQL injection enabling data exfiltration or modification in the Enterprise Alert database.
+verify_steps: Pass `' OR '1'='1` as the `sExecutor` parameter and observe if query returns unauthorized rows.
+class: OTHER
+asset: derdack-events-snmp/SNMP-MIB-Importer.js:153,161,169
+confidence: 85
+reasoning: Lines 153, 161, 169: MIB data (`aMibs[i].id`, `.name`, `.description`) concatenated into SQL INSERT/UPDATE without parameterization. Malicious MIB XML files could inject SQL.
+impact: High — SQL injection via crafted MIB files imported into the Enterprise Alert database.
+verify_steps: Craft a MIB XML file with a name containing `'--; DROP TABLE EventParameters; --` and import it.
+class: OTHER
+asset: derdack-2wayREST-samples/Dynatrace/Main.js:52-69, Logic Monitor/Main.js:52-68, zendesk/Main.js:52-68
+confidence: 80
+reasoning: `eval()` called on `appContext.state.callbackSaveState`, `appContext.runtimeInfo.callbackSetStatusError`, etc. If these values are attacker-controllable (e.g. via config manipulation), this enables arbitrary code execution on the EA scripting host.
+impact: High — RCE on Enterprise Alert scripting host if context values can be influenced.
+verify_steps: Manipulate `appContext.state.callbackSaveState` to contain `require('child_process').exec('id')` and observe execution.
+class: MISCONFIG
+asset: derdack-2wayREST-samples/README.md:147,239,332,421,506 and derdack-plugin-checkmk/2-way/Main.js:94
+confidence: 100
+reasoning: Internal IPs `192.168.88.88` (5 occurrences in README) and `192.168.88.107` (Main.js:94) leaked in public repo. Reveals internal network topology.
+impact: Medium — Aids attacker reconnaissance of Derdack's internal infrastructure.
+verify_steps: Check if these IPs respond from the public internet or are firewalled.
+class: MISCONFIG
+asset: derdack-2wayREST-samples/README.md:195,288,377
+confidence: 100
+reasoning: Real employee name/email exposed: `rbormann@de.derdack.com`, `Rene Bormann`, username `bormann` — appears 3 times in README example payloads.
+impact: Low — PII exposure enabling targeted phishing against Derdack staff.
+verify_steps: Confirm rbormann is a current/valid Derdack employee email.
+class: MISCONFIG
+asset: derdack-alert-forwarding/Alert2Team.js:15, derdack-events-snmp/SNMP-MIB-Importer.js:18
+confidence: 85
+reasoning: Alert2Team.js:15 reveals `(local)` SQL Server. SNMP-MIB-Importer.js:18 reveals `.\sqlexpress` instance name and `EnterpriseAlert` database name.
+impact: Medium — Infrastructure disclosure aiding targeted attacks.
+verify_steps: Attempt to connect to the SQL instances from external networks.
+class: MISCONFIG
+asset: User-Monitoring/User Monitoring.ps1:21
+confidence: 80
+reasoning: Line 21: `http://<EA_Server>/EAWebService/rest/events?apiKey=<REST_Endpoint_Key>` — uses HTTP, not HTTPS. API key transmitted in cleartext in URL query parameter (logged in server access logs, proxy logs).
+impact: Medium — API key interception via network sniffing or log exposure.
+verify_steps: Check if EA Server enforces HTTPS redirect; verify if API keys appear in web server access logs.
+class: OTHER
+asset: derdack-integration-azuremonitor/registerClient.ps1:110, derdack-integration-azuresentinel/registerClient.ps1:119
+confidence: 85
+reasoning: Both scripts execute `$config | Format-List` which prints the generated Azure `ClientSecret` to stdout in plaintext. Terminal logs, screen captures, or shoulder-surfing can expose it. Sentinel variant also assigns overly broad `"Azure Sentinel Contributor"` role.
+impact: Medium — Azure service principal secret exposure; Sentinel variant grants excessive permissions.
+verify_steps: Run the script in a test Azure tenant and observe console output for secret leakage.
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
