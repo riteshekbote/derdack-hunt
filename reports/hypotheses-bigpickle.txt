@@ -1,28 +1,10 @@
-## 2026-09-20 11:57:32 UTC [target] (model bigpickle)
-[HYP] Vendor Azure-registration script prints ClientSecret to console + assigns Contributor-wide role
+## 2026-09-20 15:15:43 UTC [target] (model bigpickle)
+[HYP] Derdack-authored EA/SIGNL4 integration scripts model secrets in plaintext/URL/log — ClientSecret console dump, apiKey-in-HTTP-query, team-secret debug-log, over-broad Sentinel role
 class: MISCONFIG
-asset: github.com/derdack/derdack-integration-azuremonitor/registerClient.ps1:110 (+ azuresentinel:119)
-confidence: 70
-reasoning: lead claims both scripts pipe generated object through `$config | Format-List` after registering an Azure AD service principal; Sentinel variant assigns documented role `"Azure Sentinel Contributor"` rather than a scoped role; script is Derdack-authored, used by EA operators to create monitor/sentinel principals.
-evidence_needed: raw-file confirmation that `ClientSecret` lands in stdout output and the exact role string is Contributor-scoped (not resource-scoped).
-verify_steps: 1) GET raw.githubusercontent.com/derdack/derdack-integration-azuremonitor/master/registerClient.ps1 → confirm $config|Format-List incl. ClientSecret property 2) same for -azuresentinel variant → confirm role assignment string 3) RAG docs.signl4.com/EA docs for recommended SP role — compare to script's actual grant.
-impact: shoulder-surf/CI-log/capture leaks a live Azure SP secret with Sentinel Contributor in customer tenant — Medium (proximity-gated).
-testability: PASSIVE
-[HYP] EA REST apiKey URL-embedded over cleartext HTTP in vendor monitoring script
-class: MISCONFIG
-asset: github.com/derdack/repo User Monitoring.ps1:21
-confidence: 55
-reasoning: lead cites `http://<EA_Server>/EAWebService/rest/events?apiKey=<REST_Endpoint_Key>` — apiKey in query string over HTTP; EA is deployed on customer infra, script is canonical vendor sample; cleartext transport → sniffing + access/proxy log capture.
-evidence_needed: raw-file confirmation of `http://` literal (vs https) and apiKey query placement; whether EA WebService enforces HTTPS-only.
-verify_steps: 1) RAG raw User Monitoring.ps1 → confirm line-21 literal 2) RAG EA docs for HTTPS redirect enforcement on EAWebService (AUTH_HELPED — requires a live EA build to test redirect).
-impact: attacker intercepting/log-capturing the REST endpoint key gets unauth alert read/injection on customer EA — Medium.
-testability: PASSIVE
-[HYP] EA SQL-Server fingerprint embedded in vendor JS/SNMP tools
-class: MISCONFIG
-asset: github.com/derdack Alert2Team.js:15, SNMP-MIB-Importer.js:18
-confidence: 35
-reasoning: lead cites `(local)` SQL Server + `.\sqlexpress` instance/db `EnterpriseAlert`; names are LOCAL-machine descriptors, not network endpoints; EA-on-MS-SQL is published architecture, so this corroborates docs rather than revealing new attack surface.
-evidence_needed: any network-reachable variant of these instances (none plausible from local names).
-verify_steps: external connection to `(local)`/`.\sqlexpress` is infeasible by definition; only doc-level corroboration possible.
-impact: none beyond confirming documented backend stack — Low.
+asset: github.com/Derdack/{User-Monitoring,derdack-integration-azuremonitor,derdack-integration-azuresentinel,derdack-integration-SIGNL4,derdack-2wayREST-samples}
+confidence: 75
+reasoning: raw-source verified this cycle — registerClient.ps1 azuremonitor:67/110 + azuresentinel:119 print live SP secret (`$spnPwd`, 1y) via Format-List; sentinel:111 grants Azure Sentinel Contributor at subscription scope; User Monitoring.ps1:21 + 2wayREST Main.js (3 handlers) place API key in `?apiKey=` query; SIGNL4 WebhookGateway.js:41/87 LogDebug the decoded team secret. All Derdack-authored, operator-run on customer tenants.
+evidence_needed: none further passive — only open question is whether EA WebService enforces HTTPS redirect (requires live EA build, unreachable from here).
+verify_steps: DONE (raw-file GETs). Residual: HUMAN — run registerClient.ps1 in a disposable test tenant to confirm console leak end-to-end; confirm EAWebService HTTPS-only in EA docs.
+impact: shoulder-surf/CI-log/screen-capture/access-log/proxy-log exposure of live EA REST keys and Azure SP secrets grants alert read/injection on customer EA + Sentinel read in customer tenant — Medium (deployment-side, proximity-gated; not Derdack-hosted infra).
 testability: PASSIVE
