@@ -3174,3 +3174,28 @@
 - LEARN: CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signi
 - LEARN: ACCEPTED MISCONFIG @ docs.enterprisealert.com: A-record → Azure edge serving HTTP 404 with default *.web.core.windows.net cert + no hostname SAN — decommissione
 - LEARN: ACCEPTED OTHER @ us.derdack.com: 217.160.0.28 IONOS behind shared x-ws proxy, parked partner-iframe page, dot-prefix namespace untested but pattern matches dev.
+
+## RANKED HYPOTHESES 2026-09-20 07:02:10 UTC
+- [95] vps.signl4.com: Subdomain takeover via dangling A-record on vps.signl4.com (from art/lead_nemotron3.txt)
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://vps.signl4.com/ (confirm 200 default nginx page, unrelated cert CN=server.d1g.it) + GET http://vps.signl4.com/ (301→HTTPS) + dig vps.signl4.c
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response pr
+- LEARN: REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS)
+- LEARN: REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
+- LEARN: REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
+- LEARN: ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
+- LEARN: ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5
+- LEARN: ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer c
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v2/events: base 404 unregistered, leaf {id} 405 Allow:GET,POST both hosts — events namespace route map complete, 5th name
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/prepaid/{id}/prepaidSettings: PUT-only registered route (Allow:PUT), handler-deferred auth (405 before 401), prepaid bill
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: OPTIONS Allow:GET, unauth 401, invalid Bearer 401 — route-gated this cycle
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v1/alerts/acknowledgeAll: OPTIONS Allow:GET,POST, unauth 401, invalid Bearer 401 — route-gated this cycle
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/api/v2/users/{userId}/changePassword: PUT-only (Allow:PUT), 411 without body, 401 with invalid Bearer — handler enforces Cont
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: POST 411 without Content-Length, 404 with {"code":3004,"details":"No matching event source found."} — o
+- LEARN: REJECTED OTHER @ V4 API namespace: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+- LEARN: CHANGED Cross-env token forgery chain: now spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — all share byte-identical RS256 signi
+- LEARN: ACCEPTED MISCONFIG @ docs.enterprisealert.com: CNAME chain ends at live Azure SWA account `derdackdownloads.z13.web.core.windows.net` (global-unique name, still
+- LEARN: REJECTED OTHER @ docs.enterprisealert.com takeover: SWA account name un-creatable + claim gate = DNS control (Human) → takeover confidence ≤25, demoted to inert
+- LEARN: ACCEPTED MISCONFIG @ us.derdack.com: MultiViews 300 + x-ws reverse-proxy fingerprint byte-identical to dev.derdack.com — two-host evidence of estate-wide parked
+- LEARN: ACCEPTED OTHER @ s4dev1-8.enterprisealert.com: CNAME → Azure AD App Proxy (msappproxy.net) → 4.207.244.99 — App-Proxy-fronted staging fleet, consistent with 404
+- LEARN: ACCEPTED OTHER @ crt.sh: %derdack.com (4) + %enterprisealert.com (5) sweeps completed — CT coverage across all three roots now CLOSED, zero new live names, esta

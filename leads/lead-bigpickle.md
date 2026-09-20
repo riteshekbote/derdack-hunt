@@ -5681,3 +5681,19 @@ testability: AUTH_HELPED
 [LEARN] ACCEPTED OTHER @ s4dev1-8.enterprisealert.com: CNAME → Azure AD App Proxy (msappproxy.net) → 4.207.244.99 — App-Proxy-fronted staging fleet, consistent with 404/504 inertness; new fingerprint datum.
 [LEARN] ACCEPTED OTHER @ crt.sh: %derdack.com (4) + %enterprisealert.com (5) sweeps completed — CT coverage across all three roots now CLOSED, zero new live names, estate drift = 0.
 [RISK] derdack: 89 — down from 91: docs.enterprisealert.com takeover claim formally dead (owned-empty SWA, un-creatable account name), us.derdack.com demoted to minimal-config twin, all CT sweep gaps closed. Residual exposure unchanged: vps.signl4.com dangling-rec takeover proof-complete (95, HUMAN claim), 6-host shared-RS256/client-id forgery chain (88, CRITICAL once any credential leaks), and a growing AUTH_HELPED BOLA queue (V1 licenses/transactions, V3 reports/zugferd, V2 changePassword, V1 userId impersonation) all blocked solely on one legitimate credential. Passive surface across signl4.com/derdack.com/enterprisealert.com is fully mapped and inert; remaining value is credential-gated.
+## 2026-09-20 07:02:01 UTC [target] (model bigpickle)
+reasoning: Alert2Team.js:15 reveals `(local)` SQL Server. SNMP-MIB-Importer.js:18 reveals `.\sqlexpress` instance name and `EnterpriseAlert` database name.
+impact: Medium — Infrastructure disclosure aiding targeted attacks.
+verify_steps: Attempt to connect to the SQL instances from external networks.
+class: MISCONFIG
+asset: User-Monitoring/User Monitoring.ps1:21
+confidence: 80
+reasoning: Line 21: `http://<EA_Server>/EAWebService/rest/events?apiKey=<REST_Endpoint_Key>` — uses HTTP, not HTTPS. API key transmitted in cleartext in URL query parameter (logged in server access logs, proxy logs).
+impact: Medium — API key interception via network sniffing or log exposure.
+verify_steps: Check if EA Server enforces HTTPS redirect; verify if API keys appear in web server access logs.
+class: OTHER
+asset: derdack-integration-azuremonitor/registerClient.ps1:110, derdack-integration-azuresentinel/registerClient.ps1:119
+confidence: 85
+reasoning: Both scripts execute `$config | Format-List` which prints the generated Azure `ClientSecret` to stdout in plaintext. Terminal logs, screen captures, or shoulder-surfing can expose it. Sentinel variant also assigns overly broad `"Azure Sentinel Contributor"` role.
+impact: Medium — Azure service principal secret exposure; Sentinel variant grants excessive permissions.
+verify_steps: Run the script in a test Azure tenant and observe console output for secret leakage.
