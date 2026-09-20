@@ -68,3 +68,25 @@
 - 2 lead(s) marked VALID at 2026-09-18 23:43:24 UTC
   - **VERDICT: VALID**
   - | devconnect↔prod signing key + client reuse | **VALID** | 8.1 High | Yes — bugs.olivermaicher.eu |
+
+- 26 lead(s) marked VALID at 2026-09-20 01:52:55 UTC
+  - | Q5 Novel? | **No** — already reported in valid-bugs.md (multiple entries: 2026-09-09, 09-11, 09-13, 09-14, 09-18) |
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.4 HIGH. No new action needed.
+  - | Q5 Novel? | **No** — already reported in valid-bugs.md |
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 6.5 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 8.1 HIGH.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.5 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.5 HIGH.
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md; distinct from the eval() finding (different file, different mechanism — shell interpolation vs eval) |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md as a standalone finding; distinct from the hardcoded SA creds finding |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Uncertain** — may overlap with prior VALID entries in valid-bugs.md that mention "eval" |
+  - | Q7 Reasonable triager? | **Conditional** — valid code defect, but impact requires EA SDK documentation to confirm trust boundary |
+  - **Verdict: HOLD** — Valid code defect but impact gated on whether EA SDK provides attacker-controllable data to these callback fields. Needs: (1) EA Scripting Host SDK documentation review, (2) confir
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md |
