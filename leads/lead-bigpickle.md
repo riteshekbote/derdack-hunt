@@ -5791,3 +5791,31 @@ evidence_needed: raw read of plugin script confirming credential handling mode.
 verify_steps: 1) GET api.github.com/repos/Derdack/derdack-plugin-nagios/git/trees/master?recursive=1 2) raw GET shell script, grep credential/url/apiKey handling.
 impact: if confirmed — EA REST key visible in `ps`/CI logs in customer monitoring hosts — Low/Medium.
 testability: PASSIVE
+## 2026-09-20 22:49:13 UTC [target] (model bigpickle)
+[HYP] Nagios plugin exposes EA REST key as URL query parameter visible in process listings and server access logs
+class: MISCONFIG
+asset: github.com/Derdack/derdack-plugin-nagios/ea_host_notify.sh & ea_service_notify.sh
+confidence: 70
+reasoning: raw-verified both scripts build `EA_URL=https://<ea-server>/EAWebService/rest/events?apiKey=<api-key>` and run `curl -L -X POST --data "$EA_MSG" $EA_URL`; README instructs operator to paste real API key into URL; key travels in argv (visible via ps) and in EAWebService/access-log query strings; same EA REST key class as the /events/{teamSecret} + webhook secret documented primary credentials.
+evidence_needed: none further passive; residual = real-world deployment confirmation (operator behavior).
+verify_steps: DONE (raw GET both scripts + README + cfg). Future: static grep of same org repos for `apiKey=` in URLs.
+impact: shoulder-surf/CI-log/process-listing/access-log observer acquires customer EA REST key → unauth alert read/injection on customer Enterprise Alert — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] checkmk 2way plugin commits live test credentials and logs targetUrl + Checkmk response bodies into EA logs
+class: MISCONFIG
+asset: github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js
+confidence: 60
+reasoning: raw-verified — `username="cmkadmin"`, `password="CNlydVqZ"` (sha256 beb9fa72…), `updateUser="Ron"`, `serverURL="http://192.168.88.107:8080/cmk/check_mk/api/v0/"` hardcoded in public repo; L72 logs configured target URL, L330/373 log full Checkmk response bodies; header uses `Authorization: Bearer <user> <password>` (L317/360) — creds from source constants, not API-key URL.
+evidence_needed: whether the hardcoded cred is still live (target on RFC1918 — unreachable from here); residual = historical/operator reuse.
+verify_steps: DONE (raw GET Main.js). No external probe possible (RFC1918 target).
+impact: disclosure of checkmk credentials + pattern reinforcement for the family; response-body logging leaks Checkmk API content into EA logs — Low/Medium, disclosure-side.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] Remaining Derdack GitHub repos (12 org-wide) repeat the apiKey-in-URL or credential-echo pattern
+class: MISCONFIG
+asset: github.com/Derdack org (unswept repos)
+confidence: 55
+reasoning: 5/12 repos verified with the family pattern; org is the single canonical operator corpus; unswept repos likely mirror the same template (WebApi/EA plugin archetypes).
+evidence_needed: full org repo enumeration + per-repo grep for `apiKey=|targetUrl|searchParams.get("apiKey")|Logger.writeLog.*[Uu]rl`.
+verify_steps: 1) GET api.github.com/orgs/Derdack/repos?per_page=100 → list all repos 2) per-repo git/trees recursive → raw GET entry points, grep credential/apiKey/Logger patterns.
+impact: if confirmed — broad deployment-side credential exposure class across the vendor integration corpus — Medium.
+testability: PASSIVE
