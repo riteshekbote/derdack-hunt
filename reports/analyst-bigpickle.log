@@ -31109,3 +31109,68 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 [RISK] Derdack program: 55 — live anonymous surface exhausted (all 401/404/405/411); strongest findings = vps.signl4.com subdomain takeover (claimable) + deployment-side org credential-template family (6/12 repos, HUMAN residual); AUTH_HELPED queue (cross-env forgery, V1 userId IDOR, V3 BOLA) permanently blocked on a legitimate credential; RAG oracle negative again this cycle.
+===== ANALYST bigpickle 2026-09-21 17:13:26 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m◈ [0mParallel Web Search "Enterprise Alert REST API events endpoint apiKey "EAWebService/rest/events" documentation rotation"
+[0m◈ [0mParallel Web Search "helpcenter.signl4.com Enterprise Alert REST API "REST Endpoint Key" apiKey events"
+STEP 1 — DELTA
+- NEW vendor product page (derdack.com/portfolio_item/webhook-rest-api-mobile-app-text-push-voice-scheduling) officially documents the EA REST integration as `http://server-name/EAWebService/rest/events?apiKey={API-Key}` — URL-embedded key is vendor-sanctioned primary pattern, not repo-template drift
+- NEW same page confirms "Authentication can be done through an API key or through HTTP Basic Authentication" — per-source key copied once at creation ("copy the API key ... and click save"), then pasted into scripts
+- NEW SIGNL4 Sep-2020 blog documents cloud API-key controls: shown-once, optional expiry, read-only vs full scope, renewal/revocation on compromise — cloud rotation lifecycle IS documented
+- CHANGED REST-key lifecycle-gap hypothesis split: refuted for SIGNL4 cloud (expiry+rotate+renew documented), unverified for EA on-prem REST source keys (no rotation/audit doc located)
+
+STEP 2 — PRIORITIZE
+- [PRIO] github.com/Derdack org (EA REST apiKey-in-URL family), priority=3.6, axis=a=5,b=4,t=3,g=0,c=1,f=7.
+- [PRIO] derdack.com Webhook/REST-API vendor doc (format corroboration), priority=3.1, axis=a=2,b=5,t=2,g=0,c=2,f=8.
+- [PRIO] EA on-prem EAWebService/rest/events endpoint, priority=2.8, axis=a=4,b=4,t=2,g=0,c=3,f=2. (RFC1918/on-prem, no remote surface)
+
+STEP 3 — HYPOTHESES
+[HYP] EA REST apiKey-in-URL is vendor-documented primary auth — org template family corroborated by official product docs
+class: MISCONFIG
+asset: github.com/Derdack/{User-Monitoring, nagios, 2wayREST×3, SIGNL4} + derdack.com portfolio Webhook/REST-API page
+confidence: 73
+reasoning: vendor page literally publishes `http://server-name/EAWebService/rest/events?apiKey={API-Key}` as the integration example and instructs operators to copy the per-source key into that URL; 6/12 org repos (`User Monitoring.ps1` L42 `<REST_Endpoint_Key>`, nagios, 2wayREST×3, SIGNL4) render the same pattern; key is created once, copy-pasted into cleartext URL, persisted in scripts long-term.
+evidence_needed: deployed-instance evidence of a live customer key reaching EA access-log/process-arg surface (HUMAN, on-prem).
+verify_steps: DONE (raw GET of vendor page + 6 repo entry points). Residual: deployed-instance only.
+impact: EA log/process/access-log reader recovers a live EA REST Endpoint Key → unauth alert read/injection on customer EA — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
+
+[HYP] checkmk 2-way plugin hardcoded credential reuse (cnmkadmin/CNlydVqZ)
+class: MISCONFIG
+asset: github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js
+confidence: 55
+reasoning: L90-91 hardcoded username/password (sha256 beb9fa72…); L330/373 log full "Checkmk response: " bodies incl auth results; RFC1918 target unreachable remotely; same copy-paste operator family as the apiKey templates.
+evidence_needed: operator reuse of template cred (HUMAN, historical/leak-only).
+verify_steps: DONE (raw GET). No live probe possible.
+impact: Checkmk API account compromise on reusing deployments — Low/Medium, disclosure-side.
+testability: PASSIVE (verified) with HUMAN residual
+
+[HYP] EA on-prem REST Endpoint Key lacks documented rotation/audit controls
+class: BUSLOGIC
+asset: EA on-prem Webhook/REST API event sources cert only
+confidence: 35
+reasoning: derdack.com page shows key shown once + copied into URL with no rotation/audit step; but no EA on-prem manual section found yet and SIGNL4-cloud equivalents are fully documented (expiry/rotate/renew), so vendor capability elsewhere exists — absence unproven.
+evidence_needed: EA on-prem manual sourcing for REST-key lifecycle (RAG, LOW effort).
+verify_steps: RAG docs.enterprisealert.com manual "Webhook/REST API" / "Event Sources" for key rotation/audit language.
+impact: elevates family credibility only; static-key residual risk — Low, design-side.
+testability: PASSIVE
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] REST key lifecycle gap: dropped 45→35 — SIGNL4 cloud controls documented (Sep-2020 blog: expiry, scope, renew-on-compromise); EA on-prem absence not demonstrable without manual source; barely above floor.
+- [PARKED] azure registerClient.ps1 ClientSecret: standard AD provisioning, KB-rejected.
+- [PARKED] deployed-EA-key oracle: negative across corpora, no live-key evidence.
+- [FINAL] EA REST apiKey-in-URL family (73) — plus vendor-official corroboration; 6/12 repos + README placeholder + portfolio doc now locked.
+- [FINAL] checkmk hardcoded cred (55) — disclosure-side, leak-only.
+
+STEP 5 — NEXT ACTION
+- [NEXT] RAG: fetch docs.enterprisealert.com EA on-prem manual (Webhook/REST API or System > Event Sources section) to settle REST Endpoint Key lifecycle wording — exact query `site:docs.enterprisealert.com "REST" "apiKey" "Event Source" rotation OR expire OR revoke`.
+
+STEP 6 — LEARNING
+- [LEARN] ACCEPTED MISCONFIG @ derdack.com portfolio Webhook/REST-API page: vendor officially documents `EAWebService/rest/events?apiKey={API-Key}` URL-embedded key + "copied once at source creation" workflow — org repo credential-template family is vendor-sanctioned pattern, strengthening family finding to 73.
+- [LEARN] ACCEPTED OTHER @ SIGNL4 blog 2020-09: cloud API keys support optional expiry, read-only/full scope, shown-once, and renew/recreate on compromise — SIGNL4-cloud rotation lifecycle documented, so lifecycle-gap claim applies to EA on-prem only at best.
+- [LEARN] REJECTED BUSLOGIC @ EA/SIGNL4 REST-key lifecycle gap: confidence <50 — cloud equivalents fully documented; EA on-prem absence unproven; hypothesis demoted to PARKED.
+
+STEP 7 — RISK
+- [RISK] Derdack program: 55 — live anonymous surface fully mapped/exhausted (all 401/404/405/411/absent-V4); strongest findings = vps.signl4.com takeover + org-wide apiKey-in-URL credential-template family now vendor-corroborated (73, deployment-side, HUMAN residual); AUTH_HELPED queue (cross-env forgery, V1 userId IDOR, V3 ZUGFeRD BOLA, changePassword) still blocked on a legitimate credential; RAG oracle remains negative for live key exposure.

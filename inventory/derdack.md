@@ -1338,3 +1338,17 @@ www.derdack.com
 - CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
 
 ## 2026-09-21 11:33:12 UTC
+
+## 2026-09-21 17:13:26 UTC
+- NEW vps.signl4.com subdomain takeover CONFIRMED via live probes (2026-09-18 through 2026-09-21): HTTPS 200 nginx default page (`/cgi-sys/defaultwebpage.cgi`), TLS cert CN=server.d1g.it (unrelated), GoDadd
+- NEW docs.enterprisealert.com CNAME chain corrected: `→ derdackdownloads.z13.web.core.windows.net` (live Azure SWA, 404 WebContentNotFound) — NOT dangling A-record; takeover confidence ≤25
+- NEW us.derdack.com live: MultiViews `300 Multiple Choices` byte-identical to dev.derdack.com (/.well-known/→300 listing /.ssh//.bash_history//.viminfo/, /.ssh/→403, fabricated paths→300)
+- NEW s4dev1-8.enterprisealert.com CNAME → Azure AD App Proxy (`*.msappproxy.net`) → 4.207.244.99 — staging fleet App-Proxy-fronted, explains 404/504 inertness
+- NEW CT coverage complete: %derdack.com (4) + %enterprisealert.com (5) sweeps done — zero new live names, estate drift = 0
+- NEW GitHub org sweep complete 12/12 — apiKey-in-URL credential-template family confirmed in 6 repos (nagios, 2wayREST×3, SIGNL4, User-Monitoring) + checkmk hardcoded cred; deployments log keys to EA log/p
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
+- CHANGED connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET 401, invalid Bearer 401 — route-gated (differs from V1/V2 handler-deferred)
+- CHANGED connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle (differs from V2 teams flapping)
+- CHANGED V4 API namespace confirmed absent: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+- CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted

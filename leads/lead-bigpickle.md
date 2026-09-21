@@ -5924,3 +5924,31 @@ testability: PASSIVE
 [LEARN] ACCEPTED MISCONFIG @ github.com/Derdack/User-Monitoring: README (main) minimal, no apiKey doc — key-format evidence confined to .ps1 L42 `<REST_Endpoint_Key>` placeholder + vendor docs; org-wide credential-template family re-confirmed 6/12 repos.
 [LEARN] REJECTED OTHER @ public indexed corpora: Sourcegraph 0 matches for "EAWebService"/"rest/events", grep.app 429, GitHub code-search auth-gated — no deployed customer EA REST key recovered; credential-leak oracle remains negative across 5+ corpora.
 [RISK] Derdack program: 55 — live anonymous surface exhausted (all 401/404/405/411); strongest findings = vps.signl4.com subdomain takeover (claimable) + deployment-side org credential-template family (6/12 repos, HUMAN residual); AUTH_HELPED queue (cross-env forgery, V1 userId IDOR, V3 BOLA) permanently blocked on a legitimate credential; RAG oracle negative again this cycle.
+## 2026-09-21 17:11:44 UTC [target] (model bigpickle)
+[HYP] EA REST apiKey-in-URL is vendor-documented primary auth — org template family corroborated by official product docs
+class: MISCONFIG
+asset: github.com/Derdack/{User-Monitoring, nagios, 2wayREST×3, SIGNL4} + derdack.com portfolio Webhook/REST-API page
+confidence: 73
+reasoning: vendor page literally publishes `http://server-name/EAWebService/rest/events?apiKey={API-Key}` as the integration example and instructs operators to copy the per-source key into that URL; 6/12 org repos (`User Monitoring.ps1` L42 `<REST_Endpoint_Key>`, nagios, 2wayREST×3, SIGNL4) render the same pattern; key is created once, copy-pasted into cleartext URL, persisted in scripts long-term.
+evidence_needed: deployed-instance evidence of a live customer key reaching EA access-log/process-arg surface (HUMAN, on-prem).
+verify_steps: DONE (raw GET of vendor page + 6 repo entry points). Residual: deployed-instance only.
+impact: EA log/process/access-log reader recovers a live EA REST Endpoint Key → unauth alert read/injection on customer EA — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] checkmk 2-way plugin hardcoded credential reuse (cnmkadmin/CNlydVqZ)
+class: MISCONFIG
+asset: github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js
+confidence: 55
+reasoning: L90-91 hardcoded username/password (sha256 beb9fa72…); L330/373 log full "Checkmk response: " bodies incl auth results; RFC1918 target unreachable remotely; same copy-paste operator family as the apiKey templates.
+evidence_needed: operator reuse of template cred (HUMAN, historical/leak-only).
+verify_steps: DONE (raw GET). No live probe possible.
+impact: Checkmk API account compromise on reusing deployments — Low/Medium, disclosure-side.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] EA on-prem REST Endpoint Key lacks documented rotation/audit controls
+class: BUSLOGIC
+asset: EA on-prem Webhook/REST API event sources cert only
+confidence: 35
+reasoning: derdack.com page shows key shown once + copied into URL with no rotation/audit step; but no EA on-prem manual section found yet and SIGNL4-cloud equivalents are fully documented (expiry/rotate/renew), so vendor capability elsewhere exists — absence unproven.
+evidence_needed: EA on-prem manual sourcing for REST-key lifecycle (RAG, LOW effort).
+verify_steps: RAG docs.enterprisealert.com manual "Webhook/REST API" / "Event Sources" for key rotation/audit language.
+impact: elevates family credibility only; static-key residual risk — Low, design-side.
+testability: PASSIVE
