@@ -5819,3 +5819,33 @@ evidence_needed: full org repo enumeration + per-repo grep for `apiKey=|targetUr
 verify_steps: 1) GET api.github.com/orgs/Derdack/repos?per_page=100 → list all repos 2) per-repo git/trees recursive → raw GET entry points, grep credential/apiKey/Logger patterns.
 impact: if confirmed — broad deployment-side credential exposure class across the vendor integration corpus — Medium.
 testability: PASSIVE
+## 2026-09-21 00:42:01 UTC [target] (model bigpickle)
+[HYP] SIGNL4 team secret stored/decoded/logged in plaintext by Derdack's own EA integration
+class: MISCONFIG
+asset: github.com/Derdack/derdack-integration-SIGNL4/js/WebhookGateway.js + README.md
+confidence: 68
+reasoning: README L29-33 instructs operator to Base64-encode the SIGNL4 team secret into the REST source name `SIGNL4_[anyname]_[Base64teamsecret]`; WebhookGateway.js L40-41 `decodeBase64String(arraySrvNameParts[2])` then `LogDebug("Decoded S4 Team Secret: " + strS4TeamSecret)` — plaintext secret echoed into the EA debug log; L94 places the decoded secret in the webhook URL. Team secret is the documented POST /{teamSecret} credential across 15+ integrations (oracle 404-vs-201, KB).
+evidence_needed: operator-facing readability of the EA log line (EA on-prem, presumed). Secret itself verified to be decode-able from config string anytime.
+verify_steps: DONE (raw GET README + WebhookGateway.js). Residual deployment-side only.
+impact: EA operator / log-aggregation reader recovers a live SIGNL4 team webhook secret → alert read/injection against the SIGNL4 team (matches 2026-09-10 credential-leak class, now with a concrete vendor pipeline that produces the leak) — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] checkmk 2-way plugin ships hardcoded live checkmk credential and echoes full Checkmk response bodies into EA logs
+class: MISCONFIG
+asset: github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js
+confidence: 60
+reasoning: L90-91 hardcoded `username="cmkadmin"`, `password="CNlydVqZ"` (sha256 beb9fa72…); L330/373 `Logger.writeLog(... "Checkmk response: " + body)` log full response bodies including auth results; L417-418 connection-test path uses `targetUrl` + hardcoded Bearer. Published in public repo; target RFC1918 — not remotely reachable.
+evidence_needed: proven live only if the RFC1918 target cred is reused by an operator (historical/leak-only, HUMAN). 
+verify_steps: DONE (raw GET). No live probe possible.
+impact: public disclosure of checkmk account credentials + response-body logging; reinforces the org credential-template family — Low/Medium, disclosure-side.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] 2wayREST samples persist third-party API keys in EA config and echo them verbatim into EA logs
+class: MISCONFIG
+asset: github.com/Derdack/derdack-2wayREST-samples/{zendesk,Dynatrace,LogicMonitor}/Main.js
+confidence: 68
+reasoning: 3/3 handlers read key via `searchParams.get("apiKey")` from config targetUrl; Dynatrace→`Api-Token` header, LogicMonitor/zendesk→`Basic`; `onConfigureApp` logs `${appContext.config.targetUrl}` with key intact to EA log; `onGetAppConfig` returns key to state/UI.
+evidence_needed: none passive; residual = EA runtime log operator-readability (on-prem).
+verify_steps: DONE (raw GET ×3).
+impact: EA operator/log-agg reader recovers live Zendesk/Dynatrace/LogicMonitor API keys — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
+[NEXT] PROBE: GET https://raw.githubusercontent.com/Derdack/derdack-2wayREST-samples/main/README.md — confirm the exact apiKey placeholder format operators paste into EA config (advertised-includes-key vs customer-supplied) to lock the impact statement for the 2wayREST family report.
+[RISK] Derdack program: 55 — live anonymous surface fully mapped and exhausted (all 401/404/405/411, zero read leaks); strongest findings are the confirmed vps.signl4.com takeover (claimable via GoDaddy DNS) and the deployment-side org credential-template family; AUTH_HELPED queue (cross-env forgery, V1 userId IDOR, V3 BOLA) remains permanently blocked on a legitimate credential.
