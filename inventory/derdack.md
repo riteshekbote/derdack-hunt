@@ -1352,3 +1352,12 @@ www.derdack.com
 - CHANGED connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle (differs from V2 teams flapping)
 - CHANGED V4 API namespace confirmed absent: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
 - CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted
+
+## 2026-09-21 21:11:16 UTC
+- NEW GitHub org sweep complete 12/12 — apiKey-in-URL credential-template family confirmed in 6 repos (nagios, 2wayREST×3, SIGNL4, User-Monitoring) + checkmk hardcoded cred; deployments log keys to EA log/p
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
+- CHANGED connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET 401, invalid Bearer 401 — route-gated (differs from V1/V2 handler-deferred)
+- CHANGED connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle (differs from V2 teams flapping)
+- CHANGED V4 API namespace confirmed absent: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+- CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted
