@@ -711,3 +711,5 @@
 - 2026-09-21 ACCEPTED MISCONFIG @ us.derdack.com: MultiViews 300 + x-ws reverse-proxy fingerprint byte-identical to dev.derdack.com — two-host evidence of estate-wide parked-minimal config class; no readable sensitive files (403/404)
 - 2026-09-21 ACCEPTED OTHER @ s4dev1-8.enterprisealert.com: CNAME → Azure AD App Proxy (msappproxy.net) → 4.207.244.99 — App-Proxy-fronted staging fleet, consistent with 404/504 inertness; new fingerprint datum
 - 2026-09-21 ACCEPTED OTHER @ crt.sh: %derdack.com (4) + %enterprisealert.com (5) sweeps completed — CT coverage across all three roots now CLOSED, zero new live names, estate drift = 0
+- 2026-09-21 ACCEPTED MISCONFIG @ github.com/Derdack org: org sweep complete 12/12 — apiKey-in-URL credential-template family confirmed in 5 repos (nagios, 2wayREST×3, SIGNL4, User-Monitoring) + checkmk hardcoded cred; deployments log keys to EA log/process/access-log surface.
+- 2026-09-21 REJECTED MISCONFIG @ azure registerClient.ps1: ClientSecret generated locally + printed to console/config is standard Azure AD provisioning, no new defect class.

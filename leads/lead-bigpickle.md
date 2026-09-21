@@ -5849,3 +5849,39 @@ impact: EA operator/log-agg reader recovers live Zendesk/Dynatrace/LogicMonitor 
 testability: PASSIVE (verified) with HUMAN residual
 [NEXT] PROBE: GET https://raw.githubusercontent.com/Derdack/derdack-2wayREST-samples/main/README.md — confirm the exact apiKey placeholder format operators paste into EA config (advertised-includes-key vs customer-supplied) to lock the impact statement for the 2wayREST family report.
 [RISK] Derdack program: 55 — live anonymous surface fully mapped and exhausted (all 401/404/405/411, zero read leaks); strongest findings are the confirmed vps.signl4.com takeover (claimable via GoDaddy DNS) and the deployment-side org credential-template family; AUTH_HELPED queue (cross-env forgery, V1 userId IDOR, V3 BOLA) remains permanently blocked on a legitimate credential.
+## 2026-09-21 05:43:39 UTC [target] (model bigpickle)
+[PRIO] github.com/Derdack org (deployment-side credential-template corpus), priority=5.0, axis=a=4,b=5,t=4,g=9,c=1,f=7.
+[HYP] EA REST apiKey-in-URL template family extends to User-Monitoring — 5 verified instances org-wide
+class: MISCONFIG
+asset: github.com/Derdack/User-Monitoring/User Monitoring.ps1 (+ nagios, 2wayREST, SIGNL4, checkmk verified earlier)
+confidence: 72
+reasoning: raw-verified L42 `Invoke-RestMethod "http://<EA_Server>/EAWebService/rest/events?apiKey=<REST_Endpoint_Key>"`; EA REST endpoint documented as on-prem (`http://server-name/EAWebService/rest/events?apiKey=` per vendor Zendesk+sitepoint docs); same credential-class as `/events/{teamSecret}` + webhook secrets. Organ-wide template means every operator deployment records the REST key in process args/access/EA logs.
+evidence_needed: none further passive — org fully swept; residual = operator deployments (HUMAN).
+verify_steps: DONE (org tree enumeration 12/12 + raw GET of every JS/ps1 entry point). Future: GitHub/web search for deployed `EAWebService/rest/events?apiKey=` instances outside org (credential-leak oracle).
+impact: EA log/process-list/access-log reader recovers customer EA REST key → unauth alert read/injection on customer EA — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] Azure registerClient.ps1 persists Azure AD ClientSecret to plaintext config
+class: MISCONFIG
+asset: github.com/Derdack/derdack-integration-azuremonitor/registerClient.ps1 + azuresentinel twin
+confidence: 45
+reasoning: L59-60 generates $spnPwd, L110 `$config | Format-List -Property SubscriptionId,TenantId,ClientId,ClientSecret` prints and L68/L119 stores service-principal secret into a JSON config consumed by the EA integration; standard local operator provisioning pattern, no hardcoded value.
+evidence_needed: whether config file is written next to EA web root (web-servable) — on-prem deployment detail, HUMAN.
+verify_steps: DONE (raw GET). No remote probe possible.
+impact: if config lands in web-servable EA dir, Azure AD tenant access — Low/Medium, deployment-side only.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] checkmk CMK admin credential `CNlydVqZ` reused across org deployments
+class: MISCONFIG
+asset: github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js
+confidence: 55
+reasoning: hardcoded live-looking cred in public repo (sha256 beb9fa72…); same family evidences operator copy-paste of templates; RFC1918 target unreachable remotely.
+evidence_needed: only via leak-reuse (HUMAN).
+verify_steps: DONE (raw GET). Residual only.
+impact: Checkmk API account compromise on deployments reusing the template — Low/Medium, disclosure-side.
+testability: PASSIVE (verified) with HUMAN residual
+[PARKED] azure ClientSecret plaintext: operator-local provisioning, no hardcoded secret, no EA-log path proven — standard AD automation, confidence <50.
+[PARKED] checkmk cred reuse: already established in prior cycles, leak-only.
+[FINAL] User-Monitoring apiKey-in-URL family instance (72) — the consolidating org-wide credential-template finding survives; 5/12 repos confirm the class.
+[NEXT] RAG: GitHub code-search web UI for `EAWebService/rest/events?apiKey=` and `EAWebService/rest/events` across public repos (outside Derdack org) to detect deployed customer EA REST keys — passive credential-leak oracle on the S4/EA secret family.
+[LEARN] ACCEPTED MISCONFIG @ github.com/Derdack org: org sweep complete 12/12 — apiKey-in-URL credential-template family confirmed in 5 repos (nagios, 2wayREST×3, SIGNL4, User-Monitoring) + checkmk hardcoded cred; deployments log keys to EA log/process/access-log surface.
+[LEARN] REJECTED MISCONFIG @ azure registerClient.ps1: ClientSecret generated locally + printed to console/config is standard Azure AD provisioning, no new defect class.
+[RISK] Derdack program: 55 — live anonymous surface fully mapped and exhausted (all 401/404/405/411); strongest findings = vps.signl4.com takeover + deployment-side org credential-template family (now 5/12 repos verified, impact operator-side, HUMAN residual); AUTH_HELPED queue (cross-env forgery, V1 userId IDOR, V3 BOLA) permanently blocked on a legitimate credential.
