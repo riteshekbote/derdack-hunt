@@ -713,3 +713,5 @@
 - 2026-09-21 ACCEPTED OTHER @ crt.sh: %derdack.com (4) + %enterprisealert.com (5) sweeps completed — CT coverage across all three roots now CLOSED, zero new live names, estate drift = 0
 - 2026-09-21 ACCEPTED MISCONFIG @ github.com/Derdack org: org sweep complete 12/12 — apiKey-in-URL credential-template family confirmed in 5 repos (nagios, 2wayREST×3, SIGNL4, User-Monitoring) + checkmk hardcoded cred; deployments log keys to EA log/process/access-log surface.
 - 2026-09-21 REJECTED MISCONFIG @ azure registerClient.ps1: ClientSecret generated locally + printed to console/config is standard Azure AD provisioning, no new defect class.
+- 2026-09-21 ACCEPTED MISCONFIG @ github.com/Derdack/User-Monitoring: README (main) minimal, no apiKey doc — key-format evidence confined to .ps1 L42 `<REST_Endpoint_Key>` placeholder + vendor docs; org-wide credential-template family re-confirmed 6/12 repos.
+- 2026-09-21 REJECTED OTHER @ public indexed corpora: Sourcegraph 0 matches for "EAWebService"/"rest/events", grep.app 429, GitHub code-search auth-gated — no deployed customer EA REST key recovered; credential-leak oracle remains negative across 5+ corpora.
