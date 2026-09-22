@@ -1400,3 +1400,20 @@ www.derdack.com
 - CHANGED connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle (differs from V2 teams flapping)
 - CHANGED V4 API namespace confirmed absent: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
 - CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted
+
+## 2026-09-22 14:19:13 UTC
+- NEW RAG executed on `mmea2012.derdack-support.local` + `Password=Derdack01`: zero indexed hits outside the SolarWinds article itself — SolarWinds-article credentials confirmed example-only, no reuse anywh
+- NEW derdack.com "send-alerts-web-services-simulate-browser" (2016) surfaces as additional vendor source teaching `Username=Administrator&Password=test` in GET URL — family now spans 7+ distinct vendor-doc
+- NEW EA9 HTTP/SOAP API PDF (still HTTP-origin-indexed despite SWA 404): documents EventProviderAPI `Password` param accepts "String or **md5 hashed**" — MD5-hash-in-URL credential variant vendor-documented
+- CHANGED EventProviderAPI operator-reuse sub-claim: leak-oracle closed negative → example-only; standalone hypothesis folds fully into consolidated credential-in-URL family.
+- NEW vps.signl4.com subdomain takeover CONFIRMED via live probes (2026-09-18 through 2026-09-22): HTTPS 200 nginx default page, TLS cert CN=server.d1g.it (unrelated), GoDaddy authoritative NS, fabricated-h
+- NEW docs.enterprisealert.com CNAME chain corrected: → derdackdownloads.z13.web.core.windows.net (live Azure SWA, 404 WebContentNotFound) — NOT dangling A-record; takeover confidence ≤25
+- NEW us.derdack.com live: MultiViews 300 Multiple Choices byte-identical to dev.derdack.com (/.well-known/→300 listing /.ssh//.bash_history//.viminfo/, /.ssh/→403, fabricated paths→300)
+- NEW GitHub org sweep complete 12/12 — apiKey-in-URL credential-template family confirmed in 6 repos (nagios, 2wayREST×3, SIGNL4, User-Monitoring) + checkmk hardcoded cred; deployments log keys to EA log/p
+- NEW SolarWinds integration article (derdack.com/de/) embeds cleartext credential URL template `EventProviderAPI.aspx?Handler=RaiseEvent&Username=services&Password=Derdack01&...` + internal hostname `mmea2
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
+- CHANGED connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET 401, invalid Bearer 401 — route-gated (differs from V1/V2 handler-deferred)
+- CHANGED connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle (differs from V2 teams flapping)
+- CHANGED V4 API namespace confirmed absent: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+- CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted
