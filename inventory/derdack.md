@@ -1385,3 +1385,18 @@ www.derdack.com
 - CHANGED connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle (differs from V2 teams flapping)
 - CHANGED V4 API namespace confirmed absent: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
 - CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted
+
+## 2026-09-22 09:43:18 UTC
+- NEW Leak-oracle for documented example EA key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` resolved: hits ONLY on vendor Zendesk article 18204929905949 + derdack.com portfolio page — zero customer-deployed instance
+- NEW vendor SolarWinds integration article (derdack.com/de/) embeds full cleartext-credential URL template `EventProviderAPI.aspx?Handler=RaiseEvent&Username=services&Password=Derdack01&...` + internal hos
+- CHANGED docs.enterprisealert.com PDFs (EA9 HTTP/SOAP API) still indexable via HTTP origin despite SWA 404 — index is historical, origin dead (no re-probe needed).
+- NEW vps.signl4.com subdomain takeover CONFIRMED via live probes (2026-09-18 through 2026-09-22): HTTPS 200 nginx default page, TLS cert CN=server.d1g.it (unrelated), GoDaddy authoritative NS, fabricated-h
+- NEW GitHub org sweep complete 12/12 — apiKey-in-URL credential-template family confirmed in 6 repos (nagios, 2wayREST×3, SIGNL4, User-Monitoring) + checkmk hardcoded cred; deployments log keys to EA log/p
+- CHANGED docs.enterprisealert.com CNAME chain corrected: → derdackdownloads.z13.web.core.windows.net (live Azure SWA, 404 WebContentNotFound) — NOT dangling A-record; takeover confidence ≤25
+- CHANGED us.derdack.com live: MultiViews 300 Multiple Choices byte-identical to dev.derdack.com (/.well-known/→300 listing /.ssh//.bash_history//.viminfo/, /.ssh/→403, fabricated paths→300)
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
+- CHANGED connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: unauth GET 401, invalid Bearer 401 — route-gated (differs from V1/V2 handler-deferred)
+- CHANGED connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle (differs from V2 teams flapping)
+- CHANGED V4 API namespace confirmed absent: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+- CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted

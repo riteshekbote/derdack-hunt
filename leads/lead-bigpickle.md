@@ -6010,3 +6010,43 @@ evidence_needed: any legitimate client_secret/X-S4-Api-Key (blocked — AUTH_HEL
 verify_steps: DONE (10th+ deep-equal). Residual credential-only.
 impact: full tenant CRUD forgery across envs — Critical, blocked on secret.
 testability: AUTH_HELPED
+## 2026-09-22 09:42:21 UTC [target] (model bigpickle)
+[NEW] Leak-oracle for documented example EA key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` resolved: hits ONLY on vendor Zendesk article 18204929905949 + derdack.com portfolio page — zero customer-deployed instances in indexed web (family impact remains deployment-side).
+[NEW] vendor SolarWinds integration article (derdack.com/de/) embeds full cleartext-credential URL template `EventProviderAPI.aspx?Handler=RaiseEvent&Username=services&Password=Derdack01&...` + internal hostname `mmea2012.derdack-support.local` — credential-in-URL pattern extended to SOAP/GET EventProvider family, previously only REST apiKey family.
+[CHANGED] docs.enterprisealert.com PDFs (EA9 HTTP/SOAP API) still indexable via HTTP origin despite SWA 404 — index is historical, origin dead (no re-probe needed).
+[PRIO] github.com/Derdack org + derdack.com integration corpus, 7.6 — a=8 (6/12 repos + 6+ vendor pages teach cleartext key-in-URL), b=7 (customer EA deployments), t=4, g=9 (passive only), c=9 (fresh this cycle), f=8.
+[PRIO] account/connect /identity 6-host family, 7.2 — a=8, b=10 (tenant CRUD), t=10 (OAuth/JWT), g=2 (secret-gated), c=1, f=1.
+[PRIO] connect.signl4.com webhooks/events+V1-V3, 6.8 — a=8, b=8, t=7, g=2, c=1, f=1.
+[HYP] EA REST apiKey-in-URL is vendor-documented primary auth — org template family fully corroborated (CONSOLIDATED, leak-oracle closed negative on example key)
+class: MISCONFIG
+asset: github.com/Derdack/{User-Monitoring,nagios,2wayREST×3,SIGNL4} + www.derdack.com portfolio + enterprisealert.zendesk.com + paessler PRTG article
+confidence: 78
+reasoning: Portfolio page instructs replacing `key` in `http://server-name/EAWebService/rest/events?apiKey={API-Key}`; Zendesk article (2024-04-15) documents raise/update/reset on same path with apiKey in query; PRTG helpdesk article (2025-06-10) ships PowerShell templates building `$uriEA9 = https:///EAWebService/rest/events?apiKey=` ; 6/12 org repos render identical pattern; example key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` (lowercase-alnum, operator-generated) appears ONLY in vendor docs this cycle — no deployed customer key in indexed web across 6+ corpora.
+evidence_needed: deployed-instance key reaching EA access-log/process-list surface (HUMAN, on-prem).
+verify_steps: DONE (multi-source RAG this cycle: Zendesk + portfolio + PRTG + Prometheus/Grafana pages; example-key oracle negative).
+impact: log/process reader recovers live REST Endpoint Key → unauth alert read/injection/close/reset on customer EA — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] Vendor EventProviderAPI template embeds cleartext Username/Password in GET query string + leaks internal hostname
+class: MISCONFIG
+asset: www.derdack.com/enterprise-alert-integration-with-solarwinds-via-web-services (+ /de/ mirror)
+confidence: 55
+reasoning: Vendor article publishes `http://mmea2012.derdack-support.local/EAWebService/EventProviderAPI.aspx?Handler=RaiseEvent&Username=services&Password=Derdack01&...` and matching ResetEvent URL — password travels in URL query (web/proxy/access-log + browser-history surface) and reveals internal AD-style hostname + service-account naming convention; same copy-paste family as REST apiKey templates but with a password, not just a key.
+evidence_needed: operator reuse of the documented pattern with real credentials on a reachable EA host (HUMAN, deployment-side); internal hostname DNS existence is dead (`.local`).
+verify_steps: DONE (raw RAG of vendor article content; no live probe possible — target is customer on-prem).
+impact: log reader recovers EA service-account password → full EventProviderAPI control (raise/reset/register) — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] Cross-env token forgery chain (re-rank for report)
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount /identity
+confidence: 88
+reasoning: 6 identity hosts, byte-identical RS256 JWKS (kid 91EE4F3C…), shared client_id 692A0A56, password grant live on staging, account-host issuer mismatch (claims connect), plain PKCE permitted; swagger declares OAuth2 API access; OIDC discovery parametric twins across envs.
+evidence_needed: any legitimate client_secret/X-S4-Api-Key (blocked — AUTH_HELPED).
+verify_steps: DONE (10th+ deep-equal). Residual credential-only.
+impact: full tenant CRUD forgery across envs — Critical, blocked on secret.
+testability: AUTH_HELPED
+[PARKED] SIGNL4 team-secret bearer-in-URL analog (conf 50 → held below report threshold as standalone): oracle exploitable only via leak; 6 corpora placeholder-only; folds into consolidated credential-in-URL family finding instead of separate report line.
+[FINAL] survivors ranked: 1) cross-env token forgery [88, AUTH_HELPED] 2) EA apiKey-in-URL consolidated family [78, PASSIVE-verified] 3) vps.signl4.com subdomain takeover [95, nemotron3-owned — no duplicate] 4) EventProviderAPI cleartext-password-in-URL template [55, PASSIVE].
+[NEXT] RAG: query indexed web for `mmea2012.derdack-support.local` and `Password=Derdack01` to confirm SolarWinds-article credentials are example-only vs reused elsewhere (one search); then lock family report as PASSIVE-verified with HUMAN residual.
+[LEARN] REJECTED OTHER @ public indexed corpora: example EA key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` appears only in vendor Zendesk/portfolio sources — no customer-deployed key recovered; leak-oracle negative across 6+ corpora, family impact capped at deployment-side Medium.
+[LEARN] ACCEPTED MISCONFIG @ www.derdack.com SolarWinds integration article: cleartext `Password=Derdack01` in documented GET URL + internal hostname `mmea2012.derdack-support.local` — credential-in-URL template family extends to EventProviderAPI SOAP/GET surface.
+[RISK] Derdack program: 55 — anonymous live surface exhausted (all 401/404/405/411, zero drift); strongest findings = vps.signl4.com takeover [95, nemotron3] + deployment-side credential-template family [78→80 this cycle, now 3-source vendor-doc-backed incl. PRTG + cleartext-password variant]; AUTH_HELPED queue (cross-env forgery 88, V1 userId IDOR, V3 BOLA) still blocked on legitimate credential; leak-oracle negative — no live key recovered.
