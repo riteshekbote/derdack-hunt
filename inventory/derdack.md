@@ -1429,3 +1429,23 @@ www.derdack.com
 - CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
 - CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
 - CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted; signl4.derdack.com permanently unreachable; dev.derdack.com MultiViews benign static echo; blog/techblog HTTPS→HTTP
+
+## 2026-09-22 21:28:51 UTC
+- NEW RAG executed on `mmea2012.derdack-support.local` + `Password=Derdack01`: zero indexed hits outside the SolarWinds article itself — SolarWinds-article credentials confirmed example-only, no reuse anywh
+- NEW derdack.com "send-alerts-web-services-simulate-browser" (2016) surfaces as additional vendor source teaching `Username=Administrator&Password=test` in GET URL — family now spans 7+ distinct vendor-doc
+- NEW EA9 HTTP/SOAP API PDF (still HTTP-origin-indexed despite SWA 404): documents EventProviderAPI `Password` param accepts "String or **md5 hashed**" — MD5-hash-in-URL credential variant vendor-documented
+- CHANGED EventProviderAPI operator-reuse sub-claim: leak-oracle closed negative → example-only; standalone hypothesis folds fully into consolidated credential-in-URL family.
+- NEW derdack.com "send-alerts-web-services-simulate-browser" (2016) surfaces as additional vendor source teaching `Username=Administrator&Password=test` in GET URL — family now spans 7+ distinct vendor-doc
+- NEW EA9 HTTP/SOAP API PDF (still HTTP-origin-indexed despite SWA 404): documents EventProviderAPI `Password` param accepts "String or **md5 hashed**" — MD5-hash-in-URL credential variant vendor-documented
+- CHANGED EventProviderAPI operator-reuse sub-claim: leak-oracle closed negative → example-only; standalone hypothesis folds fully into consolidated credential-in-URL family.
+- NEW IN-SCOPE LIVE EA SURFACE @ demo.enterprisealert.com: POC-probed the EAWebService path family (previously only root "/" was probed → 404; /EAWebService/ was never tested). Result: FULL live Enterprise 
+- NEW vps.signl4.com subdomain takeover CONFIRMED across 5 consecutive probe cycles (2026-09-18 through 2026-09-22) — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fabri
+- NEW Credential-in-URL vendor-template family expanded to 7+ distinct sources (SolarWinds article, EA9 PDF, send-alerts-web-services, nagios, 2wayREST×3, SIGNL4, User-Monitoring) with md5-hash variant docu
+- NEW GitHub org sweep complete 12/12 — apiKey-in-URL template family confirmed in 6 repos + checkmk hardcoded cred; deployments log keys to EA log/process/access-log surface
+- NEW Leak-oracle for example EA key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` resolved: hits ONLY on vendor Zendesk/portfolio — zero customer-deployed instance across 7+ corpora
+- NEW RAG on `mmea2012.derdack-support.local` + `Password=Derdack01` returns zero indexed hits outside SolarWinds article — example-only, no reuse
+- CHANGED docs.enterprisealert.com CNAME chain corrected to live Azure SWA `derdackdownloads.z13.web.core.windows.net` (404 WebContentNotFound) — NOT dangling, takeover confidence ≤25
+- CHANGED us.derdack.com live: MultiViews 300 byte-identical to dev.derdack.com (/.well-known/→300 listing /.ssh//.bash_history//.viminfo/, /.ssh/→403, fabricated paths→300)
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
+- CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted; signl4.derdack.com permanently unreachable; dev.derdack.com MultiViews benign static echo; blog/techblog HTTPS→HTTP
