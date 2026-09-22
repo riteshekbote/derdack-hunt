@@ -5982,3 +5982,31 @@ impact: Checkmk API account compromise on reusing deployments — Low/Medium, di
 testability: PASSIVE (verified) with HUMAN residual
 [NEXT] RAG: sweep docs.enterprisealert.com + enterprisealert.zendesk.com for a real customer-deployed EA REST key or the exact article example `l1slfpjwirbm6twzs30bhtcl3z34m8v9` to test leak-oracle (one query: `"EAWebService/rest/events" apiKey` on Sourcegraph/grep.app); expect negative — then finalize family report as PASSIVE-verified with HUMAN residual.
 [RISK] Derdack program: 55 — live anonymous surface exhausted (all 401/404/405/411, zero drift); strongest finding = vps.signl4.com takeover [95] (nemotron3) + deployment-side org credential-template family [78] now vendor-doc-backed across 3 sources and 6/12 repos; AUTH_HELPED queue (cross-env forgery, V1 userId IDOR, V3 BOLA) remains blocked on legitimate credential; RAG oracle negative again — no live-key leak recovered, family impact capped at deployment-side Medium.
+## 2026-09-22 05:01:19 UTC [target] (model bigpickle)
+[HYP] SIGNL4 cloud team-secret is bearer-in-URL with vendor TLS-safety claim (cloud analog of EA apiKey-in-URL family)
+class: MISCONFIG
+asset: connect.signl4.com/webhook/{teamSecret} + docs.signl4.com/integrations/webhook/webhook.html
+confidence: 50
+reasoning: Vendor docs (2026-09-16) state webhook auth = team/integration secret encoded in request URL `https://connect.signl4.com/webhook/{teamSecret}` and claim it "can never be read in plain text during data transmission (TLS)" — false for access-log/proxy-header/referrer layers; same operator copy-paste family as EA REST key templates; 15+ integrations embed it in URLs.
+evidence_needed: a customer webhook URL line in access-log/proxy log, or team-secret leak in public corpora (negative across 5+ to date).
+verify_steps: RAG DONE (webhook.html + n8n + docs samples — placeholder-only). No live probe possible (404/201 oracle is operator-secret class, REJECTED brute-force).
+impact: log reader recovers team-secret → unauth alert trigger/ack/reset on a customer team — Medium, deployment-side.
+testability: PASSIVE with HUMAN residual
+[HYP] EA REST Endpoint Key rotation/audit lifecycle undocumented
+class: BUSLOGIC
+asset: EA on-prem REST event sources (vendor manual only)
+confidence: 35
+reasoning: derdack.com portfolio page shows key shown-once + copied into URL, no rotation/audit step; SIGNL4-cloud equivalents document expiry/rotate/renew — capability gap unproven because EA on-prem manual is offline (docs.enterprisealert.com = decommissioned SWA 404).
+evidence_needed: EA on-prem manual content (unreachable — docs.enterprisealert.com dead).
+verify_steps: RAG ATTEMPTED — docs.enterprisealert.com serves 404 WebContentNotFound; manual unreachable.
+impact: elevates family credibility only — Low, design-side.
+testability: PASSIVE
+[HYP] Cross-env token forgery chain (re-rank for report)
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount /identity
+confidence: 88
+reasoning: 6 identity hosts, byte-identical RS256 JWKS (kid 91EE4F3C...), shared client_id 692A0A56, password grant live on staging, account-host issuer mismatch (claims connect), plain PKCE permitted; swagger declares OAuth2 API access.
+evidence_needed: any legitimate client_secret/X-S4-Api-Key (blocked — AUTH_HELPED).
+verify_steps: DONE (10th+ deep-equal). Residual credential-only.
+impact: full tenant CRUD forgery across envs — Critical, blocked on secret.
+testability: AUTH_HELPED

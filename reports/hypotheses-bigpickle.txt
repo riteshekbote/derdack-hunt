@@ -1,30 +1,28 @@
-## 2026-09-22 00:09:56 UTC [target] (model bigpickle)
-[HYP] EA REST apiKey-in-URL is vendor-documented primary auth — org template family fully corroborated by product docs (CONSOLIDATED finding)
+## 2026-09-22 05:01:19 UTC [target] (model bigpickle)
+[HYP] SIGNL4 cloud team-secret is bearer-in-URL with vendor TLS-safety claim (cloud analog of EA apiKey-in-URL family)
 class: MISCONFIG
-asset: github.com/Derdack/{User-Monitoring, nagios, 2wayREST×3, SIGNL4} + www.derdack.com Webhook/REST-API page + enterprisealert.zendesk.com CURL article
-confidence: 78
-reasoning: Vendor portfolio page literally instructs replacing `key` in `http://server-name/EAWebService/rest/events?apiKey={API-Key}`; Zendesk article (2024-04-15) documents raise/update/reset on same path family with apiKey in query; 6/12 org repos render the identical pattern (`User Monitoring.ps1` L42 `<REST_Endpoint_Key>`); key created once, copy-pasted into cleartext URL, persists in scripts/process args long-term. Key format `l1slfpjwirbm6twzs30bhtcl3z34m8v9` = lowercase-alnum, operator-genera ted (not high-entropy prefix-gated).
-evidence_needed: deployed-instance evidence of live customer key reaching EA access-log/process-list surface (HUMAN, on-prem).
-verify_steps: DONE (raw GET of 2 vendor pages + 6 repo entry points + search index digest). Residual: deployed-instance only.
-impact: EA log/access-log/process reader recovers a live REST Endpoint Key → unauth alert read/injection/close/reset on customer EA — Medium, deployment-side.
-testability: PASSIVE (verified) with HUMAN residual
-[HYP] Vendor REST integration template disables TLS by default (`-L -k`, `http://` URLs) — key-in-query-string travels cleartext on-wire and into proxy/access logs
-class: MISCONFIG
-asset: enterprisealert.zendesk.com CURL article + derdack.com Webhook/REST-API page (on-prem EA REST source provisioning)
-confidence: 55
-reasoning: Every vendor curl example uses `-k` (verify skipped) + `http://localhost` scheme; state-mutating paths `/rest/events/{id}/update|reset` are GET/`--data` with the apiKey in the URL query, so the secret lands in web/proxy/access-log URL lines regardless of transport; portfolio page shows same `http://` example. No TLS-enforcement or `https only` note in either source.
-evidence_needed: operator following template on HTTP or with `-k` where an intermediate proxy logs URLs (HUMAN, deployment-side).
-verify_steps: DONE (raw GET of article digest + portfolio page; article body 403 on direct fetch, digest suffices).
-impact: On-wire/at-rest secret recoverability for EA REST keys in customer deployments — Low/Medium, design-side corroborator for family finding.
-testability: PASSIVE (verified) with HUMAN residual
-[HYP] checkmk 2-way plugin hardcoded credential reuse (cmkadmin/CNlydVqZ)
-class: MISCONFIG
-asset: github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js
-confidence: 55
-reasoning: L90-91 hardcoded username/password (sha256 beb9fa72…); L330/373 log full "Checkmk response: " bodies incl auth results; RFC1918 target not remotely reachable — leak-only, same copy-paste operator family as apiKey templates.
-evidence_needed: operator reuse of template cred (HUMAN, historical/leak-only).
-verify_steps: DONE (raw GET). No live probe possible.
-impact: Checkmk API account compromise on reusing deployments — Low/Medium, disclosure-side.
-testability: PASSIVE (verified) with HUMAN residual
-[NEXT] RAG: sweep docs.enterprisealert.com + enterprisealert.zendesk.com for a real customer-deployed EA REST key or the exact article example `l1slfpjwirbm6twzs30bhtcl3z34m8v9` to test leak-oracle (one query: `"EAWebService/rest/events" apiKey` on Sourcegraph/grep.app); expect negative — then finalize family report as PASSIVE-verified with HUMAN residual.
-[RISK] Derdack program: 55 — live anonymous surface exhausted (all 401/404/405/411, zero drift); strongest finding = vps.signl4.com takeover [95] (nemotron3) + deployment-side org credential-template family [78] now vendor-doc-backed across 3 sources and 6/12 repos; AUTH_HELPED queue (cross-env forgery, V1 userId IDOR, V3 BOLA) remains blocked on legitimate credential; RAG oracle negative again — no live-key leak recovered, family impact capped at deployment-side Medium.
+asset: connect.signl4.com/webhook/{teamSecret} + docs.signl4.com/integrations/webhook/webhook.html
+confidence: 50
+reasoning: Vendor docs (2026-09-16) state webhook auth = team/integration secret encoded in request URL `https://connect.signl4.com/webhook/{teamSecret}` and claim it "can never be read in plain text during data transmission (TLS)" — false for access-log/proxy-header/referrer layers; same operator copy-paste family as EA REST key templates; 15+ integrations embed it in URLs.
+evidence_needed: a customer webhook URL line in access-log/proxy log, or team-secret leak in public corpora (negative across 5+ to date).
+verify_steps: RAG DONE (webhook.html + n8n + docs samples — placeholder-only). No live probe possible (404/201 oracle is operator-secret class, REJECTED brute-force).
+impact: log reader recovers team-secret → unauth alert trigger/ack/reset on a customer team — Medium, deployment-side.
+testability: PASSIVE with HUMAN residual
+[HYP] EA REST Endpoint Key rotation/audit lifecycle undocumented
+class: BUSLOGIC
+asset: EA on-prem REST event sources (vendor manual only)
+confidence: 35
+reasoning: derdack.com portfolio page shows key shown-once + copied into URL, no rotation/audit step; SIGNL4-cloud equivalents document expiry/rotate/renew — capability gap unproven because EA on-prem manual is offline (docs.enterprisealert.com = decommissioned SWA 404).
+evidence_needed: EA on-prem manual content (unreachable — docs.enterprisealert.com dead).
+verify_steps: RAG ATTEMPTED — docs.enterprisealert.com serves 404 WebContentNotFound; manual unreachable.
+impact: elevates family credibility only — Low, design-side.
+testability: PASSIVE
+[HYP] Cross-env token forgery chain (re-rank for report)
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount /identity
+confidence: 88
+reasoning: 6 identity hosts, byte-identical RS256 JWKS (kid 91EE4F3C...), shared client_id 692A0A56, password grant live on staging, account-host issuer mismatch (claims connect), plain PKCE permitted; swagger declares OAuth2 API access.
+evidence_needed: any legitimate client_secret/X-S4-Api-Key (blocked — AUTH_HELPED).
+verify_steps: DONE (10th+ deep-equal). Residual credential-only.
+impact: full tenant CRUD forgery across envs — Critical, blocked on secret.
+testability: AUTH_HELPED

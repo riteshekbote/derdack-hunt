@@ -31248,3 +31248,66 @@ testability: PASSIVE (verified) with HUMAN residual
 
 **STEP 7 — RISK**
 [RISK] Derdack program: 55 — live anonymous surface exhausted (all 401/404/405/411, zero drift); strongest finding = vps.signl4.com takeover [95] (nemotron3) + deployment-side org credential-template family [78] now vendor-doc-backed across 3 sources and 6/12 repos; AUTH_HELPED queue (cross-env forgery, V1 userId IDOR, V3 BOLA) remains blocked on legitimate credential; RAG oracle negative again — no live-key leak recovered, family impact capped at deployment-side Medium.
+===== ANALYST bigpickle 2026-09-22 05:01:35 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m◈ [0mParallel Web Search ""EAWebService/rest/events" apiKey site:enterprisealert.com OR site:github.com"
+[0m◈ [0mParallel Web Search ""EAWebService/rest/events" apiKey="
+[0m◈ [0mParallel Web Search ""l1slfpjwirbm6twzs30bhtcl3z34m8v9""
+[0m◈ [0mParallel Web Search ""EAWebService" apiKey github OR gitlab OR pastebin"
+[0m◈ [0mParallel Web Search ""x-s4-api-key" OR "X-S4-Api-Key" signl4 github"
+[0m◈ [0mParallel Web Search ""signl4" "api key" postman OR integration "s4-" secret github"
+STEP 1 — DELTA:
+- [NEW] RAG leak-oracle executed this cycle: exact EA article example key `l1slfpjwirbm6twzs30bhtcl3z34m8v9`, `"EAWebService/rest/events" apiKey`, `"x-s4-api-key"`/`X-S4-Api-Key`, and SIGNL4 team-secret — all NEGATIVE across indexed web; only vendor placeholder docs surfaced (docs.signl4.com REST samples `{api-key}`, `{team-secret}`, n8n `helloworld`). 6+ corpora now clean (Sourcegraph 0, grep.app 429, GitHub-gated, vendor samples, web).
+- [NEW] docs.signl4.com/integrations/webhook/webhook.html (updated 2026-09-16) asserts URL-embedded team secret "can never be read in plain text during data transmission (TLS)" — vendor design posture for secret-in-URL bearer token.
+- [CHANGED] No live-surface drift: connect/api/devapi/account identity + V1/V2/V3/webhook/events route maps unchanged, V4 absent, all anon → 401/404/405/411.
+
+STEP 2 — PRIORITIZE:
+- [PRIO] connect.signl4.com API estate,6.5,axis=a9b9t8g1c7f2 — AUTH_HELPED queue (V1 userId IDOR, V2 changePassword, V3 invoice-BOLA, prepaid/licenses) still fully gated.
+- [PRIO] github.com/Derdack org credential-template family,5.0,axis=a3b7t6g6c3f4 — PASSIVE-verified, HUMAN-residual, now vendor-doc-backed ×3.
+- [PRIO] vps.signl4.com,3.4,axis=a1b8t2g2c2f3 — confirmed finding (nemotron3), low fresh surface.
+
+STEP 3 — HYPOTHESES:
+[HYP] SIGNL4 cloud team-secret is bearer-in-URL with vendor TLS-safety claim (cloud analog of EA apiKey-in-URL family)
+class: MISCONFIG
+asset: connect.signl4.com/webhook/{teamSecret} + docs.signl4.com/integrations/webhook/webhook.html
+confidence: 50
+reasoning: Vendor docs (2026-09-16) state webhook auth = team/integration secret encoded in request URL `https://connect.signl4.com/webhook/{teamSecret}` and claim it "can never be read in plain text during data transmission (TLS)" — false for access-log/proxy-header/referrer layers; same operator copy-paste family as EA REST key templates; 15+ integrations embed it in URLs.
+evidence_needed: a customer webhook URL line in access-log/proxy log, or team-secret leak in public corpora (negative across 5+ to date).
+verify_steps: RAG DONE (webhook.html + n8n + docs samples — placeholder-only). No live probe possible (404/201 oracle is operator-secret class, REJECTED brute-force).
+impact: log reader recovers team-secret → unauth alert trigger/ack/reset on a customer team — Medium, deployment-side.
+testability: PASSIVE with HUMAN residual
+[HYP] EA REST Endpoint Key rotation/audit lifecycle undocumented
+class: BUSLOGIC
+asset: EA on-prem REST event sources (vendor manual only)
+confidence: 35
+reasoning: derdack.com portfolio page shows key shown-once + copied into URL, no rotation/audit step; SIGNL4-cloud equivalents document expiry/rotate/renew — capability gap unproven because EA on-prem manual is offline (docs.enterprisealert.com = decommissioned SWA 404).
+evidence_needed: EA on-prem manual content (unreachable — docs.enterprisealert.com dead).
+verify_steps: RAG ATTEMPTED — docs.enterprisealert.com serves 404 WebContentNotFound; manual unreachable.
+impact: elevates family credibility only — Low, design-side.
+testability: PASSIVE
+[HYP] Cross-env token forgery chain (re-rank for report)
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount /identity
+confidence: 88
+reasoning: 6 identity hosts, byte-identical RS256 JWKS (kid 91EE4F3C...), shared client_id 692A0A56, password grant live on staging, account-host issuer mismatch (claims connect), plain PKCE permitted; swagger declares OAuth2 API access.
+evidence_needed: any legitimate client_secret/X-S4-Api-Key (blocked — AUTH_HELPED).
+verify_steps: DONE (10th+ deep-equal). Residual credential-only.
+impact: full tenant CRUD forgery across envs — Critical, blocked on secret.
+testability: AUTH_HELPED
+
+STEP 4 — SELF-CRITIQUE:
+- [PARKED] EA REST key rotation/audit (BUSLOGIC 35): evidence source (EA on-prem manual) is unreachable — docs.enterprisealert.com permanently 404; confidence <40.
+- [PARKED] TLS-disabled template (-L -k / http://): corroborator for family, standalone value nil without deployed instance.
+- [FINAL] 1) Cross-env token forgery [88] AUTH_HELPED; 2) EA REST apiKey-in-URL consolidated family [78] PASSIVE + HUMAN residual; 3) SIGNL4 cloud team-secret-in-URL + TLS claim [50] PASSIVE + HUMAN residual; 4) checkmk hardcoded cmkadmin/CNlydVqZ [55] PASSIVE + leak-only.
+
+STEP 5 — NEXT ACTION:
+- [NEXT] HUMAN: obtain one legitimate credential (X-S4-Api-Key or client_secret or a test webhook team-secret) from the program operator to unblock the AUTH_HELPED queue — passive leak oracles (EA + SIGNL4 cloud, 6+ corpora) all negative; V1 userId IDOR / V2 changePassword / V3 invoice BOLA / prepaid-licenses BOLA are primed and only the credential is missing.
+
+STEP 6 — LEARNING:
+- [LEARN] REJECTED OTHER @ public indexed corpora: EA REST key + SIGNL4 cloud key/team-secret leak oracles negative across 6+ corpora incl web search this cycle (exact template key, `"EAWebService/rest/events" apiKey`, `"x-s4-api-key"`) — only placeholder docs surfaced; credential acquisition via public leak permanently closed.
+- [LEARN] ACCEPTED MISCONFIG @ docs.signl4.com: vendor webhook article (2026-09-16) claims URL-embedded team secret "can never be read in plain text during data transmission (TLS)" — claim ignores access-log/proxy/referrer/layer-7 handling; documents secret-in-URL design posture for the cloud estate, corroborating the EA template family.
+
+STEP 7 — RISK:
+- [RISK] Derdack program: 55 — live anonymous surface fully exhausted (all 401/404/405/411, zero drift across 20+ cycles); strongest findings = vps.signl4.com takeover [95] (nemotron3) + consolidated vendor-templated credential family (EA [78] + cloud secret-in-URL [50]) all deployment/HUMAN-residual; two independent leak oracles closed negative; AUTH_HELPED queue (forgery [88], V1 userId IDOR, V2 changePassword, V3 BOLA) permanently gated on a credential that must now come from the operator.
