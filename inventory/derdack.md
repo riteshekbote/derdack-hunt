@@ -1417,3 +1417,15 @@ www.derdack.com
 - CHANGED connect.signl4.com/api/v1/alerts/acknowledgeAll: unauth GET 401, invalid Bearer 401 — route-gated this cycle (differs from V2 teams flapping)
 - CHANGED V4 API namespace confirmed absent: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
 - CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted
+
+## 2026-09-22 18:21:52 UTC
+- CHANGED vps.signl4.com subdomain takeover re-confirmed across 5 consecutive probe cycles (2026-09-18 through 2026-09-22) — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fa
+- CHANGED Credential-in-URL vendor-template family expanded to 7+ distinct sources (SolarWinds article, EA9 PDF, send-alerts-web-services, nagios, 2wayREST×3, SIGNL4, User-Monitoring) with md5-hash variant now 
+- CHANGED GitHub org sweep complete 12/12 — apiKey-in-URL template family confirmed in 6 repos + checkmk hardcoded cred; deployments log keys to EA log/process/access-log surface
+- CHANGED Leak-oracle for example EA key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` resolved: hits ONLY on vendor Zendesk/portfolio — zero customer-deployed instance across 7+ corpora
+- CHANGED RAG on `mmea2012.derdack-support.local` + `Password=Derdack01` returns zero indexed hits outside SolarWinds article — example-only, no reuse
+- CHANGED docs.enterprisealert.com CNAME chain corrected to live Azure SWA `derdackdownloads.z13.web.core.windows.net` (404 WebContentNotFound) — NOT dangling, takeover confidence ≤25
+- CHANGED us.derdack.com live: MultiViews 300 byte-identical to dev.derdack.com (/.well-known/→300 listing /.ssh//.bash_history//.viminfo/, /.ssh/→403, fabricated paths→300)
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
+- CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted; signl4.derdack.com permanently unreachable; dev.derdack.com MultiViews benign static echo; blog/techblog HTTPS→HTTP
