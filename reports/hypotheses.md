@@ -3589,3 +3589,30 @@
 - LEARN: ACCEPTED MISCONFIG @ www.derdack.com SolarWinds integration article: cleartext `Password=Derdack01` in documented GET URL + internal hostname `mmea2012.derdack-
 - LEARN: REJECTED OTHER @ public indexed corpora: `mmea2012.derdack-support.local` + `Password=Derdack01` return zero indexed hits outside the SolarWinds article — examp
 - LEARN: ACCEPTED MISCONFIG @ www.derdack.com send-alerts-web-services article + EA9 HTTP/SOAP API PDF: additional vendor sources confirm Username/Password (or md5 hash)
+
+## RANKED HYPOTHESES 2026-09-22 23:49:12 UTC
+- [95] vps.signl4.com: Subdomain takeover via dangling A-record on vps.signl4.com (from art/lead_nemotron3.txt)
+- [80] demo.enterprisealert.com/EAWebService/: demo.enterprisealert.com public EAWebService exposure (report hyp) (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx (SOAP WSDL) to enumerate EventProviderAPI handler surface and test credential-in-
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response pr
+- LEARN: REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS)
+- LEARN: REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
+- LEARN: REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
+- LEARN: ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
+- LEARN: ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5
+- LEARN: ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer c
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+- LEARN: ACCEPTED MISCONFIG @ docs.enterprisealert.com: CNAME chain ends at live Azure SWA account `derdackdownloads.z13.web.core.windows.net` (global-unique name, still
+- LEARN: REJECTED OTHER @ docs.enterprisealert.com takeover: SWA account name un-creatable + claim gate = DNS control (Human) → takeover confidence ≤25, demoted to inert
+- LEARN: ACCEPTED MISCONFIG @ us.derdack.com: MultiViews 300 + x-ws reverse-proxy fingerprint byte-identical to dev.derdack.com — two-host evidence of estate-wide parked
+- LEARN: ACCEPTED OTHER @ s4dev1-8.enterprisealert.com: CNAME → Azure AD App Proxy (msappproxy.net) → 4.207.244.99 — App-Proxy-fronted staging fleet, consistent with 404
+- LEARN: ACCEPTED OTHER @ crt.sh: %derdack.com (4) + %enterprisealert.com (5) sweeps completed — CT coverage across all three roots now CLOSED, zero new live names, esta
+- LEARN: ACCEPTED MISCONFIG @ github.com/Derdack org: org sweep complete 12/12 — apiKey-in-URL credential-template family confirmed in 6 repos (nagios, 2wayREST×3, SIGNL
+- LEARN: REJECTED MISCONFIG @ azure registerClient.ps1: ClientSecret generated locally + printed to console/config is standard Azure AD provisioning, no new defect class
+- LEARN: REJECTED OTHER @ public indexed corpora: example EA key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` appears only in vendor Zendesk/portfolio sources — no customer-deploy
+- LEARN: ACCEPTED MISCONFIG @ www.derdack.com SolarWinds integration article: cleartext `Password=Derdack01` in documented GET URL + internal hostname `mmea2012.derdack-
+- LEARN: REJECTED OTHER @ public indexed corpora: `mmea2012.derdack-support.local` + `Password=Derdack01` return zero indexed hits outside the SolarWinds article — examp
+- LEARN: ACCEPTED MISCONFIG @ www.derdack.com send-alerts-web-services article + EA9 HTTP/SOAP API PDF: additional vendor sources confirm Username/Password (or md5 hash)
+- LEARN: ACCEPTED @ demo.enterprisealert.com: full public EA 9.5.26147 was unprobed surface the whole time (KB said demo→IIS 404 from root-only probe). Lesson: root-only
+- LEARN: NEGATIVE @ trace.axd/elmah/WebAdmin/ManagementUI/rest-help-on-demo: standard closed; no trace exposure; EA web portal not at /WebAdmin or /ManagementUI heuristi
+- LEARN: REJECTED @ s4dev1-8/EAWebService, www.enterprisealert.com, ea.enterprisealert.com: 404/504/000 — demo.enterprisealert.com confirmed unique live EA host.

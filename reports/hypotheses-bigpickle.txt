@@ -1,156 +1,28 @@
-## 2026-09-22 21:28:40 UTC [target] (model bigpickle)
-evidence_needed: Valid client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 OR leaked X-S4-Api-Key / team-secret / Bearer token to demonstrate cross-env token acceptance
-verify_steps: 1) GET https://account.signl4.com/identity/.well-known/openid-configuration (confirm issuer mismatch, shared JWKS, plain PKCE, password grant) 2) GET https://devconnect.signl4.com/identity/.well-known/openid-configuration (confirm staging parity) 3) POST https://devconnect.signl4.com/identity/connect/token with password grant + client_id 692A0A56-... (confirm invalid_client without secret) 4) GET https://connect.signl4.com/api/v1/alerts/acknowledgeAll (confirm handler-deferred auth: 405 not 401)
-impact: Full multi-tenant EA/SIGNL4 compromise — forged tokens accepted across all 6 identity hosts and all API namespaces (V1/V2/V3/webhook/events); scopes grant CRUD on alerts, teams, subscriptions, billing, user management; severity CRITICAL
-testability: AUTH_HELPED
-[PARKED] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch: confidence 88 but AUTH_HELPED — requires valid client_secret or leaked X-S4-Api-Key/Bearer; no passive-only path to token acquisition
-[PARKED] Cross-user IDOR on V1 bulk alert operations via userId query parameter: confidence 80 but AUTH_HELPED — requires authenticated operator token; no passive verification of user ownership guard
-[FINAL] 1) Subdomain takeover via dangling A-record on vps.signl4.com (MISCONFIG, 95) — PASSIVE, CONFIRMED via live probes, ready for reporting
-[FINAL] 2) Customer EA REST API key leakage via template-driven deployment logs (MISCONFIG, 78) — PASSIVE
-[FINAL] 3) Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch (AUTH, 88) — AUTH_HELPED, blocked on credential
-[NEXT] PROBE: Search grep.app for `rest/events?apiKey=` OR `X-S4-Api-Key:` patterns in public repositories/logs to validate credential leakage hypothesis from template repos
-[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response proves dangling → subdomain takeover candidate
-[LEARN] REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS)
-[LEARN] REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
-[LEARN] REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
-[LEARN] ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
-[LEARN] ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
-[LEARN] ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer claim
-[LEARN] ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
-[LEARN] ACCEPTED MISCONFIG @ docs.enterprisealert.com: CNAME chain ends at live Azure SWA account `derdackdownloads.z13.web.core.windows.net` (global-unique name, still resolves) → 404 WebContentNotFound = decommissioned-but-present empty binding; corrects prior "A-record" claim; not dangling-controlled
-[LEARN] REJECTED OTHER @ docs.enterprisealert.com takeover: SWA account name un-creatable + claim gate = DNS control (Human) → takeover confidence ≤25, demoted to inert config
-[LEARN] ACCEPTED MISCONFIG @ us.derdack.com: MultiViews 300 + x-ws reverse-proxy fingerprint byte-identical to dev.derdack.com — two-host evidence of estate-wide parked-minimal config class; no readable sensitive files (403/404)
-[LEARN] ACCEPTED OTHER @ s4dev1-8.enterprisealert.com: CNAME → Azure AD App Proxy (msappproxy.net) → 4.207.244.99 — App-Proxy-fronted staging fleet, consistent with 404/504 inertness; new fingerprint datum
-[LEARN] ACCEPTED OTHER @ crt.sh: %derdack.com (4) + %enterprisealert.com (5) sweeps completed — CT coverage across all three roots now CLOSED, zero new live names, estate drift = 0
-[LEARN] ACCEPTED MISCONFIG @ github.com/Derdack org: org sweep complete 12/12 — apiKey-in-URL credential-template family confirmed in 6 repos (nagios, 2wayREST×3, SIGNL4, User-Monitoring) + checkmk hardcoded cred; deployments log keys to EA log/process/access-log surface
-[LEARN] REJECTED MISCONFIG @ azure registerClient.ps1: ClientSecret generated locally + printed to console/config is standard Azure AD provisioning, no new defect class
-[LEARN] REJECTED OTHER @ public indexed corpora: example EA key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` appears only in vendor Zendesk/portfolio sources — no customer-deployed instance recovered; leak-oracle negative across 7+ corpora
-[LEARN] ACCEPTED MISCONFIG @ www.derdack.com SolarWinds integration article: cleartext `Password=Derdack01` in documented GET URL + internal hostname `mmea2012.derdack-support.local` — credential-in-URL template family extends to EventProviderAPI SOAP/GET surface
-[LEARN] REJECTED OTHER @ public indexed corpora: `mmea2012.derdack-support.local` + `Password=Derdack01` return zero indexed hits outside the SolarWinds article — example-only, no credential reuse; leak-oracle negative across 7+ corpora
-[LEARN] ACCEPTED MISCONFIG @ www.derdack.com send-alerts-web-services article + EA9 HTTP/SOAP API PDF: additional vendor sources confirm Username/Password (or md5 hash) in GET query as documented primary auth for full EventProviderAPI handler set — credential-in-URL family extended to password-credential type + md5-hash variant; 7+ distinct sources now
-[RISK] derdack: 90 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed discovery-parametric parity across account/connect hosts and closed EA-scope-host and authorize-differential hypotheses. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover.
-verify_steps: DONE (raw RAG of vendor article content; no live probe possible — target is customer on-prem).
-impact: log reader recovers EA service-account password → full EventProviderAPI control (raise/reset/register) — Medium, deployment-side.
+## 2026-09-22 23:48:09 UTC [target] (model bigpickle)
+[HYP] demo.enterprisealert.com public EAWebService exposure (report hyp)
+class: MISCONFIG
+asset: demo.enterprisealert.com/EAWebService/ (Azure AD App Proxy, no pre-auth)
+confidence: 80
+reasoning: /EAWebService/ 200 SDK+handler index, 12-op SOAP WSDL, REST events route map proven unauth; CNAME demo-derdack.msappproxy.net → 4.207.244.99 tenant ff2a095d; version 9.5.26147 disclosed; gates hold (401/Error-1); swagger schema paths all 404 (no doc-leak); unique live EA host (s4dev/www/ea 404/504/000).
+evidence_needed: valid apiKey or EA service-account credential (AUTH_HELPED) to chain past gate.
+verify_steps: DONE (path family + WSDL + handler index + gates + DNS). Residual excludes swagger (5 paths probed 404 this cycle).
+impact: complete EA alert surface + version exposed to internet on company-owned host; with any leaked key → full event lifecycle control (raise/close/reset/update) — Medium-High.
+testability: PASSIVE (exposure verified) / AUTH_HELPED (chain)
+[HYP] Credential-in-URL consolidated family (report hyp)
+class: MISCONFIG
+asset: github.com/Derdack/{nagios,2wayREST×3,SIGNL4,User-Monitoring} + 8 derdack.com integration pages + Zendesk + PRTG + EA9 PDF
+confidence: 80
+reasoning: REST key accepted in query param, HTTP Basic, AND URL-embedded (Update1-2018 + Webhook-2020 = 3 positions, same secret value); EventProviderAPI.aspx Username/Password (or md5) in GET URL (2016 article, EA9 PDF, SolarWinds article); keys non-user-attributable (no CAL); live RFC reachable at demo/EAWebService/rest/events?apiKey= and EventProviderAPI.aspx?Handler=RaiseEvent (gated); leak-oracles negative across 8 corpora (l1slfpj… vendor-only; Derdack01/mmea2012 zero external reuse).
+evidence_needed: deployed-instance credential reaching an EA access-log/process/proxy log surface (HUMAN, on-prem) — passive corpora exhausted.
+verify_steps: DONE (RAG 8 first-party pages this cycle + prior 6 repos + PDFs).
+impact: any log/reader recovering a URL-embedded key or service-account password → unauth alert read/inject/close/reset on customer EA + on Derdack's own demo — Medium, deployment-side, now with in-scope live chain proof.
 testability: PASSIVE (verified) with HUMAN residual
 [HYP] Cross-env token forgery chain (re-rank for report)
 class: AUTH
 asset: connect/devconnect/api/devapi/account/devaccount /identity
 confidence: 88
-reasoning: 6 identity hosts, byte-identical RS256 JWKS (kid 91EE4F3C…), shared client_id 692A0A56, password grant live on staging, account-host issuer mismatch (claims connect), plain PKCE permitted; swagger declares OAuth2 API access; OIDC discovery parametric twins across envs.
+reasoning: 6 identity hosts byte-identical RS256 JWKS (kid 91EE4F3C…), shared client_id 692A0A56, password grant live on staging, account-host issuer mismatch, plain PKCE allowed, detector-deferred handler auth; swagger OAuth2 accepts tokens from same shared-key IdP.
 evidence_needed: any legitimate client_secret/X-S4-Api-Key (blocked — AUTH_HELPED).
 verify_steps: DONE (10th+ deep-equal). Residual credential-only.
 impact: full tenant CRUD forgery across envs — Critical, blocked on secret.
 testability: AUTH_HELPED
-[PARKED] SIGNL4 team-secret bearer-in-URL analog (conf 50 → held below report threshold as standalone): oracle exploitable only via leak; 6 corpora placeholder-only; folds into consolidated credential-in-URL family finding instead of separate report line.
-[FINAL] survivors ranked: 1) cross-env token forgery [88, AUTH_HELPED] 2) EA apiKey-in-URL consolidated family [78, PASSIVE-verified] 3) vps.signl4.com subdomain takeover [95, nemotron3-owned — no duplicate] 4) EventProviderAPI cleartext-password-in-URL template [55, PASSIVE].
-[NEXT] RAG: query indexed web for `mmea2012.derdack-support.local` and `Password=Derdack01` to confirm SolarWinds-article credentials are example-only vs reused elsewhere (one search); then lock family report as PASSIVE-verified with HUMAN residual.
-[LEARN] REJECTED OTHER @ public indexed corpora: example EA key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` appears only in vendor Zendesk/portfolio sources — no customer-deployed key recovered; leak-oracle negative across 6+ corpora, family impact capped at deployment-side Medium.
-[LEARN] ACCEPTED MISCONFIG @ www.derdack.com SolarWinds integration article: cleartext `Password=Derdack01` in documented GET URL + internal hostname `mmea2012.derdack-support.local` — credential-in-URL template family extends to EventProviderAPI SOAP/GET surface.
-[RISK] Derdack program: 55 — anonymous live surface exhausted (all 401/404/405/411, zero drift); strongest findings = vps.signl4.com takeover [95, nemotron3] + deployment-side credential-template family [78→80 this cycle, now 3-source vendor-doc-backed incl. PRTG + cleartext-password variant]; AUTH_HELPED queue (cross-env forgery 88, V1 userId IDOR, V3 BOLA) still blocked on legitimate credential; leak-oracle negative — no live key recovered.
-[NEW] RAG executed on `mmea2012.derdack-support.local` + `Password=Derdack01`: zero indexed hits outside the SolarWinds article itself — SolarWinds-article credentials confirmed example-only, no reuse anywhere in indexed web.
-[NEW] derdack.com "send-alerts-web-services-simulate-browser" (2016) surfaces as additional vendor source teaching `Username=Administrator&Password=test` in GET URL — family now spans 7+ distinct vendor-doc sources.
-[NEW] EA9 HTTP/SOAP API PDF (still HTTP-origin-indexed despite SWA 404): documents EventProviderAPI `Password` param accepts "String or **md5 hashed**" — MD5-hash-in-URL credential variant vendor-documented; full handler set (Register/Unregister/RaiseEvent/GetEventStatus/CloseAlert/SubmitEventUpdate) all carry Username+Password in query string.
-[CHANGED] EventProviderAPI operator-reuse sub-claim: leak-oracle closed negative → example-only; standalone hypothesis folds fully into consolidated credential-in-URL family.
-[PRIO] github.com/Derdack org + www.derdack.com integration corpus (consolidated credential-in-URL family), 7.4 — a=8 (7+ vendor-doc sources + 6/12 repos), b=7 (customer EA deployments), t=4 (URL-query auth), g=9 (passive only), c=9 (RAG fresh this cycle), f=8.
-[PRIO] connect/devconnect/api/devapi/account/devaccount /identity 6-host family, 6.5 — a=8, b=10 (tenant CRUD), t=10 (OAuth/JWT), g=2 (secret-gated), c=1, f=1.
-[PRIO] vps.signl4.com, 7.4 — a=9 (dangling A confirmed), b=8 (subdomain takeover), t=6, g=9 (passive DNS+HTTP), c=2, f=7; nemotron3 leads verification, no duplicate probe.
-[HYP] EA/ SIGNL4 credential-in-URL vendor-template family fully corroborated across 7+ sources with md5-hash variant (CONSOLIDATED: REST apiKey + EventProviderAPI password + md5)
-class: MISCONFIG
-asset: github.com/Derdack/{User-Monitoring,nagios,2wayREST×3,SIGNL4} + www.derdack.com (portfolio, send-alerts-web-services 2016, SolarWinds article) + enterprisealert.zendesk.com + paessler PRTG + EA9 HTTP/SOAP API PDF (historical index)
-confidence: 80
-reasoning: 6/12 org repos render `EAWebService/rest/events?apiKey=`; derdack.com portfolio instructs replacing `key` in same path; Zendesk article (2024-04-15) documents raise/update/reset with apiKey in query; PRTG helpdesk (2025-06-10) ships PowerShell templates building the URI; SolarWinds article embeds `EventProviderAPI.aspx?Handler=RaiseEvent&Username=services&Password=Derdack01` + internal hostname `mmea2012.derdack-support.local`; 2016 send-alerts article adds `Username=Administrator&Password=test` GET template; EA9 PDF documents Password param "String or md5 hashed" across full handler set (Register/Unregister/RaiseEvent/GetEventStatus/CloseAlert/SubmitEventUpdate) — two distinct credential types (REST apiKey + SOAP/GET password-or-md5) both vendor-taught as URL-query primary auth. Leak-oracles closed negative this cycle: example key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` only in vendor docs; `Password=Derdack01` + `mmea2012.derdack-support.local` zero indexed reuse — no customer-deployed credential recovered across 7+ corpora.
-evidence_needed: deployed-instance credential reaching EA access-log/process-list surface (HUMAN, on-p?em); leak-oracles exhausted passively.
-verify_steps: DONE (multi-source RAG this cycle: mmea2012/Password=Derdack01 oracle negative; 2016 article + EA9 PDF md5 variant confirmed as new sources; prior cycle Zendesk+portfolio+PRTG).
-impact: log/proxy/process reader recovers live REST Endpoint Key or EventProviderAPI service-account password → unauth alert read/injection/close/reset + full event lifecycle control on customer EA — Medium, deployment-side.
-testability: PASSIVE (verified) with HUMAN residual
-[HYP] Cross-env token forgery chain (re-rank for report)
-class: AUTH
-asset: connect/devconnect/api/devapi/account/devaccount /identity
-confidence: 88
-reasoning: 6 identity hosts, byte-identical RS256 JWKS (kid 91EE4F3C…), shared client_id 692A0A56, password grant live on staging, account-host issuer mismatch (claims connect), plain PKCE permitted, OIDC discovery parametric twins across envs; swagger declares OAuth2 API access accepting tokens from same shared-key IdP.
-evidence_needed: any legitimate client_secret/X-S4-Api-Key (blocked — AUTH_HELPED).
-verify_steps: DONE (10th+ deep-equal). Residual credential-only.
-impact: full tenant CRUD forgery across envs — Critical, blocked on secret.
-testability: AUTH_HELPED
-[HYP] vps.signl4.com subdomain takeover (passive re-confirmation only; nemotron3 leads verification)
-class: MISCONFIG
-asset: vps.signl4.com
-confidence: 95
-reasoning: explicit A record under GoDaddy authoritative NS (domaincontrol.com) → 72.167.227.27 (secureserver.net shared host); HTTPS 200 nginx default page (`/cgi-sys/defaultwebpage.cgi`); TLS cert CN=server.d1g.it unrelated; fabricated-host byte-identical response proves dangling; stable across 2026-09-18 through 2026-09-22 probe cycles.
-evidence_needed: none — fully verified by nemotron3 live probes; my role passive-confirmation only, no duplicate probe.
-verify_steps: DONE (delegated to nemotron3; DNS+HTTP state re-read from KB this cycle, zero drift).
-impact: attacker claims vps.signl4.com → phishing/cookie capture on signl4.com parent scope if cookie Domain set broadly; High, subdomain takeover class.
-testability: PASSIVE
-[PARKED] EventProviderAPI AttachmentURIs-as-SSRF chain: documented server-side URL fetch exists (`AttachmentURIs=HTTP://...` in EA9 PDF) but requires valid EA credentials AND customer on-prem target (unreachable); conf 45 with HUMAN_ONLY testability and no live path — folds into consolidated family impact statement as chain note instead of standalone SSRF report line.
-[FINAL] survivors ranked: 1) cross-env token forgery [88, AUTH_HELPED] 2) credential-in-URL consolidated family [80, PASSIVE-verified, 7+ sources incl. md5 variant] 3) vps.signl4.com takeover [95, nemotron3-owned, passive-confirmed].
-[NEXT] RAG: query indexed web for `site:derdack.com` + `EAWebService OR EventProviderAPI OR "apiKey=" OR "Password="` to enumerate any remaining derdack.com integration articles teaching credential-in-URL patterns not yet counted — size the family exhaustively for the report (one search).
-[LEARN] REJECTED OTHER @ public indexed corpora: `mmea2012.derdack-support.local` + `Password=Derdack01` return zero indexed hits outside the SolarWinds article — example-only, no credential reuse; leak-oracle negative across 7+ corpora.
-[LEARN] ACCEPTED MISCONFIG @ www.derdack.com send-alerts-web-services article + EA9 HTTP/SOAP API PDF: additional vendor sources confirm Username/Password (or md5 hash) in GET query as documented primary auth for full EventProviderAPI handler set — credential-in-URL family extended to password-credential type + md5-hash variant; 7+ distinct sources now.
-[RISK] Derdack: 58 — anonymous live surface still exhausted (zero drift across all API/identity/CT hosts); family finding strengthened this cycle (7+ vendor-doc sources, md5 variant, both leak-oracles closed negative → reportable as PASSIVE-verified deployment-side Medium with clear HUMAN residual); vps.signl4.com takeover [95] report-ready via nemotron3; AUTH_HELPED queue (cross-env forgery 88, V1 userId IDOR, V3 BOLA, licenses BOLA) still blocked on legitimate credential; no new live-probe surface identified this cycle.
-[NEW] derdack.com "send-alerts-web-services-simulate-browser" (2016) surfaces as additional vendor source teaching `Username=Administrator&Password=test` in GET URL — family now spans 7+ distinct vendor-doc sources.
-[NEW] EA9 HTTP/SOAP API PDF (still HTTP-origin-indexed despite SWA 404): documents EventProviderAPI `Password` param accepts "String or **md5 hashed**" — MD5-hash-in-URL credential variant vendor-documented; full handler set (Register/Unregister/RaiseEvent/GetEventStatus/CloseAlert/SubmitEventUpdate) all carry Username+Password in query string.
-[CHANGED] EventProviderAPI operator-reuse sub-claim: leak-oracle closed negative → example-only; standalone hypothesis folds fully into consolidated credential-in-URL family.
-[PRIO] github.com/Derdack org + www.derdack.com integration corpus (consolidated credential-in-URL family), 7.4 — a=8 (7+ vendor-doc sources + 6/12 repos), b=7 (customer EA deployments), t=4 (URL-query auth), g=9 (passive only), c=9 (RAG fresh this cycle), f=8.
-[PRIO] connect/devconnect/api/devapi/account/devaccount /identity 6-host family, 6.5 — a=8, b=10 (tenant CRUD), t=10 (OAuth/JWT), g=2 (secret-gated), c=1, f=1.
-[PRIO] vps.signl4.com, 7.4 — a=9 (dangling A confirmed), b=8 (subdomain takeover), t=6, g=9 (passive DNS+HTTP), c=2, f=7; nemotron3 leads verification, no duplicate probe.
-[HYP] EA/ SIGNL4 credential-in-URL vendor-template family fully corroborated across 7+ sources with md5-hash variant (CONSOLIDATED: REST apiKey + EventProviderAPI password + md5)
-class: MISCONFIG
-asset: github.com/Derdack/{User-Monitoring,nagios,2wayREST×3,SIGNL4} + www.derdack.com (portfolio, send-alerts-web-services 2016, SolarWinds article) + enterprisealert.zendesk.com + paessler PRTG + EA9 HTTP/SOAP API PDF (historical index)
-confidence: 80
-reasoning: 6/12 org repos render `EAWebService/rest/events?apiKey=`; derdack.com portfolio instructs replacing `key` in same path; Zendesk article (2024-04-15) documents raise/update/reset with apiKey in query; PRTG helpdesk (2025-06-10) ships PowerShell templates building the URI; SolarWinds article embeds `EventProviderAPI.aspx?Handler=RaiseEvent&Username=services&Password=Derdack01` + internal hostname `mmea2012.derdack-support.local`; 2016 send-alerts article adds `Username=Administrator&Password=test` GET template; EA9 PDF documents Password param "String or md5 hashed" across full handler set (Register/Unregister/RaiseEvent/GetEventStatus/CloseAlert/SubmitEventUpdate) — two distinct credential types (REST apiKey + SOAP/GET password-or-md5) both vendor-taught as URL-query primary auth. Leak-oracles closed negative this cycle: example key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` only in vendor docs; `Password=Derdack01` + `mmea2012.derdack-support.local` zero indexed reuse — no customer-deployed credential recovered across 7+ corpora.
-evidence_needed: deployed-instance credential reaching EA access-log/process-list surface (HUMAN, on-p?em); leak-oracles exhausted passively.
-verify_steps: DONE (multi-source RAG this cycle: mmea2012/Password=Derdack01 oracle negative; 2016 article + EA9 PDF md5 variant confirmed as new sources; prior cycle Zendesk+portfolio+PRTG).
-impact: log/proxy/process reader recovers live REST Endpoint Key or EventProviderAPI service-account password → unauth alert read/injection/close/reset + full event lifecycle control on customer EA — Medium, deployment-side.
-testability: PASSIVE (verified) with HUMAN residual
-[HYP] Cross-env token forgery chain (re-rank for report)
-class: AUTH
-asset: connect/devconnect/api/devapi/account/devaccount /identity
-confidence: 88
-reasoning: 6 identity hosts, byte-identical RS256 JWKS (kid 91EE4F3C…), shared client_id 692A0A56, password grant live on staging, account-host issuer mismatch (claims connect), plain PKCE permitted, OIDC discovery parametric twins across envs; swagger declares OAuth2 API access accepting tokens from same shared-key IdP.
-evidence_needed: any legitimate client_secret/X-S4-Api-Key (blocked — AUTH_HELPED).
-verify_steps: DONE (10th+ deep-equal). Residual credential-only.
-impact: full tenant CRUD forgery across envs — Critical, blocked on secret.
-testability: AUTH_HELPED
-[HYP] vps.signl4.com subdomain takeover (passive re-confirmation only; nemotron3 leads verification)
-class: MISCONFIG
-asset: vps.signl4.com
-confidence: 95
-reasoning: explicit A record under GoDaddy authoritative NS (domaincontrol.com) → 72.167.227.27 (secureserver.net shared host); HTTPS 200 nginx default page (`/cgi-sys/defaultwebpage.cgi`); TLS cert CN=server.d1g.it unrelated; fabricated-host byte-identical response proves dangling; stable across 2026-09-18 through 2026-09-22 probe cycles.
-evidence_needed: none — fully verified by nemotron3 live probes; my role passive-confirmation only, no duplicate probe.
-verify_steps: DONE (delegated to nemotron3; DNS+HTTP state re-read from KB this cycle, zero drift).
-impact: attacker claims vps.signl4.com → phishing/cookie capture on signl4.com parent scope if cookie Domain set broadly; High, subdomain takeover class.
-testability: PASSIVE
-[PARKED] EventProviderAPI AttachmentURIs-as-SSRF chain: documented server-side URL fetch exists (`AttachmentURIs=HTTP://...` in EA9 PDF) but requires valid EA credentials AND customer on-prem target (unreachable); conf 45 with HUMAN_ONLY testability and no live path — folds into consolidated family impact statement as chain note instead of standalone SSRF report line.
-[FINAL] survivors ranked: 1) cross-env token forgery [88, AUTH_HELPED] 2) credential-in-URL consolidated family [80, PASSIVE-verified, 7+ sources incl. md5 variant] 3) vps.signl4.com takeover [95, nemotron3-owned, passive-confirmed].
-[NEXT] RAG: query indexed web for `site:derdack.com` + `EAWebService OR EventProviderAPI OR "apiKey=" OR "Password="` to enumerate any remaining derdack.com integration articles teaching credential-in-URL patterns not yet counted — size the family exhaustively for the report (one search).
-[LEARN] REJECTED OTHER @ public indexed corpora: `mmea2012.derdack-support.local` + `Password=Derdack01` return zero indexed hits outside the SolarWinds article — example-only, no credential reuse; leak-oracle negative across 7+ corpora.
-[LEARN] ACCEPTED MISCONFIG @ www.derdack.com send-alerts-web-services article + EA9 HTTP/SOAP API PDF: additional vendor sources confirm Username/Password (or md5 hash) in GET query as documented primary auth for full EventProviderAPI handler set — credential-in-URL family extended to password-credential type + md5-hash variant; 7+ distinct sources now.
-[RISK] Derdack: 58 — anonymous live surface still exhausted (zero drift across all API/identity/CT hosts); family finding strengthened this cycle (7+ vendor-doc sources, md5 variant, both leak-oracles closed negative → reportable as PASSIVE-verified deployment-side Medium with clear HUMAN residual); vps.signl4.com takeover [95] report-ready via nemotron3; AUTH_HELPED queue (cross-env forgery 88, V1 userId IDOR, V3 BOLA, licenses BOLA) still blocked on legitimate credential; no new live-probe surface identified this cycle.
-[NEW] IN-SCOPE LIVE EA SURFACE @ demo.enterprisealert.com: POC-probed the EAWebService path family (previously only root "/" was probed → 404; /EAWebService/ was never tested). Result: FULL live Enterprise Alert instance v9.5.26147, published via Azure AD App Proxy (CNAME demo-derdack.msappproxy.net → 4.207.244.99, tenant ff2a095d-01ff-4edb-99e6-38b97f49467c, same endpoint IP as s4dev fleet) WITHOUT pre-auth challenge — entire /EAWebService/ API publicly reachable:
-[HYP] demo.enterprisealert.com public EAWebService exposure (NEW standalone report hyp)
-class: INFO/MISCONFIG
-asset: demo.enterprisealert.com/EAWebService/ (Azure App Proxy, no pre-auth)
-confidence: 80
-reasoning: /EAWebService/ 200 SDK doc + handler index, SOAP WSDL 12 ops, REST events route map all verified unauthenticated; AAD pre-auth absent (no STS redirect, content served directly through connector x-ms-proxy-* headers); gates enforced (401/Error-1) so exposure-only, not unauth-write; version disclosed.
-evidence_needed: none further passively; exploit of the URL-credential auth itself requires a valid apiKey/EA credential (AUTH_HELPED).
-verify_steps: DONE (this cycle: full path family + gate checks + WSDL + handler index + DNS/CNAME).
-impact: exposes complete EA API surface + version to internet on company-owned host; combined with the credential-in-URL family, any leaked EA apiKey/service-account password confers full event lifecycle control (raise/close/reset/update) directly on Derdack infra — Medium-High, exposure+leak-chain.
-testability: PASSIVE (verified) for exposure; AUTH_HELPED for credential-chain exploitation.
-[NEXT] Extend EAWebService path probing to the s4dev fleet (s4dev1-8.enterprisealert.com) and any other *.enterprisealert.com hosts not yet checked for /EAWebService/ — confirm demo is unique or fleet-wide surface; then finalize family+exposure consolidated report.
-[LEARN] ACCEPTED @ demo.enterprisealert.com: full public EA 9.5.26147 was unprobed surface the whole time (KB said demo→IIS 404 from root-only probe). Lesson: root-only status is not full-host status — path-family probing of known-404 hosts finds live sub-apps behind App Proxy.
-[LEARN] NEGATIVE @ trace.axd/elmah/WebAdmin/ManagementUI/rest-help-on-demo: standard closed; no trace exposure; EA web portal not at /WebAdmin or /ManagementUI heuristics.
-[RISK] Derdack: 60 — new in-scope live surface found and characterized (demo EA 9.5.26147) with verified auth gates; family finding upgraded to include a live in-scope instance; no credential recovered (oracles still negative); exploit remains AUTH_HELPED; s4dev fleet EAWebService probe is next cheap step.
-testability: PASSIVE (verified) for exposure; AUTH_HELPED for credential-chain exploitation.
-[NEXT] Extend EAWebService path probing to the s4dev fleet (s4dev1-8.enterprisealert.com) and any other *.enterprisealert.com hosts not yet checked for /EAWebService/ — confirm demo is unique or fleet-wide surface; then finalize family+exposure consolidated report.
-[LEARN] ACCEPTED @ demo.enterprisealert.com: full public EA 9.5.26147 was unprobed surface the whole time (KB said demo→IIS 404 from root-only probe). Lesson: root-only status is not full-host status — path-family probing of known-404 hosts finds live sub-apps behind App Proxy.
-[LEARN] NEGATIVE @ trace.axd/elmah/WebAdmin/ManagementUI/rest-help-on-demo: standard closed; no trace exposure; EA web portal not at /WebAdmin or /ManagementUI heuristics.
-[RISK] Derdack: 60 — new in-scope live surface found and characterized (demo EA 9.5.26147) with verified auth gates; family finding upgraded to include a live in-scope instance; no credential recovered (oracles still negative); exploit remains AUTH_HELPED; s4dev fleet EAWebService probe is next cheap step.
-[PRIO] demo.enterprisealert.com live EA surface, 7.4 — a=9 (full product API public), b=7 (version+API exposure), t=8 (directly reachable), g=8 (proved by live path probes), c=8 (fresh), f=8.
-[PRIO] credential-in-URL family, 7.8 (upgraded): family pattern now demonstrated LIVE on in-scope host (demo/EAWebService/rest/events?apiKey= reachable, gated; EventProviderAPI.aspx?Handler=RaiseEvent&Username=&Password= live) — was deployment-side-only assumption, now RFC-live on Derdack's own hosted EA.
-[PRIO] cross-env token forgery, 6.5 (unchanged, AUTH_HELPED); vps.signl4.com, 7.4 (nemotron3-owned, passive).
-[HYP] demo.enterprisealert.com public EAWebService exposure — class MISCONFIG/INFO, asset demo.enterprisealert.com/EAWebService/, confidence 80 — reasoning: full EA 9.5.26147 API (REST events + 12-op SOAP WSDL + 10-handler HTTP form + ConnectorSDK page) public via Azure App Proxy no-pre-auth (CNAME demo-derdack.msappproxy.net, tenant ff2a095d-_, endpoint 4.207.244.99), version disclosed, gates enforced (401/Error-1), no event created; testability PASSIVE (exposure verified) + AUTH_HELPED (credential chain).
-[HYP] credential-in-URL family (upgraded impact) — now includes Derdack's own hosted EA demo; evidence_needed: any valid apiKey or EA service-account credential (AUTH_HELPED).
-[FINAL] survivors ranked: 1) cross-env token forgery [88, AUTH_HELPED] 2) credential-in-URL consolidated family [80, PASSIVE-verified, now with live in-scope RFC proof] 3) demo.enterprisealert.com EAWebService exposure [80, new, PASSIVE-verified exposure, AUTH_HELPED chain] 4) vps.signl4.com [95, nemotron3-owned].
-[NEXT] Finalize consolidated report: family + demo-exposure as the top deliverable pair; no further live probing (credential chase is AUTH_HELPED by design); update state_bigpickle to next phase.
-[LEARN] REJECTED @ s4dev1-8/EAWebService, www.enterprisealert.com, ea.enterprisealert.com: 404/504/000 — demo.enterprisealert.com confirmed unique live EA host.
-[RISK] Derdack: 60 — new live in-scope surface (demo EA 9.5.26147) fully characterized + family upgraded with live proof; exploit chain remains credential-gated (AUTH_HELPED); risk held at 60 pending report delivery.

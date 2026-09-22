@@ -1449,3 +1449,16 @@ www.derdack.com
 - CHANGED api.signl4.com/api/v2/teams auth-status flapping 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
 - CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stagi
 - CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted; signl4.derdack.com permanently unreachable; dev.derdack.com MultiViews benign static echo; blog/techblog HTTPS→HTTP
+
+## 2026-09-22 23:49:12 UTC
+- NEW demo.enterprisealert.com: Full live EA 9.5.26147 web portal discovered behind App Proxy at /EAWebService/ (previously only root "/" probed → 404; path-family probing finds live sub-app)
+- NEW us.derdack.com: Live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minimal conf
+- NEW GitHub org sweep complete 12/12: apiKey-in-URL credential-template family confirmed in 6 repos (nagios, 2wayREST×3, SIGNL4, User-Monitoring) + checkmk hardcoded cred; deployments log keys to EA log/pr
+- NEW SolarWinds integration article (derdack.com/de/): Cleartext credential URL template `EventProviderAPI.aspx?Handler=RaiseEvent&Username=services&Password=Derdack01&...` + internal hostname `mmea2012.de
+- NEW EA9 HTTP/SOAP API PDF: Documents EventProviderAPI `Password` param accepts "String or **md5 hashed**" — MD5-hash-in-URL credential variant vendor-documented
+- CHANGED vps.signl4.com subdomain takeover: Re-confirmed across 5 consecutive probe cycles (2026-09-18 through 2026-09-22) — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, f
+- CHANGED docs.enterprisealert.com: CNAME chain corrected to live Azure SWA `derdackdownloads.z13.web.core.windows.net` (404 WebContentNotFound) — NOT dangling A-record; takeover confidence ≤25
+- CHANGED Cross-env token forgery chain: Stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on stag
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping: 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED Leak-oracle for example EA key `l1slfpjwirbm6twzs30bhtcl3z34m8v9`: Hits ONLY on vendor Zendesk/portfolio — zero customer-deployed instance across 7+ corpora
+- CHANGED RAG on `mmea2012.derdack-support.local` + `Password=Derdack01`: Zero indexed hits outside SolarWinds article — example-only, no reuse
