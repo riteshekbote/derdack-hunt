@@ -3424,3 +3424,24 @@
 - LEARN: ACCEPTED OTHER @ crt.sh: %derdack.com (4) + %enterprisealert.com (5) sweeps completed — CT coverage across all three roots now CLOSED, zero new live names, esta
 - LEARN: ACCEPTED MISCONFIG @ github.com/Derdack org: org sweep complete 12/12 — apiKey-in-URL credential-template family confirmed in 6 repos (nagios, 2wayREST×3, SIGNL
 - LEARN: REJECTED MISCONFIG @ azure registerClient.ps1: ClientSecret generated locally + printed to console/config is standard Azure AD provisioning, no new defect class
+
+## RANKED HYPOTHESES 2026-09-22 00:11:49 UTC
+- [88] account.signl4.com/identity: Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch (from art/lead_nemotron3.txt)
+- [78] github.com/Derdack/{User-Monitoring,: EA REST apiKey-in-URL is vendor-documented primary auth — org template family fully corroborated by product docs (CONSOLIDATED finding) (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): RAG: sweep docs.enterprisealert.com + enterprisealert.zendesk.com for a real customer-deployed EA REST key or the exact article example `l1slfpjwirbm6twzs30bhtc
+- NEXT(hypotheses-nemotron3.txt): PROBE: Search grep.app for `rest/events?apiKey=` OR `X-S4-Api-Key:` patterns in public repositories/logs to validate credential leakage hypothesis from template
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response pr
+- LEARN: REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS)
+- LEARN: REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
+- LEARN: REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
+- LEARN: ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
+- LEARN: ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5
+- LEARN: ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer c
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+- LEARN: ACCEPTED MISCONFIG @ docs.enterprisealert.com: CNAME chain ends at live Azure SWA account `derdackdownloads.z13.web.core.windows.net` (global-unique name, still
+- LEARN: REJECTED OTHER @ docs.enterprisealert.com takeover: SWA account name un-creatable + claim gate = DNS control (Human) → takeover confidence ≤25, demoted to inert
+- LEARN: ACCEPTED MISCONFIG @ us.derdack.com: MultiViews 300 + x-ws reverse-proxy fingerprint byte-identical to dev.derdack.com — two-host evidence of estate-wide parked
+- LEARN: ACCEPTED OTHER @ s4dev1-8.enterprisealert.com: CNAME → Azure AD App Proxy (msappproxy.net) → 4.207.244.99 — App-Proxy-fronted staging fleet, consistent with 404
+- LEARN: ACCEPTED OTHER @ crt.sh: %derdack.com (4) + %enterprisealert.com (5) sweeps completed — CT coverage across all three roots now CLOSED, zero new live names, esta
+- LEARN: ACCEPTED MISCONFIG @ github.com/Derdack org: org sweep complete 12/12 — apiKey-in-URL credential-template family confirmed in 6 repos (nagios, 2wayREST×3, SIGNL
+- LEARN: REJECTED MISCONFIG @ azure registerClient.ps1: ClientSecret generated locally + printed to console/config is standard Azure AD provisioning, no new defect class

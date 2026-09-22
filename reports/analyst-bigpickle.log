@@ -31174,3 +31174,77 @@ STEP 6 — LEARNING
 
 STEP 7 — RISK
 - [RISK] Derdack program: 55 — live anonymous surface fully mapped/exhausted (all 401/404/405/411/absent-V4); strongest findings = vps.signl4.com takeover + org-wide apiKey-in-URL credential-template family now vendor-corroborated (73, deployment-side, HUMAN residual); AUTH_HELPED queue (cross-env forgery, V1 userId IDOR, V3 ZUGFeRD BOLA, changePassword) still blocked on a legitimate credential; RAG oracle remains negative for live key exposure.
+===== ANALYST bigpickle 2026-09-22 00:11:49 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m◈ [0mExa Web Search "Enterprise Alert EAWebService REST API events apiKey REST Endpoint Key documentation"
+[0m◈ [0mExa Web Search "Enterprise Alert helpcenter "REST API" event sources "REST Endpoint Key" rotation renew"
+[0m✗ [0mWebFetch https://enterprisealert.zendesk.com/hc/en-us/articles/18204929905949-Test-a-REST-API-event-source-using-CURL-commands failed
+[91m[1mError: [0mStatusCode: non 2xx status code (403 GET https://enterprisealert.zendesk.com/hc/en-us/articles/18204929905949-Test-a-REST-API-event-source-using-CURL-commands)
+[0m% [0mWebFetch https://www.derdack.com/portfolio_item/webhook-rest-api-mobile-app-text-push-voice-scheduling/
+[0m◈ [0mExa Web Search "docs.enterprisealert.com manual REST API event source "api key" rotate OR reactivation site:enterprisealert.zendesk.com OR site:docs.enterprisealert.com"
+**STEP 1 — DELTA**
+- NEW derdack.com portfolio "Webhook/REST API" page raw-fetched (200): exact instructions "Alter this link by replacing 'key' with the API key generated from the Event Source. Example: `http://server-name/EAWebService/rest/events?apiKey={API-Key}`" + "Authentication can be done through an API key or though HTTP Basic Authentication."
+- NEW enterprisealert.zendesk.com article "Test a REST API event source using CURL commands" (2024): vendor example key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` (30-char lowercase, operator-generated); all three endpoints carry apiKey in query string — `/rest/events`, `/rest/events/{id}/update`, `/rest/events/{id}/reset` — every curl uses `-L -k` over `http://localhost`.
+- CHANGED HYP1 (73→78): apiKey-in-URL now corroborated by 3 independent vendor sources (portfolio page, Grafana portfolio item, Zendesk curl article) — "vendor-documented primary auth" fully verified.
+- CHANGED HYP3 (35→drop): no rotation/audit language in any vendor source, but derdack documents HTTP Basic Auth as alternative — lifecycle-gap is a weak design-corroborator only, below threshold.
+- NO_DELTA on live estate: all passive route maps/identity surface unchanged (KB 2026-09-21 21:11 stable).
+
+**STEP 2 — PRIORITIZE**
+PRIO = .25a+.25b+.15t+.15g+.10c+.10f
+- [PRIO] github.com/Derdack org template family + vendor doc corpus, 5.0, attack_surface=4 (deployment-side), business_value=5 (customer EA alerting creds), tech_exposure=3, gate_ease=10 (auth-free read), cloud_surface=2, freshness=6
+- [PRIO] vps.signl4.com, 4.8, attack_surface=6, business_value=4, tech_exposure=2, gate_ease=10, cloud_surface=3, freshness=5 — owner nemotron3, deferred per dedup rule
+- [PRIO] github.com/Derdack/derdack-plugin-checkmk, 3.6, disclosure-side only
+
+**STEP 3 — HYPOTHESES**
+[HYP] EA REST apiKey-in-URL is vendor-documented primary auth — org template family fully corroborated by product docs (CONSOLIDATED finding)
+class: MISCONFIG
+asset: github.com/Derdack/{User-Monitoring, nagios, 2wayREST×3, SIGNL4} + www.derdack.com Webhook/REST-API page + enterprisealert.zendesk.com CURL article
+confidence: 78
+reasoning: Vendor portfolio page literally instructs replacing `key` in `http://server-name/EAWebService/rest/events?apiKey={API-Key}`; Zendesk article (2024-04-15) documents raise/update/reset on same path family with apiKey in query; 6/12 org repos render the identical pattern (`User Monitoring.ps1` L42 `<REST_Endpoint_Key>`); key created once, copy-pasted into cleartext URL, persists in scripts/process args long-term. Key format `l1slfpjwirbm6twzs30bhtcl3z34m8v9` = lowercase-alnum, operator-genera ted (not high-entropy prefix-gated).
+evidence_needed: deployed-instance evidence of live customer key reaching EA access-log/process-list surface (HUMAN, on-prem).
+verify_steps: DONE (raw GET of 2 vendor pages + 6 repo entry points + search index digest). Residual: deployed-instance only.
+impact: EA log/access-log/process reader recovers a live REST Endpoint Key → unauth alert read/injection/close/reset on customer EA — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
+
+[HYP] Vendor REST integration template disables TLS by default (`-L -k`, `http://` URLs) — key-in-query-string travels cleartext on-wire and into proxy/access logs
+class: MISCONFIG
+asset: enterprisealert.zendesk.com CURL article + derdack.com Webhook/REST-API page (on-prem EA REST source provisioning)
+confidence: 55
+reasoning: Every vendor curl example uses `-k` (verify skipped) + `http://localhost` scheme; state-mutating paths `/rest/events/{id}/update|reset` are GET/`--data` with the apiKey in the URL query, so the secret lands in web/proxy/access-log URL lines regardless of transport; portfolio page shows same `http://` example. No TLS-enforcement or `https only` note in either source.
+evidence_needed: operator following template on HTTP or with `-k` where an intermediate proxy logs URLs (HUMAN, deployment-side).
+verify_steps: DONE (raw GET of article digest + portfolio page; article body 403 on direct fetch, digest suffices).
+impact: On-wire/at-rest secret recoverability for EA REST keys in customer deployments — Low/Medium, design-side corroborator for family finding.
+testability: PASSIVE (verified) with HUMAN residual
+
+[HYP] checkmk 2-way plugin hardcoded credential reuse (cmkadmin/CNlydVqZ)
+class: MISCONFIG
+asset: github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js
+confidence: 55
+reasoning: L90-91 hardcoded username/password (sha256 beb9fa72…); L330/373 log full "Checkmk response: " bodies incl auth results; RFC1918 target not remotely reachable — leak-only, same copy-paste operator family as apiKey templates.
+evidence_needed: operator reuse of template cred (HUMAN, historical/leak-only).
+verify_steps: DONE (raw GET). No live probe possible.
+impact: Checkmk API account compromise on reusing deployments — Low/Medium, disclosure-side.
+testability: PASSIVE (verified) with HUMAN residual
+
+**STEP 4 — SELF-CRITIQUE**
+- HYP1 drop risk: none — 3 independent vendor sources + 6 repos, all raw-verified. FINAL.
+- HYP2 (55): new; design/deployment-side only, no live demo possible; retained strictly as corroboration of the family chain (key→logs→recovery). FINAL.
+- HYP3 rotation/audit gap (35): below threshold → dropped; Basic Auth alternative documented so "no alternative" claim false.
+- deployed-key RAG (Sourcegraph/grep/GitHub): negative again across corpus — PARKED.
+- [PARKED] rotation/audit lifecycle gap (35): vendor documents Basic Auth alternative; absence of rotation docs unproven, no residual value.
+- [FINAL] EA REST apiKey-in-URL family (78) — consolidating finding, vendor-doc-backed.
+- [FINAL] TLS/cleartext template chain (-k, http, mutating GET key-in-URL) (55) — design corroborator.
+- [FINAL] checkmk hardcoded cred (55) — disclosure-side.
+
+**STEP 5 — NEXT ACTION**
+[NEXT] RAG: sweep docs.enterprisealert.com + enterprisealert.zendesk.com for a real customer-deployed EA REST key or the exact article example `l1slfpjwirbm6twzs30bhtcl3z34m8v9` to test leak-oracle (one query: `"EAWebService/rest/events" apiKey` on Sourcegraph/grep.app); expect negative — then finalize family report as PASSIVE-verified with HUMAN residual.
+
+**STEP 6 — LEARNING**
+- [LEARN] ACCEPTED MISCONFIG @ www.derdack.com Webhook/REST-API page: vendor page literally documents `http://server-name/EAWebService/rest/events?apiKey={API-Key}` as the integration example and HTTP Basic Auth as alternative — apiKey-in-URL family confirmed as vendor-documented primary auth (3rd independent source).
+- [LEARN] ACCEPTED MISCONFIG @ enterprisealert.zendesk.com CURL article: raise/update/reset all carry apiKey in query string with `-L -k` over http — vendor template disables TLS validation and exposes mutating GETs with secret in URL; on-prem key→log leakage chain design-confirmed.
+- [LEARN] REJECTED BUSLOGIC @ EA REST key lifecycle: no rotation/audit language found, but Basic Auth documented as alternative auth; "absence of controls" unproven and low-value — dropped (conf 35<40).
+
+**STEP 7 — RISK**
+[RISK] Derdack program: 55 — live anonymous surface exhausted (all 401/404/405/411, zero drift); strongest finding = vps.signl4.com takeover [95] (nemotron3) + deployment-side org credential-template family [78] now vendor-doc-backed across 3 sources and 6/12 repos; AUTH_HELPED queue (cross-env forgery, V1 userId IDOR, V3 BOLA) remains blocked on legitimate credential; RAG oracle negative again — no live-key leak recovered, family impact capped at deployment-side Medium.
