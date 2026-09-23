@@ -6276,3 +6276,33 @@ evidence_needed: any legitimate client_secret/X-S4-Api-Key (blocked — AUTH_HEL
 verify_steps: DONE (10th+ deep-equal). Residual credential-only.
 impact: full tenant CRUD forgery across envs — Critical, blocked on secret.
 testability: AUTH_HELPED
+## 2026-09-23 02:32:02 UTC [target] (model bigpickle)
+[HYP] demo.enterprisealert.com public EAWebService exposure (report deliverable)
+class: MISCONFIG
+asset: demo.enterprisealert.com/EAWebService/ (Azure AD App Proxy, no pre-auth)
+confidence: 82
+reasoning: /EAWebService/ 200 SDK+handler index, 12-op SOAP WSDL, REST events map + EventProviderAPI.aspx live on 404-root host behind demo-derdack.msappproxy.net (tenant ff2a095d-, endpoint 4.207.244.99); version 9.5.26147 disclosed; all gates hold (401/Error-1); swagger/help/WebAdmin/ManagementUI/trace/elmah negative; s4dev/www/ea negative → unique.
+evidence_needed: none for exposure (PASSIVE-verified). Chain to event lifecycle requires valid apiKey or EA service-account credential (AUTH_HELPED).
+verify_steps: DONE — path family, WSDL, handler index, gates, DNS/CNAME. No further passive probes warranted.
+impact: complete EA alert API + version exposed to internet on company-owned host; any leaked key (per family finding) → raise/resolve/close/reset of genuine alerts on Derdack infrastructure — Medium-High.
+testability: PASSIVE (exposure) / AUTH_HELPED (credential chain)
+[HYP] Credential-in-URL consolidated family (report deliverable)
+class: MISCONFIG
+asset: github.com/Derdack{6 repos} + derdack.com integration pages(4+) + EA9 PDF + Zendesk; live proof @ demo/EAWebService/rest/events?apiKey= + EventProviderAPI.aspx?Username=&Password=
+confidence: 80
+reasoning: REST key accepted at 3 URL positions (query/Update1-2018/Webhook-2020) same secret value; Username/Password (or md5) in GET URL as documented primary auth across 7+ sources incl SolarWinds (Derdack01/mmea2012.derdack-support.local example) and 2016 send-alerts article; gates on demo reject fabricated creds (Error-1/401) confirming live RFC surface; leak-oracles negative across 8+ corpora (example key vendor-only, Derdack01 zero external reuse).
+evidence_needed: deployed-instance credential hitting an EA log/process/access-log surface (HUMAN, on-prem) — passive corpora exhausted.
+verify_steps: DONE (RAG 7+ sources, repo sweep 12/12, live gate checks).
+impact: log/referrer recovery of URL-embedded key or service password → unauth read/inject/close/reset on customer EA and on Derdack's own demo — Medium, deployment-side, now with in-scope live chain proof.
+testability: PASSIVE (verified) with HUMAN residual
+[HYP] Cross-env token forgery chain (re-rank third)
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount /identity (+ swagger OAuth2 consumer)
+confidence: 88
+reasoning: 6 IdP hosts byte-identical RS256 JWKS (kid 91EE4F3C…), shared client_id 692A0A56, staging password grant + plain PKCE allowed, account-host issuer=mismatch (claims connect), handler-deferred auth; unchanged, no drift.
+evidence_needed: any legitimate client_secret / X-S4-Api-Key / token (AUTH_HELPED blocker).
+verify_steps: DONE (10th+ deep-equal). Residual credential-only.
+impact: full tenant CRUD forgery across envs — Critical, blocked on secret.
+testability: AUTH_HELPED
+[NEXT] HUMAN: Finalize consolidated report pair (demo EAWebService exposure + credential-in-URL family with live in-scope RFC proof, leak-oracles negative, AUTH_HELPED chains enumerated, ~Medium/Medium-High) and transition state_bigpickle phase POC→REPORT; no further live probing justified while surface map is exhausted and credential acquisition is program-excluded.
+[RISK] Derdack: 62 — report-ready PASSIVE findings (live in-scope EA API exposure + credential-in-URL family with live RFC proof) meaningfully raise reportable value over prior exhaustion; exploit chains remain credential-gated (AUTH_HELPED) raising risk only via leak-deployment coupling (HUMAN residual); no illegitimate credential acquired; no drift in rest of estate. POC objective met; recommend report phase.
