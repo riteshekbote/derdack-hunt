@@ -1499,3 +1499,16 @@ www.derdack.com
 - CHANGED api.signl4.com/api/v2/teams auth-status flapping — 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
 - CHANGED Leak-oracle for example EA key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` — Hits ONLY on vendor Zendesk/portfolio — zero customer-deployed instance across 7+ corpora
 - CHANGED RAG on `mmea2012.derdack-support.local` + `Password=Derdack01` — Zero indexed hits outside SolarWinds article — example-only, no reuse
+
+## 2026-09-23 17:57:04 UTC
+- NEW demo.enterprisealert.com/EAWebService: Full live EA 9.5.26147 portal discovered behind Azure AD App Proxy (previously only root "/" probed → 404; path-family probing finds live sub-app with EventProvi
+- NEW us.derdack.com: Live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minimal conf
+- NEW vps.signl4.com subdomain takeover: Re-confirmed across 5+ consecutive probe cycles — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fabricated-host byte-identical r
+- NEW Cross-env token forgery chain: Stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), share
+- NEW api.signl4.com/api/v2/teams auth-status flapping: 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- NEW Credential-in-URL vendor-template family: 7+ distinct sources (SolarWinds article, EA9 PDF, send-alerts-web-services, nagios, 2wayREST×3, SIGNL4, User-Monitoring) with md5-hash variant documented
+- NEW Leak-oracle for example EA key `l1slfpjwirbm6twzs30bhtcl3z34m8v9`: Hits ONLY on vendor Zendesk/portfolio — zero customer-deployed instance across 7+ corpora
+- NEW RAG on `mmea2012.derdack-support.local` + `Password=Derdack01`: Zero indexed hits outside SolarWinds article — example-only, no reuse
+- CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted
+- CHANGED V4 API namespace confirmed absent: connect.signl4.com/api/v4 404, /api/docs/v4/swagger.json 404 — sole unprobed namespace gap closed
+- CHANGED signl4.derdack.com permanently unreachable (8+ cycles TCP timeout) — attack surface value = 0
