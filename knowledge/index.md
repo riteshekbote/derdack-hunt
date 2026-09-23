@@ -764,3 +764,4 @@
 - 2026-09-23 NEGATIVE @ trace.axd/elmah/WebAdmin/ManagementUI/rest-help-on-demo: standard closed; no trace exposure; EA web portal not at /WebAdmin or /ManagementUI heuristics.
 - 2026-09-23 REJECTED @ s4dev1-8/EAWebService, www.enterprisealert.com, ea.enterprisealert.com: 404/504/000 — demo.enterprisealert.com confirmed unique live EA host.
 - 2026-09-23 ACCEPTED @ demo.enterprisealert.com/EAWebService: path-family probing of known-404 host found full live EA 9.5.26147 (root-only status ≠ full-host status); all report hypotheses verified DONE, credential chains AUTH_HELPED.
+- 2026-09-23 ACCEPTED @ demo.enterprisealert.com/EAWebService: path-family probing of a known-404 root host found full live EA 9.5.26147 — root-only status ≠ full-host status; lesson applies to any future App-Proxy-fronted estate.

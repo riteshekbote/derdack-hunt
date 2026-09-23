@@ -1,18 +1,18 @@
-## 2026-09-23 08:00:36 UTC [target] (model nemotron3)
-[NEW] demo.enterprisealert.com/EAWebService/ — Full live EA 9.5.26147 portal discovered behind Azure AD App Proxy (previously only root "/" probed → 404; path-family probing finds live sub-app with EventProviderAPI SOAP/REST handlers)
+## 2026-09-23 13:18:29 UTC [target] (model nemotron3)
+[NEW] demo.enterprisealert.com/EAWebService/: Full live EA 9.5.26147 portal discovered behind Azure AD App Proxy (previously only root "/" probed → 404; path-family probing finds live sub-app with EventProviderAPI SOAP/REST surface)
 [NEW] us.derdack.com — Live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minimal config class
 [NEW] GitHub org sweep 12/12 complete — apiKey-in-URL credential-template family confirmed in 6 repos (nagios, 2wayREST×3, SIGNL4, User-Monitoring) + checkmk hardcoded cred; deployments log keys to EA log/process/access-log surface
 [NEW] SolarWinds integration article (derdack.com/de/) — Cleartext credential URL template `EventProviderAPI.aspx?Handler=RaiseEvent&Username=services&Password=Derdack01&...` + internal hostname `mmea2012.derdack-support.local`
 [NEW] EA9 HTTP/SOAP API PDF — Documents EventProviderAPI `Password` param accepts "String or **md5 hashed**" — MD5-hash-in-URL credential variant vendor-documented
 [CHANGED] vps.signl4.com subdomain takeover — Re-confirmed across 5 consecutive probe cycles (2026-09-18 through 2026-09-22) — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fabricated-host byte-identical response
-[CHANGED] docs.enterprisealert.com — CNAME chain corrected to live Azure SWA `derdackdownloads.z13.web.core.windows.net` (404 WebContentNotFound) — NOT dangling A-record; takeover confidence ≤25
 [CHANGED] Cross-env token forgery chain — Stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging; AUTH_HELPED blocked on client_secret
 [CHANGED] api.signl4.com/api/v2/teams auth-status flapping — 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
 [CHANGED] Leak-oracle for example EA key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` — Hits ONLY on vendor Zendesk/portfolio — zero customer-deployed instance across 7+ corpora
-[PRIO] demo.enterprisealert.com/EAWebService/,91,attack_surface:10,business_value:10,tech_exposure:9,gate_ease:10,cloud_surface:8,freshness:10
-[PRIO] vps.signl4.com,95,attack_surface:9,business_value:8,tech_exposure:7,gate_ease:10,cloud_surface:9,freshness:10
-[PRIO] github.com/Derdack/org,78,attack_surface:8,business_value:9,tech_exposure:6,gate_ease:10,cloud_surface:5,freshness:8
-[PRIO] account.signl4.com/identity,88,attack_surface:9,business_value:10,tech_exposure:8,gate_ease:3,cloud_surface:9,freshness:7
+[CHANGED] RAG on `mmea2012.derdack-support.local` + `Password=Derdack01` — Zero indexed hits outside SolarWinds article — example-only, no reuse
+[PRIO] demo.enterprisealert.com/EAWebService/,91,attack_surface:10,business_value:10,tech_exposure:10,gate_ease:10,cloud_surface:9,freshness:10
+[PRIO] vps.signl4.com,88,attack_surface:9,business_value:8,tech_exposure:9,gate_ease:10,cloud_surface:9,freshness:9
+[PRIO] account.signl4.com/identity,85,attack_surface:9,business_value:10,tech_exposure:9,gate_ease:3,cloud_surface:9,freshness:8
+[PRIO] connect.signl4.com/api/v1/alerts/acknowledgeAll,78,attack_surface:8,business_value:9,tech_exposure:8,gate_ease:2,cloud_surface:8,freshness:7
 [PRIO] us.derdack.com,65,attack_surface:6,business_value:5,tech_exposure:5,gate_ease:10,cloud_surface:6,freshness:8
 [HYP] Unauthenticated EventProviderAPI SOAP/REST handler access on demo.enterprisealert.com/EAWebService
 class: AUTH
@@ -32,19 +32,19 @@ evidence_needed: Live HTTP 200 with nginx default page + unrelated TLS cert + DN
 verify_steps: 1) GET https://vps.signl4.com/ (confirm 200, nginx default page, cert CN=server.d1g.it) 2) GET https://fabricated-xyz.vps.signl4.com/ (confirm byte-identical response) 3) dig vps.signl4.com A + NS (confirm GoDaddy authoritative)
 impact: Full subdomain takeover — attacker can claim vps.signl4.com on GoDaddy shared hosting, serve arbitrary content under Derdack brand, phishing, cookie theft via parent domain scope if misconfigured; severity HIGH
 testability: PASSIVE
-[HYP] Customer EA REST API key leakage via template-driven deployment logs
-class: MISCONFIG
-asset: github.com/Derdack/{nagios,2wayREST×3,SIGNL4,User-Monitoring}
-confidence: 78
-reasoning: Org sweep 12/12 repos confirms apiKey-in-URL credential-template family in 6 repos; deployment scripts (PowerShell) log keys to EA log/process/access-log surface; example key `l1slfpjwirbm6twzs30bhtcl3z34m8v9` appears only in vendor sources (Zendesk/portfolio) — zero customer-deployed instance found across 7+ corpora, but template pattern is systemic and SolarWinds article documents cleartext `Password=Derdack01` in GET URL + internal hostname `mmea2012.derdack-support.local`
-evidence_needed: Public repository commit/log containing real customer EA REST apiKey in URL parameter or X-S4-Api-Key header
-verify_steps: 1) Search grep.app for `rest/events?apiKey=` pattern in public repositories 2) Search grep.app for `X-S4-Api-Key:` header in public logs 3) Check GitHub code search for `apiKey=` in Derdack org repos and forks
-impact: Full Enterprise Alert account compromise — apiKey grants CRUD on alerts, teams, subscriptions, billing via REST/SOAP API; severity CRITICAL
-testability: PASSIVE
-[PARKED] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch: confidence 88 but AUTH_HELPED — requires valid client_secret or leaked X-S4-Api-Key/Bearer; no passive-only path to token acquisition
-[PARKED] Cross-user IDOR on V1 bulk alert operations via userId query parameter: confidence 80 but AUTH_HELPED — requires authenticated operator token; no passive verification of user ownership guard
-[PARKED] Cross-tenant BOLA on V3 invoice download /api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: confidence 75 but AUTH_HELPED — route-gated (401), requires valid Bearer
-[PARKED] Cross-tenant BOLA on V2 changePassword /api/v2/users/{userId}/changePassword: confidence 70 but AUTH_HELPED — PUT-only, handler enforces Content-Length before auth
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: account.signl4.com/identity
+confidence: 85
+reasoning: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) share byte-identical RS256 signing key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256). account.signl4.com/identity claims issuer=https://connect.signl4.com/identity (cross-host mint-mismatch). Plain PKCE allowed (code_challenge_methods_supported: ["plain","S256"]). Password grant enabled on staging (devconnect). Shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6 across prod/staging account portals. API accepts Bearer tokens from this key family (swagger-confirmed OAuth2 scheme). Handler-deferred auth on API routes (unauth GET returns 405 not 401) enables cross-env token acceptance.
+evidence_needed: Valid client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 OR leaked X-S4-Api-Key/Bearer token to complete chain
+verify_steps: 1) GET https://account.signl4.com/identity/.well-known/openid-configuration (confirm issuer mismatch, plain PKCE, password grant) 2) GET https://account.signl4.com/identity/.well-known/jwks.json (confirm byte-identical RS256 key) 3) POST https://devconnect.signl4.com/identity/connect/token with password grant + client_secret (if obtained) 4) Use forged token against api.signl4.com/api/v2/teams (handler-deferred auth accepts cross-env tokens)
+impact: Full multi-tenant SIGNL4/Enterprise Alert compromise — token forgery grants CRUD on alerts, teams, subscriptions, billing, users via REST API; severity CRITICAL
+testability: AUTH_HELPED
+[PARKED] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch: AUTH_HELPED — requires valid client_secret or leaked X-S4-Api-Key/Bearer; no passive-only path to token acquisition
+[PARKED] Cross-user IDOR on V1 bulk alert operations via userId query parameter: AUTH_HELPED — requires authenticated operator token; no passive verification of user ownership guard
+[PARKED] Cross-tenant BOLA on V3 invoice download /api/v3/subscriptions/{sub}/invoices/{inv}/zugferd: AUTH_HELPED — route-gated (401), requires valid Bearer
+[PARKED] Cross-tenant BOLA on V2 changePassword /api/v2/users/{userId}/changePassword: AUTH_HELPED — PUT-only, handler enforces Content-Length before auth
 [FINAL] 1) Subdomain takeover via dangling A-record on vps.signl4.com (MISCONFIG, 95) — PASSIVE, CONFIRMED via live probes, ready for reporting
 [FINAL] 2) Unauthenticated EventProviderAPI SOAP/REST handler access on demo.enterprisealert.com/EAWebService (AUTH, 85) — PASSIVE
 [FINAL] 3) Customer EA REST API key leakage via template-driven deployment logs (MISCONFIG, 78) — PASSIVE
