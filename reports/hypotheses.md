@@ -3914,3 +3914,24 @@
 - LEARN: ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5
 - LEARN: ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer c
 - LEARN: ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
+
+## RANKED HYPOTHESES 2026-09-24 20:46:14 UTC
+- [95] vps.signl4.com: Subdomain takeover via dangling A-record on vps.signl4.com (from art/lead_nemotron3.txt)
+- [88] connect/devconnect/api/devapi/account/devaccount.signl4.com: Cross-env token forgery chain (REPORT, AUTH_HELPED) (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: Submit final dossier at bugs.olivermaicher.eu — (a) demo.enterprisealert.com/EAWebService public EA alert API exposure (MISCONFIG, PASSIVE: handler index
+- NEXT(hypotheses-nemotron3.txt): HUMAN: Finalize and submit at bugs.olivermaicher.eu — (a) demo.enterprisealert.com/EAWebService public EA alert API exposure (MISCONFIG, PASSIVE — handler index
+- LEARN: REJECTED OTHER @ vps.signl4.com (nemotron3 [95]): explicit A-record to GoDaddy shared pool = stale DNS config; no claimable takeover primitive from researcher s
+- LEARN: ACCEPTED OTHER @ full estate: zero drift reconfirmed at 2026-09-24 17:32+ boundaries — no new probe data across identity/API/CT/WP/EA; further live probing retu
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: root-only status ≠ full-host status — path-family probing of a known-404 App-Proxy host recovered a 
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: path-family probing of a known-404 root host (IIS/App-Proxy) recovered a full live EA 9.5.26147 sub-
+- LEARN: ACCEPTED OTHER @ demo.enterprisealert.com/EAWebService: version disclosure 9.5.26147 + 12-op WSDL + REST events + EventProviderAPI.aspx all anon-readable, yet e
+- LEARN: REJECTED OTHER @ EA version CVE matching: no program-specific exploit derivable without credentials → REJECTED-class, not pursued
+- LEARN: ACCEPTED OTHER @ full estate: repeated probe cycles across identity/API/CT/WordPress/EA surfaces yield zero new paths, verbs, or differentials — passive surface
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response pr
+- LEARN: REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS)
+- LEARN: REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
+- LEARN: REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
+- LEARN: ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
+- LEARN: ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5
+- LEARN: ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer c
+- LEARN: ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS

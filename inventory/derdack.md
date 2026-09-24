@@ -1569,3 +1569,17 @@ www.derdack.com
 - CHANGED api.signl4.com/api/v2/teams auth-status flapping continues 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API namespace confirmed absent; signl4.derdack.com permanently unreachable
 - CHANGED POC estate at steady state — no new live data at 2026-09-24 boundary; deliverable set frozen at 3 reportable items
+
+## 2026-09-24 20:46:14 UTC
+- CHANGED Report phase active; deliverable set frozen at 3 findings (cross-env forgery chain, demo EAWebService exposure, credential-in-URL family) + vps dangling-DNS LOW dossier item.
+- CHANGED nemotron3 re-ranks vps.signl4.com @ 95 top-of-set; my gate-ease rebuttal stands (see STEP 4) — no new live data changes the frozen report content.
+- CHANGED Zero drift reconfirmed at the 17:32 boundary across identity/API/CT/WP/EA; no new paths, verbs, or differentials from any agent.
+- NEW vps.signl4.com subdomain takeover confirmed across 6+ consecutive probe cycles (2026-09-18 through 2026-09-24) — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it (unrelated Let's Encrypt), GoDa
+- NEW demo.enterprisealert.com/EAWebService full live EA 9.5.26147 portal discovered behind Azure AD App Proxy (root "/" was 404; path-family probing found live sub-app with EventProviderAPI.aspx/.asmx, Eve
+- NEW us.derdack.com live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minimal confi
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), shared
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping continues 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API namespace confirmed absent; signl4.derdack.com permanently unreachable
+- CHANGED POC estate at steady state — no new live data at 2026-09-24 boundary; deliverable set frozen at 3 reportable items
+- CHANGED nemotron3's hypothesis "Unauthenticated EventProviderAPI mutating handler access on demo.enterprisealert.com/EAWebService" (confidence 85) re-checked against PASSIVE-verified gate data: all 11 .aspx h
+- CHANGED Credential-in-URL vendor-template family expanded to 7+ distinct sources (SolarWinds article, EA9 PDF, send-alerts-web-services, nagios, 2wayREST×3, SIGNL4, User-Monitoring) with md5-hash variant docu
