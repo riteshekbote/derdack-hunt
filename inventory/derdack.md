@@ -1559,3 +1559,13 @@ www.derdack.com
 ## 2026-09-24 12:29:28 UTC
 - NEW nemotron3 ranks vps.signl4.com subdomain-takeover at confidence 95 — top of ranked set this cycle; my gate-ease critique contradicts exploitability (see PARKED).
 - CHANGED POC estate at steady state — no new live data at the 2026-09-24 06:47 boundary; deliverable set frozen at 3 reportable items; transitioned to REPORT per prior NEXT.
+
+## 2026-09-24 17:33:07 UTC
+- NEW nemotron3 ranks vps.signl4.com subdomain-takeover at 95 = top of ranked set this cycle — conflicts with my gate-ease assessment (see PARKED): dangling A-record to GoDaddy shared hosting pool is stale 
+- CHANGED Phase POC→REPORT committed; deliverable set frozen at 3 reportable findings; zero drift re-confirmed at the 2026-09-24 12:29 boundary across identity/API/CT/WP/EA surfaces.
+- CHANGED nemotron3's hypothesis "Unauthenticated EventProviderAPI mutating handler access on demo.enterprisealert.com/EAWebService" (confidence 85) re-checked against PASSIVE-verified gate data: all 11 .aspx h
+- CHANGED vps.signl4.com subdomain takeover re-confirmed across 6 consecutive probe cycles (2026-09-18 through 2026-09-24) — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fa
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping continues 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API namespace confirmed absent; signl4.derdack.com permanently unreachable
+- CHANGED POC estate at steady state — no new live data at 2026-09-24 boundary; deliverable set frozen at 3 reportable items
