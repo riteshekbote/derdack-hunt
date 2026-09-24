@@ -1555,3 +1555,7 @@ www.derdack.com
 - CHANGED api.signl4.com/api/v2/teams auth-status flapping: 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
 - CHANGED Credential-in-URL vendor-template family: 7+ distinct sources (SolarWinds article, EA9 PDF, send-alerts-web-services, nagios, 2wayREST×3, SIGNL4, User-Monitoring) with md5-hash variant documented; lea
 - CHANGED Full estate identity/API/CT surface stable zero drift; passive route maps exhausted; V4 API namespace confirmed absent; signl4.derdack.com permanently unreachable
+
+## 2026-09-24 12:29:28 UTC
+- NEW nemotron3 ranks vps.signl4.com subdomain-takeover at confidence 95 — top of ranked set this cycle; my gate-ease critique contradicts exploitability (see PARKED).
+- CHANGED POC estate at steady state — no new live data at the 2026-09-24 06:47 boundary; deliverable set frozen at 3 reportable items; transitioned to REPORT per prior NEXT.
