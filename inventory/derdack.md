@@ -1583,3 +1583,13 @@ www.derdack.com
 - CHANGED POC estate at steady state — no new live data at 2026-09-24 boundary; deliverable set frozen at 3 reportable items
 - CHANGED nemotron3's hypothesis "Unauthenticated EventProviderAPI mutating handler access on demo.enterprisealert.com/EAWebService" (confidence 85) re-checked against PASSIVE-verified gate data: all 11 .aspx h
 - CHANGED Credential-in-URL vendor-template family expanded to 7+ distinct sources (SolarWinds article, EA9 PDF, send-alerts-web-services, nagios, 2wayREST×3, SIGNL4, User-Monitoring) with md5-hash variant docu
+
+## 2026-09-24 23:42:15 UTC
+- NEW demo.enterprisealert.com/EAWebService: Full live EA 9.5.26147 portal confirmed behind Azure AD App Proxy (root "/" was 404; /EAWebService/ path-family probing found live sub-app with EventProviderAPI.
+- NEW us.derdack.com: Live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minimal conf
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), shared
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping continues 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API namespace confirmed absent; signl4.derdack.com permanently unreachable
+- CHANGED POC estate at steady state — no new live data at 2026-09-24 boundary; deliverable set frozen at 3 reportable items
+- CHANGED nemotron3's hypothesis "Unauthenticated EventProviderAPI mutating handler access on demo.enterprisealert.com/EAWebService" (confidence 85) re-checked against PASSIVE-verified gate data: all 11 .aspx h
+- CHANGED Credential-in-URL vendor-template family expanded to 7+ distinct sources (SolarWinds article, EA9 PDF, send-alerts-web-services, nagios, 2wayREST×3, SIGNL4, User-Monitoring) with md5-hash variant docu
