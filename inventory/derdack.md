@@ -1602,3 +1602,12 @@ www.derdack.com
 - CHANGED api.signl4.com/api/v2/teams auth-status flapping continues 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
 - CHANGED vps.signl4.com subdomain takeover re-confirmed across 6+ consecutive probe cycles — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fabricated-host byte-identical re
 - NEW us.derdack.com live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class
+
+## 2026-09-25 08:13:32 UTC
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-09-24 23:42 boundary — no new paths, verbs, or differentials across 6 identity hosts, V1/V2/V3 APIs, webhook/events name
+- CHANGED POC phase deliverable set frozen at 3 reportable items per 2026-09-24 12:29/17:32 boundaries; transition to REPORT committed
+- CHANGED nemotron3's hypothesis "Unauthenticated EventProviderAPI mutating handler access on demo.enterprisealert.com/EAWebService" (confidence 85) re-checked against passive gate data — all 11 .aspx handlers 
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), shared
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping continues 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED vps.signl4.com subdomain takeover re-confirmed across 6+ consecutive probe cycles — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fabricated-host byte-identical re
+- NEW us.derdack.com live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class

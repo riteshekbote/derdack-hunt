@@ -6788,3 +6788,41 @@ evidence_needed: deployed-instance credential reaching an EA log/process/access-
 verify_steps: DONE — RAG 7+ sources, repo sweep 12/12, live gate checks.
 impact: log/referrer recovery of URL-embedded key/password → unauth alert lifecycle control on customer EA + demo — Medium, deployment-side.
 testability: PASSIVE (verified) with HUMAN residual
+## 2026-09-25 08:13:21 UTC [target] (model bigpickle)
+[PRIO] connect/devconnect/api/devapi/account/devaccount.signl4.com priority=7.55 (attack_surface=9, business_value=10, tech_exposure=10, gate_ease=0, cloud_surface=3, freshness=10)
+[PRIO] demo.enterprisealert.com/EAWebService/ priority=7.30 (attack_surface=8, business_value=9, tech_exposure=7, gate_ease=6, cloud_surface=2, freshness=9)
+[PRIO] credential-in-URL documentation/repository family priority=6.55 (attack_surface=7, business_value=8, tech_exposure=6, gate_ease=6, cloud_surface=1, freshness=9)
+[HYP] Cross-environment bearer-token acceptance through shared SIGNL4 identity configuration
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount.signl4.com/identity and API consumers
+confidence: 88
+reasoning: Six identity hosts publish byte-identical RS256 JWKS material and the same public client_id; account discovery advertises the connect issuer; API documentation declares OAuth2 bearer consumption. This proves shared trust configuration, not token acceptance.
+evidence_needed: An authorized client_secret or issued token tested only against an approved non-production tenant, with issuer, audience, and scope results; retain only a SHA-256 fingerprint for any provided secret.
+verify_steps: GET api.signl4.com/identity/.well-known/openid-configuration, connect.signl4.com/identity/.well-known/jwks, devapi.signl4.com/identity/.well-known/jwks, and account.signl4.com/identity/.well-known/openid-configuration; expected 200 for each; compare published key identifiers and issuer values only; GET connect.signl4.com/api/docs/v1/swagger.json; expected 200; do not submit tokens, authentication attempts, or data requests.
+impact: If cross-environment acceptance is confirmed, cross-tenant alert, team, subscription, billing, and file access; Critical; otherwise configuration exposure only.
+testability: AUTH_HELPED
+[HYP] Publicly reachable Enterprise Alert metadata and handler surface on demo.enterprisealert.com
+class: MISCONFIG
+asset: demo.enterprisealert.com/EAWebService/
+confidence: 82
+reasoning: Root / returned 404, but /EAWebService/ returned 200; version 9.5.26147 is disclosed; the handler index lists 11 EventProviderAPI.aspx handlers, the .asmx WSDL exposes 12 operations, and EventConnectorServer.ashx returns an empty 200 response; tested credential paths reject fabricated credentials with Error-1/401.
+evidence_needed: Reproduce the public metadata and version responses and obtain program-owner confirmation that the demo application is in scope; no credential-bearing write request.
+verify_steps: GET demo.enterprisealert.com/EAWebService/; expected 200; GET demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx; expected 200; GET demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl; expected 200 with WSDL; GET demo.enterprisealert.com/EAWebService/EventConnectorServer.ashx; expected 200 with an empty body; do not invoke mutating handlers.
+impact: Public version and method disclosure on a Derdack-operated demo application; no anonymous write primitive is proven; Medium-High exposure, with alert impact remaining credential-dependent.
+testability: PASSIVE
+[HYP] Vendor-documented URL-embedded credentials create deployment-side exposure
+class: MISCONFIG
+asset: www.derdack.com integration documentation, github.com/Derdack examples, and demo.enterprisealert.com/EAWebService/
+confidence: 80
+reasoning: Seven or more vendor sources document Username/Password or md5 credentials in GET query strings; six of twelve Derdack repositories use API-key-in-URL templates; the live demo rejects fabricated credentials; no real customer credential was recovered across eight or more searched corpora.
+evidence_needed: Owner-provided evidence that a deployed credential reached an access log, proxy log, process listing, referrer, or telemetry; redact values and report only a SHA-256 fingerprint.
+verify_steps: GET www.derdack.com/wp-json/wp/v2/posts; expected 200; inspect the recorded public SolarWinds and send-alerts article records; GET github.com/Derdack; expected 200; GET demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl; expected 200; inspect parameter names only, without submitting credentials or invoking event handlers.
+impact: If a deployed key or password is recovered from logs or telemetry, alert raise, resolve, or close operations may be controlled; Medium deployment-side impact; no live credential leak is proven.
+testability: PASSIVE
+[PARKED] vps.signl4.com takeover: stale DNS points to a GoDaddy shared pool, but no researcher-controlled claimable endpoint exists; DNS/hosting control is HUMAN_ONLY, so this is LOW configuration residue.
+[PARKED] Unauthenticated EventProviderAPI mutation: all tested handlers and WSDL operations rejected fabricated credentials with Error-1/401; no anonymous write primitive was demonstrated.
+[PARKED] API-key query-parameter leakage: the scheme is documented in Swagger, but canonical documentation uses the header and no live referrer/log leak is demonstrated; it is folded into the credential family.
+[FINAL] 1) Cross-environment SIGNL4 bearer-token acceptance (88, AUTH_HELPED); 2) demo.enterprisealert.com/EAWebService metadata exposure (82, PASSIVE); 3) URL-embedded credential design (80, PASSIVE with HUMAN impact residual).
+[NEXT] HUMAN: Submit the frozen three-item dossier to bugs.olivermaicher.eu, marking credential-dependent chains AUTH_HELPED and vps.signl4.com explicitly non-claimable.
+[LEARN] ACCEPTED AUTH @ account.signl4.com/identity: account-hosted discovery advertises the connect issuer while sharing the six-host RS256 JWKS; this is a trust-boundary signal, not proof of cross-environment token acceptance.
+[RISK] Derdack: 63 — Two passive-verified reportable exposures and one Critical AUTH_HELPED chain remain; no legitimate credential or anonymous write primitive was obtained, and vps is LOW/non-claimable.
