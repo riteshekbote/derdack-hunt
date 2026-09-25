@@ -96,3 +96,13 @@
   - **Verdict: VALID**
   - | 1 | SIGNL4 staging OIDC + cross-env JWKS key reuse | **VALID** | 7.4 |
   - | 2 | Hardcoded SA/Checkmk creds + command injection in EA scripts | **VALID** | 9.8 |
+
+- 8 lead(s) marked VALID at 2026-09-25 05:00:44 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | SIGNL4 staging IdP shares prod signing key + OAuth client | **VALID** | 7.4 |
+  - | 2 | Hardcoded SA/Checkmk creds + command injection in EA scripts | **VALID** | 9.8 |
+  - | 9 | Hardcoded SIGNL4 team secrets in public repos | **VALID** | 5.3 |
+  - | 10 | PII + internal URLs in public CSV exports | **VALID** | 5.3 |
