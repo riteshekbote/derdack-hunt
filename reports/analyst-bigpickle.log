@@ -33717,3 +33717,117 @@ testability: PASSIVE
 Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
 The next step is submitting the frozen dossier to `bugs.olivermaicher.eu`.  
 I can prepare the final report text, but submission requires your explicit authorization and portal access.
+===== ANALYST bigpickle 2026-09-25 13:53:39 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m% [0mWebFetch https://api.signl4.com/identity/.well-known/openid-configuration
+[0m% [0mWebFetch https://account.signl4.com/identity/.well-known/openid-configuration
+[0m% [0mWebFetch https://api.signl4.com/identity/.well-known/openid-configuration/jwks
+[0m% [0mWebFetch https://account.signl4.com/identity/.well-known/openid-configuration/jwks
+[0m% [0mWebFetch https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+[STEP 1 — DELTA]
+[NEW] Fresh GET of `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` records non-public single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`; deployment timing of this hostname is unknown.
+[NEW] Fresh OIDC discovery on `api.signl4.com` and `account.signl4.com` records DPoP signing-algorithm metadata; this is a mitigating control, not a vulnerability.
+[CHANGED] No issuer, JWKS, scope, grant, PKCE, or client-authentication drift observed.
+
+[STEP 2 — PRIORITIZE]
+[PRIO] connect/devconnect/api/devapi/account/devaccount.signl4.com identity/API,7.55,attack_surface=9 business_value=10 tech_exposure=10 gate_ease=0 cloud_surface=3 freshness=10
+[PRIO] demo.enterprisealert.com/EAWebService/,7.40,attack_surface=8 business_value=9 tech_exposure=7 gate_ease=6 cloud_surface=2 freshness=10
+[PRIO] Derdack URL-embedded-credential documentation/repository family,6.55,attack_surface=7 business_value=8 tech_exposure=6 gate_ease=6 cloud_surface=1 freshness=9
+
+[HYP] Cross-environment bearer-token acceptance through shared SIGNL4 identity configuration
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount.signl4.com/identity and API consumers
+confidence: 78
+reasoning: Fresh GETs confirm `api` and `account` publish the same RS256 key and advertise `https://connect.signl4.com/identity`; provided context extends the shared key to six hosts and confirms OAuth2 bearer consumers. Shared trust configuration is proven; token acceptance is not.
+evidence_needed: An owner-approved non-production token accepted outside its expected environment, with issuer, audience, scope, and HTTP result recorded; retain only a SHA-256 fingerprint.
+verify_steps: GET `https://api.signl4.com/identity/.well-known/openid-configuration` and `https://account.signl4.com/identity/.well-known/openid-configuration`; GET both advertised JWKS URIs; compare issuer, kid, modulus, x5t, and endpoint parameters only; do not submit tokens anonymously.
+impact: If cross-environment acceptance exists, cross-tenant alert, team, subscription, billing, and file access, Critical; otherwise shared configuration exposes no direct exploit.
+testability: AUTH_HELPED
+
+[HYP] Public EA WSDL discloses a non-public service hostname and mutating contract
+class: MISCONFIG
+asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+confidence: 78
+reasoning: Fresh WSDL retrieval exposes 12 operations and `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`. Prior tested mutating operations rejected fabricated credentials with Error-1/401.
+evidence_needed: Confirm `ereesus` is non-public infrastructure and whether any supported client automatically follows the WSDL address; an approved client-side SSRF or routing PoC is required for higher impact.
+verify_steps: GET `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl`; expect 200; inspect operation names and `soap:address` only; do not invoke any operation.
+impact: Attacker gains a non-public hostname, topology clue, and operation map, Low; no anonymous data access or mutation is demonstrated.
+testability: PASSIVE
+
+[HYP] Vendor-documented URL-embedded credentials create recoverable log and telemetry exposure
+class: MISCONFIG
+asset: www.derdack.com integration documentation, github.com/Derdack, and demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+confidence: 80
+reasoning: Vendor material documents Username/Password in GET requests, six Derdack repositories use API-key-in-URL templates, and the live WSDL defines credential parameters for state-changing operations. Searches across eight or more corpora recovered no deployed customer credential.
+evidence_needed: Owner-provided redacted access-log, proxy-log, process-listing, referrer, or telemetry evidence containing a deployed credential; report only a SHA-256 fingerprint.
+verify_steps: GET `https://www.derdack.com/wp-json/wp/v2/posts` and inspect the recorded SolarWinds/send-alerts examples for parameter names only; GET `https://github.com/Derdack`; GET the EA WSDL above; do not submit credentials or invoke handlers.
+impact: Recovery of a deployed key or password could permit alert raise, update, acknowledgement, or closure, Medium; no live credential leak is proven.
+testability: HUMAN_ONLY
+
+[STEP 4 — SELF-CRITIQUE]
+[PARKED] demo.enterprisealert.com/EAWebService WSDL disclosure: hostname and endpoint-map disclosure are verified, but no anonymous access, mutation, or client-side SSRF PoC exists; retain only as supporting evidence.
+[PARKED] vps.signl4.com takeover: stale DNS to a GoDaddy shared default vhost is verified, but no claimable endpoint or researcher-controlled content primitive exists; takeover impact is HUMAN_ONLY.
+[FINAL] 1) Cross-environment SIGNL4 bearer-token acceptance, 78, AUTH_HELPED; 2) URL-embedded credential design, 80, HUMAN_ONLY.
+
+[STEP 5 — NEXT ACTION]
+[NEXT] HUMAN: Obtain an owner-approved non-production bearer token and perform `GET https://api.signl4.com/identity/connect/userinfo` with it; return only HTTP status, issuer, audience, scopes, and a SHA-256 token fingerprint—no account data or token value.
+
+[STEP 6 — LEARNING]
+[LEARN] ACCEPTED AUTH @ api.signl4.com/identity & account.signl4.com/identity: Fresh probes reconfirm shared trust configuration and newly record DPoP metadata, but still do not prove cross-environment token acceptance.
+
+[STEP 7 — RISK]
+[RISK] Derdack: 63 — One potentially Critical cross-environment chain remains credential-blocked; URL-embedded credential impact is unproven, EA hostname disclosure is Low, and vps DNS is non-claimable.
+## Objective
+- Act as a senior bug-bounty analyst for the Derdack/SIGNL4/Enterprise Alert program and emit only the structured STEP 1–7 blocks (the prompt says “8 steps” but defines seven).
+- Produce an evidence-grounded delta, priority scoring, three hypotheses, self-critique, one next action, learning, and risk rating.
+
+## Important Details
+- Program: Derdack GmbH / Derdack Group; report channel `bugs.olivermaicher.eu`.
+- Current state: `phase=POC`, `target=api`; prior leads indicate a frozen three-item dossier and zero passive-surface drift.
+- In-scope: company-owned infrastructure, sites, APIs, SaaS, status pages, domains, SIGNL4 and Enterprise Alert.
+- Excluded: brute-force/rate-limit testing, OPTIONS/TRACE as standalone findings, scanner-only output, endpoint-map-only output, descriptive headers/files, TLS best practice, known-vulnerable-library findings without a program-specific exploit, auth-bypass or mutating tests against live data.
+- Probe rules: passive-first, ≤1 rps, live probes limited to GET/HEAD/OPTIONS, no credential submission, SHA-256 any secret.
+- Strongest AUTH lead: six IdP hosts — `connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount` — share one RS256 key (`kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) and `client_id=692A0A56-892F-4AE2-8259-76DA398990B6`.
+- `api.signl4.com` and `account.signl4.com` discovery both advertise `issuer=https://connect.signl4.com/identity`, 12 scopes including EA/mobile scopes, `password` grant, device-code, CIBA, PAR, and `require_pushed_authorization_requests=false`.
+- Both freshly fetched JWKS documents were byte-identical: same `kid`, `x5t=ke5PPOlOtRevZrJU90l-yw4x7ic`, modulus, `x5c` with `CN=*.signl4.com`, `alg=RS256`.
+- `demo.enterprisealert.com` root 404 masked a live app at `/EAWebService/`; freshly fetched `EventProviderAPI.asmx?wsdl` returned 200 WSDL for EA with `targetNamespace=http://derdack.com/WebInterface/EnterpriseAlert` and operations including `RegisterEventProvider` and `RaiseEvent`.
+- `vps.signl4.com` points to a GoDaddy shared host with an unrelated certificate/default page; no researcher-controllable claim exists, so it is LOW/non-claimable pending HUMAN DNS/hosting control.
+- Prior suggested scoring: six-host identity/API `7.55`; `demo.enterprisealert.com/EAWebService/` `7.30`; credential-in-URL family `6.55`.
+- Expected next action is HUMAN: submit the frozen dossier and/or request an authorized non-production credential; all credential-dependent chains are `AUTH_HELPED`.
+
+## Work State
+### Completed
+- Performed four read-only GET fetches without authentication:
+  - `https://api.signl4.com/identity/.well-known/openid-configuration` — 200 discovery.
+  - `https://account.signl4.com/identity/.well-known/openid-configuration` — 200 discovery with matching issuer/scopes/claims.
+  - `https://api.signl4.com/identity/.well-known/openid-configuration/jwks` — shared RS256 key.
+  - `https://account.signl4.com/identity/.well-known/openid-configuration/jwks` — byte-identical key.
+  - `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` — live EA WSDL.
+- Confirmed fresh data matches the KB: no identity-key rotation, no discovery drift, and the EA sub-application remains live.
+- No files created or modified.
+
+### Active
+- Preparing the final STEP 1–7 structured analyst response using the fresh 200/JWKS/WSDL evidence.
+- Expected output: `NO_DELTA`, three scored assets, three `[HYP]` blocks, `[PARKED]`/`[FINAL]`, one `[NEXT] HUMAN`, one `[LEARN]`, and one `[RISK]`.
+
+### Blocked
+- Cross-environment token acceptance is unproven and cannot be advanced anonymously; it needs an authorized `client_secret`, issued token, or `X-S4-Api-Key` for an approved non-production tenant.
+- No anonymous Enterprise Alert write primitive exists; fabricated credentials return Error-1/401.
+- EA WSDL/version disclosure alone risks being endpoint-map-only; impact should be stated as reconnaissance unless scope-owner confirmation strengthens it.
+- `vps.signl4.com` takeover requires DNS/hosting-account control (HUMAN_ONLY) and is not claimable from the researcher seat.
+
+## Next Move
+1. Emit STEP 1 `NO_DELTA` and STEP 2 priority lines, reusing scores `7.55`, `7.30`, and `6.55` unless recalculated explicitly.
+2. Emit STEP 3–7: keep cross-env bearer acceptance as AUTH_HELPED, describe EA exposure conservatively, park the non-claimable vps item, then choose exactly one `[NEXT] HUMAN: Submit the frozen three-item dossier to bugs.olivermaicher.eu with credential-dependent chains marked AUTH_HELPED.`
+
+## Relevant Files
+- `inventory/derdack.md`: Derdack inventory and passive recon seed.
+- `scope.yml`: in-scope asset definition.
+- `art/lead_bigpickle.txt`: bigpickle cross-environment identity lead.
+- `art/lead_nemotron3.txt`: nemotron3 `vps.signl4.com` takeover lead.
+- `hypotheses-bigpickle.txt`: bigpickle next steps and final dossier ranking.
+- `hypotheses-nemotron3.txt`: nemotron3 Enterprise Alert exposure and vps submission notes.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[STEP 5] Blocked on HUMAN action: provide the results of the owner-approved non-production token test—HTTP status, `iss`/`aud`/scopes, and SHA-256 fingerprint—or confirm you want a submission-ready dossier instead.

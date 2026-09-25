@@ -1611,3 +1611,8 @@ www.derdack.com
 - CHANGED api.signl4.com/api/v2/teams auth-status flapping continues 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
 - CHANGED vps.signl4.com subdomain takeover re-confirmed across 6+ consecutive probe cycles — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fabricated-host byte-identical re
 - NEW us.derdack.com live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class
+
+## 2026-09-25 13:53:39 UTC
+- NEW Fresh GET of `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` records non-public single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`; deployment ti
+- NEW Fresh OIDC discovery on `api.signl4.com` and `account.signl4.com` records DPoP signing-algorithm metadata; this is a mitigating control, not a vulnerability.
+- CHANGED No issuer, JWKS, scope, grant, PKCE, or client-authentication drift observed.

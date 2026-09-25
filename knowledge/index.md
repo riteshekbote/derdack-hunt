@@ -822,3 +822,4 @@
 - 2026-09-25 ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer claim
 - 2026-09-25 ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
 - 2026-09-25 ACCEPTED AUTH @ account.signl4.com/identity: account-hosted discovery advertises the connect issuer while sharing the six-host RS256 JWKS; this is a trust-boundary signal, not proof of cross-environment token acceptance.
+- 2026-09-25 ACCEPTED AUTH @ api.signl4.com/identity & account.signl4.com/identity: Fresh probes reconfirm shared trust configuration and newly record DPoP metadata, but still do not prove cross-environment token acceptance.

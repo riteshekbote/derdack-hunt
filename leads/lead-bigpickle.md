@@ -6826,3 +6826,43 @@ testability: PASSIVE
 [NEXT] HUMAN: Submit the frozen three-item dossier to bugs.olivermaicher.eu, marking credential-dependent chains AUTH_HELPED and vps.signl4.com explicitly non-claimable.
 [LEARN] ACCEPTED AUTH @ account.signl4.com/identity: account-hosted discovery advertises the connect issuer while sharing the six-host RS256 JWKS; this is a trust-boundary signal, not proof of cross-environment token acceptance.
 [RISK] Derdack: 63 — Two passive-verified reportable exposures and one Critical AUTH_HELPED chain remain; no legitimate credential or anonymous write primitive was obtained, and vps is LOW/non-claimable.
+## 2026-09-25 13:53:29 UTC [target] (model bigpickle)
+[NEW] Fresh GET of `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` records non-public single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`; deployment timing of this hostname is unknown.
+[NEW] Fresh OIDC discovery on `api.signl4.com` and `account.signl4.com` records DPoP signing-algorithm metadata; this is a mitigating control, not a vulnerability.
+[CHANGED] No issuer, JWKS, scope, grant, PKCE, or client-authentication drift observed.
+[PRIO] connect/devconnect/api/devapi/account/devaccount.signl4.com identity/API,7.55,attack_surface=9 business_value=10 tech_exposure=10 gate_ease=0 cloud_surface=3 freshness=10
+[PRIO] demo.enterprisealert.com/EAWebService/,7.40,attack_surface=8 business_value=9 tech_exposure=7 gate_ease=6 cloud_surface=2 freshness=10
+[PRIO] Derdack URL-embedded-credential documentation/repository family,6.55,attack_surface=7 business_value=8 tech_exposure=6 gate_ease=6 cloud_surface=1 freshness=9
+[HYP] Cross-environment bearer-token acceptance through shared SIGNL4 identity configuration
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount.signl4.com/identity and API consumers
+confidence: 78
+reasoning: Fresh GETs confirm `api` and `account` publish the same RS256 key and advertise `https://connect.signl4.com/identity`; provided context extends the shared key to six hosts and confirms OAuth2 bearer consumers. Shared trust configuration is proven; token acceptance is not.
+evidence_needed: An owner-approved non-production token accepted outside its expected environment, with issuer, audience, scope, and HTTP result recorded; retain only a SHA-256 fingerprint.
+verify_steps: GET `https://api.signl4.com/identity/.well-known/openid-configuration` and `https://account.signl4.com/identity/.well-known/openid-configuration`; GET both advertised JWKS URIs; compare issuer, kid, modulus, x5t, and endpoint parameters only; do not submit tokens anonymously.
+impact: If cross-environment acceptance exists, cross-tenant alert, team, subscription, billing, and file access, Critical; otherwise shared configuration exposes no direct exploit.
+testability: AUTH_HELPED
+[HYP] Public EA WSDL discloses a non-public service hostname and mutating contract
+class: MISCONFIG
+asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+confidence: 78
+reasoning: Fresh WSDL retrieval exposes 12 operations and `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`. Prior tested mutating operations rejected fabricated credentials with Error-1/401.
+evidence_needed: Confirm `ereesus` is non-public infrastructure and whether any supported client automatically follows the WSDL address; an approved client-side SSRF or routing PoC is required for higher impact.
+verify_steps: GET `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl`; expect 200; inspect operation names and `soap:address` only; do not invoke any operation.
+impact: Attacker gains a non-public hostname, topology clue, and operation map, Low; no anonymous data access or mutation is demonstrated.
+testability: PASSIVE
+[HYP] Vendor-documented URL-embedded credentials create recoverable log and telemetry exposure
+class: MISCONFIG
+asset: www.derdack.com integration documentation, github.com/Derdack, and demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+confidence: 80
+reasoning: Vendor material documents Username/Password in GET requests, six Derdack repositories use API-key-in-URL templates, and the live WSDL defines credential parameters for state-changing operations. Searches across eight or more corpora recovered no deployed customer credential.
+evidence_needed: Owner-provided redacted access-log, proxy-log, process-listing, referrer, or telemetry evidence containing a deployed credential; report only a SHA-256 fingerprint.
+verify_steps: GET `https://www.derdack.com/wp-json/wp/v2/posts` and inspect the recorded SolarWinds/send-alerts examples for parameter names only; GET `https://github.com/Derdack`; GET the EA WSDL above; do not submit credentials or invoke handlers.
+impact: Recovery of a deployed key or password could permit alert raise, update, acknowledgement, or closure, Medium; no live credential leak is proven.
+testability: HUMAN_ONLY
+[PARKED] demo.enterprisealert.com/EAWebService WSDL disclosure: hostname and endpoint-map disclosure are verified, but no anonymous access, mutation, or client-side SSRF PoC exists; retain only as supporting evidence.
+[PARKED] vps.signl4.com takeover: stale DNS to a GoDaddy shared default vhost is verified, but no claimable endpoint or researcher-controlled content primitive exists; takeover impact is HUMAN_ONLY.
+[FINAL] 1) Cross-environment SIGNL4 bearer-token acceptance, 78, AUTH_HELPED; 2) URL-embedded credential design, 80, HUMAN_ONLY.
+[NEXT] HUMAN: Obtain an owner-approved non-production bearer token and perform `GET https://api.signl4.com/identity/connect/userinfo` with it; return only HTTP status, issuer, audience, scopes, and a SHA-256 token fingerprint—no account data or token value.
+[LEARN] ACCEPTED AUTH @ api.signl4.com/identity & account.signl4.com/identity: Fresh probes reconfirm shared trust configuration and newly record DPoP metadata, but still do not prove cross-environment token acceptance.
+[RISK] Derdack: 63 — One potentially Critical cross-environment chain remains credential-blocked; URL-embedded credential impact is unproven, EA hostname disclosure is Low, and vps DNS is non-claimable.
