@@ -6866,3 +6866,4 @@ testability: HUMAN_ONLY
 [NEXT] HUMAN: Obtain an owner-approved non-production bearer token and perform `GET https://api.signl4.com/identity/connect/userinfo` with it; return only HTTP status, issuer, audience, scopes, and a SHA-256 token fingerprint—no account data or token value.
 [LEARN] ACCEPTED AUTH @ api.signl4.com/identity & account.signl4.com/identity: Fresh probes reconfirm shared trust configuration and newly record DPoP metadata, but still do not prove cross-environment token acceptance.
 [RISK] Derdack: 63 — One potentially Critical cross-environment chain remains credential-blocked; URL-embedded credential impact is unproven, EA hostname disclosure is Low, and vps DNS is non-claimable.
+## 2026-09-25 18:10:22 UTC [target] (model bigpickle)

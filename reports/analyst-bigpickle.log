@@ -33831,3 +33831,237 @@ testability: HUMAN_ONLY
 - `hypotheses-nemotron3.txt`: nemotron3 Enterprise Alert exposure and vps submission notes.
 Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
 [STEP 5] Blocked on HUMAN action: provide the results of the owner-approved non-production token test—HTTP status, `iss`/`aud`/scopes, and SHA-256 fingerprint—or confirm you want a submission-ready dossier instead.
+===== ANALYST bigpickle 2026-09-25 18:11:28 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mUA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+for u in \
+  "https://api.signl4.com/identity/.well-known/openid-configuration" \
+  "https://connect.signl4.com/identity/.well-known/openid-configuration" \
+  "https://account.signl4.com/identity/.well-known/openid-configuration" \
+  "https://devconnect.signl4.com/identity/.well-known/openid-configuration" ; do
+  code=$(curl -s -o /tmp/od.json -w '%{http_code}' --max-time 20 -A "$UA" "$u")
+  iss=$(python3 -c "import json;d=json.load(open('/tmp/od.json'));print(d.get('issuer'),len(d.get('scopes_supported',[])),d.get('code_challenge_methods_supported'),d.get('id_token_signing_alg_values_supported'),d.get('dpop_signing_alg_values_supported'))" 2>/dev/null)
+  echo "$code $u :: $iss"
+done
+200 https://api.signl4.com/identity/.well-known/openid-configuration :: https://connect.signl4.com/identity 12 ['plain', 'S256'] ['RS256'] ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+200 https://connect.signl4.com/identity/.well-known/openid-configuration :: https://connect.signl4.com/identity 12 ['plain', 'S256'] ['RS256'] ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+200 https://account.signl4.com/identity/.well-known/openid-configuration :: https://connect.signl4.com/identity 12 ['plain', 'S256'] ['RS256'] ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+200 https://devconnect.signl4.com/identity/.well-known/openid-configuration :: https://devconnect.signl4.com/identity 13 ['plain', 'S256'] ['RS256'] ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+[0m
+[0m$ [0mUA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+for u in \
+  "https://api.signl4.com/identity/connect/certs" \
+  "https://account.signl4.com/identity/connect/certs" \
+  "https://devconnect.signl4.com/identity/connect/certs" ; do
+  curl -s --max-time 20 -A "$UA" "$u" -o /tmp/jwks.json
+  python3 -c "
+import json,hashlib
+d=json.load(open('/tmp/jwks.json'))
+for k in d.get('keys',[]):
+    n=k.get('n','')
+    print('$u', k.get('kid'), k.get('alg'), 'n_sha8='+hashlib.sha256(n.encode()).hexdigest()[:8], k.get('x5t'))
+" 2>/dev/null
+done
+(no output)
+[0m
+[0m$ [0mUA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+python3 - <<'EOF'
+import json,urllib.request,time
+def get(u):
+    r=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0'})
+    return json.load(urllib.request.urlopen(r,timeout=20))
+a=get('https://connect.signl4.com/identity/.well-known/openid-configuration')
+b=get('https://devconnect.signl4.com/identity/.well-known/openid-configuration')
+sa,sb=set(a.get('scopes_supported',[])),set(b.get('scopes_supported',[]))
+print('prod-only scopes:',sorted(sa-sb))
+print('dev-only scopes:',sorted(sb-sa))
+ga,gb=set(a.get('grant_types_supported',[])),set(b.get('grant_types_supported',[]))
+print('prod-only grants:',sorted(ga-gb),'dev-only grants:',sorted(gb-ga))
+for k in sorted(set(a)|set(b)):
+    if a.get(k)!=b.get(k):
+        print('DIFF',k,'\n  prod:',str(a.get(k))[:300],'\n  dev :',str(b.get(k))[:300])
+EOF
+prod-only scopes: []
+dev-only scopes: ['public_api_mfa_manage']
+prod-only grants: [] dev-only grants: []
+DIFF authorization_endpoint 
+  prod: https://connect.signl4.com/identity/connect/authorize 
+  dev : https://devconnect.signl4.com/identity/connect/authorize
+DIFF backchannel_authentication_endpoint 
+  prod: https://connect.signl4.com/identity/connect/ciba 
+  dev : https://devconnect.signl4.com/identity/connect/ciba
+DIFF check_session_iframe 
+  prod: https://connect.signl4.com/identity/connect/checksession 
+  dev : https://devconnect.signl4.com/identity/connect/checksession
+DIFF device_authorization_endpoint 
+  prod: https://connect.signl4.com/identity/connect/deviceauthorization 
+  dev : https://devconnect.signl4.com/identity/connect/deviceauthorization
+DIFF end_session_endpoint 
+  prod: https://connect.signl4.com/identity/connect/endsession 
+  dev : https://devconnect.signl4.com/identity/connect/endsession
+DIFF introspection_endpoint 
+  prod: https://connect.signl4.com/identity/connect/introspect 
+  dev : https://devconnect.signl4.com/identity/connect/introspect
+DIFF issuer 
+  prod: https://connect.signl4.com/identity 
+  dev : https://devconnect.signl4.com/identity
+DIFF jwks_uri 
+  prod: https://connect.signl4.com/identity/.well-known/openid-configuration/jwks 
+  dev : https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks
+DIFF pushed_authorization_request_endpoint 
+  prod: https://connect.signl4.com/identity/connect/par 
+  dev : https://devconnect.signl4.com/identity/connect/par
+DIFF revocation_endpoint 
+  prod: https://connect.signl4.com/identity/connect/revocation 
+  dev : https://devconnect.signl4.com/identity/connect/revocation
+DIFF scopes_supported 
+  prod: ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access'] 
+  dev : ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_mfa_manage', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access']
+DIFF token_endpoint 
+  prod: https://connect.signl4.com/identity/connect/token 
+  dev : https://devconnect.signl4.com/identity/connect/token
+DIFF userinfo_endpoint 
+  prod: https://connect.signl4.com/identity/connect/userinfo 
+  dev : https://devconnect.signl4.com/identity/connect/userinfo
+[0m
+[0m$ [0mUA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+for h in api connect account devapi devaccount devconnect; do
+  jw=$(curl -s --max-time 20 -A "$UA" "https://$h.signl4.com/identity/.well-known/openid-configuration" | python3 -c "import json,sys;print(json.load(sys.stdin).get('jwks_uri'))" 2>/dev/null)
+  echo "== $h jwks_uri=$jw"
+  curl -s --max-time 20 -A "$UA" "$jw" -o /tmp/j.json
+  python3 -c "
+import json,hashlib
+try:
+  d=json.load(open('/tmp/j.json'))
+  for k in d.get('keys',[]):
+    print('  ',k.get('kid'),k.get('kty'),k.get('alg'),'use='+str(k.get('use')),'n8='+hashlib.sha256(k.get('n','').encode()).hexdigest()[:10],k.get('x5t'))
+except Exception as e: print('  ERR',e, open('/tmp/j.json').read()[:120])
+"
+  sleep 1
+done
+== api jwks_uri=https://api.signl4.com/identity/.well-known/openid-configuration/jwks
+   91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 RSA RS256 use=sig n8=138f432ba8 ke5PPOlOtRevZrJU90l-yw4x7ic
+== connect jwks_uri=https://connect.signl4.com/identity/.well-known/openid-configuration/jwks
+   91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 RSA RS256 use=sig n8=138f432ba8 ke5PPOlOtRevZrJU90l-yw4x7ic
+== account jwks_uri=https://account.signl4.com/identity/.well-known/openid-configuration/jwks
+   91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 RSA RS256 use=sig n8=138f432ba8 ke5PPOlOtRevZrJU90l-yw4x7ic
+== devapi jwks_uri=https://devapi.signl4.com/identity/.well-known/openid-configuration/jwks
+   91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 RSA RS256 use=sig n8=138f432ba8 ke5PPOlOtRevZrJU90l-yw4x7ic
+== devaccount jwks_uri=https://devaccount.signl4.com/identity/.well-known/openid-configuration/jwks
+   91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 RSA RS256 use=sig n8=138f432ba8 ke5PPOlOtRevZrJU90l-yw4x7ic
+== devconnect jwks_uri=https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks
+   91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 RSA RS256 use=sig n8=138f432ba8 ke5PPOlOtRevZrJU90l-yw4x7ic
+[0m
+[0m$ [0mUA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+python3 - <<'EOF'
+import json,urllib.request
+def get(u):
+    r=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0'})
+    return json.load(urllib.request.urlopen(r,timeout=20))
+import time
+for h in ['api','devapi','account','devaccount']:
+    d=get(f'https://{h}.signl4.com/identity/.well-known/openid-configuration')
+    print(h,'issuer=',d.get('issuer'))
+    print('   scopes=',d.get('scopes_supported'))
+    print('   claims=',sorted(d.get('claims_supported',[]))[:20])
+    time.sleep(1)
+EOF
+api issuer= https://connect.signl4.com/identity
+   scopes= ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access']
+   claims= ['birthdate', 'email', 'email_verified', 'family_name', 'gender', 'given_name', 'http://schemas.derdack.com/identity/claims/active', 'http://schemas.derdack.com/identity/claims/branch_id', 'http://schemas.derdack.com/identity/claims/is_branch_manager', 'http://schemas.derdack.com/identity/claims/is_stakeholder', 'http://schemas.derdack.com/identity/claims/subscription_id', 'locale', 'middle_name', 'name', 'nickname', 'picture', 'preferred_username', 'profile', 'sub', 'updated_at']
+devapi issuer= https://devconnect.signl4.com/identity
+   scopes= ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_mfa_manage', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access']
+   claims= ['birthdate', 'email', 'email_verified', 'family_name', 'gender', 'given_name', 'http://schemas.derdack.com/identity/claims/active', 'http://schemas.derdack.com/identity/claims/branch_id', 'http://schemas.derdack.com/identity/claims/is_branch_manager', 'http://schemas.derdack.com/identity/claims/is_stakeholder', 'http://schemas.derdack.com/identity/claims/subscription_id', 'locale', 'middle_name', 'name', 'nickname', 'picture', 'preferred_username', 'profile', 'sub', 'updated_at']
+account issuer= https://connect.signl4.com/identity
+   scopes= ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access']
+   claims= ['birthdate', 'email', 'email_verified', 'family_name', 'gender', 'given_name', 'http://schemas.derdack.com/identity/claims/active', 'http://schemas.derdack.com/identity/claims/branch_id', 'http://schemas.derdack.com/identity/claims/is_branch_manager', 'http://schemas.derdack.com/identity/claims/is_stakeholder', 'http://schemas.derdack.com/identity/claims/subscription_id', 'locale', 'middle_name', 'name', 'nickname', 'picture', 'preferred_username', 'profile', 'sub', 'updated_at']
+devaccount issuer= https://devconnect.signl4.com/identity
+   scopes= ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_mfa_manage', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access']
+   claims= ['birthdate', 'email', 'email_verified', 'family_name', 'gender', 'given_name', 'http://schemas.derdack.com/identity/claims/active', 'http://schemas.derdack.com/identity/claims/branch_id', 'http://schemas.derdack.com/identity/claims/is_branch_manager', 'http://schemas.derdack.com/identity/claims/is_stakeholder', 'http://schemas.derdack.com/identity/claims/subscription_id', 'locale', 'middle_name', 'name', 'nickname', 'picture', 'preferred_username', 'profile', 'sub', 'updated_at']
+[0m
+[0m$ [0mUA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+for h in connect account devconnect devaccount; do
+ for p in "/identity/connect/introspect?token=eyJhbGciOiJSUzI1NiJ9.aaa.bbb" "/identity/connect/userinfo" "/identity/connect/revocation" "/identity/connect/ciba" ; do
+  out=$(curl -s -o /tmp/b.txt -w '%{http_code} %{size_download}' --max-time 20 -A "$UA" "https://$h.signl4.com$p")
+  body=$(head -c 160 /tmp/b.txt | tr -d '\n')
+  echo "$h $p -> $out :: $body"
+  sleep 1
+ done
+done
+connect /identity/connect/introspect?token=eyJhbGciOiJSUzI1NiJ9.aaa.bbb -> 405 0 :: 
+connect /identity/connect/userinfo -> 401 0 :: 
+connect /identity/connect/revocation -> 405 0 :: 
+connect /identity/connect/ciba -> 400 27 :: {"error":"invalid_request"}
+account /identity/connect/introspect?token=eyJhbGciOiJSUzI1NiJ9.aaa.bbb -> 405 0 :: 
+account /identity/connect/userinfo -> 401 0 :: 
+account /identity/connect/revocation -> 405 0 :: 
+account /identity/connect/ciba -> 400 27 :: {"error":"invalid_request"}
+devconnect /identity/connect/introspect?token=eyJhbGciOiJSUzI1NiJ9.aaa.bbb -> 405 0 :: 
+devconnect /identity/connect/userinfo -> 401 0 :: 
+devconnect /identity/connect/revocation -> 405 0 :: 
+devconnect /identity/connect/ciba -> 400 27 :: {"error":"invalid_request"}
+devaccount /identity/connect/introspect?token=eyJhbGciOiJSUzI1NiJ9.aaa.bbb -> 405 0 :: 
+devaccount /identity/connect/userinfo -> 401 0 :: 
+devaccount /identity/connect/revocation -> 405 0 :: 
+devaccount /identity/connect/ciba -> 400 27 :: {"error":"invalid_request"}
+[0m
+[0m$ [0mUA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+for v in v1 v2 v3; do
+ curl -s --max-time 30 -A "$UA" "https://connect.signl4.com/api/docs/$v/swagger.json" -o /tmp/sw-$v.json
+ echo "== $v $(stat -c%s /tmp/sw-$v.json) bytes"
+ sleep 1
+done
+python3 - <<'EOF'
+import json
+for v in ['v1','v2','v3']:
+    try: d=json.load(open(f'/tmp/sw-{v}.json'))
+    except Exception as e: print(v,'ERR',e); continue
+    hits=[p for p in d.get('paths',{}) if 'mfa' in p.lower() or 'totp' in p.lower() or 'twofactor' in p.lower() or '2fa' in p.lower() or 'otp' in p.lower()]
+    print(v,'securitySchemes:',list(d.get('components',{}).get('securitySchemes',{}).keys()) or list(d.get('securityDefinitions',{}).keys()))
+    print(v,'mfa/totp/otp paths:',hits)
+    # scopes referenced anywhere
+    s=open(f'/tmp/sw-{v}.json').read()
+    for sc in ['public_api_mfa_manage','public_api_ea_manage','mobile_api','reseller_portal']:
+        print('   ',sc,'occurrences=',s.count(sc))
+EOF
+== v1 493618 bytes
+== v2 1216391 bytes
+== v3 1213127 bytes
+v1 securitySchemes: ['API_Key_Header', 'API_Key_Query', 'OAuth2']
+v1 mfa/totp/otp paths: []
+    public_api_mfa_manage occurrences= 0
+    public_api_ea_manage occurrences= 0
+    mobile_api occurrences= 0
+    reseller_portal occurrences= 0
+v2 securitySchemes: ['API_Key_Header', 'API_Key_Query', 'OAuth2']
+v2 mfa/totp/otp paths: []
+    public_api_mfa_manage occurrences= 0
+    public_api_ea_manage occurrences= 0
+    mobile_api occurrences= 0
+    reseller_portal occurrences= 0
+v3 securitySchemes: ['API_Key_Header', 'API_Key_Query', 'OAuth2']
+v3 mfa/totp/otp paths: []
+    public_api_mfa_manage occurrences= 0
+    public_api_ea_manage occurrences= 0
+    mobile_api occurrences= 0
+    reseller_portal occurrences= 0
+[0m
+[93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
+[0m✗ [0mcd /tmp && python3 - <<'EOF'
+import json,re
+for v in ['v1','v2','v3']:
+    s=open(f'/tmp/sw-{v}.json').read()
+    print('==',v)
+    for kw in ['MFA','mfa','TwoFactor','twoFactor','two-factor','TOTP','totp','otp','OTP','authenticator','2fa','StrongPassword','passwordPolicy']:
+        c=s.count(kw)
+        if c: print('   ',kw,c)
+    d=json.load(open(f'/tmp/sw-{v}.json'))
+    ps=list(d.get('paths',{}).keys())
+    print('   total paths',len(ps))
+    for p in ps:
+        if re.search(r'user|setting|security|auth|credential|invite|reset',p,re.I):
+            print('     ',p)
+EOF failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.

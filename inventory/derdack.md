@@ -1616,3 +1616,11 @@ www.derdack.com
 - NEW Fresh GET of `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` records non-public single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`; deployment ti
 - NEW Fresh OIDC discovery on `api.signl4.com` and `account.signl4.com` records DPoP signing-algorithm metadata; this is a mitigating control, not a vulnerability.
 - CHANGED No issuer, JWKS, scope, grant, PKCE, or client-authentication drift observed.
+
+## 2026-09-25 18:11:28 UTC
+- NEW Fresh GET of `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` records non-public single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`; deployment-ti
+- NEW Fresh OIDC discovery on `api.signl4.com` and `account.signl4.com` records DPoP signing-algorithm metadata; mitigating control, not a vulnerability
+- CHANGED No issuer, JWKS, scope, grant, PKCE, or client-authentication drift observed across 6 identity hosts
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-09-25 boundary — no new paths, verbs, or differentials
+- CHANGED vps.signl4.com subdomain takeover re-confirmed across 7+ consecutive probe cycles — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fabricated-host byte-identical re
+- CHANGED us.derdack.com live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class
