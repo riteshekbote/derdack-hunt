@@ -6761,3 +6761,30 @@ testability: PASSIVE (verified) with HUMAN residual
 [LEARN] REJECTED OTHER @ vps.signl4.com (nemotron3 [95]): explicit A-record to GoDaddy shared pool = stale DNS config; no claimable takeover primitive from researcher seat; exploitability gated on DNS/hosting-account control (HUMAN); 95 overstates, correct exposure = MISCONFIG LOW-Medium.
 [LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: root-only status ≠ full-host status — path-family probing of a known-404 App-Proxy host recovered a live EA 9.5.26147 sub-app; apply to all future App-Proxy-fronted/multi-app hosts before declaring inert.
 [RISK] Derdack: 63 — two PASSIVE-verified reportable findings (in-scope live EA alert API with version disclosure on a Derdack-run host; credential-in-URL template family with live RFC proof) plus Critical AUTH_HELPED forgery chain (no illegitimate credential acquired); vps adds LOW non-claimable dossier item; estate static with zero drift — POC objective met, REPORT committed, no further live probing warranted.
+## 2026-09-25 02:36:44 UTC [target] (model bigpickle)
+[HYP] Cross-env token forgery chain (REPORT, AUTH_HELPED)
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount.signl4.com /identity + swagger OAuth2 consumer
+confidence: 88
+reasoning: 6 IdP hosts serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256; 10+ deep-equal, zero drift); shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6; staging password grant + plain PKCE; account IdP issuer mismatch (claims connect); V1/V2/V3 auth gate-flapping (401/405) 10th+ cycles; swagger declares Bearer OAuth2 + empty global security.
+evidence_needed: legitimate client_secret / X-S4-Api-Key / token — acquisition program-excluded.
+verify_steps: DONE — OIDC discovery, JWKS deep-equal, token-endpoint grant probes (invalid_client), swagger dumps, route-gate checks.
+impact: cross-tenant CRUD forgery (alerts/teams/subscriptions/billing/ZUGFeRD invoices) across all envs — Critical, blocked on secret.
+testability: AUTH_HELPED
+[HYP] Public EA alert API @ demo.enterprisealert.com/EAWebService (REPORT, PASSIVE-verified)
+class: MISCONFIG
+asset: demo.enterprisealert.com/EAWebService/
+confidence: 82
+reasoning: root "/" 404 masked live EA 9.5.26147 sub-app behind Azure AD App Proxy; path-family sweep recovered handler index 200, 11 EventProviderAPI.aspx handlers, 12-op SOAP WSDL, REST events map, EventConnectorServer.ashx 200-empty; every credential path rejects fabricated creds (Error-1/401).
+verify_steps: DONE — path-family sweep, WSDL capture, handler index, gate checks, DNS/CNAME chain.
+impact: internet-exposed Derdack-run EA alert API with version disclosure; leaked key (credential-in-URL family) → raise/resolve/close genuine alerts — Medium-High.
+testability: PASSIVE (exposure) / AUTH_HELPED (chains)
+[HYP] Credential-in-URL consolidated family (REPORT, PASSIVE-verified + HUMAN residual)
+class: MISCONFIG
+asset: github.com/Derdack (6/12 repos) + derdack.com integration pages (7+ sources) + live RFC @ demo/EAWebService
+confidence: 80
+reasoning: REST apiKey accepted at 3 URL positions; Username/Password (or md5) in GET = documented primary auth across 7+ vendor sources (SolarWinds `Password=Derdack01`+`mmea2012.derdack-support.local`; EA9 PDF md5 variant); repo sweep 12/12; live demo gates reject fabricated creds; leak-oracles negative 8+ corpora.
+evidence_needed: deployed-instance credential reaching an EA log/process/access-log surface (HUMAN, on-prem).
+verify_steps: DONE — RAG 7+ sources, repo sweep 12/12, live gate checks.
+impact: log/referrer recovery of URL-embedded key/password → unauth alert lifecycle control on customer EA + demo — Medium, deployment-side.
+testability: PASSIVE (verified) with HUMAN residual
