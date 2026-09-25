@@ -6867,3 +6867,37 @@ testability: HUMAN_ONLY
 [LEARN] ACCEPTED AUTH @ api.signl4.com/identity & account.signl4.com/identity: Fresh probes reconfirm shared trust configuration and newly record DPoP metadata, but still do not prove cross-environment token acceptance.
 [RISK] Derdack: 63 — One potentially Critical cross-environment chain remains credential-blocked; URL-embedded credential impact is unproven, EA hostname disclosure is Low, and vps DNS is non-claimable.
 ## 2026-09-25 18:10:22 UTC [target] (model bigpickle)
+## 2026-09-25 21:39:41 UTC [target] (model bigpickle)
+[HYP] Azure AD App Proxy discloses Derdack's Azure subscription, App Proxy topology and hosting region to unauthenticated clients
+class: MISCONFIG
+asset: demo.enterprisealert.com/EAWebService/ (EventProviderAPI.aspx, EventConnectorServer.ashx, /EAWebService/)
+confidence: 72
+reasoning: 3/3 probed paths return byte-stable `x-ms-proxy-subscription-id ff2a095d-01ff-4edb-99e6-38b97f49467c`, `app-id f18ba879-3dea-4018-b9d1-e6dbdc9ce151`, `group-id 6b26e6a4-c5ad-4b27-b31c-e1777730c354`, `connector-id da867a92-3ba5-4e78-95f6-c97bac3c791f`, `service-name proxy-appproxy-NEUR-DUB01P-3`, `data-center NEUR`; only `transaction-id` rotates per request. `Handler=About` returns 200 with no credential, so the headers are reachable pre-auth. Azure AD App Proxy can only front Azure App Service, so app type and hosting tier are fixed by this exposure.
+evidence_needed: Owner confirmation that the proxy emits these to unauthenticated clients by default rather than a per-app override, and the operator's mapping of these GUIDs to the App Service/connector inventory; report GUIDs only, never resource contents.
+verify_steps: GET `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About` → expect 200; GET `https://demo.enterprisealert.com/EAWebService/EventConnectorServer.ashx` → expect 200; capture only `x-ms-proxy-*` and NEL/`Report-To`; submit no credential, invoke no handler.
+impact: Attacker learns the Azure subscription GUID, exact App Proxy app/group/connector and the NEUR-DUB01P-3 region, enabling targeted Azure resource enumeration and subscription-scoped phishing against Derdack cloud admins; Low-Medium, no data access.
+testability: PASSIVE
+[HYP] Cross-environment bearer-token acceptance through shared SIGNL4 identity configuration
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount.signl4.com/identity and API consumers
+confidence: 76
+reasoning: Fresh GET on `api.signl4.com/identity` returns 200 with `issuer=https://connect.signl4.com/identity`, `kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, `x5t ke5PPOlOtRevZrJU90l-yw4x7ic`, `n_sha256_12=138f432ba8c1` — byte-identical to the recorded five other hosts. 8 grant types incl `password`, device_code, ciba, token-exchange; `code_challenge_methods_supported [plain, S256]`; `token_endpoint_auth_methods_supported` secret-only; `registration_endpoint` absent. Shared trust configuration is proven; token acceptance is not.
+evidence_needed: An owner-approved non-production bearer token accepted by an API host outside its intended environment, recording issuer/audience/scope/HTTP status and a SHA-256 token fingerprint only.
+verify_steps: GET `https://api.signl4.com/identity/.well-known/openid-configuration` → 200; GET the advertised `jwks_uri` → 200; compare issuer, kid, x5t, `n` digest and endpoint parameters only; do not submit any token.
+impact: If cross-environment acceptance exists, cross-tenant alert, team, subscription, billing and file access, Critical; if not, shared configuration alone exposes no direct exploit.
+testability: AUTH_HELPED
+[HYP] URL-embedded credentials make the EA alert-mutation API a read/write surface once any deployed credential is recoverable
+class: MISCONFIG
+asset: www.derdack.com integration docs, github.com/Derdack, demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx
+confidence: 74
+reasoning: Fresh `ShowMethodInfo=1` confirms all query/mutating handlers take `Username`+`Password` as ordinary query/form fields, including `CloseAlert(Username, Password, ProviderName, …)` and `GetAlertStatus(Username, Password, AlertID)`. Vendor sources document the same params in GET query strings, incl the SolarWinds `Password=Derdack01` template and an md5-hash variant; 6/12 Derdack repos use apiKey-in-URL templates. The gate itself is intact — `POST /EAWebService/rest/events` with body `{` returns 401 anon **and** 401 with fabricated creds, so auth precedes payload parsing. 8+ corpora searched recovered no deployed customer credential.
+evidence_needed: Owner-supplied redacted access-log, proxy-log, process-listing, referrer or telemetry sample containing a deployed credential; report only a SHA-256 fingerprint.
+verify_steps: GET `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=CloseAlert&ShowMethodInfo=1` → 200, read parameter names only; GET `https://www.derdack.com/wp-json/wp/v2/posts` and read the recorded SolarWinds/send-alerts example parameter names; submit no credential, invoke no handler.
+impact: One recovered deployed key or password grants alert raise/update/ack/close plus alert-status read against a live alert-routing system, Medium; no live credential leak is proven.
+testability: HUMAN_ONLY
+[PARKED] Azure App Proxy header disclosure: verified and bounded — these are Azure-emitted defaults; exposure is an enumeration/targeting aid, not data access. The "headers only" REJECTED class overlaps, so it must be submitted as identifier disclosure carrying the App Service/connector-topology argument, not as a banner.
+[PARKED] demo.enterprisealert.com/EAWebService handler + version disclosure: About/GetAlertStatus/CloseAlert contracts and v9.5.26147 are all anon-readable, but every credential path gates — config-level exposure only, exploit chains AUTH_HELPED.
+[PARKED] vps.signl4.com takeover: stale A-record to GoDaddy shared pool, no researcher-controlled claimable endpoint, HUMAN_ONLY.
+[FINAL] 1) Cross-environment SIGNL4 bearer-token acceptance, 76, AUTH_HELPED; 2) URL-embedded credential design on the EA alert API, 74, HUMAN_ONLY; 3) Azure App Proxy subscription/connector disclosure, 72, PASSIVE.
+[NEXT] PROBE: GET `https://s4dev1-8.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About` (deep path — root returned no response this cycle) and capture only `x-ms-proxy-*`; expected 200 with the same or a different `x-ms-proxy-subscription-id` as demo, which decides whether the identifier leak is a demo-only artifact or an estate-wide App Proxy configuration defect.
+[RISK] Derdack: 62 — one Critical cross-environment chain remains strictly credential-blocked, the EA alert API credential-in-URL design has no proven live leak across 8+ corpora, and the new App Proxy disclosure is an enumeration aid only; no anonymous write primitive and no customer data were accessed this cycle.

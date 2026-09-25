@@ -650,3 +650,7 @@ https://www.derdack.com/wp-json/wp/v2/posts` -> HTTP 404
 
 ## 2026-09-25 18:11:33 UTC
 https://www.derdack.com/de/integrations/solarwinds -> 200 len=?
+
+## 2026-09-25 21:39:59 UTC
+https://www.derdack.com/de/integrations/solarwinds -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/posts` -> HTTP 404
