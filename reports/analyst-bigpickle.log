@@ -34709,3 +34709,825 @@ STEP 6 — LEARNING
 STEP 7 — RISK
 
 [RISK] Derdack: 55 — the App Proxy disclosure de-escalated this cycle (bounded to 2 of 8 hosts, and its one internal hostname is NXDOMAIN, so impact is enumeration-only), the two HIGH-value demo-app channels are both now negatively closed, and the GraphQL class is absent estate-wide. The sole Critical item (cross-environment bearer acceptance across six shared-identity hosts) remains strictly credential-blocked, and every credential-gated hypothesis is now blocked behind a credential with **no remaining unprobed surface to spend it on**. No anonymous write primitive exists anywhere in the estate and no customer data was accessed.
+===== ANALYST bigpickle 2026-09-26 10:00:42 UTC =====
+[0m
+> build · big-pickle
+[0m
+I'll execute the 8-step analysis. Let me first check the current state and run a small number of targeted read-only probes.
+[0m$ [0mls -la 2>/dev/null; echo "---"; ls art/ 2>/dev/null | head -50
+total 964
+drwxr-xr-x 12 runner runner   4096 Sep 26 09:53 .
+drwxr-xr-x  3 runner runner   4096 Sep 26 09:53 ..
+drwxr-xr-x  7 runner runner   4096 Sep 26 09:53 .git
+drwxr-xr-x  3 runner runner   4096 Sep 26 09:53 .github
+-rw-r--r--  1 runner runner   1831 Sep 26 09:53 README.md
+-rw-r--r--  1 runner runner    156 Sep 26 09:53 analyst-out.txt
+-rw-r--r--  1 runner runner 435360 Sep 26 09:53 analyst-prompt.txt
+-rw-r--r--  1 runner runner 431481 Sep 26 09:53 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Sep 26 09:53 inventory
+drwxr-xr-x  2 runner runner   4096 Sep 26 09:53 knowledge
+drwxr-xr-x  2 runner runner   4096 Sep 26 09:53 leads
+-rw-r--r--  1 runner runner  18040 Sep 26 09:53 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Sep 26 09:53 recon-notes
+drwxr-xr-x  2 runner runner   4096 Sep 26 09:53 reports
+drwxr-xr-x  2 runner runner   4096 Sep 26 09:53 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Sep 26 09:53 scope.yml
+drwxr-xr-x  2 runner runner   4096 Sep 26 09:53 scripts
+-rw-r--r--  1 runner runner     33 Sep 26 09:53 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Sep 26 09:53 state_laguna.json
+-rw-r--r--  1 runner runner     33 Sep 26 09:53 state_ling3.json
+-rw-r--r--  1 runner runner     33 Sep 26 09:53 state_longcat.json
+-rw-r--r--  1 runner runner     33 Sep 26 09:53 state_mimo.json
+-rw-r--r--  1 runner runner     33 Sep 26 09:53 state_nemotron3.json
+drwxr-xr-x  2 runner runner  12288 Sep 26 09:53 triage
+---
+[0m
+[0m$ [0mcat scope.yml; echo "=== STATE ==="; cat state_bigpickle.json; echo; echo "=== PROBE RESULTS tail ==="; tail -80 probe-results.md
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+  passive_first: false          # deep-hunt agent: active probes allowed when scoped
+  max_requests_per_second: 1    # never hammer live infra
+  no_doom: true                 # no DoS/DDoS, no account-lockout attacks
+  account_creation: restricted  # only on test/sandbox assets, never live customer data
+  no_data_modification: true    # no writes/deletes on live customer data
+  no_pre_disclosure: true       # never disclose before program response
+  poc_required: true            # scanner output alone is REJECTED
+  redact_secrets_in_commits: true
+
+models:
+  - { id: opencode/big-pickle, name: bigpickle }
+  - { id: opencode/nemotron-3-ultra-free, name: nemotron3 }
+  - { id: opencode/longcat-2.0-free, name: longcat }
+  - { id: opencode/ling-3.0-flash-free, name: ling3 }
+  - { id: opencode/laguna-s-2.1-free, name: laguna }
+=== STATE ===
+{"phase": "POC", "target": "api"}
+=== PROBE RESULTS tail ===
+
+## 2026-09-22 00:11:49 UTC
+
+
+## 2026-09-22 05:01:35 UTC
+
+
+## 2026-09-22 09:43:18 UTC
+
+
+## 2026-09-22 14:19:13 UTC
+
+
+## 2026-09-22 18:21:52 UTC
+
+
+## 2026-09-22 21:28:51 UTC
+
+
+## 2026-09-22 23:49:12 UTC
+
+
+## 2026-09-23 02:34:14 UTC
+
+
+## 2026-09-23 08:00:46 UTC
+
+
+## 2026-09-23 13:18:40 UTC
+
+
+## 2026-09-23 17:57:04 UTC
+
+
+## 2026-09-23 20:58:02 UTC
+
+
+## 2026-09-23 23:26:49 UTC
+
+
+## 2026-09-24 01:40:06 UTC
+
+
+## 2026-09-24 06:47:23 UTC
+
+
+## 2026-09-24 12:29:28 UTC
+
+
+## 2026-09-24 17:33:07 UTC
+
+
+## 2026-09-24 20:46:14 UTC
+
+
+## 2026-09-24 23:42:15 UTC
+
+
+## 2026-09-25 02:41:48 UTC
+
+
+## 2026-09-25 08:13:32 UTC
+
+
+## 2026-09-25 13:53:46 UTC
+https://www.derdack.com/de/integrations/solarwinds -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/posts` -> HTTP 404
+
+## 2026-09-25 18:11:33 UTC
+https://www.derdack.com/de/integrations/solarwinds -> 200 len=?
+
+## 2026-09-25 21:39:59 UTC
+https://www.derdack.com/de/integrations/solarwinds -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/posts` -> HTTP 404
+
+## 2026-09-26 00:10:53 UTC
+
+
+## 2026-09-26 05:04:49 UTC
+https://www.derdack.com/de/ -> 200 len=?
+[0m
+[0m$ [0mls -la leads/ reports/ 2>/dev/null
+leads/:
+total 2876
+drwxr-xr-x  2 runner runner    4096 Sep 26 09:53 .
+drwxr-xr-x 12 runner runner    4096 Sep 26 09:53 ..
+-rw-r--r--  1 runner runner  950562 Sep 26 09:53 lead-bigpickle.md
+-rw-r--r--  1 runner runner    7905 Sep 26 09:53 lead-laguna.md
+-rw-r--r--  1 runner runner    7750 Sep 26 09:53 lead-ling3.md
+-rw-r--r--  1 runner runner    8008 Sep 26 09:53 lead-longcat.md
+-rw-r--r--  1 runner runner      18 Sep 26 09:53 lead-mimo.md
+-rw-r--r--  1 runner runner 1875573 Sep 26 09:53 lead-nemotron3.md
+-rw-r--r--  1 runner runner   73912 Sep 26 09:53 reposcan-derdack.md
+
+reports/:
+total 6524
+drwxr-xr-x  2 runner runner    4096 Sep 26 09:53 .
+drwxr-xr-x 12 runner runner    4096 Sep 26 09:53 ..
+-rw-r--r--  1 runner runner 2878450 Sep 26 09:53 analyst-bigpickle.log
+-rw-r--r--  1 runner runner   33635 Sep 26 09:53 analyst-laguna.log
+-rw-r--r--  1 runner runner   33480 Sep 26 09:53 analyst-ling3.log
+-rw-r--r--  1 runner runner   33572 Sep 26 09:53 analyst-longcat.log
+-rw-r--r--  1 runner runner 3011377 Sep 26 09:53 analyst-nemotron3.log
+-rw-r--r--  1 runner runner   10930 Sep 26 09:53 hypotheses-bigpickle.txt
+-rw-r--r--  1 runner runner      51 Sep 26 09:53 hypotheses-laguna.txt
+-rw-r--r--  1 runner runner      50 Sep 26 09:53 hypotheses-ling3.txt
+-rw-r--r--  1 runner runner      52 Sep 26 09:53 hypotheses-longcat.txt
+-rw-r--r--  1 runner runner   11598 Sep 26 09:53 hypotheses-nemotron3.txt
+-rw-r--r--  1 runner runner  619352 Sep 26 09:53 hypotheses.md
+-rw-r--r--  1 runner runner    5996 Sep 26 09:53 valid-bugs.md
+[0m
+Now executing my prior [NEXT] SCAN — the never-fingerprinted client/mobile app surface (the only scope item never touched).
+[0m$ [0mcd /tmp/opencode && for h in app.signl4.com m.signl4.com apps.signl4.com; do echo "=== $h ==="; curl -s -o /dev/null -w "dns_code=%{http_code} size=%{size_download} url=%{url_effective} redir=%{redirect_url}\n" --max-time 12 "https://$h/" 2>&1 || echo FAIL; sleep 2; done; echo "--- DNS ---"; for h in app.signl4.com m.signl4.com apps.signl4.com; do printf "%s -> " "$h"; getent hosts "$h" || echo NXDOMAIN; done
+=== app.signl4.com ===
+dns_code=000 size=0 url=https://app.signl4.com/ redir=
+FAIL
+=== m.signl4.com ===
+dns_code=000 size=0 url=https://m.signl4.com/ redir=
+FAIL
+=== apps.signl4.com ===
+dns_code=000 size=0 url=https://apps.signl4.com/ redir=
+FAIL
+--- DNS ---
+app.signl4.com -> NXDOMAIN
+m.signl4.com -> NXDOMAIN
+apps.signl4.com -> NXDOMAIN
+[0m
+`app`/`m`/`apps.signl4.com` → all NXDOMAIN. The mobile app is not on those names. Pivoting to a genuinely unprobed high-value angle: **SSRF-shaped parameters inside the anonymously-readable OpenAPI specs** (the SSRF class has 0 coverage on the SIGNL4 estate, and the specs are public + free to read).
+[0m$ [0mcd /tmp/opencode && for v in v1 v2 v3; do echo "=== $v ==="; curl -s --max-time 25 "https://connect.signl4.com/api/docs/$v/swagger.json" -o "sw-$v.json" -w "code=%{http_code} size=%{size_download}\n"; sleep 2; done; ls -la sw-*.json
+=== v1 ===
+code=200 size=493618
+=== v2 ===
+code=200 size=1216391
+=== v3 ===
+code=200 size=1213127
+-rw-r--r-- 1 runner runner  493618 Sep 26 09:54 sw-v1.json
+-rw-r--r-- 1 runner runner 1216391 Sep 26 09:54 sw-v2.json
+-rw-r--r-- 1 runner runner 1213127 Sep 26 09:54 sw-v3.json
+[0m
+All three specs live (1.2MB / 1.2MB / 494KB). Now hunting SSRF-shaped parameters (server-side URL fetch points) — never checked in any prior cycle.
+[0m$ [0mcd /tmp/opencode && python3 - <<'EOF'
+import json,re
+pat=re.compile(r'(url|uri|endpoint|callback|webhook|redirect|image|logo|icon|avatar|att|attach|src|source|proxy|fetch|import|template|file|path)',re.I)
+for v in ['v1','v2','v3']:
+    d=json.load(open(f'sw-{v}.json'))
+    hits={}
+    for path,ops in d.get('paths',{}).items():
+        for m,op in ops.items():
+            if not isinstance(op,dict): continue
+            for p in op.get('parameters',[]) or []:
+                if not isinstance(p,dict): continue
+                sch=p.get('schema',{}) or {}
+                src=sch.get('format','')+' '+sch.get('type','')+' '+p.get('type','')
+                name=p.get('name','')
+                if pat.search(name) or 'uri' in src.lower():
+                    hits.setdefault(name,[]).append((m.upper(),path,sch.get('type'),sch.get('format')))
+    print(f"=== {v} : {len(hits)} url-ish param names ===")
+    for n,l in sorted(hits.items()):
+        tps={x[2] for x in l}; fmts={x[3] for x in l}
+        print(f"  {n:28} n={len(l):3} type={tps} fmt={fmts}  eg: {l[0][0]} {l[0][1]}")
+EOF
+=== v1 : 4 url-ish param names ===
+  attachmentId                 n=  1 type={'string'} fmt={None}  eg: GET /alerts/{alertId}/attachments/{attachmentId}
+  fileName                     n=  2 type={'string'} fmt={None}  eg: GET /teams/{teamId}/alertReports/{fileName}
+  webhookId                    n=  5 type={'string'} fmt={None}  eg: GET /webhooks/{webhookId}
+  webhookIdOrTeamId            n=  1 type={'string'} fmt={None}  eg: POST /events/{webhookIdOrTeamId}
+=== v2 : 8 url-ish param names ===
+  attachmentId                 n=  1 type={'string'} fmt={None}  eg: GET /v2/alerts/{alertId}/attachments/{attachmentId}
+  eventSourceId                n=  4 type={'string'} fmt={None}  eg: GET /v2/eventDistributions
+  fileName                     n=  2 type={'string'} fmt={None}  eg: GET /v2/teams/{teamId}/alertReports/{fileName}
+  patternId                    n=  3 type={'string'} fmt={None}  eg: PUT /v2/teams/{teamId}/alertingPatterns/{patternId}
+  sourceTeamId                 n=  1 type={'string'} fmt={None}  eg: POST /v2/teams/{teamId}/holidays/years/{year}/copyFrom/{sourceTeamId}
+  templateId                   n=  6 type={'string'} fmt={None}  eg: PUT /v2/callouts/templates/{templateId}
+  webhookId                    n=  5 type={'string'} fmt={None}  eg: GET /v2/webhooks/{webhookId}
+  webhookIdOrTeamId            n=  1 type={'string'} fmt={None}  eg: POST /v2/events/{webhookIdOrTeamId}
+=== v3 : 8 url-ish param names ===
+  attachmentId                 n=  1 type={'string'} fmt={None}  eg: GET /v3/signls/{signlId}/attachments/{attachmentId}
+  eventSourceId                n=  4 type={'string'} fmt={None}  eg: GET /v3/eventsources/{eventSourceId}
+  fileName                     n=  2 type={'string'} fmt={None}  eg: GET /v3/teams/{teamId}/dutyReports/{fileName}
+  patternId                    n=  3 type={'string'} fmt={None}  eg: PUT /v3/teams/{teamId}/signalingPatterns/{patternId}
+  sourceTeamId                 n=  1 type={'string'} fmt={None}  eg: POST /v3/teams/{teamId}/holidays/years/{year}/copyFrom/{sourceTeamId}
+  templateId                   n=  4 type={'string'} fmt={None}  eg: GET /v3/templates/{templateId}
+  webhookId                    n= 10 type={'string'} fmt={None}  eg: GET /v3/webhooks/{webhookId}
+  webhookIdOrTeamId            n=  1 type={'string'} fmt={None}  eg: POST /v3/events/{webhookIdOrTeamId}
+[0m
+No `format: uri` parameter exists anywhere in V1/V2/V3 — the "server fetches a caller-supplied URL" SSRF vector is absent from the spec surface. Pivoting the same free spec corpus to a different high-value read: **internal infrastructure / credential disclosure inside the public OpenAPI** (the exact class that produced the `https://ereesus/` finding on the EA WSDL last cycle).
+[0m$ [0mcd /tmp/opencode && python3 - <<'EOF'
+import json,re
+for v in ['v1','v2','v3']:
+    raw=open(f'sw-{v}.json').read()
+    d=json.loads(raw)
+    print(f"===== {v} =====")
+    print(" servers:",json.dumps(d.get('servers'))[:300])
+    print(" host:",d.get('host'),"| basePath:",d.get('basePath'),"| schemes:",d.get('schemes'))
+    # internal / non-public hostnames
+    hosts=set(re.findall(r'https?://([A-Za-z0-9._-]+)',raw))
+    internal=[h for h in hosts if re.fullmatch(r'[a-z0-9-]+',h) or '.local' in h or '.internal' in h]
+    print(" single-label/internal hosts:",sorted(internal) if internal else "none")
+    allhosts=sorted(hosts)
+    print(" all host literals:",allhosts)
+    # secret-ish example/default values
+    sec=re.findall(r'"(?:example|default|x-example)"\s*:\s*"([^"]{6,})"',raw)
+    interesting=[s for s in set(sec) if re.search(r'(key|secret|pass|token|bearer|[A-Za-z0-9]{20,})',s,re.I)]
+    print(" example/default values (long/suspicious):",interesting[:25] if interesting else "none")
+    print(" x-s4-api-key mentions:",raw.count('x-s4-api-key'))
+EOF
+===== v1 =====
+ servers: [{"url": "https://connect.signl4.com/api"}]
+ host: None | basePath: None | schemes: None
+ single-label/internal hosts: none
+ all host literals: ['connect.signl4.com', 'docs.signl4.com', 'www.signl4.com']
+ example/default values (long/suspicious): none
+ x-s4-api-key mentions: 2
+===== v2 =====
+ servers: [{"url": "https://connect.signl4.com/api"}]
+ host: None | basePath: None | schemes: None
+ single-label/internal hosts: none
+ all host literals: ['connect.signl4.com', 'docs.signl4.com', 'www.signl4.com']
+ example/default values (long/suspicious): none
+ x-s4-api-key mentions: 2
+===== v3 =====
+ servers: [{"url": "https://connect.signl4.com/api"}]
+ host: None | basePath: None | schemes: None
+ single-label/internal hosts: none
+ all host literals: ['connect.signl4.com', 'docs.signl4.com', 'www.signl4.com']
+ example/default values (long/suspicious): none
+ x-s4-api-key mentions: 2
+[0m
+Specs are clean — no internal hostnames, no example secrets. Next genuinely-unprobed high-value class on this estate: **CORS**. The KB has a wildcard-ACAO finding on `downloads.enterprisealert.com` but **zero ACAO probe of the SIGNL4 API gateway or the 6 identity hosts** — a credentialed `Access-Control-Allow-Origin: *`/`null` on those routes would be a real cross-origin data-theft primitive. Passive: GET with an `Origin:` header, no credentials.
+[0m$ [0mcd /tmp/opencode && for u in "https://api.signl4.com/api/v2/teams" "https://connect.signl4.com/api/v1/teams" "https://api.signl4.com/identity/.well-known/openid-configuration" "https://account.signl4.com/identity/.well-known/openid-configuration" "https://connect.signl4.com/api/docs/v2/swagger.json"; do echo "=== $u ==="; curl -s -D - -o /dev/null --max-time 15 -H "Origin: https://evil.example" "$u" 2>&1 | grep -iE "^(HTTP/|access-control|vary)" ; echo; sleep 2; done
+=== https://api.signl4.com/api/v2/teams ===
+HTTP/2 401 
+
+=== https://connect.signl4.com/api/v1/teams ===
+HTTP/2 401 
+
+=== https://api.signl4.com/identity/.well-known/openid-configuration ===
+HTTP/2 200 
+access-control-allow-origin: *
+
+=== https://account.signl4.com/identity/.well-known/openid-configuration ===
+HTTP/2 200 
+access-control-allow-origin: *
+
+=== https://connect.signl4.com/api/docs/v2/swagger.json ===
+HTTP/2 200
+[0m
+`access-control-allow-origin: *` appears **only** on the public OIDC discovery documents (expected/by-design per OIDC); the authenticated data routes return **no ACAO at all**. CORS class closed. Now the intermediate-path family on the EA host, which my own KB records as under-read twice:
+[0m$ [0mcd /tmp/opencode && B="https://demo.enterprisealert.com/EAWebService"; for p in "rest/" "rest" "api/" "api" "service.asmx" "EventProviderAPI.asmx?wsdl" "EventProviderAPI.aspx?Handler=About" "rest/events" "rest/status" "rest/systems" "rest/health" "bin/" "App_Data/"; do printf "%-38s " "$p"; curl -s -o /dev/null -w "code=%{http_code} size=%{size_download} type=%{content_type}\n" --max-time 12 "$B/$p"; sleep 1.5; done
+rest/                                  code=404 size=4880 type=text/html; charset=utf-8
+rest                                   code=404 size=4878 type=text/html; charset=utf-8
+api/                                   code=404 size=4878 type=text/html; charset=utf-8
+api                                    code=404 size=4876 type=text/html; charset=utf-8
+service.asmx                           code=404 size=3832 type=text/html; charset=utf-8
+EventProviderAPI.asmx?wsdl             code=200 size=29968 type=text/xml; charset=utf-8
+EventProviderAPI.aspx?Handler=About    code=200 size=104 type=text/plain; charset=utf-8
+rest/events                            code=405 size=72 type=application/json; charset=utf-8
+rest/status                            code=404 size=4892 type=text/html; charset=utf-8
+rest/systems                           code=404 size=4894 type=text/html; charset=utf-8
+rest/health                            code=404 size=4892 type=text/html; charset=utf-8
+bin/                                   code=404 size=4869 type=text/html; charset=utf-8
+App_Data/                              code=404 size=4879 type=text/html; charset=utf-8
+[0m
+REST namespace fully closed — only `rest/events` is registered. Last differential worth testing: the KB probed all 11 `.aspx` handlers **with fabricated credentials**, which is not the same as probing them **with no credentials at all**. A handler that returns 200 anonymously but rejects fabricated creds would be a missed auth differential:
+[0m$ [0mcd /tmp/opencode && B="https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx"; for h in About RegisterEventProvider UnregisterEventProvider RaiseEvent RaiseEventAsynchronous SubmitEventUpdate GetEventStatus ResetEvent GetAlertId GetAlertDetails GetStorages GetVersion; do printf "%-26s " "$h"; curl -s --max-time 12 -w " | code=%{http_code} size=%{size_download}\n" "$B?Handler=$h" | tr -d '\n' | cut -c1-190; echo; sleep 1.5; done
+About                      Enterprise Alert® Event Provider API & Connector SDK (v9.5.26147).
+Copyright © Derdack GmbH 2004-2026 | code=200 size=104
+
+RegisterEventProvider      Error: -1
+ErrorText: The desired operation could not be performed because an unknown error occurred. Please try again. If the error persists, please contact your system administrator. | code
+
+UnregisterEventProvider    Error: -1
+ErrorText: The desired operation could not be performed because an unknown error occurred. Please try again. If the error persists, please contact your system administrator. | code
+
+RaiseEvent                 Error: -1
+ErrorText: The desired operation could not be performed because an unknown error occurred. Please try again. If the error persists, please contact your system administrator. | code
+
+RaiseEventAsynchronous     Error: -1
+ErrorText: The desired operation could not be performed because an unknown error occurred. Please try again. If the error persists, please contact your system administrator. | code
+
+SubmitEventUpdate          Error: -1
+ErrorText: The desired operation could not be performed because an unknown error occurred. Please try again. If the error persists, please contact your system administrator. | code
+
+GetEventStatus             Error: -1
+ErrorText: The desired operation could not be performed because an unknown error occurred. Please try again. If the error persists, please contact your system administrator. | code
+
+ResetEvent                 Error: -1
+ErrorText: The desired operation could not be performed because an unknown error occurred. Please try again. If the error persists, please contact your system administrator. | code
+
+GetAlertId                 <ul><li><a href=/EAWebService/EventProviderAPI.aspx?Handler=About&ShowMethodInfo=1>About</a></li></ul><ul><li><a href=/EAWebService/EventProviderAPI.aspx?Handler=RegisterEventProvider&ShowMe
+
+GetAlertDetails            <ul><li><a href=/EAWebService/EventProviderAPI.aspx?Handler=About&ShowMethodInfo=1>About</a></li></ul><ul><li><a href=/EAWebService/EventProviderAPI.aspx?Handler=RegisterEventProvider&ShowMe
+
+GetStorages                <ul><li><a href=/EAWebService/EventProviderAPI.aspx?Handler=About&ShowMethodInfo=1>About</a></li></ul><ul><li><a href=/EAWebService/EventProviderAPI.aspx?Handler=RegisterEventProvider&ShowMe
+
+GetVersion                 <ul><li><a href=/EAWebService/EventProviderAPI.aspx?Handler=About&ShowMethodInfo=1>About</a></li></ul><ul><li><a href=/EAWebService/EventProviderAPI.aspx?Handler=RegisterEventProvider&ShowMe
+[0m
+Clear **differential** found: `About` returns real data (200), the 7 real handlers return `Error: -1`, but `GetAlertId`/`GetAlertDetails`/`GetStorages`/`GetVersion` return **200 with the method-list help page** — an unrecognized-handler fallback. That raises two questions: (1) what is the authoritative handler list, and (2) does that 200 fallback **reflect the caller-supplied `Handler` value**? A reflection here would be unauthenticated reflected XSS — a top-priority chain.
+[0m$ [0mcd /tmp/opencode && B="https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx"; echo "=== authoritative handler list (from fallback page) ==="; curl -s --max-time 15 "$B?Handler=ZZnotarealhandlerZZ" | grep -oE 'Handler=[A-Za-z]+' | sort -u; echo; echo "=== reflection test: benign unique marker ==="; curl -s --max-time 15 -w "\n[code=%{http_code} size=%{size_download}]\n" "$B?Handler=MARKERQQQ999" | grep -c "MARKERQQQ999"; echo "(count of marker occurrences in body)"
+=== authoritative handler list (from fallback page) ===
+Handler=About
+Handler=CloseAlert
+Handler=GetAlertStatus
+Handler=GetEventStatus
+Handler=RaiseEvent
+Handler=RaiseEventAsynchronous
+Handler=RegisterEventProvider
+Handler=ResetEvent
+Handler=SubmitEventUpdate
+Handler=UnregisterEventProvider
+Handler=ZZnotarealhandlerZZ
+
+=== reflection test: benign unique marker ===
+1
+(count of marker occurrences in body)
+[0m
+**Reflection confirmed** — the `Handler` value is echoed into the 200 body. Authoritative list is **10 handlers** (my prior KB "11" included a fabricated name). Now the decisive question: is the reflection escaped? Let me inspect the exact context.
+[0m$ [0mcd /tmp/opencode && B="https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx"; curl -s --max-time 15 "$B?Handler=MARKERQQQ999" | grep -n "MARKERQQQ999" | cut -c1-400; echo "--- surrounding context ---"; curl -s --max-time 15 "$B?Handler=MARKERQQQ999" | tr '<' '\n' | grep -n -A2 -B2 "MARKERQQQ999" | cut -c1-300
+10:    <form name="form1" method="post" action="./EventProviderAPI.aspx?Handler=MARKERQQQ999" id="form1">
+--- surrounding context ---
+76-body>
+77-    
+78:form name="form1" method="post" action="./EventProviderAPI.aspx?Handler=MARKERQQQ999" id="form1">
+79-
+80-input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwULLTE2MTY2ODcyMjkPFgIeE1ZhbGlkYXRlUmVxdWVzdE1vZGUCAWRkK8r82jAZRjMquqBwbzn0CH5BgnvWAkLZyHnYA9H/z5E=" />
+[0m
+Reflection sits inside a **double-quoted** `action` attribute of an unauthenticated WebForms page. Whether this is exploitable depends entirely on escaping. Testing reflection-characterization (benign, no payload):
+[0m$ [0mcd /tmp/opencode && B="https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx"; echo "--- double-quote (%22) ---"; curl -s --max-time 15 "$B?Handler=A%22B" | grep -o 'Handler=A[^"]\{0,12\}' | head -3; echo "--- single-quote (%27) ---"; curl -s --max-time 15 "$B?Handler=A%27B" | grep -o "Handler=A[^<]\{0,12\}" | head -3; echo "--- less-than (%3C) ---"; curl -s --max-time 15 "$B?Handler=A%3CB" | grep -o 'Handler=A.\{0,14\}' | head -3
+--- double-quote (%22) ---
+Handler=About&ShowMet
+Handler=A%22B
+--- single-quote (%27) ---
+Handler=About&ShowMet
+Handler=A%27B" id="fo
+--- less-than (%3C) ---
+Handler=About&ShowMetho
+Handler=A%3cB" id="form
+[0m
+**Decisive negative — and a trap worth recording.** The value is reflected but *contextually URL-encoded* (`"`→`%22`, `'`→`%27`, `<`→`%3c`), so it can never break out of the double-quoted `action` attribute or open a tag. This *looks* like textbook reflected XSS (reflected param, 200, WebForms page) and is **not**. Class closed.
+
+But that page carries a `__VIEWSTATE` field — worth checking passively whether a MAC is present (ViewState forgery → deserialization is otherwise a CRITICAL unauth path). Decoding the already-obtained blob, no POST required:
+[0m$ [0mcd /tmp/opencode && python3 - <<'EOF'
+import base64,binascii
+vs="/wEPDwULLTE2MTY2ODcyMjkPFgIeE1ZhbGlkYXRlUmVxdWVzdE1vZGUCAWRkK8r82jAZRjMquqBwbzn0CH5BgnvWAkLZyHnYA9H/z5E="
+raw=base64.b64decode(vs)
+print("total bytes:",len(raw))
+print("hex head:",binascii.hexlify(raw[:24]).decode())
+print("first 4 bytes LE u32:",int.from_bytes(raw[:4],'little'),"(0x1c = payload length marker)")
+paylen=int.from_bytes(raw[:4],'little')
+payload=raw[4:4+paylen]
+mac=raw[4+paylen:]
+print("declared payload len:",paylen,"| actual payload bytes:",len(payload))
+print("MAC segment bytes:",len(mac),"->",binascii.hexlify(mac).decode())
+print()
+print("=== interpretation ===")
+if len(mac)>=20:
+    print("A 20-byte HMAC-SHA1 segment IS present after the payload.")
+    print("=> ViewState MAC validation is ENABLED (enableViewStateMac=true + machineKey).")
+    print("=> ViewState cannot be forged/tampered without the server machineKey.")
+    print("=> ViewState deserialization RCE class is CLOSED (no POST test needed).")
+else:
+    print("No trailing MAC segment -> MAC likely ABSENT, would be a critical finding.")
+EOF
+total bytes: 77
+hex head: ff010f0f050b2d313631363638373232390f16021e135661
+first 4 bytes LE u32: 252641791 (0x1c = payload length marker)
+declared payload len: 252641791 | actual payload bytes: 73
+MAC segment bytes: 0 -> 
+
+=== interpretation ===
+No trailing MAC segment -> MAC likely ABSENT, would be a critical finding.
+[0m
+## Objective
+- Continue the Derdack bug-bounty hunt in POC phase for `api`, following the required eight-step structured workflow.
+- Prioritize concrete high-value logic flaws while avoiding rejected classes and live credential/customer-data testing.
+
+## Important Details
+- Scope: Derdack-owned infrastructure and products, including SIGNL4 and Enterprise Alert; report at `bugs.olivermaicher.eu`.
+- Live probes must be passive-first, ≤1 rps, and GET/HEAD/OPTIONS only; no mutation, credentials, brute force, or customer-data access.
+- Do not repeat exhausted `401/404/405/411` route-map probes or standalone OPTIONS/TRACE checks.
+- `vps.signl4.com` is stale DNS to a GoDaddy shared default host, not researcher-claimable; correct severity is MISCONFIG LOW-Medium, gated on DNS/hosting control.
+- Shared OIDC configuration is not proof of token forgery: no cross-environment bearer acceptance has been observed.
+- Latest state: `{"phase": "POC", "target": "api"}`.
+
+## Work State
+### Completed
+- Closed GraphQL across `connect.signl4.com`, `api.signl4.com`, and `demo.enterprisealert.com`: 15/15 paths returned uniform bare 404.
+- Bounded Azure AD App Proxy identifier disclosure to 2/8 staging hosts; `s4dev5/6/7.enterprisealert.com` returned bare 404 without `x-ms-proxy-*` headers.
+- Verified `demo.enterprisealert.com/EAWebService/EventConnectorServer.ashx` has zero installed-handler rows; no alert-exfiltration channel exists.
+- Verified `demo.enterprisealert.com/EAWebService/web.config` returns 404; no configuration source disclosure.
+- Enumerated `demo.enterprisealert.com/EAWebService/`: 200 directory index, exact version `9.5.26147`, 11 `.aspx` handlers, 12-operation `.asmx` WSDL, REST events, and SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`.
+- Confirmed all EA credential-bearing handlers gate fabricated credentials with `Error-1`/`401`; no anonymous write primitive.
+- Decoded pre-auth resource `reuropenorth-dkds.dkds.core.windows.net`; it and related Azure names are NXDOMAIN.
+- Completed API namespace map: V1/V2/V3, webhook, and events mapped; `/api/v4` and its Swagger are absent.
+- Confirmed six identity hosts—`connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`—share RS256 JWKS `kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`.
+- Recorded DPoP metadata as a mitigating control; no issuer, JWKS, scope, grant, PKCE, or client-auth drift.
+- Closed public credential-leak searches across 8+ corpora; no live API key, client secret, or webhook secret recovered.
+- Corrected `docs.enterprisealert.com`: it targets live Azure SWA `derdackdownloads.z13.web.core.windows.net` and returns `WebContentNotFound`, not a claimable dangling A record.
+
+### Active
+- Highest-value lead: cross-environment bearer-token acceptance across the six shared-identity hosts, confidence 76, `AUTH_HELPED`; currently unproven.
+- Additional survivors: EA credential-in-URL design, HUMAN_ONLY; App Proxy inventory disclosure, PASSIVE; public EA SDK index/SOAP contract disclosure, PASSIVE.
+- `app.signl4.com` and `m.signl4.com` remain the only completely unprobed client/mobile surfaces.
+- Passive API estate is considered exhausted with no anonymous read surface or new differentials.
+
+### Blocked
+- Cross-environment token testing needs an owner-approved non-production bearer token; record only status, issuer, audience, scopes, and SHA-256 token fingerprint.
+- V1 `userId`, V2 `changePassword`, V3 invoice/file, prepaid, and license BOLA checks all require legitimate credentials.
+- `vps.signl4.com` takeover is blocked on DNS/GoDaddy account control and has no claimable primitive from the researcher seat.
+- No public `client_secret`, API key, or webhook secret has been located.
+
+## Next Move
+1. `[NEXT] SCAN`: GET `https://app.signl4.com/` and `https://m.signl4.com/` at ≤1 rps; for any 200 SPA, inspect only inline `__NEXT_DATA__` or `config.js` for `issuer`, `client_id`, `redirect_uri`, and `audience`.
+2. If neither host is productive, preserve the API phase as exhausted and escalate the four frozen findings for human/report review rather than repeat route probes.
+
+## Relevant Files
+- `scope.yml`: authoritative eligible assets.
+- `inventory/derdack.md`: initial Derdack host inventory.
+- `art/lead_bigpickle.txt`: current analyst leads and probe results.
+- `art/lead_nemotron3.txt`: parallel findings, including the overstated `vps.signl4.com` takeover lead.
+- `hypotheses-bigpickle.txt`: current hypotheses and next actions.
+- `hypotheses-nemotron3.txt`: parallel hypothesis queue and report dossier state.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+My framing assumption was wrong — the blob is an `ObjectStateFormatter` token stream (`ff 01 …`), not a `[len][payload][mac]` frame, so "no MAC" is **not** proven. I must not file a bogus CRITICAL. Correcting the parse:
+[0m$ [0mcd /tmp/opencode && python3 - <<'EOF'
+import base64,binascii,math
+def ent(b):
+    if not b: return 0
+    c={}; 
+    for x in b: c[x]=c.get(x,0)+1
+    return -sum(v/len(b)*math.log2(v/len(b)) for v in c.values())
+vs="/wEPDwULLTE2MTY2ODcyMjkPFgIeE1ZhbGlkYXRlUmVxdWVzdE1vZGUCAWRkK8r82jAZRjMquqBwbzn0CH5BgnvWAkLZyHnYA9H/z5E="
+raw=base64.b64decode(vs)
+print("total bytes:",len(raw))
+print("full hex:\n",binascii.hexlify(raw).decode())
+print("\nhex head (token stream):",binascii.hexlify(raw[:8]).decode(),"-> 0xff=TypeConverterSerializedContent, 0x01=payload len 1, 0x0f=StringToken")
+tail=raw[-20:]
+print("\ntrailing 20 bytes:",binascii.hexlify(tail).decode())
+print("trailing-20 entropy: %.2f bits/byte (max 8.0)"%ent(tail))
+print("whole-blob entropy: %.2f bits/byte"%ent(raw))
+print("\n=== HONEST CONCLUSION ===")
+print("This framing does NOT reveal whether enableViewStateMac is on.")
+print("ASP.NET 4.5+/core default is enableViewStateMac=true with an auto-generated")
+print("machineKey, so the *expected* posture is MAC-ENFORCED (not forgeable).")
+print("Confirming that requires a tampered-ViewState replay (POST), which the")
+print("operating rules forbid on live probes -> UNPROVABLE under current constraints.")
+EOF
+total bytes: 77
+full hex:
+ ff010f0f050b2d313631363638373232390f16021e1356616c6964617465526571756573744d6f6465020164642bcafcda301946332abaa0706f39f4087e41827bd60242d9c879d803d1ffcf91
+
+hex head (token stream): ff010f0f050b2d31 -> 0xff=TypeConverterSerializedContent, 0x01=payload len 1, 0x0f=StringToken
+
+trailing 20 bytes: 6f39f4087e41827bd60242d9c879d803d1ffcf91
+trailing-20 entropy: 4.32 bits/byte (max 8.0)
+whole-blob entropy: 5.67 bits/byte
+
+=== HONEST CONCLUSION ===
+This framing does NOT reveal whether enableViewStateMac is on.
+ASP.NET 4.5+/core default is enableViewStateMac=true with an auto-generated
+machineKey, so the *expected* posture is MAC-ENFORCED (not forgeable).
+Confirming that requires a tampered-ViewState replay (POST), which the
+operating rules forbid on live probes -> UNPROVABLE under current constraints.
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && tail -30 reports/hypotheses-bigpickle.txt
+[HYP] Unauthenticated disclosure of the complete EA 9.5.26147 Event Provider API and Connector SDK surface on the public demo host, via directory index and generated SOAP help page
+class: MISCONFIG
+asset: demo.enterprisealert.com/EAWebService/ and /EAWebService/EventProviderAPI.asmx
+confidence: 55
+reasoning: `/EAWebService/` → 200, 1824 B index page naming all three surfaces and pinning the exact build `v9.5.26147`. `EventProviderAPI.asmx` without `?wsdl` → 200, 5292 B auto-generated ASP.NET service-help page carrying the 12-operation SOAP contract. `EventProviderAPI.aspx` (11 handlers), `.asmx?wsdl` (12 ops) and `EventConnectorServer.ashx` are all anon-readable, and the index links them all. No `web.config` disclosure (404). Every credential path still gates (Error-1 / 401), so this is disclosure-only.
+evidence_needed: Owner confirmation that a public demo host is intended to publish the full unauthenticated SDK index and operation contract, or that the instance should sit behind App Proxy pre-authentication.
+verify_steps: `GET https://demo.enterprisealert.com/EAWebService/` → 200, record title/version/link list; `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx` → 200, record operation names only; `GET https://demo.enterprisealert.com/EAWebService/web.config` → expect 404; submit no credential, invoke no handler.
+impact: A public internet client gets a complete, machine-readable map of the alert-ingestion and connector surface of a product with 2+ documented CVEs plus exact build version — materially shortens reconnaissance against every Derdack-deployed EA instance; Low-Medium, no data access.
+testability: PASSIVE
+[HYP] Cross-environment bearer-token acceptance through six shared-identity SIGNL4 hosts
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount.signl4.com/identity and the /api/v1|v2|v3 consumers
+confidence: 76
+reasoning: Six hosts serve a byte-identical RS256 JWKS (`kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, `x5t ke5PPOlOtRevZrJU90l-yw4x7ic`, `n` digest `138f432b…`); `account.signl4.com/identity` advertises `issuer=https://connect.signl4.com/identity` (foreign-issuer mint); shared `client_id 692A0A56-892F-4AE2-8259-76DA398990B6`; `password` grant listed on staging; `code_challenge_methods_supported ["plain","S256"]`; new DPoP metadata present as a mitigating control. Shared configuration is proven; **token acceptance is not** — I have never observed a token accepted outside its environment.
+evidence_needed: An owner-approved non-production bearer token accepted by an API host outside its intended environment, recording only HTTP status, issuer, audience, scopes, and a SHA-256 token fingerprint.
+verify_steps: `GET https://api.signl4.com/identity/.well-known/openid-configuration` → 200; GET the advertised `jwks_uri` → 200; compare issuer/kid/x5t/`n` digest and DPoP fields only; **do not submit any token**.
+impact: If cross-environment acceptance exists → cross-tenant alert, team, subscription, billing and file access, Critical. Shared configuration and a shared key alone prove no direct exploit.
+testability: AUTH_HELPED
+[PARKED] Connector SDK pre-auth alert channel (42): PASSIVE and fully probed — the handler table is **empty**, so the highest-impact reading of this hypothesis is disproven, not merely unconfirmed. Recorded as a verified negative, not carried as a finding.
+[PARKED] Pre-auth MSAL analytic cookie internal hostname (66 → 30): the decoded value `reuropenorth-dkds.dkds.core.windows.net` is NXDOMAIN, and neither `dkds.core.windows.net` nor `reuropenorth-dkds.azurewebsites.net` resolves. There is no reachable backend and nothing claimable — the chain terminates in an unresolvable string.
+[PARKED] GraphQL introspection: 15/15 uniform bare 404 across three hosts. Class closed, no hypothesis.
+[PARKED] vps.signl4.com takeover and the credential-in-URL leak-oracle: REJECTED-class (no claimable primitive from the researcher seat; 8+ corpora negative) — unchanged, not re-raised.
+[FINAL] 1) Cross-environment SIGNL4 bearer-token acceptance — 76, AUTH_HELPED. 2) URL-embedded credential design on the EA alert API — 74, HUMAN_ONLY. 3) Azure App Proxy application-inventory disclosure, now bounded 2/8 — 72, PASSIVE. 4) Unauth EA SDK index + SOAP contract disclosure incl. exact build — 55, PASSIVE.
+[NEXT] SCAN: the SIGNL4 **client applications** (app/mobile) are the one in-scope surface never fingerprinted — the directive names "mobile applications" and nothing in the KB touches them. Probe `https://app.signl4.com/` and `https://m.signl4.com/` at ≤1 rps, GET only, and for any 200 SPA extract the inline `__NEXT_DATA__` / `config.js` JSON and read only `issuer`, `client_id`, `redirect_uri` and `audience` — no token, no credential.
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: root-only and leaf-only probing both under-read this host — the directory index and the generated `.asmx` help page carry the same version + operation contract the leaves do; full-host status needs the intermediate paths.
+[LEARN] REJECTED AUTH @ demo.enterprisealert.com/EAWebService/EventConnectorServer.ashx: the Connector SDK is anon-reachable but its installed-handlers table is **empty**, so the poll channel cannot exfiltrate alert payloads — the HIGH-value reading is disproven by a single passive GET.
+[LEARN] REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero `x-ms-proxy-*` headers, matching s4dev1/2/3/8 — the App Proxy identifier disclosure is bounded at 2 of 8 hosts, not an estate-wide defect.
+[LEARN] REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is absent from the API gateway and the demo app; no alternative read surface remains for the AUTH_HELPED queue.
+[LEARN] REJECTED MISCONFIG @ demo.enterprisealert.com/EAWebService/web.config: 404 — no source/config disclosure on the anon-readable EA path family.
+[RISK] Derdack: 55 — the App Proxy disclosure de-escalated this cycle (bounded to 2 of 8 hosts, and its one internal hostname is NXDOMAIN, so impact is enumeration-only), the two HIGH-value demo-app channels are both now negatively closed, and the GraphQL class is absent estate-wide. The sole Critical item (cross-environment bearer acceptance across six shared-identity hosts) remains strictly credential-blocked, and every credential-gated hypothesis is now blocked behind a credential with **no remaining unprobed surface to spend it on**. No anonymous write primitive exists anywhere in the estate and no customer data was accessed.
+[0m
+The blob fully parses: content is a **flat 3-key string dictionary** (`-1616687229`, `ValidateRequestMode`, `d`) — no `TypeName`/`MethodName`/`ObjectDataProvider` gadget surface at all. Let me persist this cycle's findings to the knowledge base.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && cat >> reports/hypotheses-bigpickle.txt <<'EOF'
+[LEARN] REJECTED OTHER @ app|m|apps.signl4.com: all three NXDOMAIN, and `curl` never established a connection (code=000). The [NEXT] client/mobile scan target does not exist under those names — the SIGNL4 mobile app is not published on an `app.`/`m.`/`apps.` subdomain. The "mobile applications" scope item remains **unfingerprinted by hostname, not closed**: resolving it needs a different discovery source (app-store package / API gateway app registration / CSP allowlist), not more guessing at names.
+[LEARN] REJECTED OTHER @ connect|api|account.signl4.com, CORS class: `GET` with `Origin: https://evil.example` on the authenticated data routes returns **no `access-control-*` header at all** (401). `access-control-allow-origin: *` appears only on the public `/.well-known/openid-configuration` documents of `api.` and `account.` — which is required and expected per OIDC Discovery so third-party client apps can read them. No credentialed-CORS data-theft primitive exists on the API gateway. Class closed.
+[LEARN] REJECTED OTHER @ connect.signl4.com/api/docs/{v1,v2,v3}/swagger.json, SSRF class: parsed all three anon-readable specs (493618 / 1216391 / 1213127 B). Zero parameters carry `format: uri`; every `url|uri|endpoint|callback|image|att|file|path`-shaped name resolves to a plain `string` ID/path segment (`attachmentId`, `fileName`, `webhookId`, `templateId`, `patternId`, `eventSourceId`, `sourceTeamId`). There is **no caller-supplied server-fetch parameter** on V1/V2/V3, so the metadata-SSRF class has no entry point on the public spec surface.
+[LEARN] REJECTED MISCONFIG @ connect.signl4.com/api/docs/{v1,v2,v3}/swagger.json: specs disclose **no internal infrastructure and no secrets**. `servers` is `https://connect.signl4.com/api` on all three; the only host literals in 2.9 MB of spec are `connect.`/`docs.`/`www.signl4.com`; **zero single-label or `.internal`/`.local` hostnames** (contrast the `https://ereesus/EAWebService/EventProviderAPI.asmx` internal host that the EA WSDL did leak); zero suspicious `example`/`default` values. The public-spec disclosure class is empty.
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService, intermediate paths: probed the middle of the namespace (`rest/`, `rest`, `api/`, `api`, `service.asmx`, `bin/`, `App_Data/`, plus 4 `rest/*` leaves) — **all bare 404** except `rest/events` (405 GET / 401 POST). The anon-readable surface is now **exactly** five paths: `/EAWebService/`, `EventProviderAPI.aspx`, `EventProviderAPI.asmx`(+`?wsdl`), `EventConnectorServer.ashx`, `rest/events`. Full map complete; no hidden REST branch.
+[LEARN] CORRECTION @ demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx: the recorded handler count of **11 was wrong** — it included fabricated names. The authoritative list is **10**: About, CloseAlert, GetAlertStatus, GetEventStatus, RaiseEvent, RaiseEventAsynchronous, RegisterEventProvider, ResetEvent, SubmitEventUpdate, UnregisterEventProvider. Any unrecognized `Handler` value returns **200 with the method-list help page**, so a 200 is *not* evidence of a live handler. Correct per-handler anon status: `About` → 200 real data (v9.5.26147); CloseAlert/GetAlertStatus/GetEventStatus/RaiseEvent/RaiseEventAsynchronous/RegisterEventProvider/ResetEvent/SubmitEventUpdate/UnregisterEventProvider → `Error: -1`; `GetAlertId`/`GetAlertDetails`/`GetStorages`/`GetVersion` → 200 **fallback help page, not handlers**.
+[LEARN] REJECTED XSS @ demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=: the `Handler` value **is reflected** into a 200 response inside the double-quoted `action` attribute of the WebForms `<form name="form1">` — which reads as textbook reflected XSS. It is **not**: reflection is contextually URL-encoded (`"`→`%22`, `'`→`%27`, `<`→`%3c`), so it can never terminate the attribute or open a tag. Single reflection point, encoding correct. Verified negative — a careless pass would have filed this as XSS.
+[HYP] ViewState tamperability on the anon EA Event Provider WebForms page (deserialization RCE)
+class: RCE
+asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx (__VIEWSTATE)
+confidence: 15
+reasoning: The fallback help page is a WebForms page carrying a `__VIEWSTATE` blob that base64-decodes cleanly (77 B) to an `ObjectStateFormatter` token stream (`ff 01 0f 0f 05 0b "-1616687229" … 1e "ValidateRequestMode" …`). The state is a **flat string→string dictionary** — no `TypeName`, `MethodName`, or `ObjectDataProvider` reference, so the *observed* blob carries no deserialization gadget. Whether `enableViewStateMac` is on **cannot be determined from the blob**: the framing is a token stream, not `[len][payload][mac]`, and my first decode (which inferred "no MAC" from trailing bytes) was an artifact of a wrong parse, not a server finding. ASP.NET 4.5+ defaults `enableViewStateMac=true` with an auto-generated `machineKey`, so the *expected* posture is MAC-ENFORCED.
+evidence_needed: A tampered-ViewState replay against the handler page showing whether the server rejects a modified blob. That needs a POST body, which the operating rules forbid on live probes.
+verify_steps: Offline/locally reproduce the EA 9.5.26147 WebForms page and inspect `pages enableViewStateMac` / `machineKey` in `web.config` (note: remote `web.config` is 404). Do **not** POST a tampered blob to the live demo.
+impact: Only if MAC were disabled *and* a gadget chain were reachable → unauthenticated RCE on the EA host. Two independent conditions, neither met so far.
+testability: UNPROVABLE_UNDER_RULES
+[RISK] Derdack: 55 — the client/mobile scan target did not exist (`app`/`m`/`apps` NXDOMAIN), so that scope item is still unresolved by discovery rather than closed. Four independent classes closed on the public surface this cycle: CORS (no ACAO on authenticated routes), SSRF-via-spec (no `format: uri` anywhere), public-spec disclosure (no internal hosts, no secrets), and reflected XSS (reflection is URL-encoded, cannot break out). The EA demo namespace is now a **complete** five-path map. Two false-positive traps were identified and refuted before they could be filed: the XSS reflection above, and a mis-parsed ViewState blob that a weaker pass would have escalated as unauthenticated RCE. The Critical item (cross-environment bearer acceptance) stays credential-blocked, and no anonymous write primitive or customer data access exists.
+EOF
+echo "appended $(wc -l < reports/hypotheses-bigpickle.txt) total lines"
+appended 69 total lines
+[0m
+Let me resolve the open mobile-app item with a real discovery source rather than another hostname guess — reading the CSP trust lists and the public docs.
+[0m$ [0mcd /tmp/opencode && echo "=== CSP / trust lists ==="; for u in "https://connect.signl4.com/" "https://account.signl4.com/manage"; do echo "--- $u ---"; curl -s -D - -o /dev/null --max-time 15 "$u" | grep -iE "content-security-policy|x-frame|^HTTP/" | head -5; sleep 2; done; echo; echo "=== public docs: mobile app references ==="; curl -s --max-time 20 "https://docs.signl4.com/" -o docs.html -w "code=%{http_code} size=%{size_download}\n"; grep -oiE '(https?://)?[a-z0-9.-]*signl4[a-z0-9.-]*/[a-z0-9/_-]*' docs.html 2>/dev/null | sort -u | grep -iE 'app|mobile|m\.|/m/' | head -20
+=== CSP / trust lists ===
+--- https://connect.signl4.com/ ---
+HTTP/2 301 
+x-frame-options: DENY
+--- https://account.signl4.com/manage ---
+HTTP/2 302 
+x-frame-options: DENY
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://connect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+
+=== public docs: mobile app references ===
+code=200 size=35430
+[0m
+Real finds. The `content-security-policy-report-only` on `account.signl4.com/manage` discloses two **previously unknown environments** — `labconnect.signl4.com` and `labaccount.signl4.com` (a 3rd/4th identity environment, directly feeding the Critical cross-env hypothesis), all 8 `s4dev*` hosts, and a `report-uri` of `connect.signl4.com/api/v2/csp/report` (a candidate anonymous write primitive). Testing the new lab environment against the shared-JWKS hypothesis:
+[0m$ [0mcd /tmp/opencode && for h in labconnect.signl4.com labaccount.signl4.com; do echo "=== $h ==="; curl -s --max-time 15 -o /dev/null -w "root code=%{http_code} redir=%{redirect_url}\n" "https://$h/"; sleep 1.5; curl -s --max-time 15 "https://$h/identity/.well-known/openid-configuration" -o "disc-$h.json" -w "discovery code=%{http_code} size=%{size_download}\n"; sleep 1.5; done; echo; echo "=== compare issuer/issuer+discovery across all identity hosts ==="; python3 - <<'EOF'
+import json,urllib.request,ssl,hashlib
+ctx=ssl.create_default_context(); ctx.check_hostname=False; ctx.verify_mode=ssl.CERT_NONE
+hosts=["connect","devconnect","api","devapi","account","devaccount","labconnect","labaccount"]
+iss={}; jw={}
+for h in hosts:
+    u=f"https://{h}.signl4.com/identity/.well-known/openid-configuration"
+    try:
+        d=json.loads(urllib.request.urlopen(u,timeout=15,context=ctx).read())
+        iss[h]=d.get("issuer")
+        jw[h]=d.get("jwks_uri")
+    except Exception as e: iss[h]=f"ERR {type(e).__name__}"
+for h in hosts: print(f"  {h:12} issuer={iss.get(h)}")
+print("\n=== jwks kid/x5t comparison (7 hosts that responded) ===")
+seen={}
+for h in hosts:
+    if not jw.get(h) or jw[h].startswith("ERR"): continue
+    try:
+        j=json.loads(urllib.request.urlopen(jw[h],timeout=15,context=ctx).read())
+        for k in j.get("keys",[]):
+            n=k.get("n",""); dig=hashlib.sha256(n.encode()).hexdigest()[:10]
+            key=(k.get("kid"),k.get("x5t"),dig,k.get("kty"),k.get("alg"))
+            seen.setdefault(key,[]).append(h)
+    except Exception as e: print(f"  {h} jwks ERR {type(e).__name__}")
+for key,hl in seen.items():
+    print(f"  kid={key[0]}\n    x5t={key[1]} n_digest={key[2]} {key[3]}/{key[4]}\n    shared by ({len(hl)}): {hl}")
+EOF
+=== labconnect.signl4.com ===
+root code=502 redir=
+discovery code=502 size=183
+=== labaccount.signl4.com ===
+root code=502 redir=
+discovery code=502 size=183
+
+=== compare issuer/issuer+discovery across all identity hosts ===
+  connect      issuer=https://connect.signl4.com/identity
+  devconnect   issuer=https://devconnect.signl4.com/identity
+  api          issuer=https://connect.signl4.com/identity
+  devapi       issuer=https://devconnect.signl4.com/identity
+  account      issuer=https://connect.signl4.com/identity
+  devaccount   issuer=https://devconnect.signl4.com/identity
+  labconnect   issuer=ERR HTTPError
+  labaccount   issuer=ERR HTTPError
+
+=== jwks kid/x5t comparison (7 hosts that responded) ===
+  kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256
+    x5t=ke5PPOlOtRevZrJU90l-yw4x7ic n_digest=138f432ba8 RSA/RS256
+    shared by (6): ['connect', 'devconnect', 'api', 'devapi', 'account', 'devaccount']
+[0m
+`labconnect`/`labaccount` answer with **502** — the hosts exist and are fronted, but their origins are dead. That's the discriminator for a takeover candidate, so let me read the 502 headers: an orphaned App Proxy app returns its own deprovisioned page (claimable), whereas a live proxy with a dead backend returns 502.
+[0m$ [0mcd /tmp/opencode && for h in labconnect.signl4.com labaccount.signl4.com s4dev4.enterprisealert.com; do echo "=== $h ==="; curl -s -D - --max-time 15 "https://$h/identity/.well-known/openid-configuration" | grep -iE "^HTTP/|x-ms-|x-app-service|x-azure|location|server:" ; echo "--- body ---"; curl -s --max-time 15 "https://$h/identity/.well-known/openid-configuration" | head -c 300; echo; echo; sleep 2; done; echo "=== DNS ==="; for h in labconnect.signl4.com labaccount.signl4.com s4dev4.enterprisealert.com; do printf "%-32s " "$h"; getent hosts "$h" | tr '\n' ' ' || echo NXDOMAIN; echo; done
+=== labconnect.signl4.com ===
+HTTP/2 502 
+server: Microsoft-Azure-Application-Gateway/v2
+--- body ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>Microsoft-Azure-Application-Gateway/v2</center>
+</body>
+</html>
+
+
+=== labaccount.signl4.com ===
+HTTP/2 502 
+server: Microsoft-Azure-Application-Gateway/v2
+--- body ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>Microsoft-Azure-Application-Gateway/v2</center>
+</body>
+</html>
+
+
+=== s4dev4.enterprisealert.com ===
+HTTP/1.1 504 Gateway Timeout
+x-ms-proxy-app-id: eb3307ea-bd50-4a4f-9500-ebc778fcba8e
+x-ms-proxy-group-id: 431e7607-7c5a-45ed-8fcd-4a72535eda1c
+x-ms-proxy-subscription-id: ff2a095d-01ff-4edb-99e6-38b97f49467c
+x-ms-proxy-transaction-id: bdaefe94-cf55-4d93-b113-b063dfedd091
+x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+x-ms-proxy-data-center: NEUR
+x-ms-proxy-connector-id: 00000000-0000-0000-0000-000000000000
+x-ms-proxy-error-details: NoActiveConnector
+--- body ---
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8"/>
+    <title>This page can't be displayed</title>
+  </head>
+  <body style="margin-top: 4%; margin-left: 4%">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAawAAAFZCAYAAADElxs
+
+=== DNS ===
+labconnect.signl4.com            13.93.49.201    s4labdevtestappgw.westeurope.cloudapp.azure.com labconnect.signl4.com 
+labaccount.signl4.com            13.93.49.201    s4labdevtestappgw.westeurope.cloudapp.azure.com labaccount.signl4.com 
+s4dev4.enterprisealert.com       4.207.244.99    www.tm.eur.proxy-3.appproxy.trafficmanager.net s4dev4.enterprisealert.com s4dev4-derdack.msappproxy.net ff2a095d-01ff-4edb-99e6-38b97f49467c.tenant.runtime.msappproxy.net cwap-eur1-runtime.routing.msappproxy.net eur.proxy-3.appproxy.msidentity.com
+[0m
+`lab*` = Application Gateway v2 (`s4labdevtestappgw.westeurope.cloudapp.azure.com`), 502 with the gateway alive → dead backend, **not** claimable. `s4dev4` discloses `x-ms-proxy-*` with `x-ms-proxy-error-details: NoActiveConnector` — a *third* App Proxy identifier and evidence a staging front-end has no healthy connector. Let me nail the accurate disclosure count across all 8 rather than leave the stale "2/8":
+[0m$ [0mcd /tmp/opencode && echo "host                      code  proxyhdr  app-id / error-detail"; for i in 1 2 3 4 5 6 7 8; do h="s4dev$i.enterprisealert.com"; out=$(curl -s -D - -o /dev/null --max-time 15 "https://$h/" 2>/dev/null); code=$(echo "$out" | grep -iE "^HTTP/" | tail -1 | awk '{print $2}'); n=$(echo "$out" | grep -ic "x-ms-proxy"); appid=$(echo "$out" | grep -i "x-ms-proxy-app-id" | awk '{print $2}' | tr -d '\r'); err=$(echo "$out" | grep -i "x-ms-proxy-error-details" | sed 's/^[^:]*: //' | tr -d '\r'); printf "%-26s %-5s %-8s %s %s\n" "$h" "${code:-000}" "$n" "${appid:-none}" "${err:-}"; sleep 1.5; done
+host                      code  proxyhdr  app-id / error-detail
+s4dev1.enterprisealert.com 404   0        none 
+s4dev2.enterprisealert.com 404   0        none 
+s4dev3.enterprisealert.com 404   0        none 
+s4dev4.enterprisealert.com 404   0        none 
+s4dev5.enterprisealert.com 404   0        none 
+s4dev6.enterprisealert.com 404   0        none 
+s4dev7.enterprisealert.com 404   0        none 
+s4dev8.enterprisealert.com 404   0        none
+[0m
+Root-only probing under-read again — all 8 give bare 404 at `/`, yet `s4dev4` disclosed at the deep path. The "2/8" bound was a `/`-only artifact. Re-measuring all 8 at the path that actually proxies:
+[0m$ [0mcd /tmp/opencode && echo "host                      code  hdrs  app-id                              error-detail"; for i in 1 2 3 4 5 6 7 8; do h="s4dev$i.enterprisealert.com"; out=$(curl -s -D - -o /dev/null --max-time 18 "https://$h/identity/.well-known/openid-configuration" 2>/dev/null); code=$(echo "$out" | grep -iE "^HTTP/" | tail -1 | awk '{print $2}'); n=$(echo "$out" | grep -ic "x-ms-proxy"); appid=$(echo "$out" | grep -i "x-ms-proxy-app-id" | awk '{print $2}' | tr -d '\r'); err=$(echo "$out" | grep -i "x-ms-proxy-error-details" | sed 's/^[^:]*: //' | tr -d '\r'); printf "%-26s %-5s %-5s %-35s %s\n" "$h" "${code:-000}" "$n" "${appid:-none}" "${err:-}"; sleep 1.5; done
+host                      code  hdrs  app-id                              error-detail
+s4dev1.enterprisealert.com 504   8     1ed1083c-c71a-4997-8027-b1ffe4a4e5da NoActiveConnector
+s4dev2.enterprisealert.com 504   8     66f8fe89-1859-462c-93e5-82ac1b94b93d NoActiveConnector
+s4dev3.enterprisealert.com 504   8     145fbd28-ebeb-43fb-9bc3-c3fd09b6bbb3 NoActiveConnector
+s4dev4.enterprisealert.com 504   8     eb3307ea-bd50-4a4f-9500-ebc778fcba8e NoActiveConnector
+s4dev5.enterprisealert.com 504   8     73d43271-791c-48dc-b2e9-1d3e49a4e301 NoActiveConnector
+s4dev6.enterprisealert.com 504   8     84f933b4-4714-4e51-9e67-d02e407baca9 NoActiveConnector
+s4dev7.enterprisealert.com 504   8     2429d507-8987-4c6b-9f15-490e3773bd35 NoActiveConnector
+s4dev8.enterprisealert.com 504   8     c2304556-7997-4bf9-9c67-9b18d5228699 NoActiveConnector
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && cat >> reports/hypotheses-bigpickle.txt <<'EOF'
+[HYP] Uniform Azure App Proxy identifier disclosure across the ENTIRE s4dev1-8 EA staging estate (8/8, corrected upward from 2/8)
+class: MISCONFIG
+asset: s4dev1..s4dev8.enterprisealert.com
+confidence: 84
+reasoning: The recorded "2 of 8 hosts disclose" bound was **wrong and path-dependent** — at `/` all 8 return a bare 404 carrying zero `x-ms-proxy-*` headers, but at a path that is actually proxied (`/identity/.well-known/openid-configuration`) **8 of 8 return HTTP 504 with 8 `x-ms-proxy-*` headers**, each with a distinct `x-ms-proxy-app-id`: s4dev1 `1ed1083c-c71a-4997-8027-b1ffe4a4e5da`, s4dev2 `66f8fe89-1859-462c-93e5-82ac1b94b93d`, s4dev3 `145fbd28-ebeb-43fb-9bc3-c3fd09b6bbb3`, s4dev4 `eb3307ea-bd50-4a4f-9500-ebc778fcba8e`, s4dev5 `73d43271-791c-48dc-b2e9-1d3e49a4e301`, s4dev6 `84f933b4-4714-4e51-9e67-d02e407baca9`, s4dev7 `2429d507-8987-4c6b-9f15-490e3773bd35`, s4dev8 `c2304556-7997-4bf9-9c67-9b18d5228699`. Each response also leaks `x-ms-proxy-subscription-id ff2a095d-01ff-4edb-99e6-38b97f49467c`, `x-ms-proxy-group-id 431e7607-7c5a-45ed-8fcd-4a72535eda1c`, `x-ms-proxy-service-name proxy-appproxy-NEUR-DUB01P-3`, `x-ms-proxy-data-center NEUR`, and the CNAME chain `s4devN-derdack.msappproxy.net` / `eur.proxy-3.appproxy.msidentity.com`. All 8 also report `x-ms-proxy-error-details: NoActiveConnector` with `x-ms-proxy-connector-id 00000000-0000-0000-0000-000000000000`.
+evidence_needed: Owner confirmation that App Proxy diagnostic headers on error responses are expected, and that 8 unique application IDs + the Azure subscription ID are not intended to be internet-disclosed. Confirm whether the s4dev tier is meant to be publicly resolvable at all while having no active connector.
+verify_steps: `GET https://s4devN.enterprisealert.com/identity/.well-known/openid-configuration` → 504 + `x-ms-proxy-*`; compare app-ids across N=1..8. Do **not** probe `/` alone — it returns a bare 404 and under-reads the whole estate.
+impact: A complete, uniform map of the entire Azure App Proxy staging tier with 8 distinct application IDs, the tenant subscription ID, the proxy group and service name, and the data-center region — hands an attacker a pre-built target list for App Proxy misconfiguration, connector abuse, or phishing against a known-internal staging environment. Enumeration only, no data access, Low-Medium.
+testability: PASSIVE
+[HYP] Decommissioned lab/dev/test tier still publicly resolvable and CSP-trusted while serving dead origins
+class: MISCONFIG
+asset: labconnect.signl4.com, labaccount.signl4.com, s4labdevtestappgw.westeurope.cloudapp.azure.com
+confidence: 62
+reasoning: The `content-security-policy-report-only` header on `https://account.signl4.com/manage` (302) enumerates the portal's full trust list, which revealed two identity environments the inventory had never recorded: `labconnect.signl4.com` (in `connect-src`) and `labaccount.signl4.com` (in `connect-src` and `form-action`). Both resolve to `13.93.49.201`, CNAME `s4labdevtestappgw.westeurope.cloudapp.azure.com`, and both return **HTTP 502** with `server: Microsoft-Azure-Application-Gateway/v2` on root and on `/identity/.well-known/openid-configuration` (183-byte nginx-style 502 page). The lab identity environment is therefore a **dead origin behind a live Application Gateway**, while the production portal's CSP still trusts it for form submission and XHR. The same header also enumerates all eight `s4dev*.enterprisealert.com` hosts, all `*.recurly.com`, `*.smooch.io`, `*.twilio.com`, `*.zendesk.com`, `*.zdassets.com`, and `https://ipapi.co`.
+evidence_needed: Owner statement on whether the `lab` environment is decommissioned (if so, the trust entries and the still-registered App Gateway should be removed) or merely broken (if so, why a dead environment is in a production `form-action` allowlist).
+verify_steps: `GET https://labconnect.signl4.com/identity/.well-known/openid-configuration` → 502 `Microsoft-Azure-Application-Gateway/v2`; `GET https://account.signl4.com/manage` → read `content-security-policy-report-only` and enumerate `connect-src`/`form-action` only. No credentials, no interaction with any lab backend.
+impact: Reveals a non-public lab environment name, its West Europe Application Gateway resource name, and a production CSP that will `form-action` to a host the attacker can watch appear in the tenant's own allowlist — useful for social-engineering pretexts and for fingerprinting internal environment naming. Low.
+testability: PASSIVE
+[PARKED] Anonymous write primitive via the CSP report ingestion endpoint — **blocked by the operating rules, not disproven**. `account.signl4.com/manage` publishes `report-uri https://connect.signl4.com/api/v2/csp/report` and `report-to csp-endpoint`. This is the first candidate **unauthenticated write sink** identified anywhere in the estate (every other candidate gates on a credential), and CSP report ingestion is by design an unauthenticated POST target. Exploiting it requires sending a POST body, which this engagement's rules forbid on live hosts, so it cannot be tested here. Recorded as a hypothesis at low confidence with the reason it is parked, NOT as a negative.
+[PARKED] lab* takeover: **not claimable.** The 502 proves the Azure Application Gateway resource `s4labdevtestappgw` still exists and is serving; a *dangling* resource would instead NXDOMAIN or return the provider's deprovisioned page. Likewise all 8 `s4dev*` hosts return App Proxy's own branded 504 with a real `x-ms-proxy-app-id`, proving the proxy applications are still registered — `NoActiveConnector` means the connector is down, not that the app was deleted. Rejected as a takeover; the residual value is the identifier disclosure above.
+[PARKED] lab environment as a cross-environment token target: **not comparable.** `labconnect`/`labaccount` return 502, so the shared-JWKS comparison stays at the six responding hosts (`connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`), all still byte-identical on `kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256` / `x5t ke5PPOlOtRevZrJU90l-yw4x7ic` / `n` digest `138f432ba8` / RSA-RS256. Issuer mapping re-confirmed: `api` and `account` advertise the **`connect`** issuer and `devapi`/`devaccount` advertise the **`devconnect`** issuer — the foreign-issuer minting that feeds the Critical hypothesis. The `lab` tier is unavailable, so it can neither strengthen nor weaken that finding.
+[NEXT] PROBE: `labconnect.signl4.com` and `labaccount.signl4.com` are the only in-scope hosts that resolve but serve a dead origin. A single low-rate check distinguishes "temporarily broken" from "permanently decommissioned" and decides whether the CSP trust entries are stale: `GET /` and `GET /identity/.well-known/openid-configuration` on both, twice, ~30s apart, comparing `server`/`Date` only. If they stay 502 across both rounds, fold the lab tier into the decommissioned-tier finding and drop it from the cross-env token target list permanently. Do not attempt to reach or enumerate any origin behind the gateway.
+[LEARN] CORRECTED MISCONFIG @ s4dev1..8.enterprisealert.com: the App Proxy disclosure is **8 of 8, not 2 of 8**. The earlier bound was a self-inflicted instance of the recurring root-only-probing error — `/` returns a bare 404 through a different front-door path and hides the headers entirely, while a genuinely proxied path exposes 8 of them. Any prior "bounded" count on this estate must be re-measured at a path that reaches the backend before it is trusted.
+[LEARN] REJECTED OTHER @ account.signl4.com/manage, CSP posture: the portal ships `content-security-policy-report-only` (not an enforcing header), so its directives — `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`, plus `x-frame-options: DENY` — are **monitored, not enforced**. The hardening intent is correct and clickjacking is genuinely blocked (`frame-ancestors` + `XFO`), so this is a hardening observation rather than a filed finding; its real value was as a passive discovery source for the `lab` and `s4dev*` inventory.
+[LEARN] REJECTED OTHER @ app|m|apps.signl4.com: all three NXDOMAIN and no connection was ever established (curl code=000). The [NEXT] client/mobile scan target does not exist under those names, so the "mobile applications" scope item is still **unfingerprinted rather than closed** — resolving it needs a different discovery source (app-store package, API-gateway client registration, or the CSP/portal trust lists now proven productive), not more hostname guessing.
+[RISK] Derdack: 58 (up from 55) — the App Proxy finding moved sharply **upward**, not down: it is 8/8 rather than 2/8, leaks 8 distinct application IDs plus the Azure subscription ID, and the entire s4dev tier plus both `lab` hosts are non-functional origins still publicly resolvable and CSP-trusted. This is the first cycle in which a prior bound was found to be an artifact of my own under-reading, which is the single most important process lesson so far. Two false-positive traps were caught and refuted before they could be filed: the EA `Handler=` reflection (URL-encoded, cannot break out of the quoted `action` attribute) and a mis-parsed ViewState blob that a weaker pass would have escalated as unauthenticated RCE — the blob is a flat string dictionary and its framing does not reveal MAC state. Four classes closed this cycle: CORS (no ACAO on authenticated routes), SSRF-via-spec (no `format: uri` in 2.9 MB of OpenAPI), public-spec disclosure (no internal hosts, no secrets), and the 10-handler EA map correction. The Critical cross-environment bearer item remains credential-blocked at six comparable hosts. No customer data was accessed, and no write primitive was exercised.
+EOF
+echo "appended — file now $(wc -l < reports/hypotheses-bigpickle.txt) lines"
+appended — file now 95 lines
+[0m
+**8/8, not 2/8** — every `s4dev*` host discloses 8 `x-ms-proxy-*` headers with a unique app-id, all `NoActiveConnector`. The old "2/8" was a root-path artifact. Persisting the correction:
+Cycle complete. Here is the structured output.
+
+## HYPOTHESES
+
+**1. Azure App Proxy identifier disclosure — entire s4dev1-8 estate (8/8, corrected UP from 2/8)**
+- `class: MISCONFIG` · `asset: s4dev1..s4dev8.enterprisealert.com` · `confidence: 84` · `testability: PASSIVE`
+- `GET /identity/.well-known/openid-configuration` on all 8 → **504 + 8 `x-ms-proxy-*` headers**, each with a unique `x-ms-proxy-app-id` (`1ed1083c…`, `66f8fe89…`, `145fbd28…`, `eb3307ea…`, `73d43271…`, `84f933b4…`, `2429d507…`, `c2304556…`), plus `x-ms-proxy-subscription-id ff2a095d-01ff-4edb-99e6-38b97f49467c`, `x-ms-proxy-group-id 431e7607…`, `x-ms-proxy-service-name proxy-appproxy-NEUR-DUB01P-3`, `x-ms-proxy-data-center NEUR`.
+- **The old "2/8" bound was wrong and path-dependent** — at `/` all 8 return a bare 404 with zero headers; only a genuinely proxied path exposes them.
+
+**2. Decommissioned lab tier still publicly resolvable and CSP-trusted**
+- `class: MISCONFIG` · `asset: labconnect.signl4.com, labaccount.signl4.com, s4labdevtestappgw.westeurope.cloudapp.azure.com` · `confidence: 62` · `testability: PASSIVE`
+- Discovered via `content-security-policy-report-only` on `account.signl4.com/manage`, which also lists all 8 `s4dev*` hosts, `*.recurly.com`, `*.smooch.io`, `*.twilio.com`, `*.zendesk.com`, and `ipapi.co`. Both `lab` hosts → `13.93.49.201`, **502 `Microsoft-Azure-Application-Gateway/v2`**. Production `form-action` still trusts `labaccount`.
+
+## PARKED
+
+- **`report-uri https://connect.signl4.com/api/v2/csp/report`** — the **first candidate unauthenticated write sink in the whole estate**; every other candidate gates on a credential. Blocked by the GET-only operating rule, **not disproven**.
+- **lab\*/s4dev\* takeover — rejected.** A 502 proves the Application Gateway resource still exists; the branded 504 with a real app-id proves the proxy apps are still registered. `NoActiveConnector` = connector down, not app deleted.
+- **lab tier as token target — not comparable.** 502 keeps the shared-JWKS comparison at six hosts, all still identical on `kid 91EE4F3C…RS256` / `x5t ke5PPOlO…` / `n` digest `138f432ba8`. Issuer map re-confirmed: `api`+`account` → **connect** issuer, `devapi`+`devaccount` → **devconnect** issuer.
+
+## FINAL RANKING
+1. Cross-environment SIGNL4 bearer acceptance — 76, AUTH_HELPED
+2. **App Proxy disclosure, 8/8 (was 2/8)** — 84, PASSIVE
+3. URL-embedded credential design (EA) — 74, HUMAN_ONLY
+4. Unauth EA SDK index + SOAP contract — 55, PASSIVE
+5. Decommissioned lab tier — 62, PASSIVE
+
+## NEXT
+`[NEXT] PROBE` — `labconnect`/`labaccount` are the only in-scope hosts that resolve but serve a dead origin. GET `/` and `/identity/.well-known/openid-configuration` on both, twice ~30s apart, comparing `server`/`Date` only. Two flat 502s → fold the lab tier into the decommissioned finding and drop it from the token-target list permanently. Do not enumerate anything behind the gateway.
+
+## LEARN
+- **The recurring root-only-probing error finally bit a real number.** A "bounded" count in my own KB was an artifact of my own under-reading. Any prior "bounded" count must be re-measured at a path that reaches the backend.
+- **Two false-positive traps caught and refuted before filing:** the EA `Handler=` reflection is URL-encoded (`"`→`%22`, `<`→`%3c`) and cannot break out of the quoted `action` attribute — it reads as textbook reflected XSS and is not; and my ViewState parse initially implied "no MAC" (`UNPROVABLE_UNDER_RULES`, 15), which a weaker pass would have escalated as unauthenticated RCE. The blob is a flat 3-key string dictionary with no gadget surface.
+- **Four classes closed:** CORS (no ACAO on authenticated routes; wildcard only on public OIDC discovery), SSRF-via-spec (zero `format: uri` in 2.9 MB of OpenAPI), public-spec disclosure (no internal hosts/secrets), and the EA map (corrected to **10** handlers, not 11 — a 200 there is the fallback help page, not a live handler).
+
+## RISK
+**58** (up from 55). Derdack's exposure moved **upward**, not down: 8/8 proxy disclosure with 8 app-IDs and the Azure subscription ID, plus a fully dead lab/staging tier still public and CSP-trusted. The Critical cross-env bearer item stays credential-blocked. No customer data accessed, no write primitive exercised.
+
+Two things need your decision: whether the GET-only rule can be relaxed to test the CSP report endpoint (the only unauthenticated write candidate left), and whether the CSP report-only posture is worth filing.
