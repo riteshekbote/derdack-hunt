@@ -7082,3 +7082,4 @@ evidence_needed: Owner confirmation that App Proxy diagnostic headers on error r
 verify_steps: `GET https://s4devN.enterprisealert.com/identity/.well-known/openid-configuration` for N=1..8 → 504 + `x-ms-proxy-*`; diff the app-ids. **Never probe `/` alone** — it returns a bare 404 and under-reads the whole estate.
 impact: Complete uniform map of the App Proxy staging tier with 8 app IDs, the subscription ID, proxy group, service name and region — a pre-built target list for App Proxy misconfiguration, connector abuse, or phishing against a known-internal staging estate. Enumeration only, no data access. Low-Medium.
 testability: PASSIVE
+## 2026-09-26 17:37:30 UTC [target] (model bigpickle)

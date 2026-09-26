@@ -35673,3 +35673,35 @@ testability: PASSIVE
 ## STEP 7 — RISK
 
 **[RISK] Derdack: 59 (up from 58)** — the mobile scope item moved from *unfingerprinted* to *fingertipped and unresolved*: a distinct App Gateway ingress exists on three hosts behind the Kestrel API, and the `mobile_api` scope is granted by an IdP that publishes one signing key across six hosts with sender-constraint absent. That is a live boundary question, not a config note. The lab tier closed cleanly as decommissioned rather than as a reachable staging environment. The Critical cross-environment bearer item remains credential-blocked, no anonymous write primitive was exercised, and no customer data was accessed.
+===== ANALYST bigpickle 2026-09-26 17:40:46 UTC =====
+[0m
+> build · big-pickle
+[0m
+I'll work through the 8 steps with live read-only verification first.
+[0m$ [0mUA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'
+echo "=== [NEXT] lab tier double-check, round 1 ==="
+for h in labconnect.signl4.com labaccount.signl4.com; do
+  for p in / /identity/.well-known/openid-configuration; do
+    out=$(curl -s -o /tmp/o.bin -D /tmp/h.txt -A "$UA" -m 20 "https://$h$p" 2>/dev/null; echo $?)
+    st=$(awk 'NR==1{print $2}' /tmp/h.txt); sv=$(grep -i '^server:' /tmp/h.txt | tr -d '\r' | cut -d' ' -f2-)
+    sz=$(stat -c%s /tmp/o.bin 2>/dev/null); sh=$(sha256sum /tmp/o.bin 2>/dev/null | cut -c1-16)
+    echo "$h$p -> curl=$out http=$st bytes=$sz sha=$sh server=$sv"
+    sleep 1
+  done
+done
+=== [NEXT] lab tier double-check, round 1 ===
+labconnect.signl4.com/ -> curl=0 http=502 bytes=585 sha=9ea0d5558419815d server=Microsoft-Azure-Application-Gateway/v2
+labconnect.signl4.com/identity/.well-known/openid-configuration -> curl=0 http=502 bytes=585 sha=9ea0d5558419815d server=Microsoft-Azure-Application-Gateway/v2
+labaccount.signl4.com/ -> curl=0 http=502 bytes=585 sha=9ea0d5558419815d server=Microsoft-Azure-Application-Gateway/v2
+labaccount.signl4.com/identity/.well-known/openid-configuration -> curl=0 http=502 bytes=585 sha=9ea0d5558419815d server=Microsoft-Azure-Application-Gateway/v2
+[0m
+[93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
+[0m✗ [0mUA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'
+echo "=== full 502 body + headers, labconnect ==="
+curl -s -D - -A "$UA" -m 20 https://labconnect.signl4.com/ -o /tmp/lab.html 2>&1 | tr -d '\r'
+echo "--- BODY ---"
+cat /tmp/lab.html
+echo ""
+echo "=== http (80) on labconnect ==="
+curl -s -o /dev/null -D - -A "$UA" -m 20 http://labconnect.signl4.com/ 2>&1 | tr -d '\r' | head -8 failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.
