@@ -34376,3 +34376,154 @@ testability: HUMAN_ONLY
 **STEP 7 — RISK**
 
 [RISK] Derdack: 62 — one Critical cross-environment chain remains strictly credential-blocked, the EA alert API credential-in-URL design has no proven live leak across 8+ corpora, and the new App Proxy disclosure is an enumeration aid only; no anonymous write primitive and no customer data were accessed this cycle.
+===== ANALYST bigpickle 2026-09-26 00:10:53 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -sS -o /tmp/opencode/ea_about.html -D /tmp/opencode/ea_about.hdr --max-time 20 "https://s4dev1-8.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About" -w "http_code=%{http_code} time=%{time_total}\n" 2>&1 | tail -5; echo "---HEADERS---"; grep -iE "^(HTTP|x-ms-proxy|x-ms-|nel|report-to|server|location|content-type)" /tmp/opencode/ea_about.hdr 2>/dev/null; echo "---BODY(300)---"; head -c 300 /tmp/opencode/ea_about.html 2>/dev/null
+curl: (6) Could not resolve host: s4dev1-8.enterprisealert.com
+http_code=000 time=0.031573
+---HEADERS---
+---BODY(300)---
+[0m
+[0m$ [0mcurl -sS -o /dev/null -D /tmp/opencode/demo_about.hdr --max-time 20 "https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About" -w "demo http_code=%{http_code}\n" 2>&1 | tail -2; echo "---DEMO PROXY HDRS---"; grep -iE "^x-ms-proxy|^x-ms-|^nel" /tmp/opencode/demo_about.hdr 2>/dev/null
+demo http_code=200
+---DEMO PROXY HDRS---
+x-ms-proxy-app-id: f18ba879-3dea-4018-b9d1-e6dbdc9ce151
+x-ms-proxy-group-id: 6b26e6a4-c5ad-4b27-b31c-e1777730c354
+x-ms-proxy-subscription-id: ff2a095d-01ff-4edb-99e6-38b97f49467c
+x-ms-proxy-transaction-id: d878c0e8-44e6-4332-9a97-4a1a9e6c771f
+x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+x-ms-proxy-data-center: NEUR
+x-ms-proxy-connector-id: da867a92-3ba5-4e78-95f6-c97bac3c791f
+Nel: {"report_to":"network-errors","max_age":86400,"success_fraction":0.2,"failure_fraction":1.0}
+[0m
+[0m$ [0mecho "=== demo About body (600) ==="; head -c 600 /tmp/opencode/ea_about.html 2>/dev/null; echo; echo "=== demo full header count ==="; wc -l < /tmp/opencode/demo_about.hdr; echo "=== demo security hdrs ==="; grep -iE "^(strict-transport|content-security|x-frame|x-content-type|referrer|set-cookie|x-powered|server|date)" /tmp/opencode/demo_about.hdr
+=== demo About body (600) ===
+
+=== demo full header count ===
+19
+=== demo security hdrs ===
+Set-Cookie: ASP.NET_SessionId=2zmxvchadqp3d2jbjelv4gms; Path=/; HttpOnly; SameSite=Lax
+Set-Cookie: AzureAppProxyAnalyticCookie_f18ba879-3dea-4018-b9d1-e6dbdc9ce151_https_1.3=MGD:MIIBwQYJKoZIhvcNAQcDoIIBsjCCAa4CAQIxggE0ooIBMAIBBDCB8wRUTAAAAAAAAAABAAAAS0RTSwYAAABsAQAADgAAAAYAAACpOFewNqcsYuvjcxP1BINmIAAAACHQCHhklf/o8nr9AkDeGueH8tmIY10n6CF3diKCPQhUMIGaBgkrBgEEAYI3SgEwgYwGCisGAQQBgjdKAQ0wfjB8MHoMBERTVFMMcmV1cm9wZW5vcnRoLWRrZHMuZGtkcy5jb3JlLndpbmRvd3MubmV0O2h0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWU7Y3dhcHByb3h5ZGtkc2V1cjALBglghkgBZQMEAS0EKBj2xCAKL4lxYphJOSRm4zk7YwOmNe+KpY/1GuBMvdk80xfxZJtFeEQwcQYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAyqzhRkYPeIMmiToJQCARCARGJbcqiip8RNhQzRkcwGbm4ej5HNdsy9XbC04Zf/1ERQRWgxVXcQlXoBLTno+oIawfzfSdEbHklxU8HSEzFhYZLliLhm; path=/; Secure; SameSite=None
+x-powered-by: ASP.NET
+Date: Sat, 26 Sep 2026 00:08:13 GMT
+[0m
+[0m$ [0mfor h in s4dev1-8 s4dev1 s4dev4 s4dev8; do echo -n "$h.enterprisealert.com -> "; getent hosts $h.enterprisealert.com 2>/dev/null || echo "NXDOMAIN/none"; done; echo "---"; curl -sS -o /dev/null --max-time 12 -w "s4dev1_root http_code=%{http_code}\n" "https://s4dev1.enterprisealert.com/" 2>&1 | tail -1
+s4dev1-8.enterprisealert.com -> NXDOMAIN/none
+s4dev1.enterprisealert.com -> 4.207.244.99    www.tm.eur.proxy-3.appproxy.trafficmanager.net s4dev1.enterprisealert.com s4dev1-derdack.msappproxy.net ff2a095d-01ff-4edb-99e6-38b97f49467c.tenant.runtime.msappproxy.net cwap-eur1-runtime.routing.msappproxy.net eur.proxy-3.appproxy.msidentity.com
+s4dev4.enterprisealert.com -> 4.207.244.99    www.tm.eur.proxy-3.appproxy.trafficmanager.net s4dev4.enterprisealert.com s4dev4-derdack.msappproxy.net ff2a095d-01ff-4edb-99e6-38b97f49467c.tenant.runtime.msappproxy.net cwap-eur1-runtime.routing.msappproxy.net eur.proxy-3.appproxy.msidentity.com
+s4dev8.enterprisealert.com -> 4.207.244.99    www.tm.eur.proxy-3.appproxy.trafficmanager.net s4dev8.enterprisealert.com s4dev8-derdack.msappproxy.net ff2a095d-01ff-4edb-99e6-38b97f49467c.tenant.runtime.msappproxy.net cwap-eur1-runtime.routing.msappproxy.net eur.proxy-3.appproxy.msidentity.com
+---
+s4dev1_root http_code=404
+[0m
+[0m$ [0mpython3 - <<'EOF'
+import base64,re
+d=open('/tmp/opencode/demo_about.hdr').read()
+m=re.search(r'AzureAppProxyAnalyticCookie_\S+?=(\S+);',d)
+if not m: print("no analytic cookie"); raise SystemExit
+raw=m.group(1)
+b=base64.b64decode(raw[4:])
+# crude: find printable runs
+printable=re.findall(rb'[ -~]{6,}',b)
+for p in printable[:20]: print(p.decode())
+EOF
+0~0|0z
+reuropenorth-dkds.dkds.core.windows.net;http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name;cwapproxydkdseur0
+DPEh1Uw
+[0m
+[0m$ [0mfor h in s4dev1 s4dev4; do echo "=== $h ==="; curl -sS -o /tmp/opencode/$h.html -D /tmp/opencode/$h.hdr --max-time 25 "https://$h.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About" -w "  http_code=%{http_code} size=%{size_download}\n" 2>&1 | tail -2; grep -iE "^x-ms-proxy|^nel|^server" /tmp/opencode/$h.hdr 2>/dev/null | sed 's/^/  /'; head -c 200 /tmp/opencode/$h.html 2>/dev/null | sed 's/^/  BODY: /'; echo; done
+=== s4dev1 ===
+  http_code=404 size=0
+
+=== s4dev4 ===
+  http_code=504 size=30943
+  x-ms-proxy-app-id: 1f22d4e0-b2e2-4618-9dd7-f0214bbd6ed5
+  x-ms-proxy-group-id: 431e7607-7c5a-45ed-8fcd-4a72535eda1c
+  x-ms-proxy-subscription-id: ff2a095d-01ff-4edb-99e6-38b97f49467c
+  x-ms-proxy-transaction-id: ad72b4e9-7ce6-4e98-88dd-f1f80be5105c
+  x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+  x-ms-proxy-data-center: NEUR
+  x-ms-proxy-connector-id: 00000000-0000-0000-0000-000000000000
+  Nel: {"report_to":"network-errors","max_age":86400,"success_fraction":0.2,"failure_fraction":1.0}
+  x-ms-proxy-error-details: NoActiveConnector
+  BODY: <!DOCTYPE html>
+  BODY: <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  BODY:   <head>
+  BODY:     <meta charset="utf-8"/>
+  BODY:     <title>This page can't be displayed</title>
+  BODY:   </head>
+  BODY:   <body style="margin-top: 4%
+[0m
+[0m$ [0mfor h in s4dev8 s4dev2; do sleep 1; echo "=== $h deep ==="; curl -sS -o /dev/null -D /tmp/opencode/$h.hdr --max-time 25 "https://$h.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About" -w "  code=%{http_code}\n" 2>&1|tail -1; grep -iE "^x-ms-proxy-(app-id|group-id|subscription-id|connector-id|error)" /tmp/opencode/$h.hdr 2>/dev/null|sed 's/^/  /'; done; sleep 1; echo "=== s4dev1 root control ==="; curl -sS -o /dev/null -D /tmp/opencode/s4dev1r.hdr --max-time 20 "https://s4dev1.enterprisealert.com/" -w "  code=%{http_code}\n" 2>&1|tail -1; grep -icE "^x-ms-proxy" /tmp/opencode/s4dev1r.hdr|sed 's/^/  proxy_hdr_lines=/'
+=== s4dev8 deep ===
+  code=404
+=== s4dev2 deep ===
+  code=404
+=== s4dev1 root control ===
+  code=404
+  proxy_hdr_lines=0
+[0m
+## STEP 1 — DELTA
+- [NEW] `s4dev1-8.enterprisealert.com` = **NXDOMAIN** — my prior [NEXT] PROBE targeted a hostname that does not exist; the staging fleet is `s4dev1`…`s4dev8` as separate names, not a `s4dev1-8` wildcard.
+- [NEW] `s4dev4.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About` → **504** carrying a **second, distinct App Proxy app identity**: `x-ms-proxy-app-id: 1f22d4e0-b2e2-4618-9dd7-f0214bbd6ed5`, `group-id: 431e7607-7c5a-45ed-8fcd-4a72535eda1c` — vs demo's `f18ba879-3dea-4018-b9d1-e6dbdc9ce151` / `6b26e6a4-c5ad-4b27-b31c-e1777730c354`, under the **same subscription GUID** `ff2a095d-01ff-4edb-99e6-38b97f49467c`.
+- [NEW] `x-ms-proxy-error-details: NoActiveConnector` + `x-ms-proxy-connector-id: 00000000-0000-0000-0000-000000000000` on s4dev4 vs demo's live `connector-id: da867a92-3ba5-4e78-95f6-c97bac3c791f` → unauthenticated **connector-pool liveness oracle** (which App Service/connector group is live vs decommissioned).
+- [NEW] `s4dev1`, `s4dev2`, `s4dev8` deep path → bare **404, 0 bytes, zero `x-ms-proxy-*` headers** → header leak is per-App-Proxy-app, not a traffic-manager-wide default. Disclosed app count bounded at 2/8 sampled.
+- [NEW] `demo.enterprisealert.com` pre-auth `Set-Cookie: AzureAppProxyAnalyticCookie_…=MGD:<base64>` decodes to internal App Service naming `reuropenorth-dkds.dkds.core.windows.net` + claims name `cwapproxydkdseur0` → App Service default-hostname disclosure via **cookie**, not header (new channel).
+- [CHANGED] App Proxy identifier disclosure upgraded from *demo-only, 1 app, 3/3 paths* to *multi-app, 2 distinct app-ids/2 connector states, header + cookie channel* — the "s4dev1-8" NEXT step is now answered (estate is not uniform, s4dev4 is the second mapped app).
+- [CHANGED] `ASP.NET_SessionId` on demo is set pre-auth **without** `Secure` (`HttpOnly; SameSite=Lax; Path=/`) while the App Proxy analytic cookie is `Secure; SameSite=None` — recorded, not pursued (cookie-flag class).
+
+## STEP 2 — PRIORITIZE
+- [PRIO] demo.enterprisealert.com/EAWebService/ + s4dev4.enterprisealert.com/EAWebService/,score=7.0,axes: attack_surface=8 business_value=6 tech_exposure=8 gate_ease=10 cloud_surface=9 freshness=9
+- [PRIO] demo.enterprisealert.com (AzureAppProxyAnalyticCookie → App Service default hostname),score=5.4,axes: a=6 b=6 t=7 g=10 c=8 f=9
+- [PRIO] {connect,devconnect,api,devapi,account,devaccount}.signl4.com/identity + /api*,score=6.6,axes: a=9 b=10 t=9 g=2 c=6 f=6
+
+## STEP 3 — HYPOTHESES
+[HYP] Azure AD App Proxy leaks a multi-application inventory, connector state and region topology to unauthenticated clients
+class: MISCONFIG
+asset: demo.enterprisealert.com/EAWebService/ + s4dev4.enterprisealert.com/EAWebService/
+confidence: 80
+reasoning: demo `Handler=About` → 200 unauth with `subscription-id ff2a095d-01ff-4edb-99e6-38b97f49467c`, `app-id f18ba879-3dea-4018-b9d1-e6dbdc9ce151`, `group-id 6b26e6a4-c5ad-4b27-b31c-e1777730c354`, `connector-id da867a92-3ba5-4e78-95f6-c97bac3c791f`, `service-name proxy-appproxy-NEUR-DUB01P-3`, `data-center NEUR`. s4dev4 same path → 504 with the **same subscription GUID and region** but `app-id 1f22d4e0-b2e2-4618-9dd7-f0214bbd6ed5`, `group-id 431e7607-7c5a-45ed-8fcd-4a72535eda1c`, `connector-id 00000000-0000-0000-0000-000000000000`, plus `x-ms-proxy-error-details: NoActiveConnector`. s4dev1/2/8 → 404 with zero proxy headers. Only `transaction-id` rotates.
+evidence_needed: Owner confirmation that App Proxy emits these to unauthenticated clients by default (no per-app override) and the operator's GUID→App Service/connector mapping; report GUIDs only.
+verify_steps: GET `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About` → 200, capture only `x-ms-proxy-*` + `NEL`; GET `https://s4dev4.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About` → 504 with `x-ms-proxy-error-details`; submit no credential, invoke no handler.
+impact: Attacker enumerates Derdack's Azure subscription GUID, ≥2 distinct App Proxy applications, their group/connector IDs, which connector pools are live vs `NoActiveConnector`, and the NEUR-DUB01P-3 hosting region — enables targeted Azure resource enumeration and subscription-scoped phishing against Derdack cloud admins; Low-Medium, no data access.
+testability: PASSIVE
+
+[HYP] Pre-auth MSAL analytic cookie discloses the internal Azure App Service default hostname
+class: MISCONFIG
+asset: demo.enterprisealert.com (any 200 path under /EAWebService/)
+confidence: 66
+reasoning: Unauthenticated `GET .../EventProviderAPI.aspx?Handler=About` returns `Set-Cookie: AzureAppProxyAnalyticCookie_f18ba879-..._https_1.3=MGD:<base64>` with `path=/; Secure; SameSite=None`. Base64-decoding the `MGD:` payload yields the printable string `reuropenorth-dkds.dkds.core.windows.net` alongside the claim URI `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name` and value `cwapproxydkdseur0`. The `f18ba879-…` app-id in the cookie name matches the leaked `x-ms-proxy-app-id`, confirming the two disclosures are the same App Proxy app.
+evidence_needed: Owner confirmation that the App Service default hostname is not intended for external disclosure and is not in scope for a self-service claim path (`*.dkds.core.windows.net` is tenant-derived, not a dangling resource).
+verify_steps: GET `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About` → 200; base64-decode only the `MGD:` cookie value; read printed strings; submit no credential, invoke no handler.
+impact: Attacker learns the internal App Service name (`reuropenorth-dkds`) and that the app front is App Service-backed, correlating with the leaked app-id to name the backend App Service; Low, topology aid only, resource is not claimable from the researcher seat.
+testability: PASSIVE
+
+[HYP] Cross-environment bearer-token acceptance through six shared-identity SIGNL4 hosts
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount.signl4.com/identity and /api/v1|v2|v3 consumers
+confidence: 72
+reasoning: All six hosts serve byte-identical RS256 JWKS (`kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, `x5t ke5PPOlOtRevZrJU90l-yw4x7ic`, CN=`*.signl4.com`); `account.signl4.com/identity` advertises `issuer=https://connect.signl4.com/identity` (foreign-issuer mint); both discover `code_challenge_methods_supported ["plain","S256"]`; shared `client_id 692A0A56-892F-4AE2-8259-76DA398990B6`; `password` grant listed on staging. Fresh discovery now also advertises DPoP signing-algorithm metadata — a mitigating control, and a partial bar to naive bearer replay. No cross-env acceptance has been observed.
+evidence_needed: An owner-approved non-production bearer token accepted by an API host outside its intended environment, recording only HTTP status, issuer, audience, scopes and a SHA-256 token fingerprint.
+verify_steps: GET `https://api.signl4.com/identity/.well-known/openid-configuration` → 200; GET the advertised `jwks_uri` → 200; compare issuer/kid/x5t/`n` digest and DPoP fields only; do not submit any token.
+impact: If cross-env acceptance exists → cross-tenant alert/team/subscription/billing/file access, Critical; shared configuration plus a shared key alone proves no direct exploit.
+testability: AUTH_HELPED
+
+## STEP 4 — SELF-CRITIQUE
+- [PARKED] vps.signl4.com takeover: stale A-record to a GoDaddy shared default vhost; no claimable endpoint or researcher-controlled content primitive — takeover impact HUMAN_ONLY, no confidence gain this cycle.
+- [PARKED] URL-embedded EA credentials in GET query: design finding; 8+ corpora searched, zero deployed credential recovered — HUMAN_ONLY, unchanged.
+- [PARKED] `s4dev1-8.enterprisealert.com` App Proxy check: hypothesis premise invalidated — NXDOMAIN; the correct fleet names are `s4dev1`…`s4dev8`, re-scoped into hypothesis 1.
+- [PARKED] demo EA WSDL `ereesus` single-label SOAP address + ASP.NET_SessionId missing `Secure`: Low topology/cookie-flag items, below the 3-finding threshold and overlapping REJECTED cookie-flag class.
+- [FINAL] 1) Azure App Proxy multi-app identifier + connector-state disclosure, 80, PASSIVE; 2) cross-environment SIGNL4 bearer-token acceptance, 72, AUTH_HELPED (DPoP is a new mitigating control, down from 76); 3) pre-auth MSAL cookie App Service hostname disclosure, 66, PASSIVE.
+
+## STEP 5 — NEXT ACTION
+[NEXT] PROBE: GET `https://s4dev5.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About` and capture only `x-ms-proxy-*`; then `s4dev6` and `s4dev7` at ≤1 rps. Expected 504 with a third distinct `app-id`/`group-id` under subscription `ff2a095d-…` (a 3rd mapped app, widening the inventory) or bare 404 (bounds the disclosed app count at 2/8). This bounds the App Proxy app inventory claimed in finding 1 instead of leaving it at 2 sampled hosts.
+
+## STEP 6 — LEARNING
+- [LEARN] REJECTED OTHER @ s4dev1-8.enterprisealert.com: NXDOMAIN — the literal hyphenated hostname never existed; the staging estate is `s4dev1`…`s4dev8`. My own prior [NEXT] step was malformed; corrected before any claim was made.
+- [LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/ + s4dev4.enterprisealert.com/EAWebService/: App Proxy identifier disclosure is now multi-app — 2 distinct `app-id`/`group-id` pairs under one subscription GUID, plus an unauthenticated `NoActiveConnector` / null-`connector-id` fault-detail channel that distinguishes live from decommissioned connector pools; `s4dev1/2/8` return bare 404 with zero proxy headers, so the exposure is per-app, not traffic-manager-wide.
+- [LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com: the pre-auth `AzureAppProxyAnalyticCookie` MSAL blob independently discloses the internal App Service default hostname `reuropenorth-dkds.dkds.core.windows.net`, adding a cookie channel to the header-based App Proxy disclosure; the cookie's embedded app-id matches `x-ms-proxy-app-id` exactly, corroborating both as the same App Proxy application.
+- [LEARN] REJECTED AUTH @ api/account.signl4.com/identity DPoP: newly observed DPoP signing-algorithm metadata is a mitigating control, not a finding; it does not change the shared-key/shared-issuer observation, which still proves no exploit on its own.
+
+## STEP 7 — RISK
+[RISK] Derdack: 60 — the App Proxy disclosure widened from one demo-only app to two distinct applications plus a connector-liveness fault channel, and now also leaks the internal App Service hostname pre-auth, making it a defensible Low-Medium submission; however it grants no data access and no claimable resource. The single potentially Critical item (cross-environment bearer-token acceptance across six shared-identity hosts) remains strictly credential-blocked and is now further gated by DPoP metadata, and the EA credential-in-URL family still has no proven live leak across 8+ corpora. No anonymous write primitive was exercised and no customer data was accessed.

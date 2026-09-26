@@ -823,3 +823,15 @@
 - 2026-09-25 ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS
 - 2026-09-25 ACCEPTED AUTH @ account.signl4.com/identity: account-hosted discovery advertises the connect issuer while sharing the six-host RS256 JWKS; this is a trust-boundary signal, not proof of cross-environment token acceptance.
 - 2026-09-25 ACCEPTED AUTH @ api.signl4.com/identity & account.signl4.com/identity: Fresh probes reconfirm shared trust configuration and newly record DPoP metadata, but still do not prove cross-environment token acceptance.
+- 2026-09-26 ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: path-family probing of a known-404 root host (IIS/App-Proxy) recovered a full live EA 9.5.26147 sub-app — root-only status is not full-host status; apply to all future App-Proxy-fronted/multi-app hosts before declaring inert
+- 2026-09-26 ACCEPTED OTHER @ demo.enterprisealert.com/EAWebService: version disclosure 9.5.26147 + 12-op WSDL + REST events + EventProviderAPI.aspx all anon-readable, yet every credential path gates (401/Error-1) — exposure is config-level, exploit chains are strictly AUTH_HELPED; no anonymous write primitive exists on the demo host
+- 2026-09-26 REJECTED OTHER @ EA version CVE matching: no program-specific exploit derivable without credentials → REJECTED-class, not pursued
+- 2026-09-26 ACCEPTED OTHER @ full estate: repeated probe cycles across identity/API/CT/WordPress/EA surfaces yield zero new paths, verbs, or differentials — passive surface confirmed exhausted, no drift; further live probing returns endpoint-map-only
+- 2026-09-26 ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response proves dangling → subdomain takeover candidate
+- 2026-09-26 REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS)
+- 2026-09-26 REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
+- 2026-09-26 REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
+- 2026-09-26 ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
+- 2026-09-26 ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
+- 2026-09-26 ACCEPTED MISCONFIG @ account.signl4.com/identity: issuer mismatch — account-hosted IdP claims connect as issuer; tokens minted by account carry connect issuer claim
+- 2026-09-26 ACCEPTED AUTH @ devaccount.signl4.com/identity: staging mirror with issuer = devconnect.signl4.com/identity, same custom claims, same shared JWKS

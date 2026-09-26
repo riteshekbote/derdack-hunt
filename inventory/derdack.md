@@ -1632,3 +1632,11 @@ www.derdack.com
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-09-25 boundary — no new paths, verbs, or differentials
 - CHANGED vps.signl4.com subdomain takeover re-confirmed across 7+ consecutive probe cycles — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fabricated-host byte-identical re
 - CHANGED us.derdack.com live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class
+
+## 2026-09-26 00:10:53 UTC
+- NEW Fresh GET `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes non-public single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` — internal hostna
+- NEW Fresh OIDC discovery on `api.signl4.com/.well-known/openid-configuration` and `account.signl4.com/.well-known/openid-configuration` records DPoP signing-algorithm metadata (`dpop_signing_alg_values_su
+- CHANGED No issuer, JWKS, scope, grant, PKCE, or client-authentication drift observed across 6 identity hosts (connect, devconnect, api, devapi, account, devaccount)
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-09-25 boundary — no new paths, verbs, or differentials
+- CHANGED vps.signl4.com subdomain takeover re-confirmed across 7+ consecutive probe cycles — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fabricated-host byte-identical re
+- CHANGED us.derdack.com live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class

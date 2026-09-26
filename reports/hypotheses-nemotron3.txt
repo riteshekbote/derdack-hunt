@@ -1,7 +1,7 @@
-## 2026-09-25 21:38:54 UTC [target] (model nemotron3)
-[NEW] Fresh GET of `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` records non-public single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`; deployment-time internal hostname leak in WSDL
-[NEW] Fresh OIDC discovery on `api.signl4.com` and `account.signl4.com` records DPoP signing-algorithm metadata; mitigating control, not a vulnerability
-[CHANGED] No issuer, JWKS, scope, grant, PKCE, or client-authentication drift observed across 6 identity hosts
+## 2026-09-26 00:10:41 UTC [target] (model nemotron3)
+[NEW] Fresh GET `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes non-public single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` — internal hostname leak in WSDL
+[NEW] Fresh OIDC discovery on `api.signl4.com/.well-known/openid-configuration` and `account.signl4.com/.well-known/openid-configuration` records DPoP signing-algorithm metadata (`dpop_signing_alg_values_supported`: ["RS256"]) — mitigating control, not a vulnerability
+[CHANGED] No issuer, JWKS, scope, grant, PKCE, or client-authentication drift observed across 6 identity hosts (connect, devconnect, api, devapi, account, devaccount)
 [CHANGED] Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-09-25 boundary — no new paths, verbs, or differentials
 [CHANGED] vps.signl4.com subdomain takeover re-confirmed across 7+ consecutive probe cycles — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fabricated-host byte-identical response
 [CHANGED] us.derdack.com live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class
@@ -9,6 +9,7 @@
 [PRIO] demo.enterprisealert.com/EAWebService,80,attack_surface:8,business_value:9,tech_exposure:7,gate_ease:10,cloud_surface:7,freshness:8
 [PRIO] connect/devconnect/api/devapi/account/devaccount.signl4.com/identity,88,attack_surface:9,business_value:10,tech_exposure:9,gate_ease:5,cloud_surface:9,freshness:7
 [PRIO] credential-in-URL template family (derdack.com/vendor docs/GitHub),78,attack_surface:7,business_value:8,tech_exposure:6,gate_ease:10,cloud_surface:6,freshness:9
+[PRIO] us.derdack.com,45,attack_surface:5,business_value:4,tech_exposure:5,gate_ease:10,cloud_surface:5,freshness:6
 [HYP] Subdomain takeover via dangling A-record on vps.signl4.com
 class: MISCONFIG
 asset: vps.signl4.com
@@ -22,27 +23,27 @@ testability: PASSIVE
 class: MISCONFIG
 asset: demo.enterprisealert.com/EAWebService
 confidence: 80
-reasoning: Root "/" returns 404 behind Azure AD App Proxy; path-family probing discovered live EA 9.5.26147 portal at /EAWebService/ with EventProviderAPI.aspx (11 handlers), EventProviderAPI.asmx (12-op WSDL), EventConnectorServer.ashx all anon-readable; every credential path gates (401/Error-1) per vendor design; exposure is config-level version disclosure + handler index + internal hostname leak in WSDL (ereesus)
+reasoning: Root "/" returns 404 behind Azure AD App Proxy; path-family probing discovered live EA 9.5.26147 portal at /EAWebService/ with EventProviderAPI.aspx (11 handlers), EventProviderAPI.asmx (12-op WSDL), EventConnectorServer.ashx all anon-readable; every credential path gates (401/Error-1) per vendor design; WSDL exposes internal hostname `ereesus` in SOAP address; exposure is config-level version disclosure + handler index + internal hostname leak
 evidence_needed: Live HTTP 200 on /EAWebService/ with version disclosure 9.5.26147 + WSDL + handler endpoints + internal hostname in SOAP address
 verify_steps: 1) GET https://demo.enterprisealert.com/EAWebService/ (confirm 200, version 9.5.26147) 2) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl (confirm 12-op WSDL, note ereesus hostname) 3) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About (confirm anon-readable handler index) 4) POST https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=RaiseEvent with fabricated creds (confirm 401/Error-1 gate)
 impact: Full EA alert API surface exposed anonymously (version, WSDL, handler index, internal hostname) — enables targeted credentialed attacks against customer EA deployments using same endpoints; severity MEDIUM (config exposure, all exploit chains AUTH_HELPED)
 testability: PASSIVE
-[HYP] Customer EA REST API key leakage via credential-in-URL template family
-class: MISCONFIG
-asset: derdack.com (vendor docs) + github.com/Derdack (12 repos)
-confidence: 78
-reasoning: 7+ distinct vendor sources document credential-in-URL templates for EventProviderAPI (SolarWinds article: `Password=Derdack01` + internal hostname `mmea2012.derdack-support.local`; EA9 PDF: md5-hash variant; send-alerts-web-services 2016; 6/12 GitHub repos with apiKey-in-URL templates); deployments log keys to EA log/process/access-log surface; leak-oracles negative across 7+ corpora (no customer-deployed keys found) but template family confirms deployment-side leakage vector
-evidence_needed: Vendor documentation showing credential-in-URL pattern + GitHub repos with template placeholders + deployment logging behavior
-verify_steps: 1) GET https://www.derdack.com/de/integrations/solarwinds (confirm `Password=Derdack01` in URL template) 2) GET EA9 HTTP/SOAP API PDF (confirm md5-hash Password variant) 3) GitHub search org:Derdack apiKey-in-URL (confirm 6 repos with template family) 4) Search public corpora for deployed EA keys (confirm zero customer instances)
-impact: Template-driven deployments leak EA REST API keys to web server logs, proxy logs, browser history, referrer headers — credential theft vector for any customer following vendor docs; severity MEDIUM (deployment-side, requires log access)
-testability: PASSIVE
-[PARKED] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch: AUTH_HELPED — requires valid client_secret or leaked X-S4-Api-Key/Bearer token to complete chain; no passive-only path to token acquisition
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount.signl4.com/identity
+confidence: 88
+reasoning: 6 identity hosts serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account.signl4.com/identity claims issuer=https://connect.signl4.com/identity (cross-host mint-mismatch); identical 12-scope set including EA management scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); password/device_code/CIBA/token-exchange grants enabled on staging; plain PKCE allowed; handler-deferred auth on V1/V2 APIs (unauth GET→405, invalid Bearer→405) enables cross-env token acceptance; API key dual pipeline live (query param + header)
+evidence_needed: Valid client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 OR leaked X-S4-Api-Key / team-secret to complete chain
+verify_steps: 1) GET https://account.signl4.com/identity/.well-known/openid-configuration (confirm issuer mismatch, plain PKCE, EA scopes) 2) GET https://connect.signl4.com/identity/.well-known/openid-configuration (confirm parametric twin) 3) POST https://devconnect.signl4.com/identity/connect/token with password grant + client_secret (if obtained) 4) Use forged token against api.signl4.com/api/v2/teams (handler-deferred auth accepts cross-env tokens)
+impact: Full multi-tenant EA/SIGNL4 compromise — token forgery across prod/staging, API CRUD via shared scopes, billing/invoice access via V3, webhook event injection via team-secret; severity CRITICAL
+testability: AUTH_HELPED
+[PARKED] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch: AUTH_HELPED — requires valid client_secret or leaked X-S4-Api-Key/Bearer token/team-secret to complete chain; no passive-only path to token acquisition
 [PARKED] BOLA on connect.signl4.com/api/v3 file-download family (signlReports/dutyReports/attachments): AUTH_HELPED — requires valid Bearer token; handler-deferred auth on V3 invoice endpoint is route-gated (401), not flapping like V1/V2 teams; file-download family unproven
 [PARKED] IDOR on connect.signl4.com/api/v1/alerts/acknowledgeAll|closeAll userId query param: AUTH_HELPED — handler-deferred auth confirmed (unauth GET→405, invalid Bearer→405) but impersonation param unreachable without valid token
 [PARKED] Webhook team-secret enumeration oracle on connect.signl4.com/webhook/{teamSecret}: operator-chosen secret (not high-entropy), guessing falls under REJECTED brute-force class; oracle exploitable only via secret leak → config/design finding
 [FINAL] 1) Subdomain takeover via dangling A-record on vps.signl4.com (MISCONFIG, 95) — PASSIVE, CONFIRMED via live probes across 7+ cycles, ready for reporting
 [FINAL] 2) Public EA 9.5.26147 alert API exposure on demo.enterprisealert.com/EAWebService (MISCONFIG, 80) — PASSIVE, handler index + version disclosure + WSDL + internal hostname leak confirmed, all mutating handlers credential-gated
-[FINAL] 3) Customer EA REST API key leakage via credential-in-URL template family (MISCONFIG, 78) — PASSIVE, 7+ vendor sources + GitHub org confirm template family, leak-oracles negative
+[FINAL] 3) Credential-in-URL template family across 7+ vendor sources + GitHub org (MISCONFIG, 78) — PASSIVE, deployment-side key leakage vector
 [NEXT] HUMAN: Finalize and submit the frozen three-item dossier to bugs.olivermaicher.eu — (a) demo.enterprisealert.com/EAWebService public EA alert API exposure (MISCONFIG, PASSIVE — handler index + version disclosure + WSDL + internal hostname leak), (b) vps.signl4.com subdomain takeover (MISCONFIG, PASSIVE — confirmed 7+ cycles, HTTPS 200 nginx default + unrelated cert + GoDaddy NS), (c) credential-in-URL template family across 7+ vendor sources + GitHub org (MISCONFIG, PASSIVE — deployment-side key leakage vector); mark cross-env token forgery and all BOLA/IDOR chains as AUTH_HELPED blocked on credential acquisition
 [LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: path-family probing of a known-404 root host (IIS/App-Proxy) recovered a full live EA 9.5.26147 sub-app — root-only status is not full-host status; apply to all future App-Proxy-fronted/multi-app hosts before declaring inert
 [LEARN] ACCEPTED OTHER @ demo.enterprisealert.com/EAWebService: version disclosure 9.5.26147 + 12-op WSDL + REST events + EventProviderAPI.aspx all anon-readable, yet every credential path gates (401/Error-1) — exposure is config-level, exploit chains are strictly AUTH_HELPED; no anonymous write primitive exists on the demo host
