@@ -36327,3 +36327,442 @@ Body is the **30,896 B generic Microsoft "This page can't be displayed"** page (
 Single next lab check: `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=UpdateTicket` with a dummy `ticketId` query parameter (integer `1`, no other params) to determine whether the `-1` changes from *param-validation* to *"No user login data specified."* — that is the read-only discriminator between hypothesis 2 being open and closed. One request, no mutation, no credential.
 
 Alongside it, a human request (not a probe): an owner-approved non-production `mobile_api` token or `client_secret` is required to close hypothesis 1 — no legal path exists to test it from this seat.
+===== ANALYST bigpickle 2026-09-26 23:00:23 UTC =====
+[0m
+> build · big-pickle
+[0m
+I'll execute the [NEXT] probe from my last cycle (lab tier 502 persistence check), then look for deltas.
+[0m$ [0mfor h in labconnect.signl4.com labaccount.signl4.com; do
+  echo "=== $h round 1 ==="
+  curl -s -o /dev/null -D - --max-time 12 "https://$h/" 2>/dev/null | sed -n '1,12p'
+  sleep 2
+done
+=== labconnect.signl4.com round 1 ===
+HTTP/2 502 
+server: Microsoft-Azure-Application-Gateway/v2
+date: Sat, 26 Sep 2026 22:54:22 GMT
+content-type: text/html
+content-length: 183
+
+=== labaccount.signl4.com round 1 ===
+HTTP/2 502 
+server: Microsoft-Azure-Application-Gateway/v2
+date: Sat, 26 Sep 2026 22:54:25 GMT
+content-type: text/html
+content-length: 183
+[0m
+[0m$ [0msleep 30
+for h in labconnect.signl4.com labaccount.signl4.com; do
+  echo "=== $h round 2 (identity) ==="
+  curl -s -o /dev/null -D - --max-time 12 "https://$h/identity/.well-known/openid-configuration" 2>/dev/null | sed -n '1,8p'
+  sleep 2
+done
+=== labconnect.signl4.com round 2 (identity) ===
+HTTP/2 502 
+server: Microsoft-Azure-Application-Gateway/v2
+date: Sat, 26 Sep 2026 22:55:00 GMT
+content-type: text/html
+content-length: 183
+
+=== labaccount.signl4.com round 2 (identity) ===
+HTTP/2 502 
+server: Microsoft-Azure-Application-Gateway/v2
+date: Sat, 26 Sep 2026 22:55:02 GMT
+content-type: text/html
+content-length: 183
+[0m
+lab tier confirmed 502 across both rounds/paths — folding into the decommissioned-tier finding. Now probing the two-front-door architecture (`/mobileapi` App Gateway vs Kestrel) that was the last real anomaly.
+[0m$ [0mfor p in /mobileapi /mobileapi/ /mobileapi/teams /mobile /mobileapi/v2/teams /api /api/v2/teams /webhook /identity /manage /connect /app /m /internal /admin /debug /health /healthz /metrics /status /prometheus /swagger /docs /.well-known/openid-configuration; do
+  r=$(curl -s -o /dev/null -w '%{http_code}|%{size_download}' --max-time 10 "https://connect.signl4.com$p" 2>/dev/null)
+  s=$(curl -s -o /dev/null -D - --max-time 10 "https://connect.signl4.com$p" 2>/dev/null | grep -i '^server:' | head -1 | tr -d '\r')
+  printf '%-38s %-16s %s\n' "$p" "$r" "$s"
+  sleep 1
+done
+/mobileapi                             403|79088        server: Microsoft-Azure-Application-Gateway/v2
+/mobileapi/                            403|79088        server: Microsoft-Azure-Application-Gateway/v2
+/mobileapi/teams                       403|79088        server: Microsoft-Azure-Application-Gateway/v2
+/mobile                                404|0            server: Microsoft-HTTPAPI/2.0
+/mobileapi/v2/teams                    403|79088        server: Microsoft-Azure-Application-Gateway/v2
+/api                                   404|0            server: Microsoft-HTTPAPI/2.0
+/api/v2/teams                          401|0            server: Microsoft-HTTPAPI/2.0
+/webhook                               404|0            server: Microsoft-HTTPAPI/2.0
+/identity                              200|5612         server: Microsoft-HTTPAPI/2.0
+/manage                                302|0            server: Microsoft-HTTPAPI/2.0
+/connect                               404|0            server: Microsoft-HTTPAPI/2.0
+/app                                   404|0            server: Microsoft-HTTPAPI/2.0
+/m                                     404|0            server: Microsoft-HTTPAPI/2.0
+/internal                              404|0            server: Microsoft-HTTPAPI/2.0
+/admin                                 404|0            server: Microsoft-HTTPAPI/2.0
+/debug                                 404|0            server: Microsoft-HTTPAPI/2.0
+/health                                404|0            server: Microsoft-HTTPAPI/2.0
+/healthz                               404|0            server: Microsoft-HTTPAPI/2.0
+/metrics                               404|0            server: Microsoft-HTTPAPI/2.0
+/status                                404|0            server: Microsoft-HTTPAPI/2.0
+/prometheus                            404|0            server: Microsoft-HTTPAPI/2.0
+/swagger                               404|0            server: Microsoft-HTTPAPI/2.0
+/docs                                  404|0            server: Microsoft-HTTPAPI/2.0
+/.well-known/openid-configuration      404|0            server: Microsoft-HTTPAPI/2.0
+[0m
+AppGW prefix rule confirmed on `/mobileapi*` (byte-identical 403 pre-routing). Now dumping full headers — if it leaks AppGW diagnostics like the s4dev hosts did, that extends the disclosure finding to **production**.
+[0m$ [0mecho "=== connect.signl4.com/mobileapi FULL HEADERS ==="
+curl -s -o /tmp/opencode/mob.html -D - --max-time 12 "https://connect.signl4.com/mobileapi" 2>/dev/null
+echo "--- body size/identifiers ---"
+wc -c /tmp/opencode/mob.html
+grep -oiE 'x-ms-[a-z-]+|Microsoft-Azure-Application-Gateway|NotFound|Forbidden|Default Web Page' /tmp/opencode/mob.html | sort -u | head -20
+=== connect.signl4.com/mobileapi FULL HEADERS ===
+HTTP/2 403 
+server: Microsoft-Azure-Application-Gateway/v2
+date: Sat, 26 Sep 2026 22:56:09 GMT
+content-type: text/html
+content-length: 79088
+etag: "6aa577f5-134f0"
+
+--- body size/identifiers ---
+79088 /tmp/opencode/mob.html
+Forbidden
+[0m
+No `x-ms-proxy-*` on production AppGW (that's App **Proxy**–specific) — clean negative, prevents over-claiming. Checking the `/mobileapi` prefix across the whole identity/API estate.
+[0m$ [0mfor h in connect api devapi devconnect account devaccount; do
+  for p in /mobileapi /mobileapi/teams; do
+    out=$(curl -s -o /dev/null -w '%{http_code}|%{size_download}' --max-time 10 "https://$h.signl4.com$p" 2>/dev/null)
+    srv=$(curl -s -o /dev/null -D - --max-time 10 "https://$h.signl4.com$p" 2>/dev/null | grep -iE '^(server|etag):' | tr -d '\r' | paste -sd' ')
+    printf '%-16s %-20s %-14s %s\n' "$h.signl4.com" "$p" "$out" "$srv"
+    sleep 1
+  done
+done
+connect.signl4.com /mobileapi           403|79088      server: Microsoft-Azure-Application-Gateway/v2 etag: "6aa577f5-134f0"
+connect.signl4.com /mobileapi/teams     403|79088      server: Microsoft-Azure-Application-Gateway/v2 etag: "6aa577f5-134f0"
+api.signl4.com   /mobileapi           403|79088      server: Microsoft-Azure-Application-Gateway/v2 etag: "6aa577f5-134f0"
+api.signl4.com   /mobileapi/teams     403|79088      server: Microsoft-Azure-Application-Gateway/v2 etag: "6aa577f5-134f0"
+devapi.signl4.com /mobileapi           403|79088      server: Microsoft-Azure-Application-Gateway/v2 etag: "6ab27cc0-134f0"
+devapi.signl4.com /mobileapi/teams     403|79088      server: Microsoft-Azure-Application-Gateway/v2 etag: "6ab27cc0-134f0"
+devconnect.signl4.com /mobileapi           403|79088      server: Microsoft-Azure-Application-Gateway/v2 etag: "6ab27cc0-134f0"
+devconnect.signl4.com /mobileapi/teams     403|79088      server: Microsoft-Azure-Application-Gateway/v2 etag: "6ab27cc0-134f0"
+account.signl4.com /mobileapi           403|79088      server: Microsoft-Azure-Application-Gateway/v2 etag: "6aa577f5-134f0"
+account.signl4.com /mobileapi/teams     403|79088      server: Microsoft-Azure-Application-Gateway/v2 etag: "6aa577f5-134f0"
+devaccount.signl4.com /mobileapi           403|79088      server: Microsoft-Azure-Application-Gateway/v2 etag: "6ab27cc0-134f0"
+devaccount.signl4.com /mobileapi/teams     403|79088      server: Microsoft-Azure-Application-Gateway/v2 etag: "6ab27cc0-134f0"
+[0m
+[0m$ [0mpython3 -c "
+import datetime
+for name,h in [('prod ','6aa577f5'),('dev ','6ab27cc0')]:
+    t=int(h,16)
+    print(name, h, t, datetime.datetime.utcfromtimestamp(t).strftime('%Y-%m-%d %H:%M:%S UTC'))
+print('delta_days', (0x6ab27cc0-0x6aa577f5)/86400)
+"
+echo "--- body text ---"
+python3 -c "
+import re,html
+d=open('/tmp/opencode/mob.html',encoding='utf-8',errors='replace').read()
+t=re.sub(r'<script.*?</script>','',d,flags=re.S|re.I)
+t=re.sub(r'<style.*?</style>','',t,flags=re.S|re.I)
+t=html.unescape(re.sub(r'<[^>]+>',' ',t))
+print(' '.join(t.split())[:900])
+"
+<string>:5: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+prod  6aa577f5 1789229045 2026-09-12 16:04:05 UTC
+dev  6ab27cc0 1790082240 2026-09-22 13:04:00 UTC
+delta_days 9.87494212962963
+--- body text ---
+SIGNL4 - Forbidden Sorry access denied 403 Forbidden Please contact us at support.signl4.com © 2024 - Derdack GmbH Feedback Imprint Terms Privacy
+[0m
+`/mobileapi` is bound on **all 6** hosts (my last cycle said three — upward correction again), and the ETag splits by environment. Decoding that.
+Now the highest-value OATH test I have not run: whether `redirect_uri` validation is **exact-match** or prefix/substring-tolerant. First I need the real registered redirect_uri (publicly visible in the portal's 302).
+[0m$ [0mecho "=== account.signl4.com/manage -> authorize (registered params) ==="
+curl -s -o /dev/null -D - --max-time 12 "https://account.signl4.com/manage" 2>/dev/null | grep -i '^location:' | tr -d '\r' | sed 's/&/\n    &/g'
+=== account.signl4.com/manage -> authorize (registered params) ===
+location: https://connect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6
+    &redirect_uri=https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fsignin-oidc
+    &response_type=code
+    &scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access
+    &code_challenge=f8TKKV-Ag2bLuAThJo0ecTOmuG791wa31iJ8ABo48Ww
+    &code_challenge_method=S256
+    &response_mode=form_post
+    &nonce=639260602349738693.ODhiNGNhMDgtMzJkMy00YzNjLWFjYmYtNzUzMjQxZWU3MTNkNmYzY2Q2MmYtYjNmYi00YzQ4LTgyMDAtMmMyYzBmMTczM2Ez
+    &state=CfDJ8P0bhSkvNP5HkPto7qc9KqP3Z2jw3Wlw1QIUMf4XluVeOa9syHnTZvluneMxGSWNX9IB0u9VP0V_C8hyfV2soR7G1qwRsnRaReDYWTezh9lh1sNQNtHLQLDYQd060qtrxBhPfminP_XnJmIESvjbmBLIziwEm4RbgJAEA5T-yFCekbbZiVzEyDks-cPAG7ox5spN88axC9dqMsyWYCYc0pP8dJqulXHioBkIlLhRU7KHzjs2zxCRe1oeCig7jZsIbH2sJulVhuXY1oWpkg42vLxb2EmtE48RkRIrj5WL8gTTjFuKqdMo81FPa5GIHSfeVNJUJv8AjCurrEqzK5WxFr63LjoDaINZzPPqpQiTDGhut6z6TYVJdhG9VrS_EnCxDmy3OnfIya7tBN1U5s1-9tg
+    &x-client-SKU=ID_NET10_0
+    &x-client-ver=8.19.2.0
+[0m
+Registered `redirect_uri` = `https://account.signl4.com/manage/signin-oidc`. Now the exact-match validation matrix — the oracle is whether an *accepted* URI redirects to the attacker (proving validation passed) vs. an IdP error page (rejected).
+[0m$ [0mcd /tmp/opencode && python3 - <<'EOF'
+import urllib.parse, subprocess, time
+CID="692A0A56-892F-4AE2-8259-76DA398990B6"
+REG="https://account.signl4.com/manage/signin-oidc"
+cases=[
+ ("CONTROL exact registered", REG),
+ ("suffix .evil.example",     REG+".evil.example"),
+ ("trailing slash",           REG+"/"),
+ ("dot-dot traversal",        "https://account.signl4.com/manage/../manage/signin-oidc"),
+ ("null byte",                REG+"%00.evil.example"),
+ ("attacker path prefix",     "https://evil.example/account.signl4.com/manage/signin-oidc"),
+ ("userinfo @evil",           "https://account.signl4.com@evil.example/manage/signin-oidc"),
+ ("scheme downgrade http",    "http://account.signl4.com/manage/signin-oidc"),
+ ("subdomain suffix",         "https://account.signl4.com.evil.example/manage/signin-oidc"),
+ ("uppercase host",           "https://ACCOUNT.signl4.com/manage/signin-oidc"),
+ ("explicit :443",            "https://account.signl4.com:443/manage/signin-oidc"),
+ ("parent domain",            "https://signl4.com/manage/signin-oidc"),
+ ("fragment trick",           REG+"#"),
+]
+for name,ru in cases:
+    q={"client_id":CID,"redirect_uri":ru,"response_type":"code",
+       "scope":"openid profile","response_mode":"query","prompt":"none",
+       "state":"PROBEREQUESTSTATE","nonce":"PROBEREQNONCE"}
+    url="https://connect.signl4.com/identity/connect/authorize?"+urllib.parse.urlencode(q)
+    r=subprocess.run(["curl","-s","-o","/dev/null","-D","-","--max-time","12",
+                      "-H","User-Agent: probe","--path-as-is",url],
+                     capture_output=True,text=True)
+    hdr=r.stdout.replace("\r","")
+    code="?"
+    loc=""
+    for line in hdr.split("\n"):
+        if line.startswith("HTTP/"): code=line.split()[1]
+        if line.lower().startswith("location:"): loc=line.split(":",1)[1].strip()
+    tag="REDIRECTED->TARGET" if "signl4.com" in loc and "/identity/home/error" not in loc else ("IDP-ERROR" if "home/error" in loc else "other")
+    print(f"{name:26} {code}  {tag:18} {loc[:110]}")
+    time.sleep(1.5)
+EOF
+CONTROL exact registered   302  IDP-ERROR          https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqMxFlnn53x5vAc1nxiZNdScqjRisx8
+suffix .evil.example       302  IDP-ERROR          https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqPVBdRLnSKNfCYFUDspZeo0yhJnavl
+trailing slash             302  IDP-ERROR          https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqO9azpcFxpZGdBxkK6FFglH4Y1w_xr
+dot-dot traversal          403  other              
+null byte                  403  other              
+attacker path prefix       302  IDP-ERROR          https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqObi3dtKJFwQA0pvw1I9MLr8OFz0Nm
+userinfo @evil             302  IDP-ERROR          https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqNJTxO99OsfMqNnl-zXwMhn69ru8Nd
+scheme downgrade http      302  IDP-ERROR          https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqMs3eEow2iveQjE2mxBfenGfvtw7b8
+subdomain suffix           302  IDP-ERROR          https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqMNq0LL8vuvfUkgCyOOJWLhKnDSFLl
+uppercase host             302  IDP-ERROR          https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqM4CVNoC1diebruYPkA1gmiZBBK2-A
+explicit :443              302  IDP-ERROR          https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqMP2M6K8I-J1uQBZT8FwrlVRUgKsnw
+parent domain              302  IDP-ERROR          https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqO3FF0311f6ReQWNP49qBTB-482T6l
+fragment trick             302  IDP-ERROR          https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqP28du1bQMk_w9FuQ5wfx5ZNjoGRnd
+[0m
+The control failed too — my oracle was contaminated (no `code_challenge`, so every case died on `invalid_request` before redirect_uri validation). Re-running with a throwaway PKCE S256 so the control actually reaches validation. I will not exchange any code.
+[0m$ [0mcd /tmp/opencode && python3 - <<'EOF'
+import urllib.parse, subprocess, time, base64, hashlib, secrets
+CID="692A0A56-892F-4AE2-8259-76DA398990B6"
+REG="https://account.signl4.com/manage/signin-oidc"
+ver=secrets.token_urlsafe(48)
+chal=base64.urlsafe_b64encode(hashlib.sha256(ver.encode()).digest()).decode().rstrip("=")
+def run(name,ru,extra=None):
+    q={"client_id":CID,"redirect_uri":ru,"response_type":"code",
+       "scope":"openid profile","response_mode":"query","prompt":"none",
+       "state":"PROBEREQUESTSTATE","nonce":"PROBEREQNONCE",
+       "code_challenge":chal,"code_challenge_method":"S256"}
+    if extra: q.update(extra)
+    url="https://connect.signl4.com/identity/connect/authorize?"+urllib.parse.urlencode(q)
+    r=subprocess.run(["curl","-s","-o","/dev/null","-D","-","--max-time","12",
+                      "-H","User-Agent: probe","--path-as-is",url],capture_output=True,text=True)
+    code=""; loc=""
+    for line in r.stdout.replace("\r","").split("\n"):
+        if line.startswith("HTTP/"): code=line.split()[1]
+        if line.lower().startswith("location:"): loc=line.split(":",1)[1].strip()
+    verdict="ACCEPTED->target" if ("signl4.com" in loc and "/home/error" not in loc) else ("REJECTED->idp" if "home/error" in loc else "other:"+code)
+    print(f"{name:26} {code:4} {verdict:18} {loc[:96]}")
+    time.sleep(1.5)
+
+run("CONTROL exact registered", REG)
+run("suffix .evil.example",     REG+".evil.example")
+run("trailing slash",           REG+"/")
+run("attacker path prefix",     "https://evil.example/account.signl4.com/manage/signin-oidc")
+run("userinfo @evil",           "https://account.signl4.com@evil.example/manage/signin-oidc")
+run("scheme downgrade http",    "http://account.signl4.com/manage/signin-oidc")
+run("subdomain suffix",         "https://account.signl4.com.evil.example/manage/signin-oidc")
+run("parent domain",            "https://signl4.com/manage/signin-oidc")
+run("uppercase host",           "https://ACCOUNT.signl4.com/manage/signin-oidc")
+run("explicit :443",            "https://account.signl4.com:443/manage/signin-oidc")
+EOF
+CONTROL exact registered   302  ACCEPTED->target   https://account.signl4.com/manage/signin-oidc?error=login_required&state=PROBEREQUESTSTATE&sessi
+suffix .evil.example       302  REJECTED->idp      https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqMZBeKLi1KK9xUhv
+trailing slash             302  REJECTED->idp      https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqNudCK54HZ2NGaBs
+attacker path prefix       302  REJECTED->idp      https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqM-CPWq7Veh9xfg2
+userinfo @evil             302  REJECTED->idp      https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqMj8m-jGesONRV6M
+scheme downgrade http      302  REJECTED->idp      https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqOEqP3O3zModmqFt
+subdomain suffix           302  REJECTED->idp      https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqMuBzmHQtp_SLi4W
+parent domain              302  REJECTED->idp      https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqOOX_qHw8Ea3ycGV
+uppercase host             302  ACCEPTED->target   https://ACCOUNT.signl4.com/manage/signin-oidc?error=login_required&state=PROBEREQUESTSTATE&sessi
+explicit :443              302  REJECTED->idp      https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqMopqk19YHe3Tvf_
+[0m
+## Objective
+- Continue the Derdack/SIGNL4/Enterprise Alert bug-bounty analysis under strict passive-first rules and produce the required eight-step structured output.
+- Identify a reportable, evidence-backed logic flaw without testing excluded classes or exposing customer/authentication data.
+
+## Important Details
+- Scope: company-owned Derdack/SIGNL4/Enterprise Alert infrastructure only; report channel `bugs.olivermaicher.eu`.
+- Live probes are read-only only: `GET`/`HEAD`/`OPTIONS`, passive-first, `<=1 rps`; no POST, credential guessing, auth bypass, mutating action, or customer-data access.
+- Excluded: brute-force/rate-limit/lockout, standalone OPTIONS/TRACE, scanner-only claims, TLS best practice, known-CVE-only findings, clickjacking without exploit, and similar non-actionable classes.
+- Current stated state: `phase: POC`, `target: api`.
+- Strongest current passive lead: all `s4dev1..s4dev8.enterprisealert.com` leak Azure App Proxy identifiers and `x-ms-proxy-subscription-id` on `/identity/.well-known/openid-configuration`; root-only probing incorrectly understated this as 2/8.
+- Key identifiers: App Proxy subscription `ff2a095d-01ff-4edb-99e6-38b97f49467c`; group `431e7607-7c5a-45ed-8fcd-4a72535eda1c`; service `proxy-appproxy-NEUR-DUB01P-3`; error `NoActiveConnector`.
+- Six responding identity hosts—`connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`—share RS256 key `kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`; cross-environment token acceptance remains `AUTH_HELPED`, not proven.
+- `labconnect.signl4.com` and `labaccount.signl4.com` resolve to `13.93.49.201` and return Azure App Gateway 502; production CSP still trusts them. Recheck twice before treating them as permanently decommissioned.
+- `mobile_api` ingress hypothesis is credible but requires an owner-approved non-production token; passive shared configuration does not prove cross-ingress acceptance.
+- `backchannel_logout_supported: true` plus shared JWKS/issuer behavior suggests possible non-propagating logout, but requires an approved client and interactive session.
+- EA demo surface is completely mapped: `demo.enterprisealert.com/EAWebService/`, `EventProviderAPI.aspx`, `EventProviderAPI.asmx`, `EventConnectorServer.ashx`, and `rest/events`; mutating handlers remain credential-gated.
+- Rejected false positives: URL-encoded `Handler=` reflection is not XSS; ViewState is a flat string dictionary and MAC/deserialization exploitability is unproven; GraphQL, CORS data theft, SSRF-via-spec, config disclosure, and anonymous EA writes are closed.
+- `vps.signl4.com` is stale DNS on a GoDaddy shared host, but takeover impact is `MISCONFIG LOW-Medium`; DNS/hosting-account control is `HUMAN_ONLY`, so confidence 95 is overstated.
+- Earlier report state froze three dossier items, but the authoritative `MY STATE` still says `POC`; avoid claiming a submission was completed.
+
+## Work State
+### Completed
+- Confirmed `s4dev1..s4dev8.enterprisealert.com` App Proxy disclosure is 8/8, not 2/8, when probing a backend-reaching path.
+- Enumerated eight distinct `x-ms-proxy-app-id` values and shared Azure tenant/proxy metadata.
+- Confirmed `labconnect`/`labaccount` dead-origin 502 behavior and their presence in the production portal’s report-only CSP trust list.
+- Completed passive `demo.enterprisealert.com/EAWebService/` route mapping and corrected the authoritative `.aspx` handler count to 10.
+- Refuted reflected XSS, anonymous ViewState RCE, anonymous EA mutation, GraphQL, CORS credential theft, OpenAPI SSRF, and public-spec secret/internal-host disclosure.
+- Closed `connect.signl4.com/api/v4`; V1/V2/V3/webhook/events route maps are complete with no anonymous read surface.
+- Confirmed no V4 Swagger and no live `app|m|apps.signl4.com`; mobile hostname guessing is closed, though mobile API discovery remains incomplete.
+- Recorded a process correction: never infer whole-host status from `/`; probe intermediate/backend-reaching paths first.
+
+### Active
+- Determine whether `labconnect.signl4.com` and `labaccount.signl4.com` remain persistently 502 or are merely temporarily broken.
+- Preserve the 8/8 App Proxy disclosure as the highest-confidence current finding.
+- Evaluate `mobile_api` cross-ingress token acceptance and cross-environment backchannel logout strictly as `AUTH_HELPED`.
+- Prepare the next eight-step structured response with facts separated from hypotheses.
+
+### Blocked
+- Cross-environment token acceptance needs an owner-approved legitimate `client_secret` or `X-S4-Api-Key`.
+- `mobile_api` ingress proof needs a non-production token carrying `mobile_api`; submission of any token is prohibited without approval.
+- Backchannel logout propagation needs an approved client, registered logout URI, and interactive session.
+- `vps.signl4.com` takeover cannot be proven from the researcher seat without DNS/GoDaddy account control.
+- CSP report ingestion is an unauthenticated POST sink, but POST testing is forbidden.
+- No live tampered ViewState replay is allowed; remote `web.config` returns 404.
+
+## Next Move
+1. Recheck `https://labconnect.signl4.com/identity/.well-known/openid-configuration` and `https://labaccount.signl4.com/identity/.well-known/openid-configuration` once, then repeat after about 30 seconds; compare status, `server`, and `Date` only.
+2. Rank `s4dev1..s4dev8.enterprisealert.com` first, then the `mobile_api` and backchannel-logout hypotheses; emit only the eight required structured blocks and classify credential-dependent items as `AUTH_HELPED`.
+
+## Relevant Files
+- `scope.yml`: authoritative eligible asset scope.
+- `inventory/derdack.md`: Derdack inventory and validation history.
+- `art/lead_nemotron3.txt`: source of the `vps.signl4.com` lead and historical three-item dossier context.
+- `hypotheses-nemotron3.txt`: nemotron3 hypothesis queue and stale `[95]` takeover ranking.
+- `bugs.olivermaicher.eu`: required report destination.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+Clean differential: only deviation is the **uppercase host**, which is RFC-mandated case-insensitivity (same origin) — not a flaw. `redirect_uri` is strict exact-match (no path, suffix, userinfo, scheme, or port tolerance). **OATH redirect_uri class → CLOSED/negative.**
+
+Now substantiating impact on the #1 finding: do the 8 App Proxy apps front staging or production?
+[0m$ [0mfor u in "https://s4dev1.enterprisealert.com/identity/.well-known/openid-configuration" "https://s4dev1.enterprisealert.com/api/v2/teams" "https://s4dev1.enterprisealert.com/nonexistent-probe-9f2a"; do
+  echo "=== $u"
+  curl -s -o /tmp/opencode/p.html -D - --max-time 12 "$u" 2>/dev/null | grep -iE '^(HTTP/|x-ms-|server|location|content-length)' | tr -d '\r'
+  echo "  -- hostnames/tokens in body:"
+  grep -oaE '[a-zA-Z0-9.-]+\.(azurewebsites\.net|azure-api\.net|azurefd\.net|internal|local|net|io|com|cloudapp\.net)' /tmp/opencode/p.html 2>/dev/null | sort -u | head -6
+  sleep 2
+done
+=== https://s4dev1.enterprisealert.com/identity/.well-known/openid-configuration
+HTTP/1.1 504 Gateway Timeout
+Content-Length: 30923
+x-ms-proxy-app-id: 1ed1083c-c71a-4997-8027-b1ffe4a4e5da
+x-ms-proxy-group-id: 1ceb310b-bfb6-4095-a8e7-4c33972de5dc
+x-ms-proxy-subscription-id: ff2a095d-01ff-4edb-99e6-38b97f49467c
+x-ms-proxy-transaction-id: 9d4a51b0-9502-454d-b876-30c86f0f97be
+x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+x-ms-proxy-data-center: NEUR
+x-ms-proxy-connector-id: 00000000-0000-0000-0000-000000000000
+x-ms-proxy-error-details: NoActiveConnector
+  -- hostnames/tokens in body:
+msdn.microsoft.com
+s4dev1.enterprisealert.com
+=== https://s4dev1.enterprisealert.com/api/v2/teams
+HTTP/1.1 504 Gateway Timeout
+Content-Length: 30865
+x-ms-proxy-app-id: 9e244978-040a-4158-94ed-a9c3252054a0
+x-ms-proxy-group-id: 1ceb310b-bfb6-4095-a8e7-4c33972de5dc
+x-ms-proxy-subscription-id: ff2a095d-01ff-4edb-99e6-38b97f49467c
+x-ms-proxy-transaction-id: ba5ad534-567a-47db-a809-3a686e61cdd6
+x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+x-ms-proxy-data-center: NEUR
+x-ms-proxy-connector-id: 00000000-0000-0000-0000-000000000000
+x-ms-proxy-error-details: NoActiveConnector
+  -- hostnames/tokens in body:
+msdn.microsoft.com
+s4dev1.enterprisealert.com
+=== https://s4dev1.enterprisealert.com/nonexistent-probe-9f2a
+HTTP/1.1 404 Not Found
+  -- hostnames/tokens in body:
+[0m
+Major correction surfacing: `x-ms-proxy-app-id` is **path-dependent**, and group differs from what I'd recorded. Verifying the routing map before I mis-file this.
+[0m$ [0mecho "=== s4dev1: distinct app-id per path ==="
+for p in /identity/.well-known/openid-configuration /api/v2/teams /ea/rest/events /mobileapi/teams /manage /EAWebService/EventProviderAPI.asmx /webhook /signin-oidc; do
+  a=$(curl -s -o /dev/null -D - --max-time 12 "https://s4dev1.enterprisealert.com$p" 2>/dev/null | grep -iE '^x-ms-proxy-(app|group)-id' | tr -d '\r' | sed 's/.*: //' | paste -sd' ')
+  c=$(curl -s -o /dev/null -o /dev/null -w '%{http_code}' --max-time 12 "https://s4dev1.enterprisealert.com$p" 2>/dev/null)
+  printf '%-46s %-4s %s\n' "$p" "$c" "$a"
+  sleep 1
+done
+echo
+echo "=== group/app variance across hosts (/identity path) ==="
+for n in 1 2 3; do
+  curl -s -o /dev/null -D - --max-time 12 "https://s4dev$n.enterprisealert.com/identity/.well-known/openid-configuration" 2>/dev/null | grep -iE '^x-ms-proxy-(app|group)-id' | tr -d '\r' | sed "s/^/s4dev$n /"
+  sleep 1
+done
+=== s4dev1: distinct app-id per path ===
+/identity/.well-known/openid-configuration     504  1ed1083c-c71a-4997-8027-b1ffe4a4e5da 1ceb310b-bfb6-4095-a8e7-4c33972de5dc
+/api/v2/teams                                  504  9e244978-040a-4158-94ed-a9c3252054a0 1ceb310b-bfb6-4095-a8e7-4c33972de5dc
+/ea/rest/events                                404  
+/mobileapi/teams                               504  7305c39b-4c27-4b22-8dd1-d559e719fab1 1ceb310b-bfb6-4095-a8e7-4c33972de5dc
+/manage                                        504  d5d476d4-20e9-4129-8355-862e7ea8847f 1ceb310b-bfb6-4095-a8e7-4c33972de5dc
+/EAWebService/EventProviderAPI.asmx            404  
+/webhook                                       504  25d99312-dc42-4e8c-91ce-f04761f26f74 1ceb310b-bfb6-4095-a8e7-4c33972de5dc
+/signin-oidc                                   404  
+
+=== group/app variance across hosts (/identity path) ===
+s4dev1 x-ms-proxy-app-id: 1ed1083c-c71a-4997-8027-b1ffe4a4e5da
+s4dev1 x-ms-proxy-group-id: 1ceb310b-bfb6-4095-a8e7-4c33972de5dc
+s4dev2 x-ms-proxy-app-id: 66f8fe89-1859-462c-93e5-82ac1b94b93d
+s4dev2 x-ms-proxy-group-id: 34fd2077-98ea-4a07-b4b2-fd67e3f1edee
+s4dev3 x-ms-proxy-app-id: 145fbd28-ebeb-43fb-9bc3-c3fd09b6bbb3
+s4dev3 x-ms-proxy-group-id: ed019623-25dd-4c54-835e-0935aed523be
+[0m
+[0m$ [0mecho "=== s4dev4..8 group/app id (identity path) + connector status ==="
+for n in 4 5 6 7 8; do
+  h=$(curl -s -o /dev/null -D - --max-time 12 "https://s4dev$n.enterprisealert.com/identity/.well-known/openid-configuration" 2>/dev/null | tr -d '\r')
+  printf 's4dev%s code=%s\n' "$n" "$(echo "$h" | head -1 | awk '{print $2}')"
+  echo "$h" | grep -iE '^x-ms-proxy-(app|group)-id|^x-ms-proxy-error-details|^x-ms-proxy-service-name' | sed 's/^/    /'
+  sleep 1
+done
+=== s4dev4..8 group/app id (identity path) + connector status ===
+s4dev4 code=504
+    x-ms-proxy-app-id: eb3307ea-bd50-4a4f-9500-ebc778fcba8e
+    x-ms-proxy-group-id: 431e7607-7c5a-45ed-8fcd-4a72535eda1c
+    x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+    x-ms-proxy-error-details: NoActiveConnector
+s4dev5 code=504
+    x-ms-proxy-app-id: 73d43271-791c-48dc-b2e9-1d3e49a4e301
+    x-ms-proxy-group-id: 27a5c995-4870-432a-846d-d57a52fe4c6d
+    x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+    x-ms-proxy-error-details: NoActiveConnector
+s4dev6 code=504
+    x-ms-proxy-app-id: 84f933b4-4714-4e51-9e67-d02e407baca9
+    x-ms-proxy-group-id: 515eeb6f-d213-496c-9622-938cf876cdcb
+    x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+    x-ms-proxy-error-details: NoActiveConnector
+s4dev7 code=504
+    x-ms-proxy-app-id: 2429d507-8987-4c6b-9f15-490e3773bd35
+    x-ms-proxy-group-id: e9c545de-a4cc-4135-bf59-9ca919338297
+    x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+    x-ms-proxy-error-details: NoActiveConnector
+s4dev8 code=504
+    x-ms-proxy-app-id: c2304556-7997-4bf9-9c67-9b18d5228699
+    x-ms-proxy-group-id: 966eab1a-ff39-41d1-a605-824fd359d070
+    x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+    x-ms-proxy-error-details: NoActiveConnector
+[0m
+Cycle complete. Four results, two of which correct my own prior claims.
+
+**Closed / negative**
+- **Lab tier**: `labconnect` + `labaccount` returned 502 on `/` and `/identity/.well-known/openid-configuration` across two rounds ~30s apart. Persistently dead origin behind a live App Gateway → folded permanently into the decommissioned-tier finding, dropped from the cross-env token target list.
+- **OATH `redirect_uri` → CLOSED/negative.** My first matrix was contaminated (missing `code_challenge`, so all 12 cases died on `invalid_request` before validation). Re-ran with throwaway PKCE S256 (no code exchanged). Control redirects to the registered URI with `error=login_required`; suffix, trailing slash, attacker-path-prefix, `userinfo@evil`, http downgrade, subdomain suffix, parent domain, and explicit `:443` are **all** rejected. Only uppercase host is accepted — RFC-mandated same-origin case-insensitivity, not a flaw. Strict exact-match, no code-theft primitive. The registered URI is the portal's own OIDC handler, so the phishing variant is dead too.
+- **Production App Gateway leaks nothing.** The `/mobileapi` 403 carries no `x-ms-proxy-*` — the disclosure is App **Proxy**–specific, not App Gateway. Confirmed negative.
+
+**Corrected**
+- `/mobileapi` is on **6/6** identity/API hosts, not three. It's a pre-routing prefix deny (byte-identical 403 for real and fabricated paths) served from a **Derdack-branded** page — "SIGNL4 - Forbidden / Sorry access denied / Please contact us at support.signl4.com", 79088 B, static. ETag mtimes: prod 2026-09-12, dev 2026-09-22 (9.87-day config drift). The branding plus the `/mobile` → 404 contrast means this is **deliberate source-position gating**, not misconfiguration — so I'm downgrading `mobile_api` from 45 to ~20 (design, not a bug). The negative finding is a point in their favor.
+- **App Proxy disclosure refined — and my prior record was wrong.** The `group 431e7607` I'd recorded as shared is **s4dev4's group only**. Each host has its own group (8 distinct: s4dev1 `1ceb310b`, s4dev2 `34fd2077`, s4dev3 `ed019623`, s4dev4 `431e7607`, s4dev5 `27a5c995`, s4dev6 `515eeb6f`, s4dev7 `e9c545de`, s4dev8 `966eab1a`). Only the **subscription** `ff2a095d-01ff-4edb-99e6-38b97f49467c` and service `proxy-appproxy-NEUR-DUB01P-3` are shared. Also `x-ms-proxy-app-id` is **per-(host,path) route**, not per-host — s4dev1 alone exposes 5+ app-ids (identity `1ed1083c`, api `9e244978`, mobileapi `7305c39b`, manage `d5d476d4`, webhook `25d99312`); unmatched paths give a clean header-free 404. So the "8 distinct app IDs" was a floor sampled on one path, and the real disclosure is a **routing map**, which is a better finding than a host list.
+- **Impact cap:** every backend-reaching route returns 504 `NoActiveConnector` with an all-zero connector-id. The entire s4dev App Proxy tier is configured but unconnected — no data path, no origin to bypass.
+
+**Current ranking**
+1. App Proxy topology/routing disclosure — 8/8 hosts, only candidate actually submittable, but **Low/Info** (unconnected tier, no data access).
+2. Backchannel logout — 42, `AUTH_HELPED` (needs approved client + interactive session).
+3. `mobile_api` — ~20, reclassified as intended design.
+4. `vps.signl4.com` — 95 in the old file remains overstated; takeover needs DNS/GoDaddy control, so `MISCONFIG LOW-Med` / `HUMAN_ONLY`.
+
+One thing I want to flag rather than paper over: nothing in the passive surface is high-impact. The three impact-bearing paths (cross-env token forgery, mobile ingress, logout propagation) all remain blocked on owner-approved credentials, and I've now closed the redirect_uri route that was the only credential-free way toward any of them.
+
+**Next move — recommendation:** stop probing and write the low-severity App Proxy draft to `bugs.olivermaicher.eu` with the corrected 8-group/route-map data, since further passive enumeration only refines an Info finding. Before I do that: do you want the report framed as *unauthenticated Azure topology disclosure* (my recommendation, accurate and low), or should I first spend a cycle checking whether any **production** host has an active App Proxy connector — the one measurement that could raise this above Info?
