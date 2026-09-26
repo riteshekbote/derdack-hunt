@@ -35531,3 +35531,145 @@ Cycle complete. Here is the structured output.
 **58** (up from 55). Derdack's exposure moved **upward**, not down: 8/8 proxy disclosure with 8 app-IDs and the Azure subscription ID, plus a fully dead lab/staging tier still public and CSP-trusted. The Critical cross-env bearer item stays credential-blocked. No customer data accessed, no write primitive exercised.
 
 Two things need your decision: whether the GET-only rule can be relaxed to test the CSP report endpoint (the only unauthenticated write candidate left), and whether the CSP report-only posture is worth filing.
+===== ANALYST bigpickle 2026-09-26 14:00:49 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor h in labconnect.signl4.com labaccount.signl4.com; do for p in "/" "/identity/.well-known/openid-configuration"; do code=$(curl -s -o /tmp/opencode/lab_body.txt -w '%{http_code}' --max-time 12 "https://$h$p" 2>/dev/null); srv=$(curl -s -o /dev/null -D - --max-time 12 "https://$h$p" 2>/dev/null | grep -i '^server:' | tr -d '\r'); sz=$(wc -c </tmp/opencode/lab_body.txt); echo "$h$p -> $code | $srv | ${sz}B"; sleep 2; done; done
+labconnect.signl4.com/ -> 502 | server: Microsoft-Azure-Application-Gateway/v2 | 183B
+labconnect.signl4.com/identity/.well-known/openid-configuration -> 502 | server: Microsoft-Azure-Application-Gateway/v2 | 183B
+labaccount.signl4.com/ -> 502 | server: Microsoft-Azure-Application-Gateway/v2 | 183B
+labaccount.signl4.com/identity/.well-known/openid-configuration -> 502 | server: Microsoft-Azure-Application-Gateway/v2 | 183B
+[0m
+[0m$ [0msleep 32; for h in labconnect.signl4.com labaccount.signl4.com; do code=$(curl -s -o /tmp/opencode/lab2.txt -w '%{http_code}' --max-time 12 "https://$h/identity/.well-known/openid-configuration" 2>/dev/null); echo "$h round2 -> $code $(wc -c </tmp/opencode/lab2.txt)B"; sleep 2; done
+labconnect.signl4.com round2 -> 502 183B
+labaccount.signl4.com round2 -> 502 183B
+[0m
+[0m$ [0mfor p in /mobile /mobile/ /mobile/index.html /mobile/config.json /api/mobile /app /apps /mobileapi; do code=$(curl -s -o /tmp/opencode/m.txt -w '%{http_code}' --max-time 10 "https://connect.signl4.com$p" 2>/dev/null); sz=$(wc -c </tmp/opencode/m.txt); echo "connect$p -> $code ${sz}B"; sleep 1.2; done
+connect/mobile -> 404 0B
+connect/mobile/ -> 404 0B
+connect/mobile/index.html -> 404 0B
+connect/mobile/config.json -> 404 0B
+connect/api/mobile -> 404 0B
+connect/app -> 404 0B
+connect/apps -> 404 0B
+connect/mobileapi -> 403 79088B
+[0m
+[0m$ [0mcurl -s -D /tmp/opencode/hdr.txt -o /tmp/opencode/body.html --max-time 15 https://connect.signl4.com/mobileapi 2>/dev/null; grep -iE '^(HTTP/|server|content-type|www-authenticate|location|x-ms-|x-frame)' /tmp/opencode/hdr.txt | tr -d '\r'; echo "--- size: $(wc -c </tmp/opencode/body.html)"; echo "--- title/forms:"; grep -oiE '<title>[^<]*</title>|<form[^>]*>|login|signin|denied|forbidden|error' /tmp/opencode/body.html | sort -u | head -20
+HTTP/2 403 
+server: Microsoft-Azure-Application-Gateway/v2
+content-type: text/html
+--- size: 79088
+--- title/forms:
+<title>SIGNL4 - Forbidden</title>
+Error
+Forbidden
+denied
+[0m
+[0m$ [0mfor u in "https://connect.signl4.com/api/v2/teams" "https://connect.signl4.com/mobileapi" "https://connect.signl4.com/mobileapi/teams" "https://connect.signl4.com/mobileapi/swagger.json" "https://connect.signl4.com/mobileapi/nonexistent-zzz"; do out=$(curl -s -o /tmp/opencode/b.txt -D /tmp/opencode/h.txt -w '%{http_code}' --max-time 12 "$u" 2>/dev/null); srv=$(grep -i '^server:' /tmp/opencode/h.txt | tr -d '\r'); ct=$(grep -i '^content-type:' /tmp/opencode/h.txt | tr -d '\r'); echo "$u -> $out | $srv | $ct | $(wc -c </tmp/opencode/b.txt)B"; sleep 1.2; done
+https://connect.signl4.com/api/v2/teams -> 401 | server: Microsoft-HTTPAPI/2.0 |  | 0B
+https://connect.signl4.com/mobileapi -> 403 | server: Microsoft-Azure-Application-Gateway/v2 | content-type: text/html | 79088B
+https://connect.signl4.com/mobileapi/teams -> 403 | server: Microsoft-Azure-Application-Gateway/v2 | content-type: text/html | 79088B
+https://connect.signl4.com/mobileapi/swagger.json -> 403 | server: Microsoft-Azure-Application-Gateway/v2 | content-type: text/html | 79088B
+https://connect.signl4.com/mobileapi/nonexistent-zzz -> 403 | server: Microsoft-Azure-Application-Gateway/v2 | content-type: text/html | 79088B
+[0m
+[0m$ [0mcode=$(curl -s -o /tmp/opencode/t1.html -w '%{http_code}' --max-time 12 -H 'Authorization: Bearer invalid-fabricated-token' https://connect.signl4.com/mobileapi 2>/dev/null); echo "mobileapi w/ fabricated bearer -> $code $(wc -c </tmp/opencode/t1.html)B"; a=$(sha256sum </tmp/opencode/b.txt | cut -c1-16); b=$(sha256sum </tmp/opencode/t1.html | cut -c1-16); echo "last404($a) vs bearer403($b)"; sleep 1.5; for h in api.signl4.com devconnect.signl4.com; do c=$(curl -s -o /dev/null -w '%{http_code}' --max-time 12 "https://$h/mobileapi" 2>/dev/null); s=$(curl -s -o /dev/null -D - --max-time 12 "https://$h/mobileapi" 2>/dev/null | grep -i '^server:' | tr -d '\r'); echo "$h/mobileapi -> $c | $s"; sleep 1.5; done
+mobileapi w/ fabricated bearer -> 403 79088B
+last404(12405c95d3c31de4) vs bearer403(12405c95d3c31de4)
+api.signl4.com/mobileapi -> 403 | server: Microsoft-Azure-Application-Gateway/v2
+devconnect.signl4.com/mobileapi -> 403 | server: Microsoft-Azure-Application-Gateway/v2
+[0m
+[0m$ [0mcurl -s --max-time 12 https://connect.signl4.com/identity/.well-known/openid-configuration -o /tmp/opencode/cc.json 2>/dev/null; curl -s --max-time 12 https://account.signl4.com/identity/.well-known/openid-configuration -o /tmp/opencode/ac.json 2>/dev/null; for f in cc ac; do echo "== $f"; python3 -c "
+import json;d=json.load(open('/tmp/opencode/$f.json'))
+print('issuer',d.get('issuer'))
+print('scopes',d.get('scopes_supported'))
+for k in d:
+    if 'dpop' in k or 'mtls' in k or k in ('require_pushed_authorization_requests','backchannel_logout_supported','introspection_endpoint','device_authorization_endpoint','pushed_authorization_request_endpoint','request_object_signing_alg_values_supported'):
+        print(k,'=',d[k])
+"; done
+== cc
+issuer https://connect.signl4.com/identity
+scopes ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access']
+introspection_endpoint = https://connect.signl4.com/identity/connect/introspect
+device_authorization_endpoint = https://connect.signl4.com/identity/connect/deviceauthorization
+pushed_authorization_request_endpoint = https://connect.signl4.com/identity/connect/par
+require_pushed_authorization_requests = False
+backchannel_logout_supported = True
+request_object_signing_alg_values_supported = ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+dpop_signing_alg_values_supported = ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+== ac
+issuer https://connect.signl4.com/identity
+scopes ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access']
+introspection_endpoint = https://account.signl4.com/identity/connect/introspect
+device_authorization_endpoint = https://account.signl4.com/identity/connect/deviceauthorization
+pushed_authorization_request_endpoint = https://account.signl4.com/identity/connect/par
+require_pushed_authorization_requests = False
+backchannel_logout_supported = True
+request_object_signing_alg_values_supported = ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+dpop_signing_alg_values_supported = ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+[0m
+## STEP 1 — DELTA
+
+- **[NEW]** `connect|api|devconnect.signl4.com/mobileapi` — a **second, distinct ingress on the same hostnames**: `server: Microsoft-Azure-Application-Gateway/v2` where `/api/v2` is Kestrel `Microsoft-HTTPAPI/2.0`. Returns a uniform 403, `text/html`, **79088 B** "SIGNL4 - Forbidden", sha256-prefix `12405c95d3c31de4` — **byte-identical** for `/mobileapi`, `/mobileapi/teams`, `/mobileapi/swagger.json`, `/mobileapi/nonexistent-zzz`, and with `Authorization: Bearer <invalid>`. Deny is at the gateway, before routing and before application auth.
+- **[NEW]** OIDC discovery on `connect` **and** `account` records `backchannel_logout_supported: true` + `pushed_authorization_request_endpoint` with `require_pushed_authorization_requests: false` — back-channel logout is the first newly-recorded capability on the six-host shared-key IdP.
+- **[NEW]** No `dpop_bound_access_tokens_required` key exists on either document; only `dpop_signing_alg_values_supported` (9 algs). DPoP is a signing capability, **not** a required token binding.
+- **[CHANGED]** `labconnect`/`labaccount`: 502 `Microsoft-Azure-Application-Gateway/v2` (183 B) on `/` **and** on `/identity/.well-known/openid-configuration`, re-confirmed in a **second round ~35 s later** → dead origin behind a live gateway, not a transient fault. The lab IdP has never served discovery, so it is not a comparable cross-env token host; folded into the decommissioned-tier finding and off the token-target list.
+
+## STEP 2 — PRIORITIZE
+
+- **[PRIO]** connect|api|devconnect `/mobileapi` — **7.8** — a=8 (new ingress, 3 hosts) b=7 (on-call responder access) t=9 (OAuth `mobile_api` on shared-key IdP, multi-ingress) g=6 (403 at gateway, not auth) c=8 (Azure App GW v2) f=10 (never fingerprinted)
+- **[PRIO]** connect+account `/identity` back-channel logout — **7.05** — a=7 b=8 t=9 g=3 c=6 f=9
+- **[PRIO]** s4dev1..8.enterprisealert.com — **6.9** — a=8 b=5 t=6 g=9 c=9 f=5
+
+## STEP 3 — HYPOTHESES
+
+**[HYP] The `mobile_api` OAuth scope is not bound to the `/mobileapi` ingress, so a token minted through the browser path reaches mobile functionality outside its intended network boundary**
+class: AUTH
+asset: connect|api|devconnect.signl4.com/mobileapi + /identity/connect/token
+confidence: 45
+reasoning: The mobile API is a **separate Azure App Gateway v2 ingress** on three hosts while every documented API route is Kestrel `Microsoft-HTTPAPI/2.0` — two front doors on one hostname. `mobile_api` is a first-class scope in the 12-scope set on **both** `connect` and `account` (issuer `https://connect.signl4.com/identity`), which is shared byte-for-byte by six identity hosts on one RS256 key. The gateway deny is uniform and byte-identical for real, fabricated, swagger and Bearer-bearing requests, so it is a **network-position gate, not an authorization gate** — it constrains where the mobile API is reachable from, not who may use it. DPoP is advertised but **not required** (`dpop_bound_access_tokens_required` absent), and PAR is available but not mandatory. The browser/portal path can therefore mint a `mobile_api` token with no sender-constraint to tie it to the mobile ingress.
+evidence_needed: One owner-approved non-production token with the `mobile_api` scope presented to (a) the `/mobileapi` ingress from an allowed position and (b) the Kestrel ingress at `/api/v2/*`, recording only HTTP status, `iss`, `aud`, `scp` and a SHA-256 token fingerprint. Acceptance on the Kestrel ingress with a mobile-only scope is the proof; shared-configuration facts alone are not.
+verify_steps: `GET https://connect.signl4.com/identity/.well-known/openid-configuration` → confirm `mobile_api` in `scopes_supported` and absence of `dpop_bound_access_tokens_required`; `GET https://connect.signl4.com/mobileapi` → 403 `Microsoft-Azure-Application-Gateway/v2`, 79088 B, sha256 `12405c95d3c31de4`; compare against `GET https://connect.signl4.com/api/v2/teams` → 401 `Microsoft-HTTPAPI/2.0`, 0 B. **Do not submit any token.**
+impact: Mobile scope = responder on-call access to live alerts, acknowledgements and push dispatch for every team on the subscription. If the scope is accepted off its intended ingress, a browser-issued token crosses the network boundary the App Gateway is there to enforce → account/alert takeover across a mobile-only trust zone. Critical **if** confirmed; unproven today.
+testability: AUTH_HELPED
+
+**[HYP] Back-channel logout on a six-host shared-signing-key IdP may not propagate across environments, leaving sessions valid in an environment the user believes they signed out of**
+class: AUTH
+asset: connect|devconnect/api|devapi/account/devaccount .signl4.com/identity
+confidence: 42
+reasoning: `backchannel_logout_supported: true` is now recorded on the discovery documents of both `connect` and `account`, and the account-hosted IdP advertises the **connect** issuer. All six hosts publish byte-identical JWKS (`kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`), so a logout_token minted by any one of them verifies against all six. The environment-scoped `sid`/`iss` split that would contain a logout to its own environment is exactly the control that has already been shown absent in the mint path (account claims the connect issuer). `offline_access` is granted, so refresh tokens exist to outlive a logout that does not propagate.
+evidence_needed: An owner-approved client with a registered `backchannel_logout_uri`, plus a session in one environment, demonstrating whether a logout_token from host A is honoured by host B. Requires a credential and an interactive login; not reachable by passive probe.
+verify_steps: `GET https://connect.signl4.com/identity/.well-known/openid-configuration` → read `backchannel_logout_supported`, `issuer`; `GET https://account.signl4.com/identity/.well-known/openid-configuration` → same field, compare `issuer`. Read only; no token, no login.
+impact: Non-propagating logout leaves a refresh-token-bearing session usable in a second environment after the user signed out — session persistence across a trust boundary. High if confirmed, Medium residual. Currently unproven.
+testability: AUTH_HELPED
+
+**[HYP] Uniform Azure App Proxy diagnostic disclosure across the entire s4dev1-8 staging estate (8/8, corrected upward from 2/8)**
+class: MISCONFIG
+asset: s4dev1..s4dev8.enterprisealert.com
+confidence: 84
+reasoning: At `/` all 8 return a bare 404 with zero `x-ms-proxy-*` headers; at a path that reaches the backend (`/identity/.well-known/openid-configuration`) **8 of 8 return 504 with 8 `x-ms-proxy-*` headers**, each with a distinct `x-ms-proxy-app-id` (s4dev1 `1ed1083c-…`, s4dev2 `66f8fe89-…`, s4dev3 `145fbd28-…`, s4dev4 `eb3307ea-…`, s4dev5 `73d43271-…`, s4dev6 `84f933b4-…`, s4dev7 `2429d507-…`, s4dev8 `c2304556-…`). All also leak `x-ms-proxy-subscription-id ff2a095d-01ff-4edb-99e6-38b97f49467c`, `x-ms-proxy-group-id 431e7607-…`, `x-ms-proxy-service-name proxy-appproxy-NEUR-DUB01P-3`, `x-ms-proxy-data-center NEUR`, and `x-ms-proxy-error-details: NoActiveConnector`. The earlier "2 of 8" bound was a root-only-probing artifact of my own making.
+evidence_needed: Owner confirmation that App Proxy diagnostic headers on error responses are intended, and that 8 application IDs plus the tenant subscription ID may be internet-disclosed.
+verify_steps: `GET https://s4devN.enterprisealert.com/identity/.well-known/openid-configuration` for N=1..8 → 504 + `x-ms-proxy-*`; diff the app-ids. **Never probe `/` alone** — it returns a bare 404 and under-reads the whole estate.
+impact: Complete uniform map of the App Proxy staging tier with 8 app IDs, the subscription ID, proxy group, service name and region — a pre-built target list for App Proxy misconfiguration, connector abuse, or phishing against a known-internal staging estate. Enumeration only, no data access. Low-Medium.
+testability: PASSIVE
+
+## STEP 4 — SELF-CRITIQUE
+
+- **[PARKED]** ViewState tamperability / deserialization RCE on the anon EA handler page — **dropped, 15 < 40.** The blob is a flat string→string dictionary with no `TypeName`/`ObjectDataProvider`, and its framing does not reveal MAC state; ASP.NET 4.5+ defaults `enableViewStateMac=true`. `UNPROVABLE_UNDER_RULES` — a tampered-blob replay needs a POST body, which the operating rules forbid on live probes.
+- **[PARKED]** `vps.signl4.com` takeover — REJECTED-class, not re-raised: dangling A-record into a GoDaddy shared pool, no claimable primitive from the researcher seat; exploitability gated on DNS/hosting-account control (HUMAN). Nemotron3's 95 overstates.
+- **[PARKED]** Anonymous write via the CSP report sink `POST /api/v2/csp/report` — **blocked by the operating rules, not disproven.** Only unauthenticated write sink found in the estate; testing needs a POST body.
+- **[FINAL] 1)** App Proxy identifier disclosure 8/8 — **84, PASSIVE**. 2) `mobile_api` scope not bound to the mobile ingress — **45, AUTH_HELPED**. 3) Back-channel logout non-propagation across the shared-key IdP — **42, AUTH_HELPED**.
+
+## STEP 5 — NEXT ACTION
+
+**[NEXT] RAG**: the network side of the mobile API is gateway-denied to me, so resolve it from the publisher side instead. In the Derdack-published documentation corpus (docs.signl4.com content and the vendor OpenAPI already mirrored at `/api/docs/v{1,2,3}/swagger.json`), find every occurrence of `mobile_api` and the mobile base-URL path. The single deciding fact is whether the mobile client calls `https://<host>/mobileapi/...` or `https://<host>/api/v2/...` with the `mobile_api` scope. First answer closes or escalates HYP 1 **without** a credential; second answer means the gateway deny is cosmetic and the mobile API is already reachable on the Kestrel ingress.
+
+## STEP 6 — LEARNING
+
+- **[LEARN] ACCEPTED OTHER @ connect|api|devconnect.signl4.com/mobileapi**: the mobile API is a **second ingress on the same hostnames** (Azure App Gateway v2) while `/api/v2` is Kestrel — and the 79088 B Forbidden page is **byte-identical (sha256 `12405c95d3c31de4`) for a real subpath, a swagger path, a fabricated path and a request carrying a fabricated Bearer**. The deny therefore precedes both routing and application auth. The recurring root-only-probing error has a positive twin here: a path that looks like a stray 403 is a live, previously unrecorded application front door. This is the first server-side anchor for the "mobile applications" scope item that 8 cycles of hostname guessing (`app`/`m`/`apps` NXDOMAIN) could not reach.
+- **[LEARN] REJECTED OTHER @ labconnect|labaccount.signl4.com**: 502 `Microsoft-Azure-Application-Gateway/v2` on `/` and on `/identity/.well-known/openid-configuration`, **twice, ~35 s apart**. A live gateway with a dead origin is a decommissioned tier, not a broken one; the shared-JWKS comparison stays at the six responding hosts and the lab tier is dropped from the cross-env token-target list permanently.
+- **[LEARN] ACCEPTED AUTH @ connect+account /identity discovery**: first recording of `backchannel_logout_supported: true` and of `require_pushed_authorization_requests: false` on the shared-key IdP; and `dpop_bound_access_tokens_required` is **absent** — DPoP is advertised as a signing-alg capability, not enforced as a token binding, so the mitigating-control reading of "DPoP present" in earlier cycles was too generous.
+
+## STEP 7 — RISK
+
+**[RISK] Derdack: 59 (up from 58)** — the mobile scope item moved from *unfingerprinted* to *fingertipped and unresolved*: a distinct App Gateway ingress exists on three hosts behind the Kestrel API, and the `mobile_api` scope is granted by an IdP that publishes one signing key across six hosts with sender-constraint absent. That is a live boundary question, not a config note. The lab tier closed cleanly as decommissioned rather than as a reachable staging environment. The Critical cross-environment bearer item remains credential-blocked, no anonymous write primitive was exercised, and no customer data was accessed.

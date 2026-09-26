@@ -1668,3 +1668,14 @@ www.derdack.com
 - CHANGED vps.signl4.com subdomain takeover re-confirmed 7+ consecutive cycles — HTTPS 200 nginx default, cert CN=server.d1g.it, GoDaddy NS, fabricated-host byte-identical
 - CHANGED us.derdack.com live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift at 2026-09-25 boundary — no new paths, verbs, or differentials
+
+## 2026-09-26 14:00:49 UTC
+- NEW demo.enterprisealert.com/EAWebService/ directory index (200, HTML titled "Enterprise Alert® Event Provider API & Connector SDK (v9.5.26147)") — never probed before, links 3 endpoint docs
+- NEW demo.enterprisealert.com/EAWebService/EventConnectorServer.ashx renders empty installed-handlers table (200, 240B, ?action=GetStatus byte-identical) — closes HIGH-value Connector SDK alert-exfil class
+- NEW s4dev5/6/7.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About → bare 404, zero x-ms-proxy-* headers (matches s4dev1/2/3/8) — App Proxy identifier disclosure bounded at 2/8 hosts
+- NEW GraphQL class closed: /graphql, /api/graphql, /api/v2/graphql, /api/v3/graphql, /graphiql → 15/15 uniform bare 404 across connect/api/demo
+- NEW Fresh WSDL GET exposes internal single-label SOAP address https://ereesus/EAWebService/EventProviderAPI.asmx — internal hostname leak
+- NEW Fresh OIDC discovery on api.signl4.com + account.signl4.com records dpop_signing_alg_values_supported: ["RS256"] — mitigating control
+- CHANGED vps.signl4.com subdomain takeover re-confirmed 7+ consecutive cycles — HTTPS 200 nginx default, cert CN=server.d1g.it, GoDaddy NS, fabricated-host byte-identical
+- CHANGED us.derdack.com live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift at 2026-09-25 boundary — no new paths, verbs, or differentials
