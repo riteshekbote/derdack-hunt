@@ -1,4 +1,4 @@
-## 2026-09-26 00:10:41 UTC [target] (model nemotron3)
+## 2026-09-26 05:03:01 UTC [target] (model nemotron3)
 [NEW] Fresh GET `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes non-public single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` — internal hostname leak in WSDL
 [NEW] Fresh OIDC discovery on `api.signl4.com/.well-known/openid-configuration` and `account.signl4.com/.well-known/openid-configuration` records DPoP signing-algorithm metadata (`dpop_signing_alg_values_supported`: ["RS256"]) — mitigating control, not a vulnerability
 [CHANGED] No issuer, JWKS, scope, grant, PKCE, or client-authentication drift observed across 6 identity hosts (connect, devconnect, api, devapi, account, devaccount)
@@ -28,16 +28,16 @@ evidence_needed: Live HTTP 200 on /EAWebService/ with version disclosure 9.5.261
 verify_steps: 1) GET https://demo.enterprisealert.com/EAWebService/ (confirm 200, version 9.5.26147) 2) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl (confirm 12-op WSDL, note ereesus hostname) 3) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About (confirm anon-readable handler index) 4) POST https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=RaiseEvent with fabricated creds (confirm 401/Error-1 gate)
 impact: Full EA alert API surface exposed anonymously (version, WSDL, handler index, internal hostname) — enables targeted credentialed attacks against customer EA deployments using same endpoints; severity MEDIUM (config exposure, all exploit chains AUTH_HELPED)
 testability: PASSIVE
-[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
-class: AUTH
-asset: connect/devconnect/api/devapi/account/devaccount.signl4.com/identity
-confidence: 88
-reasoning: 6 identity hosts serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); account.signl4.com/identity claims issuer=https://connect.signl4.com/identity (cross-host mint-mismatch); identical 12-scope set including EA management scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); password/device_code/CIBA/token-exchange grants enabled on staging; plain PKCE allowed; handler-deferred auth on V1/V2 APIs (unauth GET→405, invalid Bearer→405) enables cross-env token acceptance; API key dual pipeline live (query param + header)
-evidence_needed: Valid client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 OR leaked X-S4-Api-Key / team-secret to complete chain
-verify_steps: 1) GET https://account.signl4.com/identity/.well-known/openid-configuration (confirm issuer mismatch, plain PKCE, EA scopes) 2) GET https://connect.signl4.com/identity/.well-known/openid-configuration (confirm parametric twin) 3) POST https://devconnect.signl4.com/identity/connect/token with password grant + client_secret (if obtained) 4) Use forged token against api.signl4.com/api/v2/teams (handler-deferred auth accepts cross-env tokens)
-impact: Full multi-tenant EA/SIGNL4 compromise — token forgery across prod/staging, API CRUD via shared scopes, billing/invoice access via V3, webhook event injection via team-secret; severity CRITICAL
-testability: AUTH_HELPED
-[PARKED] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch: AUTH_HELPED — requires valid client_secret or leaked X-S4-Api-Key/Bearer token/team-secret to complete chain; no passive-only path to token acquisition
+[HYP] Credential-in-URL template family across vendor documentation and GitHub
+class: MISCONFIG
+asset: derdack.com (vendor docs), github.com/Derdack (12 repos)
+confidence: 78
+reasoning: 7+ distinct vendor sources document cleartext credentials in URL templates: SolarWinds article (Password=Derdack01 + internal hostname mmea2012.derdack-support.local), EA9 HTTP/SOAP API PDF (md5-hash variant), send-alerts-web-services (Username=Administrator&Password=test), 6/12 GitHub repos (nagios, 2wayREST×3, SIGNL4, User-Monitoring) with apiKey-in-URL templates + checkmk hardcoded cred; deployments log keys to EA log/process/access-log surface; leak-oracles negative across 7+ corpora (no customer-deployed keys found)
+evidence_needed: Live vendor documentation pages embedding credential templates; GitHub repos with credential-parameter patterns; deployment logs showing key exposure
+verify_steps: 1) GET https://www.derdack.com/de/ (SolarWinds article with cleartext Password=Derdack01) 2) GET https://docs.enterprisealert.com/ (EA9 PDF with md5-hash variant) 3) GET https://github.com/Derdack (6 repos with apiKey-in-URL templates) 4) Search public corpora for deployed keys (already done — negative)
+impact: Deployment-side credential leakage vector — customers copying vendor templates expose API keys/credentials in URLs, logs, referrers, browser history; severity MEDIUM (template risk, no active customer leak found)
+testability: PASSIVE
+[PARKED] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch: AUTH_HELPED — requires valid client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 OR leaked X-S4-Api-Key / team-secret to complete chain; no passive-only path to token acquisition
 [PARKED] BOLA on connect.signl4.com/api/v3 file-download family (signlReports/dutyReports/attachments): AUTH_HELPED — requires valid Bearer token; handler-deferred auth on V3 invoice endpoint is route-gated (401), not flapping like V1/V2 teams; file-download family unproven
 [PARKED] IDOR on connect.signl4.com/api/v1/alerts/acknowledgeAll|closeAll userId query param: AUTH_HELPED — handler-deferred auth confirmed (unauth GET→405, invalid Bearer→405) but impersonation param unreachable without valid token
 [PARKED] Webhook team-secret enumeration oracle on connect.signl4.com/webhook/{teamSecret}: operator-chosen secret (not high-entropy), guessing falls under REJECTED brute-force class; oracle exploitable only via secret leak → config/design finding

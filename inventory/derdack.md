@@ -1640,3 +1640,20 @@ www.derdack.com
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-09-25 boundary — no new paths, verbs, or differentials
 - CHANGED vps.signl4.com subdomain takeover re-confirmed across 7+ consecutive probe cycles — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fabricated-host byte-identical re
 - CHANGED us.derdack.com live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class
+
+## 2026-09-26 05:04:47 UTC
+- NEW `demo.enterprisealert.com/EAWebService/` (directory root) → 200, 1824 B HTML index titled "Enterprise Alert® Event Provider API & Connector SDK (v9.5.26147)", linking the 3 endpoint docs. Never probed
+- NEW `EventConnectorServer.ashx` renders an **"installed Event Handlers" table with zero rows** — bare path and `?action=GetStatus` are byte-identical 240 B. Closes a HIGH-value class outright: the EA Conn
+- NEW `s4dev5/6/7.enterprisealert.com` at the same deep EA path → **bare 404 with zero `x-ms-proxy-*` headers** (matches s4dev1/2/3/8). With s4dev4 (504 + headers) and demo (200 + headers), the App Proxy ap
+- NEW GraphQL class closed negative: `/graphql`, `/api/graphql`, `/api/v2/graphql`, `/api/v3/graphql`, `/graphiql` → uniform bare 404 across connect.signl4.com, api.signl4.com, demo.enterprisealert.com (15 
+- NEW The internal resource decoded from the pre-auth MSAL analytic cookie (`reuropenorth-dkds.dkds.core.windows.net`) is **NXDOMAIN**; `dkds.core.windows.net` and `reuropenorth-dkds.azurewebsites.net` also
+- CHANGED demo App Proxy baseline re-verified stable: subscription `ff2a095d-…`, app `f18ba879-…`, group `6b26e6a4-…`, connector `da867a92-…`, `NEUR-DUB01P-3`; only `transaction-id` rotates (`e5f865ad-…`). Not 
+- CHANGED `/EAWebService/web.config` → 404 (4853 B). No config source disclosure on the anon-readable EA path family.
+- CHANGED `/EAWebService/rest/events` GET → 405 JSON 72 B (POST → 401). Restores the prior KB baseline after one cycle recorded 411 — the handler enforces Bearer, not Content-Length.
+- CHANGED All AUTH_HELPED queue items (V1 userId, V2 changePassword, V3 invoice/BOLA, licenses) now have **no unprobed surface left to verify under a supplied credential** — GraphQL was the last alternative rea
+- NEW Fresh GET `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes non-public single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` — internal hostna
+- NEW Fresh OIDC discovery on `api.signl4.com/.well-known/openid-configuration` and `account.signl4.com/.well-known/openid-configuration` records DPoP signing-algorithm metadata (`dpop_signing_alg_values_su
+- CHANGED No issuer, JWKS, scope, grant, PKCE, or client-authentication drift observed across 6 identity hosts (connect, devconnect, api, devapi, account, devaccount)
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-09-25 boundary — no new paths, verbs, or differentials
+- CHANGED vps.signl4.com subdomain takeover re-confirmed across 7+ consecutive probe cycles — HTTPS 200 nginx default page, TLS cert CN=server.d1g.it, GoDaddy authoritative NS, fabricated-host byte-identical re
+- CHANGED us.derdack.com live MultiViews 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class

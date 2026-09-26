@@ -34527,3 +34527,185 @@ testability: AUTH_HELPED
 
 ## STEP 7 — RISK
 [RISK] Derdack: 60 — the App Proxy disclosure widened from one demo-only app to two distinct applications plus a connector-liveness fault channel, and now also leaks the internal App Service hostname pre-auth, making it a defensible Low-Medium submission; however it grants no data access and no claimable resource. The single potentially Critical item (cross-environment bearer-token acceptance across six shared-identity hosts) remains strictly credential-blocked and is now further gated by DPoP metadata, and the EA credential-in-URL family still has no proven live leak across 8+ corpora. No anonymous write primitive was exercised and no customer data was accessed.
+===== ANALYST bigpickle 2026-09-26 05:04:47 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor h in s4dev5 s4dev6 s4dev7; do echo "=== $h ==="; curl -s -o /dev/null -D - --max-time 15 "https://$h.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About" 2>&1 | grep -iE '^(HTTP/|x-ms-proxy|nel|server:|content-type)' ; sleep 1; done
+=== s4dev5 ===
+HTTP/1.1 404 Not Found
+=== s4dev6 ===
+HTTP/1.1 404 Not Found
+=== s4dev7 ===
+HTTP/1.1 404 Not Found
+[0m
+[0m$ [0mecho "=== demo baseline ==="; curl -s -o /dev/null -D - --max-time 15 "https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About" 2>&1 | grep -iE '^(HTTP/|x-ms-proxy|set-cookie|server:)'
+=== demo baseline ===
+HTTP/1.1 200 
+x-ms-proxy-app-id: f18ba879-3dea-4018-b9d1-e6dbdc9ce151
+x-ms-proxy-group-id: 6b26e6a4-c5ad-4b27-b31c-e1777730c354
+x-ms-proxy-subscription-id: ff2a095d-01ff-4edb-99e6-38b97f49467c
+x-ms-proxy-transaction-id: e5f865ad-d7f3-48ff-b056-e27125788bbe
+x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+x-ms-proxy-data-center: NEUR
+x-ms-proxy-connector-id: da867a92-3ba5-4e78-95f6-c97bac3c791f
+Set-Cookie: ASP.NET_SessionId=wbyojlxg3t1ozqus241rcfmm; Path=/; HttpOnly; SameSite=Lax
+Set-Cookie: AzureAppProxyAnalyticCookie_f18ba879-3dea-4018-b9d1-e6dbdc9ce151_https_1.3=MGD:MIIBwQYJKoZIhvcNAQcDoIIBsjCCAa4CAQIxggE0ooIBMAIBBDCB8wRUTAAAAAAAAAABAAAAS0RTSwQAAABsAQAADgAAAAYAAACpOFewNqcsYuvjcxP1BINmIAAAAL0PNfgP3dGmDNvBbBhMvVMvpSsCzJhLJ52gUWNxsRn1MIGaBgkrBgEEAYI3SgEwgYwGCisGAQQBgjdKAQ0wfjB8MHoMBERTVFMMcmV1cm9wZW5vcnRoLWRrZHMuZGtkcy5jb3JlLndpbmRvd3MubmV0O2h0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWU7Y3dhcHByb3h5ZGtkc2V1cjALBglghkgBZQMEAS0EKM8rq2QHJVvEZzofaaquqVqyvGxzlarhfettfIJ+VCUZfG/m97e4tiAwcQYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAyT9RMCG8JPyt+bzkYCARCARGEYgiZf0/P3EZCPVrDlfaRt8MddQ4IKEgKQxR2yhZSOER6c+LoLym5SPROVJtNEocSYNpLYS0pb5anARCe7V/OlKUSt; path=/; Secure; SameSite=None
+[0m
+[0m$ [0mfor p in "/EAWebService/" "/EAWebService/EventConnectorServer.ashx" "/EAWebService/EventConnectorServer.ashx?action=GetStatus" "/EAWebService/EventProviderAPI.asmx" "/EAWebService/rest/events" "/EAWebService/web.config" "/EA/" "/EnterpriseAlert/"; do code=$(curl -s -o /tmp/b.txt -w '%{http_code}|%{size_download}|%{content_type}' --max-time 12 "https://demo.enterprisealert.com$p" 2>&1); echo "$p -> $code"; sleep 1; done
+/EAWebService/ -> 200|1824|text/html; charset=utf-8
+/EAWebService/EventConnectorServer.ashx -> 200|240|text/html; charset=utf-8
+/EAWebService/EventConnectorServer.ashx?action=GetStatus -> 200|240|text/html; charset=utf-8
+/EAWebService/EventProviderAPI.asmx -> 200|5292|text/html; charset=utf-8
+/EAWebService/rest/events -> 405|72|application/json; charset=utf-8
+/EAWebService/web.config -> 404|4853|text/html; charset=utf-8
+/EA/ -> 404|0|
+/EnterpriseAlert/ -> 404|0|
+[0m
+[0m$ [0mecho "===== /EAWebService/ ====="; curl -s --max-time 12 "https://demo.enterprisealert.com/EAWebService/" | head -c 3000; echo; echo "===== EventConnectorServer.ashx ====="; curl -s --max-time 12 "https://demo.enterprisealert.com/EAWebService/EventConnectorServer.ashx" | head -c 600
+===== /EAWebService/ =====
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head id="Head1"><title>
+	Enterprise Alert&reg; Event Provider API &amp; Connector SDK (v9.5.26147)
+</title></head>
+<body>
+    <form name="form1" method="post" action="./" id="form1">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwUKMTc5MTQ3ODQwOQ8WAh4TVmFsaWRhdGVSZXF1ZXN0TW9kZQIBFgICAw9kFghmDw8WAh4EVGV4dAVyVGhlIEVudGVycHJpc2UgQWxlcnQmcmVnOyA8Yj5FdmVudCBQcm92aWRlciBBUEkgJmFtcDsgQ29ubmVjdG9yIFNESyAodjkuNS4yNjE0Nyk8L2I+IGNvbnRhaW5zIHRoZSBmb2xsb3dpbmcgcGFnZXM6ZGQCAQ8PFgIfAQUuRXZlbnQgUHJvdmlkZXIgQVBJIHZpYSBIVFRQIFBPU1QgYW5kIEhUVFAgR0VUOmRkAgIPDxYCHwEFM0V2ZW50IFByb3ZpZGVyIEFQSSB2aWEgV2ViIFNlcnZpY2UgcmVxdWVzdHMgKFNPQVApOmRkAgMPDxYCHwEFIUVudGVycHJpc2UgQWxlcnTCriBDb25uZWN0b3IgU0RLOmRkZDi7w7Z0oDzgSZISEwR3g0yEC0UJBPRQcOrR80T+aULJ" />
+
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="2D92FC3A" />
+    <div>
+    
+    
+    <p>
+        <span id="m_labelHeadline">The Enterprise Alert&reg; <b>Event Provider API &amp; Connector SDK (v9.5.26147)</b> contains the following pages:</span>
+    </p>
+    <ul>
+    
+        <li><span id="m_labelEAEventProviderHttp">Event Provider API via HTTP POST and HTTP GET:</span> <a href="EventProviderAPI.aspx">EventProviderAPI.aspx</a></li>       
+
+        <li><span id="m_labelEAEventProviderWS">Event Provider API via Web Service requests (SOAP):</span> <a href="EventProviderAPI.asmx">EventProviderAPI.asmx</a></li>
+
+        <li><span id="m_labelEAEventConnectorServer">Enterprise Alert® Connector SDK:</span> <a href="EventConnectorServer.ashx">EventConnectorServer.ashx</a></li>
+
+    </ul>
+    </div>
+    </form>
+</body>
+</html>
+
+===== EventConnectorServer.ashx =====
+<h3>Enterprise Alert® Connector SDK (v9.5.26147) installed Event Handlers</h3><table width="80%" cellpadding="4" style="border: 1px solid black"><tr><td><b>Handler name</b></td><td><b>Description</b></td><td><b>Status</b></td></tr></table>
+[0m
+[0m$ [0mfor n in reuropenorth-dkds.dkds.core.windows.net dkds.core.windows.net; do echo "--- $n"; getent hosts $n || nslookup $n 2>&1 | tail -5; done
+--- reuropenorth-dkds.dkds.core.windows.net
+Server:		127.0.0.53
+Address:	127.0.0.53#53
+
+** server can't find reuropenorth-dkds.dkds.core.windows.net: NXDOMAIN
+
+--- dkds.core.windows.net
+Address:	127.0.0.53#53
+
+Non-authoritative answer:
+*** Can't find dkds.core.windows.net: No answer
+[0m
+[0m$ [0mfor n in reuropenorth-dkds.azurewebsites.net reuropenorth.azurewebsites.net; do echo "--- $n"; getent hosts $n || echo "NXDOMAIN/none"; done
+--- reuropenorth-dkds.azurewebsites.net
+NXDOMAIN/none
+--- reuropenorth.azurewebsites.net
+NXDOMAIN/none
+[0m
+[0m$ [0mfor h in connect.signl4.com api.signl4.com demo.enterprisealert.com; do for p in /graphql /api/graphql /api/v3/graphql /api/v2/graphql /graphiql; do c=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "https://$h$p"); echo "$h$p -> $c"; sleep 1; done; done
+connect.signl4.com/graphql -> 404
+connect.signl4.com/api/graphql -> 404
+connect.signl4.com/api/v3/graphql -> 404
+connect.signl4.com/api/v2/graphql -> 404
+connect.signl4.com/graphiql -> 404
+api.signl4.com/graphql -> 404
+api.signl4.com/api/graphql -> 404
+api.signl4.com/api/v3/graphql -> 404
+api.signl4.com/api/v2/graphql -> 404
+api.signl4.com/graphiql -> 404
+demo.enterprisealert.com/graphql -> 404
+demo.enterprisealert.com/api/graphql -> 404
+demo.enterprisealert.com/api/v3/graphql -> 404
+demo.enterprisealert.com/api/v2/graphql -> 404
+demo.enterprisealert.com/graphiql -> 404
+[0m
+STEP 1 — DELTA
+
+[NEW] `demo.enterprisealert.com/EAWebService/` (directory root) → 200, 1824 B HTML index titled "Enterprise Alert® Event Provider API & Connector SDK (v9.5.26147)", linking the 3 endpoint docs. Never probed — only `/EAWebService/*` leaves were.
+[NEW] `EventConnectorServer.ashx` renders an **"installed Event Handlers" table with zero rows** — bare path and `?action=GetStatus` are byte-identical 240 B. Closes a HIGH-value class outright: the EA Connector SDK polling channel is live and internet-reachable pre-auth but has no handlers, so it is **not** an alert-exfiltration path on demo.
+[NEW] `s4dev5/6/7.enterprisealert.com` at the same deep EA path → **bare 404 with zero `x-ms-proxy-*` headers** (matches s4dev1/2/3/8). With s4dev4 (504 + headers) and demo (200 + headers), the App Proxy application inventory is now **bounded at 2 of 8** s4dev hosts — the disclosure is not estate-wide.
+[NEW] GraphQL class closed negative: `/graphql`, `/api/graphql`, `/api/v2/graphql`, `/api/v3/graphql`, `/graphiql` → uniform bare 404 across connect.signl4.com, api.signl4.com, demo.enterprisealert.com (15 requests). This priority class was previously unprobed on the SIGNL4 gateway and on the demo EA app.
+[NEW] The internal resource decoded from the pre-auth MSAL analytic cookie (`reuropenorth-dkds.dkds.core.windows.net`) is **NXDOMAIN**; `dkds.core.windows.net` and `reuropenorth-dkds.azurewebsites.net` also fail to resolve. The leaked hostname has no reachable or claimable backend — the disclosure is informational only.
+[CHANGED] demo App Proxy baseline re-verified stable: subscription `ff2a095d-…`, app `f18ba879-…`, group `6b26e6a4-…`, connector `da867a92-…`, `NEUR-DUB01P-3`; only `transaction-id` rotates (`e5f865ad-…`). Not a transient fault.
+[CHANGED] `/EAWebService/web.config` → 404 (4853 B). No config source disclosure on the anon-readable EA path family.
+[CHANGED] `/EAWebService/rest/events` GET → 405 JSON 72 B (POST → 401). Restores the prior KB baseline after one cycle recorded 411 — the handler enforces Bearer, not Content-Length.
+[CHANGED] All AUTH_HELPED queue items (V1 userId, V2 changePassword, V3 invoice/BOLA, licenses) now have **no unprobed surface left to verify under a supplied credential** — GraphQL was the last alternative read path and it is 404.
+
+STEP 2 — PRIORITIZE
+
+[PRIO] demo.enterprisealert.com/EAWebService/EventConnectorServer.ashx, 6.9 (a 8, b 7, t 6, g 10, c 4, f 5) — anon-reachable, credential-free, and structurally a callback/polling channel.
+[PRIO] demo.enterprisealert.com/EAWebService/ (SDK index + .asmx HTML op contract), 6.2 (a 8, b 6, t 6, g 10, c 3, f 5).
+[PRIO] connect.signl4.com/api/{v1,v2,v3} + /identity, 5.6 (a 9, b 9, t 9, g 2, c 3, f 5) — highest business value, zero gate ease.
+
+STEP 3 — HYPOTHESES
+
+[HYP] The EA Connector SDK callback channel on demo.enterprisealert.com is reachable pre-auth and would deliver queued alert payloads to any internet caller
+class: AUTH
+asset: demo.enterprisealert.com/EAWebService/EventConnectorServer.ashx
+confidence: 42
+reasoning: `GET .../EventConnectorServer.ashx` returns 200 text/html (240 B) rendering "Enterprise Alert® Connector SDK (v9.5.26147) installed Event Handlers" with an **empty table** — zero `<tr>` rows; `?action=GetStatus` is byte-identical. The endpoint sits behind Azure AD App Proxy with no pre-authentication and no credential of any kind. EA's Connector SDK is the channel through which a deployed alert system hands pending alerts (message text, destinations, acknowledgements) to a polling consumer.
+evidence_needed: One populated handler row — handler name, description, status, and a returned queue depth — obtained without submitting a credential or invoking a handler.
+verify_steps: `GET https://demo.enterprisealert.com/EAWebService/EventConnectorServer.ashx` → 200, count table rows only; `GET ...ashx?action=GetStatus` → 200, compare byte length; do **not** POST and do not invoke any handler.
+impact: If rows were present, an unauthenticated caller could poll alert payloads for a live alert-routing system — High. As observed (zero rows) the channel is inert and the hypothesis is effectively closed.
+testability: PASSIVE
+
+[HYP] Unauthenticated disclosure of the complete EA 9.5.26147 Event Provider API and Connector SDK surface on the public demo host, via directory index and generated SOAP help page
+class: MISCONFIG
+asset: demo.enterprisealert.com/EAWebService/ and /EAWebService/EventProviderAPI.asmx
+confidence: 55
+reasoning: `/EAWebService/` → 200, 1824 B index page naming all three surfaces and pinning the exact build `v9.5.26147`. `EventProviderAPI.asmx` without `?wsdl` → 200, 5292 B auto-generated ASP.NET service-help page carrying the 12-operation SOAP contract. `EventProviderAPI.aspx` (11 handlers), `.asmx?wsdl` (12 ops) and `EventConnectorServer.ashx` are all anon-readable, and the index links them all. No `web.config` disclosure (404). Every credential path still gates (Error-1 / 401), so this is disclosure-only.
+evidence_needed: Owner confirmation that a public demo host is intended to publish the full unauthenticated SDK index and operation contract, or that the instance should sit behind App Proxy pre-authentication.
+verify_steps: `GET https://demo.enterprisealert.com/EAWebService/` → 200, record title/version/link list; `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx` → 200, record operation names only; `GET https://demo.enterprisealert.com/EAWebService/web.config` → expect 404; submit no credential, invoke no handler.
+impact: A public internet client gets a complete, machine-readable map of the alert-ingestion and connector surface of a product with 2+ documented CVEs plus exact build version — materially shortens reconnaissance against every Derdack-deployed EA instance; Low-Medium, no data access.
+testability: PASSIVE
+
+[HYP] Cross-environment bearer-token acceptance through six shared-identity SIGNL4 hosts
+class: AUTH
+asset: connect/devconnect/api/devapi/account/devaccount.signl4.com/identity and the /api/v1|v2|v3 consumers
+confidence: 76
+reasoning: Six hosts serve a byte-identical RS256 JWKS (`kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, `x5t ke5PPOlOtRevZrJU90l-yw4x7ic`, `n` digest `138f432b…`); `account.signl4.com/identity` advertises `issuer=https://connect.signl4.com/identity` (foreign-issuer mint); shared `client_id 692A0A56-892F-4AE2-8259-76DA398990B6`; `password` grant listed on staging; `code_challenge_methods_supported ["plain","S256"]`; new DPoP metadata present as a mitigating control. Shared configuration is proven; **token acceptance is not** — I have never observed a token accepted outside its environment.
+evidence_needed: An owner-approved non-production bearer token accepted by an API host outside its intended environment, recording only HTTP status, issuer, audience, scopes, and a SHA-256 token fingerprint.
+verify_steps: `GET https://api.signl4.com/identity/.well-known/openid-configuration` → 200; GET the advertised `jwks_uri` → 200; compare issuer/kid/x5t/`n` digest and DPoP fields only; **do not submit any token**.
+impact: If cross-environment acceptance exists → cross-tenant alert, team, subscription, billing and file access, Critical. Shared configuration and a shared key alone prove no direct exploit.
+testability: AUTH_HELPED
+
+STEP 4 — SELF-CRITIQUE
+
+[PARKED] Connector SDK pre-auth alert channel (42): PASSIVE and fully probed — the handler table is **empty**, so the highest-impact reading of this hypothesis is disproven, not merely unconfirmed. Recorded as a verified negative, not carried as a finding.
+[PARKED] Pre-auth MSAL analytic cookie internal hostname (66 → 30): the decoded value `reuropenorth-dkds.dkds.core.windows.net` is NXDOMAIN, and neither `dkds.core.windows.net` nor `reuropenorth-dkds.azurewebsites.net` resolves. There is no reachable backend and nothing claimable — the chain terminates in an unresolvable string.
+[PARKED] GraphQL introspection: 15/15 uniform bare 404 across three hosts. Class closed, no hypothesis.
+[PARKED] vps.signl4.com takeover and the credential-in-URL leak-oracle: REJECTED-class (no claimable primitive from the researcher seat; 8+ corpora negative) — unchanged, not re-raised.
+[FINAL] 1) Cross-environment SIGNL4 bearer-token acceptance — 76, AUTH_HELPED. 2) URL-embedded credential design on the EA alert API — 74, HUMAN_ONLY. 3) Azure App Proxy application-inventory disclosure, now bounded 2/8 — 72, PASSIVE. 4) Unauth EA SDK index + SOAP contract disclosure incl. exact build — 55, PASSIVE.
+
+STEP 5 — NEXT ACTION
+
+[NEXT] SCAN: the SIGNL4 **client applications** (app/mobile) are the one in-scope surface never fingerprinted — the directive names "mobile applications" and nothing in the KB touches them. Probe `https://app.signl4.com/` and `https://m.signl4.com/` at ≤1 rps, GET only, and for any 200 SPA extract the inline `__NEXT_DATA__` / `config.js` JSON and read only `issuer`, `client_id`, `redirect_uri` and `audience` — no token, no credential.
+
+STEP 6 — LEARNING
+
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: root-only and leaf-only probing both under-read this host — the directory index and the generated `.asmx` help page carry the same version + operation contract the leaves do; full-host status needs the intermediate paths.
+[LEARN] REJECTED AUTH @ demo.enterprisealert.com/EAWebService/EventConnectorServer.ashx: the Connector SDK is anon-reachable but its installed-handlers table is **empty**, so the poll channel cannot exfiltrate alert payloads — the HIGH-value reading is disproven by a single passive GET.
+[LEARN] REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero `x-ms-proxy-*` headers, matching s4dev1/2/3/8 — the App Proxy identifier disclosure is bounded at 2 of 8 hosts, not an estate-wide defect.
+[LEARN] REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is absent from the API gateway and the demo app; no alternative read surface remains for the AUTH_HELPED queue.
+[LEARN] REJECTED MISCONFIG @ demo.enterprisealert.com/EAWebService/web.config: 404 — no source/config disclosure on the anon-readable EA path family.
+
+STEP 7 — RISK
+
+[RISK] Derdack: 55 — the App Proxy disclosure de-escalated this cycle (bounded to 2 of 8 hosts, and its one internal hostname is NXDOMAIN, so impact is enumeration-only), the two HIGH-value demo-app channels are both now negatively closed, and the GraphQL class is absent estate-wide. The sole Critical item (cross-environment bearer acceptance across six shared-identity hosts) remains strictly credential-blocked, and every credential-gated hypothesis is now blocked behind a credential with **no remaining unprobed surface to spend it on**. No anonymous write primitive exists anywhere in the estate and no customer data was accessed.
