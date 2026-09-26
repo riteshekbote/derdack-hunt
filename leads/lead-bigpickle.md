@@ -7083,3 +7083,4 @@ verify_steps: `GET https://s4devN.enterprisealert.com/identity/.well-known/openi
 impact: Complete uniform map of the App Proxy staging tier with 8 app IDs, the subscription ID, proxy group, service name and region — a pre-built target list for App Proxy misconfiguration, connector abuse, or phishing against a known-internal staging estate. Enumeration only, no data access. Low-Medium.
 testability: PASSIVE
 ## 2026-09-26 17:37:30 UTC [target] (model bigpickle)
+## 2026-09-26 20:14:15 UTC [target] (model bigpickle)
