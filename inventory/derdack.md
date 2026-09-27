@@ -1704,3 +1704,10 @@ www.derdack.com
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift at 2026-09-25 boundary — no new paths, verbs, or differentials
 
 ## 2026-09-26 23:00:23 UTC
+
+## 2026-09-27 01:04:34 UTC
+- NEW `GET /mobileapi` is a **blanket** 403 on `connect.signl4.com` — byte-identical 79088 B `text/html` for `/mobileapi`, `/mobileapi/connect/token`, `/mobileapi/api/v2/teams`, and fabricated `/mobileapi/Z
+- NEW Mobile ingress exists on `account.signl4.com` and `devaccount.signl4.com` (403, 79088 B) — **corrects my own 3-host record to 6/6**; on the same host `/api/v2/teams` returns 401 `Microsoft-HTTPAPI/2.0
+- NEW `/mobileapi` 403 body is a custom SIGNL4-branded page, `sha256 12405c95d3c31de4f9ad19c52d565240…`, `<title>SIGNL4 - Forbidden</title>`, body text "access denied / 403 / Forbidden", `support.signl4.com
+- CHANGED `demo.enterprisealert.com` App-Proxy auth namespace is fully 404: `/.auth/me`, `/.auth/login/aad/callback`, `/.auth/login/azuread`, `/signin-oidc`, `/.well-known/openid-configuration`. Pre-auth identi
+- CHANGED `labconnect.signl4.com` + `labaccount.signl4.com` remain App Gateway v2 **502** at `01:01:50–53Z` on both `/` and `/identity/.well-known/openid-configuration`. No drift.
