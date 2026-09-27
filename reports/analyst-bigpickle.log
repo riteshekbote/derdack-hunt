@@ -37271,3 +37271,460 @@ testability: AUTH_HELPED
 **STEP 7 — RISK**
 
 [RISK] Derdack bug bounty: 46 — Every high-value item is AUTH_HELPED-blocked on a single missing credential. Confirmed: no anonymous read or write across V1/V2/V3/webhook, no anonymous IDOR, no file upload, no SSRF to metadata, no customer-data exposure, and all takeover candidates are unclaimable from the researcher seat. Risk sits almost entirely on one unverified cross-environment token-acceptance chain, which is critical if true and inert if the issuers enforce `iss`/`aud` correctly.
+===== ANALYST bigpickle 2026-09-27 06:41:11 UTC =====
+[0m
+> build · big-pickle
+[0m
+I'll run a focused passive re-verification of the identity discovery documents to check for drift and to fingerprint fields never read before (MTLS, RAR, DPoP binding flags).
+[0m$ [0mmkdir -p /tmp/opencode/s4 && cd /tmp/opencode/s4 && for h in connect account api devconnect devapi devaccount; do curl -sS -m 25 -o "od_$h.json" -w "$h code=%{http_code} size=%{size_download}\n" "https://$h.signl4.com/identity/.well-known/openid-configuration" --resolve "$h.signl4.com:443:0.0.0.0" 2>/dev/null || echo "$h FAIL"; sleep 1; done; ls -la
+connect code=000 size=0
+connect FAIL
+account code=000 size=0
+account FAIL
+api code=000 size=0
+api FAIL
+devconnect code=000 size=0
+devconnect FAIL
+devapi code=000 size=0
+devapi FAIL
+devaccount code=000 size=0
+devaccount FAIL
+total 8
+drwxr-xr-x 2 runner runner 4096 Sep 27 06:38 .
+drwxr-xr-x 3 runner runner 4096 Sep 27 06:38 ..
+[0m
+The `--resolve` override broke DNS. Retrying with normal resolution.
+[0m$ [0mcd /tmp/opencode/s4 && for h in connect account api devconnect devapi devaccount; do curl -sS -m 25 -o "od_$h.json" -w "$h code=%{http_code} size=%{size_download}\n" "https://$h.signl4.com/identity/.well-known/openid-configuration" 2>&1 | tail -1; sleep 1; done
+connect code=200 size=3457
+account code=200 size=3457
+api code=200 size=3413
+devconnect code=200 size=3517
+devapi code=200 size=3473
+devaccount code=200 size=3517
+[0m
+[0m$ [0mcd /tmp/opencode/s4 && python3 - <<'PY'
+import json,glob,hashlib
+docs={}
+for f in sorted(glob.glob('od_*.json')):
+    h=f[3:-5]
+    d=json.load(open(f))
+    docs[h]=d
+    print("==",h,"sha256",hashlib.sha256(open(f,'rb').read()).hexdigest()[:16])
+keys=set()
+for d in docs.values(): keys|=set(d)
+print("\nUNION OF KEYS (%d):"%len(keys))
+for k in sorted(keys): print("  ",k)
+print("\nPRESENCE MATRIX")
+for k in sorted(keys):
+    print("  %-48s %s"%(k,"".join("1" if k in docs[h] else "-" for h in ["connect","account","api","devconnect","devapi","devaccount"])))
+PY
+== account sha256 e0a09eb8436841b6
+== api sha256 4b6e329d2be419f8
+== connect sha256 3be4ab63ef83e28a
+== devaccount sha256 cbcffaccd59a1c9c
+== devapi sha256 fac1f593f3842112
+== devconnect sha256 417b8ed0ac94c976
+
+UNION OF KEYS (38):
+   authorization_endpoint
+   authorization_response_iss_parameter_supported
+   backchannel_authentication_endpoint
+   backchannel_authentication_request_signing_alg_values_supported
+   backchannel_logout_session_supported
+   backchannel_logout_supported
+   backchannel_token_delivery_modes_supported
+   backchannel_user_code_parameter_supported
+   check_session_iframe
+   claims_supported
+   code_challenge_methods_supported
+   device_authorization_endpoint
+   dpop_signing_alg_values_supported
+   end_session_endpoint
+   frontchannel_logout_session_supported
+   frontchannel_logout_supported
+   grant_types_supported
+   id_token_signing_alg_values_supported
+   introspection_endpoint
+   introspection_endpoint_auth_methods_supported
+   introspection_signing_alg_values_supported
+   issuer
+   jwks_uri
+   prompt_values_supported
+   pushed_authorization_request_endpoint
+   request_object_signing_alg_values_supported
+   request_parameter_supported
+   require_pushed_authorization_requests
+   response_modes_supported
+   response_types_supported
+   revocation_endpoint
+   revocation_endpoint_auth_methods_supported
+   scopes_supported
+   subject_types_supported
+   token_endpoint
+   token_endpoint_auth_methods_supported
+   userinfo_endpoint
+   userinfo_signing_alg_values_supported
+
+PRESENCE MATRIX
+  authorization_endpoint                           111111
+  authorization_response_iss_parameter_supported   111111
+  backchannel_authentication_endpoint              111111
+  backchannel_authentication_request_signing_alg_values_supported 111111
+  backchannel_logout_session_supported             111111
+  backchannel_logout_supported                     111111
+  backchannel_token_delivery_modes_supported       111111
+  backchannel_user_code_parameter_supported        111111
+  check_session_iframe                             111111
+  claims_supported                                 111111
+  code_challenge_methods_supported                 111111
+  device_authorization_endpoint                    111111
+  dpop_signing_alg_values_supported                111111
+  end_session_endpoint                             111111
+  frontchannel_logout_session_supported            111111
+  frontchannel_logout_supported                    111111
+  grant_types_supported                            111111
+  id_token_signing_alg_values_supported            111111
+  introspection_endpoint                           111111
+  introspection_endpoint_auth_methods_supported    111111
+  introspection_signing_alg_values_supported       111111
+  issuer                                           111111
+  jwks_uri                                         111111
+  prompt_values_supported                          111111
+  pushed_authorization_request_endpoint            111111
+  request_object_signing_alg_values_supported      111111
+  request_parameter_supported                      111111
+  require_pushed_authorization_requests            111111
+  response_modes_supported                         111111
+  response_types_supported                         111111
+  revocation_endpoint                              111111
+  revocation_endpoint_auth_methods_supported       111111
+  scopes_supported                                 111111
+  subject_types_supported                          111111
+  token_endpoint                                   111111
+  token_endpoint_auth_methods_supported            111111
+  userinfo_endpoint                                111111
+  userinfo_signing_alg_values_supported            111111
+[0m
+[0m$ [0mcd /tmp/opencode/s4 && python3 - <<'PY'
+import json
+H=["connect","account","api","devconnect","devapi","devaccount"]
+docs={h:json.load(open(f'od_{h}.json')) for h in H}
+watch=["issuer","require_pushed_authorization_requests","authorization_response_iss_parameter_supported",
+"subject_types_supported","response_types_supported","response_modes_supported","prompt_values_supported",
+"code_challenge_methods_supported","grant_types_supported","token_endpoint_auth_methods_supported",
+"introspection_endpoint_auth_methods_supported","revocation_endpoint_auth_methods_supported",
+"introspection_signing_alg_values_supported","userinfo_signing_alg_values_supported",
+"request_object_signing_alg_values_supported","backchannel_token_delivery_modes_supported",
+"backchannel_user_code_parameter_supported","backchannel_logout_supported","frontchannel_logout_supported",
+"scopes_supported"]
+for k in watch:
+    vals=[docs[h].get(k) for h in H]
+    same=all(json.dumps(v,sort_keys=True)==json.dumps(vals[0],sort_keys=True) for v in vals)
+    print(f"\n### {k}  identical_all6={same}")
+    if same: print("   ",json.dumps(vals[0]))
+    else:
+        for h,v in zip(H,vals): print(f"    {h:11s}",json.dumps(v))
+print("\n### endpoint URLs")
+for k in ["authorization_endpoint","token_endpoint","userinfo_endpoint","end_session_endpoint","check_session_iframe","introspection_endpoint","revocation_endpoint","device_authorization_endpoint","backchannel_authentication_endpoint","pushed_authorization_request_endpoint","jwks_uri"]:
+    print(f"  {k:42s}", " ".join(docs[h].get(k,"-").replace("https://","") for h in H))
+PY
+### issuer  identical_all6=False
+    connect     "https://connect.signl4.com/identity"
+    account     "https://connect.signl4.com/identity"
+    api         "https://connect.signl4.com/identity"
+    devconnect  "https://devconnect.signl4.com/identity"
+    devapi      "https://devconnect.signl4.com/identity"
+    devaccount  "https://devconnect.signl4.com/identity"
+
+### require_pushed_authorization_requests  identical_all6=True
+    false
+
+### authorization_response_iss_parameter_supported  identical_all6=True
+    true
+
+### subject_types_supported  identical_all6=True
+    ["public"]
+
+### response_types_supported  identical_all6=True
+    ["code", "token", "id_token", "id_token token", "code id_token", "code token", "code id_token token"]
+
+### response_modes_supported  identical_all6=True
+    ["form_post", "query", "fragment"]
+
+### prompt_values_supported  identical_all6=True
+    ["none", "login", "consent", "select_account"]
+
+### code_challenge_methods_supported  identical_all6=True
+    ["plain", "S256"]
+
+### grant_types_supported  identical_all6=True
+    ["authorization_code", "client_credentials", "refresh_token", "implicit", "password", "urn:ietf:params:oauth:grant-type:device_code", "urn:openid:params:grant-type:ciba", "urn:ietf:params:oauth:grant-type:token-exchange"]
+
+### token_endpoint_auth_methods_supported  identical_all6=True
+    ["client_secret_basic", "client_secret_post"]
+
+### introspection_endpoint_auth_methods_supported  identical_all6=True
+    ["client_secret_basic", "client_secret_post"]
+
+### revocation_endpoint_auth_methods_supported  identical_all6=True
+    ["client_secret_basic", "client_secret_post"]
+
+### introspection_signing_alg_values_supported  identical_all6=True
+    ["RS256"]
+
+### userinfo_signing_alg_values_supported  identical_all6=True
+    ["RS256"]
+
+### request_object_signing_alg_values_supported  identical_all6=True
+    ["RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512"]
+
+### backchannel_token_delivery_modes_supported  identical_all6=True
+    ["poll"]
+
+### backchannel_user_code_parameter_supported  identical_all6=True
+    true
+
+### backchannel_logout_supported  identical_all6=True
+    true
+
+### frontchannel_logout_supported  identical_all6=True
+    true
+
+### scopes_supported  identical_all6=False
+    connect     ["openid", "email", "profile", "public_api_read", "public_api_write", "public_api_prov", "mobile_api", "account_portal", "reseller_portal", "public_api_ea_manage", "public_api_ea_alerting", "offline_access"]
+    account     ["openid", "email", "profile", "public_api_read", "public_api_write", "public_api_prov", "mobile_api", "account_portal", "reseller_portal", "public_api_ea_manage", "public_api_ea_alerting", "offline_access"]
+    api         ["openid", "email", "profile", "public_api_read", "public_api_write", "public_api_prov", "mobile_api", "account_portal", "reseller_portal", "public_api_ea_manage", "public_api_ea_alerting", "offline_access"]
+    devconnect  ["openid", "email", "profile", "public_api_read", "public_api_write", "public_api_mfa_manage", "public_api_prov", "mobile_api", "account_portal", "reseller_portal", "public_api_ea_manage", "public_api_ea_alerting", "offline_access"]
+    devapi      ["openid", "email", "profile", "public_api_read", "public_api_write", "public_api_mfa_manage", "public_api_prov", "mobile_api", "account_portal", "reseller_portal", "public_api_ea_manage", "public_api_ea_alerting", "offline_access"]
+    devaccount  ["openid", "email", "profile", "public_api_read", "public_api_write", "public_api_mfa_manage", "public_api_prov", "mobile_api", "account_portal", "reseller_portal", "public_api_ea_manage", "public_api_ea_alerting", "offline_access"]
+
+### endpoint URLs
+  authorization_endpoint                     connect.signl4.com/identity/connect/authorize account.signl4.com/identity/connect/authorize api.signl4.com/identity/connect/authorize devconnect.signl4.com/identity/connect/authorize devapi.signl4.com/identity/connect/authorize devaccount.signl4.com/identity/connect/authorize
+  token_endpoint                             connect.signl4.com/identity/connect/token account.signl4.com/identity/connect/token api.signl4.com/identity/connect/token devconnect.signl4.com/identity/connect/token devapi.signl4.com/identity/connect/token devaccount.signl4.com/identity/connect/token
+  userinfo_endpoint                          connect.signl4.com/identity/connect/userinfo account.signl4.com/identity/connect/userinfo api.signl4.com/identity/connect/userinfo devconnect.signl4.com/identity/connect/userinfo devapi.signl4.com/identity/connect/userinfo devaccount.signl4.com/identity/connect/userinfo
+  end_session_endpoint                       connect.signl4.com/identity/connect/endsession account.signl4.com/identity/connect/endsession api.signl4.com/identity/connect/endsession devconnect.signl4.com/identity/connect/endsession devapi.signl4.com/identity/connect/endsession devaccount.signl4.com/identity/connect/endsession
+  check_session_iframe                       connect.signl4.com/identity/connect/checksession account.signl4.com/identity/connect/checksession api.signl4.com/identity/connect/checksession devconnect.signl4.com/identity/connect/checksession devapi.signl4.com/identity/connect/checksession devaccount.signl4.com/identity/connect/checksession
+  introspection_endpoint                     connect.signl4.com/identity/connect/introspect account.signl4.com/identity/connect/introspect api.signl4.com/identity/connect/introspect devconnect.signl4.com/identity/connect/introspect devapi.signl4.com/identity/connect/introspect devaccount.signl4.com/identity/connect/introspect
+  revocation_endpoint                        connect.signl4.com/identity/connect/revocation account.signl4.com/identity/connect/revocation api.signl4.com/identity/connect/revocation devconnect.signl4.com/identity/connect/revocation devapi.signl4.com/identity/connect/revocation devaccount.signl4.com/identity/connect/revocation
+  device_authorization_endpoint              connect.signl4.com/identity/connect/deviceauthorization account.signl4.com/identity/connect/deviceauthorization api.signl4.com/identity/connect/deviceauthorization devconnect.signl4.com/identity/connect/deviceauthorization devapi.signl4.com/identity/connect/deviceauthorization devaccount.signl4.com/identity/connect/deviceauthorization
+  backchannel_authentication_endpoint        connect.signl4.com/identity/connect/ciba account.signl4.com/identity/connect/ciba api.signl4.com/identity/connect/ciba devconnect.signl4.com/identity/connect/ciba devapi.signl4.com/identity/connect/ciba devaccount.signl4.com/identity/connect/ciba
+  pushed_authorization_request_endpoint      connect.signl4.com/identity/connect/par account.signl4.com/identity/connect/par api.signl4.com/identity/connect/par devconnect.signl4.com/identity/connect/par devapi.signl4.com/identity/connect/par devaccount.signl4.com/identity/connect/par
+  jwks_uri                                   connect.signl4.com/identity/.well-known/openid-configuration/jwks account.signl4.com/identity/.well-known/openid-configuration/jwks api.signl4.com/identity/.well-known/openid-configuration/jwks devconnect.signl4.com/identity/.well-known/openid-configuration/jwks devapi.signl4.com/identity/.well-known/openid-configuration/jwks devaccount.signl4.com/identity/.well-known/openid-configuration/jwks
+[0m
+Two genuinely new datapoints. Now checking whether the staging-only `public_api_mfa_manage` scope has a corresponding API surface.
+[0m$ [0mcd /tmp/opencode/s4 && for v in v1 v2 v3; do curl -sS -m 60 -o "sw_$v.json" -w "$v code=%{http_code} size=%{size_download}\n" "https://connect.signl4.com/api/docs/$v/swagger.json"; sleep 1; done
+v1 code=200 size=493618
+v2 code=200 size=1216391
+v3 code=200 size=1213127
+[0m
+[0m$ [0mcd /tmp/opencode/s4 && python3 - <<'PY'
+import json,re
+for v in ["v1","v2","v3"]:
+    d=json.load(open(f'sw_{v}.json'))
+    paths=d.get("paths",{})
+    hits=[p for p in paths if re.search(r'mfa|multi.?factor|2fa|two.?factor|otp|totp|recovery',p,re.I)]
+    print(f"\n=== {v}: {len(paths)} paths | mfa/2fa/otp path hits: {len(hits)}")
+    for p in hits: print("   ",p, sorted(paths[p].keys()))
+    # security scheme scopes referenced anywhere
+    txt=json.dumps(d)
+    for sc in ["public_api_mfa_manage","mobile_api","public_api_ea_manage"]:
+        print(f"    scope {sc!r} occurrences in spec: {txt.count(sc)}")
+PY
+=== v1: 93 paths | mfa/2fa/otp path hits: 0
+    scope 'public_api_mfa_manage' occurrences in spec: 0
+    scope 'mobile_api' occurrences in spec: 0
+    scope 'public_api_ea_manage' occurrences in spec: 0
+
+=== v2: 189 paths | mfa/2fa/otp path hits: 0
+    scope 'public_api_mfa_manage' occurrences in spec: 0
+    scope 'mobile_api' occurrences in spec: 0
+    scope 'public_api_ea_manage' occurrences in spec: 0
+
+=== v3: 206 paths | mfa/2fa/otp path hits: 0
+    scope 'public_api_mfa_manage' occurrences in spec: 0
+    scope 'mobile_api' occurrences in spec: 0
+    scope 'public_api_ea_manage' occurrences in spec: 0
+[0m
+No MFA route in any spec. Testing whether a staging-only MFA-management route is actually registered, using the route-registration fingerprint (401/405 = registered, bare 404 = not) against prod vs staging.
+[0m$ [0mcd /tmp/opencode/s4 && for p in /api/v2/users /api/v2/mfa /api/v2/users/mfa /api/v2/2fa /api/v3/mfa; do for h in api devapi; do printf "%-22s %-8s " "$p" "$h"; curl -sS -m 20 -o "r_${h}_$(echo $p|tr / _).body" -D "r_${h}_$(echo $p|tr / _).hdr" -w "code=%{http_code} len=%{size_download}" "https://$h.signl4.com$p"; echo " allow=$(grep -i '^allow:' r_${h}_$(echo $p|tr / _).hdr | tr -d '\r' | cut -d' ' -f2-) wwwauth=$(grep -ic '^www-authenticate' r_${h}_$(echo $p|tr / _).hdr)"; sleep 1; done; done
+/api/v2/users          api      code=401 len=0 allow= wwwauth=1
+/api/v2/users          devapi   code=401 len=0 allow= wwwauth=1
+/api/v2/mfa            api      code=404 len=0 allow= wwwauth=0
+/api/v2/mfa            devapi   code=404 len=0 allow= wwwauth=0
+/api/v2/users/mfa      api      code=401 len=0 allow= wwwauth=1
+/api/v2/users/mfa      devapi   code=401 len=0 allow= wwwauth=1
+/api/v2/2fa            api      code=404 len=0 allow= wwwauth=0
+/api/v2/2fa            devapi   code=404 len=0 allow= wwwauth=0
+/api/v3/mfa            api      code=404 len=0 allow= wwwauth=0
+/api/v3/mfa            devapi   code=404 len=0 allow= wwwauth=0
+[0m
+`/api/v2/users/mfa` returned 401 — but `/api/v2/users/{userId}` is a registered parameterized route, so any segment may match. Disambiguating with a fabricated control.
+[0m$ [0mcd /tmp/opencode/s4 && for p in "/api/v2/users/mfa" "/api/v2/users/ZzQq-not-a-real-user" "/api/v2/users/1" "/api/v2/users/mfa/extra" "/api/v2/users/mfa/reset"; do printf "%-38s " "$p"; curl -sS -m 20 -o /dev/null -D "c.hdr" -w "code=%{http_code} len=%{size_download}" "https://api.signl4.com$p"; echo "  www-auth=$(grep -i '^www-authenticate' c.hdr | tr -d '\r' | cut -c1-40)"; sleep 1; done
+/api/v2/users/mfa                      code=401 len=0  www-auth=www-authenticate: Bearer
+/api/v2/users/ZzQq-not-a-real-user     code=401 len=0  www-auth=www-authenticate: Bearer
+/api/v2/users/1                        code=401 len=0  www-auth=www-authenticate: Bearer
+/api/v2/users/mfa/extra                code=404 len=0  www-auth=
+/api/v2/users/mfa/reset                code=404 len=0  www-auth=
+[0m
+Good — that 401 was the `{userId}` catch, not an MFA route. Recording the control result and finishing with a full structural diff of the discovery documents.
+[0m$ [0mcd /tmp/opencode/s4 && python3 - <<'PY'
+import json
+H=["connect","account","api","devconnect","devapi","devaccount"]
+docs={h:json.load(open(f'od_{h}.json')) for h in H}
+for h in H:
+    cs=docs[h].get("claims_supported",[])
+    print(f"{h:11s} claims={len(cs)} scopes={len(docs[h]['scopes_supported'])}")
+prod=set(docs['connect']['scopes_supported']); stg=set(docs['devconnect']['scopes_supported'])
+print("\nscopes prod-only :",sorted(prod-stg))
+print("scopes staging-only:",sorted(stg-prod))
+# claims diff
+pc=set(docs['connect']['claims_supported']); sc=set(docs['devconnect']['claims_supported'])
+print("\nclaims staging-only:",sorted(sc-pc))
+print("claims prod-only   :",sorted(pc-sc))
+# structural diff ignoring URL-valued keys
+urlk={"issuer","authorization_endpoint","token_endpoint","userinfo_endpoint","end_session_endpoint",
+"check_session_iframe","introspection_endpoint","revocation_endpoint","device_authorization_endpoint",
+"backchannel_authentication_endpoint","pushed_authorization_request_endpoint","jwks_uri"}
+def skel(d): return {k:v for k,v in d.items() if k not in urlk}
+s=json.dumps(skel(docs['connect']),sort_keys=True)
+print("\nconnect vs account :","IDENTICAL(non-URL)" if json.dumps(skel(docs['account']),sort_keys=True)==s else "DIFF")
+print("connect vs api     :","IDENTICAL(non-URL)" if json.dumps(skel(docs['api']),sort_keys=True)==s else "DIFF")
+print("connect vs devconn :","IDENTICAL(non-URL)" if json.dumps(skel(docs['devconnect']),sort_keys=True)==s else "DIFF")
+print("devconnect vs devapi:","IDENTICAL(non-URL)" if json.dumps(skel(docs['devapi']),sort_keys=True)==json.dumps(skel(docs['devconnect']),sort_keys=True) else "DIFF")
+print("\nmtls_endpoint_aliases present anywhere:", any('mtls_endpoint_aliases' in docs[h] for h in H))
+print("dpop_bound_access_tokens_required present:", any('dpop_bound_access_tokens_required' in docs[h] for h in H))
+print("authorization_details_types_supported present:", any('authorization_details_types_supported' in docs[h] for h in H))
+PY
+connect     claims=22 scopes=12
+account     claims=22 scopes=12
+api         claims=22 scopes=12
+devconnect  claims=22 scopes=13
+devapi      claims=22 scopes=13
+devaccount  claims=22 scopes=13
+
+scopes prod-only : []
+scopes staging-only: ['public_api_mfa_manage']
+
+claims staging-only: []
+claims prod-only   : []
+
+connect vs account : IDENTICAL(non-URL)
+connect vs api     : IDENTICAL(non-URL)
+connect vs devconn : DIFF
+devconnect vs devapi: IDENTICAL(non-URL)
+
+mtls_endpoint_aliases present anywhere: False
+dpop_bound_access_tokens_required present: False
+authorization_details_types_supported present: False
+[0m
+## Objective
+- Continue the Derdack bug-bounty analysis and produce only the required STEP 1–7 structured blocks.
+- Reconcile stale lead rankings with the latest corrections, prioritizing live logic flaws over endpoint inventory.
+
+## Important Details
+- Scope: Derdack-owned infrastructure and products, including SIGNL4 and Enterprise Alert; reference `scope.yml` and `inventory/derdack.md`.
+- Current state: `phase=POC`, `target=api`.
+- Rejected classes include brute-force/rate-limit testing, OPTIONS/TRACE findings, descriptive headers/errors only, outdated versions without a program-specific exploit, TLS best practice, and unvalidated scanner output.
+- Live testing must be passive-first, `<=1 rps`, and limited to GET/HEAD/OPTIONS unless explicit owner authorization permits an AUTH_HELPED test.
+- Never expose customer/employee/authentication data; stop on first successful cross-tenant read.
+- Final output must contain exactly one `[NEXT]` action.
+- Six identity hosts share RS256 JWKS material:
+  - `connect.signl4.com`
+  - `devconnect.signl4.com`
+  - `api.signl4.com`
+  - `devapi.signl4.com`
+  - `account.signl4.com`
+  - `devaccount.signl4.com`
+  - `kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`
+- Shared client ID: `692A0A56-892F-4AE2-8259-76DA398990B6`.
+- Shared JWKS plus password-grant support is a trust-boundary signal, not proof that a staging token is accepted in production.
+- `/mobileapi` is a blanket branded 403 across the six-host API/account estate; sibling `/api/v2/*` routes return 401. The 403 is 79088 B, SHA-256 prefix `12405c95d3c31de4f9ad19c52d565240…`, and exposes no internal identifiers.
+- API V1/V2/V3/webhook/events maps are complete; `/api/v4` is absent. Public specs declare global `security:[{}]`, but tested routes enforce authentication.
+- `vps.signl4.com` is stale DNS on GoDaddy shared hosting, but no claimable takeover primitive is reachable from the researcher seat; correct exposure is LOW–Medium and HUMAN-gated, not confidence 95.
+- App Proxy IDs on `s4dev1..8.enterprisealert.com` are reproducible but non-secret and program-rejected as descriptive-header disclosure.
+
+## Work State
+### Completed
+- Confirmed no anonymous read/write surface across SIGNL4 V1/V2/V3/webhook/events, WordPress protected routes, XML-RPC mutations, SCIM, billing, or Enterprise Alert demo handlers.
+- Mapped `demo.enterprisealert.com/EAWebService/` to five anonymous paths:
+  - `/EAWebService/`
+  - `/EAWebService/EventProviderAPI.aspx`
+  - `/EAWebService/EventProviderAPI.asmx`
+  - `/EAWebService/EventConnectorServer.ashx`
+  - `/EAWebService/rest/events`
+- Corrected Enterprise Alert handler count to 10 real ASPX handlers; fabricated handler names return a 200 help page. Credentialed handlers return `Error: -1`; no anonymous mutation exists.
+- Confirmed `EventConnectorServer.ashx` has an empty installed-handlers table, closing the alert-exfiltration hypothesis.
+- Confirmed `demo.enterprisealert.com` App-Proxy auth namespace is entirely 404: `/.auth/me`, `/.auth/login/aad/callback`, `/.auth/login/azuread`, `/signin-oidc`, and `/.well-known/openid-configuration`.
+- Confirmed GraphQL candidates are uniformly 404 across `connect`, `api`, and `demo`.
+- Confirmed `labconnect.signl4.com` and `labaccount.signl4.com` remain stable 502 App Gateway failures.
+- Closed public credential-leak searches; no live API key, webhook secret, client secret, or customer deployment was recovered.
+
+### Active
+- Cross-environment token acceptance: confidence 62, `AUTH_HELPED`.
+- `mobile_api` scope usable through non-mobile ingress: confidence 48, `AUTH_HELPED`.
+- Cross-environment back-channel logout propagation: confidence 42, `AUTH_HELPED`.
+- No further unauthenticated probing is expected to add value.
+
+### Blocked
+- Requires one owner-approved non-production OAuth client credential for a Derdack staging tenant.
+- Requires written permission to present one staging-minted token once to production read-only endpoints.
+- Back-channel logout additionally requires explicit authorization because verification would intentionally invalidate a session and is destructive.
+
+## Next Move
+1. Generate STEP 1–7 with the latest deltas, the three surviving hypotheses, and exactly one `[NEXT] HUMAN` request for a staging OAuth credential plus one-time production replay authorization.
+2. Once authorized, use a non-production tenant to obtain one staging token, then perform only `GET https://api.signl4.com/api/v2/teams` and `GET https://connect.signl4.com/identity/userinfo`; stop on the first 2xx and do not enumerate.
+
+## Relevant Files
+- `scope.yml`: authoritative in-scope asset policy.
+- `inventory/derdack.md`: Derdack inventory and historical recon.
+- `art/lead_bigpickle.txt`: current identity/API and mobile-ingress leads.
+- `art/lead_nemotron3.txt`: takeover and reporting leads; ranking 95 is stale/overstated.
+- `hypotheses-bigpickle.txt`: current three AUTH_HELPED hypotheses.
+- `hypotheses-nemotron3.txt`: parked takeover and report-phase leads.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+Passive re-verification is complete and yielded two real corrections plus one rejected lead. Producing the structured output.
+
+---
+
+**STEP 1 — DELTA**
+
+New this cycle (6/6 identity discovery docs re-fetched, 200, `identity` prefix, sizes 3413–3517 B):
+
+- **`require_pushed_authorization_requests` is `false` on all 6 hosts.** This **corrects** the KB's repeated "JAR on" belief. The PAR endpoint (`/identity/connect/par`) is registered, but direct requests to `/identity/connect/authorize` are accepted without a pushed request. Posture/hardening datum, not independently exploitable.
+- **Staging IdP advertises 13 scopes vs. prod 12 — staging-only `public_api_mfa_manage`.** This **corrects** the 2026-09-16/17 LEARN entry that the six hosts are "parametrically identical" / "twins". Staging is not a prod twin at the scope-registry level. Claims (22) and all other fields are identical; `devconnect`/`devapi`/`devaccount` are mutually identical.
+- Newly recorded, previously unread fields: `authorization_response_iss_parameter_supported: true` (RFC 9207, mitigates authorization-server mix-up); `code_challenge_methods_supported: ["plain","S256"]`; `backchannel_token_delivery_modes_supported: ["poll"]`; `backchannel_user_code_parameter_supported: true`; `userinfo`/`introspection` signing RS256; `request_object_signing_alg` 9 values.
+- New confirmed negatives: `mtls_endpoint_aliases` absent on all 6 (no mTLS client auth), `authorization_details_types_supported` absent (no RAR), `dpop_bound_access_tokens_required` absent (DPoP advertised but not required — supports the `mobile_api` hypothesis premise).
+- Re-fetched V1/V2/V3 specs: 93/189/206 paths, unchanged; zero `mfa|2fa|otp|totp|recovery` path matches; zero scope-to-route mappings in any spec.
+
+**STEP 2 — PRIO**
+
+1. Cross-environment token acceptance — conf 62, `AUTH_HELPED` (unchanged, still top).
+2. `mobile_api` scope usable via non-mobile ingress — conf 48, `AUTH_HELPED` (slightly reinforced: DPoP binding not required at the IdP).
+3. Cross-environment back-channel logout propagation — conf 42, `AUTH_HELPED` (unchanged).
+4. Staging-only `public_api_mfa_manage` scope with no discoverable consumer — conf 20, **REJECTED as a vulnerability**; retain only as an environment-isolation hardening note. Below the 40 threshold.
+
+**STEP 3 — HYP**
+
+Unchanged from prior cycle; no hypothesis gained new supporting evidence. The new `public_api_mfa_manage` datum does **not** promote any hypothesis: I tested it and it has no reachable consumer route (see Step 4).
+
+**STEP 4 — SELF-CRITIQUE**
+
+I nearly recorded a false positive. `/api/v2/users/mfa` returned 401 with `WWW-Authenticate: Bearer` on both `api` and `devapi`, which the route-registration fingerprint reads as "registered". But `/api/v2/users/{userId}` is a parameterized route, so the 401 may be the catch-all rather than an MFA route. A fabricated control segment (`/api/v2/users/ZzQq-not-a-real-user`) and `/api/v2/users/1` returned the **identical** 401, while `/api/v2/users/mfa/extra` and `/api/v2/users/mfa/reset` returned bare 404s — proving `/mfa` is just a `{userId}` value. **No MFA route exists.** Had I stopped at the fingerprint, I would have reported a nonexistent staging-only MFA-management endpoint, which is the same class of error as the root-only-probing mistakes already in my history. The fingerprint requires a fabricated control at the same path depth to be valid.
+
+Second, self-critique on `require_pushed_authorization_requests: false`: I am explicitly **not** claiming this is a vulnerability. `redirect_uri` validation is per-client and still enforced. Disabling JAR is a hardening gap, and I am recording it as a KB correction only. Inflating it would be a duplicate of the rejected-descriptive-finding class.
+
+Third, `public_api_mfa_manage` exists in staging with no public API consumer. It may legitimately back an internal or account-portal console. I have not proven an impact, so it stays REJECTED and is not written up as a finding.
+
+**STEP 5 — NEXT**
+
+`[NEXT] HUMAN: request one owner-approved non-production OAuth client credential (Derdack staging tenant) plus written permission to present one staging-minted token exactly once against production read-only endpoints — GET https://api.signl4.com/api/v2/teams and GET https://connect.signl4.com/identity/userinfo. No further passive probing is warranted; all remaining surface is credential-gated.`
+
+**STEP 6 — LEARN**
+
+- Route-registration fingerprints (401 vs bare 404) are **only** valid on paths with no parameterized ancestor. Always pair with a fabricated control segment at identical depth; a 401 on `/a/b/mfa` means nothing if `/a/b/{id}` is registered. Generalizes the earlier "test leaves, not just roots" lesson: on a parameterised route, the discriminating case is a sibling, not a child.
+- Authoritative config must be read from a field, not inferred from an endpoint's existence. The presence of `/connect/par` had been recorded as "JAR on" for days; the actual field is `false`. Endpoint-exists ⇒ feature-configured is a false implication, exactly like "route exists ⇒ scope enforced" (the `public_api_prov` correction).
+- Environment twins must be diffed mechanically, field by field, across all six hosts — not characterized. "Parametrically identical twins" was wrong by one scope, and the error was invisible to spot-checking the hosts the user typically visits.
+
+**STEP 7 — RISK**
+
+**46** — unchanged. All three surviving hypotheses remain `AUTH_HELPED` and unproven. Nothing new is exploitable: no anonymous read/write, no cross-tenant access, no tenant-isolation bypass. Two fresh KB corrections and one confirmed false positive are the net output of this cycle. Stopping unauthenticated work here; the identity layer's passive value is now exhausted and every remaining lead needs a credential plus written authorization.

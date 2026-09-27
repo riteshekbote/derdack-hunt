@@ -1711,3 +1711,7 @@ www.derdack.com
 - NEW `/mobileapi` 403 body is a custom SIGNL4-branded page, `sha256 12405c95d3c31de4f9ad19c52d565240…`, `<title>SIGNL4 - Forbidden</title>`, body text "access denied / 403 / Forbidden", `support.signl4.com
 - CHANGED `demo.enterprisealert.com` App-Proxy auth namespace is fully 404: `/.auth/me`, `/.auth/login/aad/callback`, `/.auth/login/azuread`, `/signin-oidc`, `/.well-known/openid-configuration`. Pre-auth identi
 - CHANGED `labconnect.signl4.com` + `labaccount.signl4.com` remain App Gateway v2 **502** at `01:01:50–53Z` on both `/` and `/identity/.well-known/openid-configuration`. No drift.
+
+## 2026-09-27 06:41:11 UTC
+- CHANGED vps.signl4.com HTTPS probe returned 000 (TCP timeout) vs KB 7× confirmed 200 nginx default — transient network or host-side block; DNS A 72.167.227.27 (GoDaddy secureserver.net) unchanged
+- CHANGED connect.signl4.com/mobileapi confirmed blanket 403 (79088 B branded page) on all 6 identity hosts — corrects prior 3-host record
