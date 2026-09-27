@@ -37728,3 +37728,526 @@ Third, `public_api_mfa_manage` exists in staging with no public API consumer. It
 **STEP 7 — RISK**
 
 **46** — unchanged. All three surviving hypotheses remain `AUTH_HELPED` and unproven. Nothing new is exploitable: no anonymous read/write, no cross-tenant access, no tenant-isolation bypass. Two fresh KB corrections and one confirmed false positive are the net output of this cycle. Stopping unauthenticated work here; the identity layer's passive value is now exhausted and every remaining lead needs a credential plus written authorization.
+===== ANALYST bigpickle 2026-09-27 12:30:10 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mUA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/128 Safari/537.36'
+p(){ printf '\n=== %s ===\n' "$1"; shift; curl -s -o /tmp/b.$$ -D /tmp/h.$$ -A "$UA" -m 20 -w 'code=%{http_code} size=%{size_download} time=%{time_total}\n' "$@"; grep -iE '^(server|x-ms-proxy-app-id|x-ms-proxy-subscription-id|x-ms-proxy-error-details|www-authenticate|content-type|allow|strict-transport|content-security|location|x-frame):' /tmp/h.$$ | head -20; head -c 400 /tmp/b.$$; echo; }
+p "A: teams baseline" https://api.signl4.com/api/v2/teams
+sleep 1
+p "B: s4dev1 AppProxy preauth .auth/me" https://s4dev1.enterprisealert.com/.auth/me
+sleep 1
+p "C: demo EAWebService index" https://demo.enterprisealert.com/EAWebService/
+sleep 1
+p "D: vps recheck" https://vps.signl4.com/
+sleep 1
+p "E: wp-json namespaces" https://www.derdack.com/wp-json/
+rm -f /tmp/b.$$ /tmp/h.$$
+=== A: teams baseline ===
+code=401 size=0 time=0.379491
+server: Microsoft-HTTPAPI/2.0
+www-authenticate: Bearer
+
+
+=== B: s4dev1 AppProxy preauth .auth/me ===
+code=404 size=0 time=0.417750
+
+
+=== C: demo EAWebService index ===
+code=200 size=1857 time=9.727164
+Content-Type: text/html; charset=utf-8
+x-ms-proxy-app-id: f18ba879-3dea-4018-b9d1-e6dbdc9ce151
+x-ms-proxy-subscription-id: ff2a095d-01ff-4edb-99e6-38b97f49467c
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head id="Head1"><title>
+	Enterprise Alert&reg; Event Provider API &amp; Connector SDK (v9.5.26147)
+</title></head>
+<body>
+    <form name="form1" method="post" action="./" id="form1">
+<div>
+<input type="hidden" name="__
+
+=== D: vps recheck ===
+code=000 size=0 time=0.161231
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head id="Head1"><title>
+	Enterprise Alert&reg; Event Provider API &amp; Connector SDK (v9.5.26147)
+</title></head>
+<body>
+    <form name="form1" method="post" action="./" id="form1">
+<div>
+<input type="hidden" name="__
+
+=== E: wp-json namespaces ===
+code=200 size=176818 time=1.567826
+content-type: application/json; charset=UTF-8
+server: Apache
+allow: GET
+{"name":"Derdack","description":"Targeted Alert Notifications - Anywhere Actions","url":"https:\/\/www.derdack.com","home":"https:\/\/www.derdack.com","gmt_offset":2,"timezone_string":"Europe\/Berlin","namespaces":["oembed\/1.0","contact-form-7\/v1","yoast\/v1","complianz\/v1","wordpress-popular-posts\/v1","wordpress-popular-posts\/v2","two-factor\/1.0","wp\/v2","wp-site-health\/v1","wp-block-edit
+[0m
+[0m$ [0mUA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/128 Safari/537.36'
+curl -s -m 25 -A "$UA" https://www.derdack.com/wp-json/ -o /tmp/wp.json
+python3 - <<'EOF'
+import json
+d=json.load(open('/tmp/wp.json'))
+print("NAMESPACES:", d.get('namespaces'))
+print("SITE_NAME:", d.get('name'))
+print("ROUTES_TOTAL:", len(d.get('routes',{})))
+import re
+hits=[r for r in d.get('routes',{}) if re.search(r'(two-factor|site-health|block|complianz|popular|user|setting|option|config|export|import|log|debug)', r, re.I)]
+for r in sorted(hits):
+    m=d['routes'][r].get('methods')
+    print(f"  {r}  -> {sorted(m) if m else None}")
+EOF
+NAMESPACES: ['oembed/1.0', 'contact-form-7/v1', 'yoast/v1', 'complianz/v1', 'wordpress-popular-posts/v1', 'wordpress-popular-posts/v2', 'two-factor/1.0', 'wp/v2', 'wp-site-health/v1', 'wp-block-editor/v1']
+SITE_NAME: Derdack
+ROUTES_TOTAL: 157
+  /complianz/v1  -> ['GET']
+  /complianz/v1/banner  -> ['GET']
+  /complianz/v1/consent-area/(?P<post_id>([0-9]+))/(?P<block_id>([a-z0-9-_]+))  -> ['GET']
+  /complianz/v1/cookie_data  -> ['GET']
+  /complianz/v1/documents  -> ['GET']
+  /complianz/v1/manage_consent_html  -> ['GET']
+  /complianz/v1/store_cookies  -> ['POST']
+  /complianz/v1/track  -> ['POST']
+  /two-factor/1.0  -> ['GET']
+  /two-factor/1.0/generate-backup-codes  -> ['POST']
+  /two-factor/1.0/totp  -> ['DELETE', 'POST']
+  /wordpress-popular-posts/v1  -> ['GET']
+  /wordpress-popular-posts/v1/popular-posts  -> ['GET', 'POST']
+  /wordpress-popular-posts/v1/popular-posts/widget/(?P<id>[\d]+)  -> ['GET']
+  /wordpress-popular-posts/v1/taxonomies  -> ['GET']
+  /wordpress-popular-posts/v1/themes  -> ['GET']
+  /wordpress-popular-posts/v1/thumbnails  -> ['GET']
+  /wordpress-popular-posts/v2  -> ['GET']
+  /wordpress-popular-posts/v2/widget  -> ['POST']
+  /wp-block-editor/v1  -> ['GET']
+  /wp-block-editor/v1/export  -> ['GET']
+  /wp-block-editor/v1/url-details  -> ['GET']
+  /wp-site-health/v1  -> ['GET']
+  /wp-site-health/v1/directory-sizes  -> ['GET']
+  /wp-site-health/v1/tests/authorization-header  -> ['GET']
+  /wp-site-health/v1/tests/background-updates  -> ['GET']
+  /wp-site-health/v1/tests/dotorg-communication  -> ['GET']
+  /wp-site-health/v1/tests/https-status  -> ['GET']
+  /wp-site-health/v1/tests/loopback-requests  -> ['GET']
+  /wp/v2/block-directory/search  -> ['GET']
+  /wp/v2/block-patterns/categories  -> ['GET']
+  /wp/v2/block-patterns/patterns  -> ['GET']
+  /wp/v2/block-renderer/(?P<name>[a-z0-9-]+/[a-z0-9-]+)  -> ['GET', 'POST']
+  /wp/v2/block-types  -> ['GET']
+  /wp/v2/block-types/(?P<namespace>[a-zA-Z0-9_-]+)  -> ['GET']
+  /wp/v2/block-types/(?P<namespace>[a-zA-Z0-9_-]+)/(?P<name>[a-zA-Z0-9_-]+)  -> ['GET']
+  /wp/v2/blocks  -> ['GET', 'POST']
+  /wp/v2/blocks/(?P<id>[\d]+)  -> ['DELETE', 'GET', 'PATCH', 'POST', 'PUT']
+  /wp/v2/blocks/(?P<id>[\d]+)/autosaves  -> ['GET', 'POST']
+  /wp/v2/blocks/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)  -> ['GET']
+  /wp/v2/blocks/(?P<parent>[\d]+)/revisions  -> ['GET']
+  /wp/v2/blocks/(?P<parent>[\d]+)/revisions/(?P<id>[\d]+)  -> ['DELETE', 'GET']
+  /wp/v2/settings  -> ['GET', 'PATCH', 'POST', 'PUT']
+  /wp/v2/users  -> ['GET', 'POST']
+  /wp/v2/users/(?P<id>[\d]+)  -> ['DELETE', 'GET', 'PATCH', 'POST', 'PUT']
+  /wp/v2/users/(?P<user_id>(?:[\d]+|me))/application-passwords  -> ['DELETE', 'GET', 'POST']
+  /wp/v2/users/(?P<user_id>(?:[\d]+|me))/application-passwords/(?P<uuid>[\w\-]+)  -> ['DELETE', 'GET', 'PATCH', 'POST', 'PUT']
+  /wp/v2/users/(?P<user_id>(?:[\d]+|me))/application-passwords/introspect  -> ['GET']
+  /wp/v2/users/me  -> ['DELETE', 'GET', 'PATCH', 'POST', 'PUT']
+  /yoast/v1/configuration/check_capability  -> ['GET']
+  /yoast/v1/configuration/enable_tracking  -> ['POST']
+  /yoast/v1/configuration/get_configuration_state  -> ['GET']
+  /yoast/v1/configuration/person_social_profiles  -> ['GET', 'POST']
+  /yoast/v1/configuration/save_configuration_state  -> ['POST']
+  /yoast/v1/configuration/site_representation  -> ['POST']
+  /yoast/v1/configuration/social_profiles  -> ['POST']
+  /yoast/v1/import/(?P<plugin>[\w-]+)/(?P<type>[\w-]+)  -> ['POST']
+[0m
+[0m$ [0mUA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/128 Safari/537.36'
+g(){ printf '\n=== %s ===\n' "$1"; shift; curl -s -m 25 -A "$UA" -D /tmp/hh -o /tmp/bb -w 'code=%{http_code} size=%{size_download}\n' "$@"; grep -iE '^(allow|www-authenticate|content-type):' /tmp/hh|head -5; head -c 500 /tmp/bb; echo; }
+B=https://www.derdack.com/wp-json
+g "1 url-details no param" "$B/wp-block-editor/v1/url-details"
+sleep 1
+g "2 url-details external benign" "$B/wp-block-editor/v1/url-details?url=https%3A%2F%2Fexample.com%2F"
+sleep 1
+g "3 block-editor export" "$B/wp-block-editor/v1/export"
+sleep 1
+g "4 site-health dir-sizes" "$B/wp-site-health/v1/directory-sizes"
+sleep 1
+g "5 site-health https-status test" "$B/wp-site-health/v1/tests/https-status"
+sleep 1
+g "6 block-directory search" "$B/wp/v2/block-directory/search?term=alert"
+sleep 1
+g "7 complianz documents" "$B/complianz/v1/documents"
+=== 1 url-details no param ===
+code=400 size=115
+content-type: application/json; charset=UTF-8
+{"code":"rest_missing_callback_param","message":"Missing parameter(s): url","data":{"status":400,"params":["url"]}}
+
+=== 2 url-details external benign ===
+code=401 size=124
+content-type: application/json; charset=UTF-8
+{"code":"rest_cannot_view_url_details","message":"Sorry, you are not allowed to process remote URLs.","data":{"status":401}}
+
+=== 3 block-editor export ===
+code=401 size=140
+content-type: application/json; charset=UTF-8
+{"code":"rest_cannot_export_templates","message":"Sorry, you are not allowed to export templates and template parts.","data":{"status":401}}
+
+=== 4 site-health dir-sizes ===
+code=401 size=98
+content-type: application/json; charset=UTF-8
+{"code":"rest_forbidden","message":"Sorry, you are not allowed to do that.","data":{"status":401}}
+
+=== 5 site-health https-status test ===
+code=401 size=98
+content-type: application/json; charset=UTF-8
+{"code":"rest_forbidden","message":"Sorry, you are not allowed to do that.","data":{"status":401}}
+
+=== 6 block-directory search ===
+code=401 size=135
+content-type: application/json; charset=UTF-8
+{"code":"rest_block_directory_cannot_view","message":"Sorry, you are not allowed to browse the block directory.","data":{"status":401}}
+
+=== 7 complianz documents ===
+code=200 size=2
+content-type: application/json; charset=UTF-8
+allow: GET
+[]
+[0m
+[0m$ [0mUA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/128 Safari/537.36'
+curl -s -m 30 -A "$UA" -D /tmp/dh -o /dev/null https://demo.enterprisealert.com/EAWebService/
+echo "--- all Set-Cookie ---"; grep -i '^set-cookie' /tmp/dh
+echo "--- x-ms headers ---"; grep -i '^x-ms' /tmp/dh
+python3 - <<'EOF'
+import re,base64,json
+raw=open('/tmp/dh',errors='replace').read()
+for name,val in re.findall(r'(?im)^set-cookie:\s*([^=]+)=([^;]+)',raw):
+    v=val.strip()
+    print(f"\n[{name}] len={len(v)}")
+    s=v
+    for _ in range(3):
+        s=s+'='*((4-len(s)%4)%4)
+        try:
+            d=base64.urlsafe_b64decode(s)
+        except Exception:
+            break
+        try:
+            t=d.decode('utf-8')
+        except Exception:
+            print("  raw:",d[:200]); break
+        print("  dec:",t[:600])
+        # look for embedded long base64/json
+        m=re.search(r'[A-Za-z0-9_-]{40,}',t)
+        if m:
+            inner=m.group(0); print("  inner len",len(inner))
+            i=inner+'='*((4-len(inner)%4)%4)
+            try: print("  inner dec:",base64.urlsafe_b64decode(i).decode('utf-8',errors='replace')[:800])
+            except Exception as e: print("  inner fail",e)
+        break
+    g=re.findall(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}',v)
+    if g: print("  GUIDs:",g)
+    for kw in ('appId','client','tid','tenant','resource','https://','core.windows','microsoftonline','login'):
+        if kw.lower() in v.lower(): print("  contains:",kw)
+EOF
+--- all Set-Cookie ---
+Set-Cookie: ASP.NET_SessionId=5rgvrwkqfcpe11m3znrqdq0g; Path=/; HttpOnly; SameSite=Lax
+Set-Cookie: AzureAppProxyAnalyticCookie_f18ba879-3dea-4018-b9d1-e6dbdc9ce151_https_1.3=MGD:MIIBwQYJKoZIhvcNAQcDoIIBsjCCAa4CAQIxggE0ooIBMAIBBDCB8wRUTAAAAAAAAAABAAAAS0RTSwYAAABsAQAADgAAAAoAAACpOFewNqcsYuvjcxP1BINmIAAAACzqw5NBoxVQU2T4zFtpq6xK9aXz3/K/uvuTsCwAlaCKMIGaBgkrBgEEAYI3SgEwgYwGCisGAQQBgjdKAQ0wfjB8MHoMBERTVFMMcmV1cm9wZW5vcnRoLWRrZHMuZGtkcy5jb3JlLndpbmRvd3MubmV0O2h0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWU7Y3dhcHByb3h5ZGtkc2V1cjALBglghkgBZQMEAS0EKBl2GdDh4QAZkTp8cvXI4dQ4eZBaOT/5jYY3khDXBGPvIm/s0lV31zAwcQYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAxsy5RqsorGbipr8YsCARCARG6DNVeViHK1c3Tv1WdNmmqXik3SL/9h6KTCsxgWBbJGcQBDiRzJ59Nwi8eHfipM5ebgmOMSxr6IcDPdEj9ayPuOVwcr; path=/; Secure; SameSite=None
+--- x-ms headers ---
+x-ms-proxy-app-id: f18ba879-3dea-4018-b9d1-e6dbdc9ce151
+x-ms-proxy-group-id: 6b26e6a4-c5ad-4b27-b31c-e1777730c354
+x-ms-proxy-subscription-id: ff2a095d-01ff-4edb-99e6-38b97f49467c
+x-ms-proxy-transaction-id: 03511690-d13a-41ff-a873-8f5c620b306b
+x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+x-ms-proxy-data-center: NEUR
+x-ms-proxy-connector-id: da867a92-3ba5-4e78-95f6-c97bac3c791f
+
+[ASP.NET_SessionId] len=24
+  raw: b'\xe6\xb8/\xaf\t*}\xca^\xd7Y\xb7\xcez\xeav\xad '
+
+[AzureAppProxyAnalyticCookie_f18ba879-3dea-4018-b9d1-e6dbdc9ce151_https_1.3] len=608
+[0m
+[0m$ [0mUA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/128 Safari/537.36'
+for s in de ea; do
+  curl -s -m 25 -A "$UA" "https://www.derdack.com/$s/wp-json/" -o /tmp/w$s.json
+  echo "=== /$s/ namespaces ==="
+  python3 -c "
+import json,sys
+d=json.load(open('/tmp/w$s.json'))
+print(d.get('name'),'| routes',len(d.get('routes',{})))
+print(d.get('namespaces'))
+" 2>/dev/null || head -c 200 /tmp/w$s.json
+  sleep 1
+  printf '=== /%s/wp-json/wp/v2/users?per_page=100 ===\n' "$s"
+  curl -s -m 25 -A "$UA" -D /tmp/uh -o /tmp/ub "https://www.derdack.com/$s/wp-json/wp/v2/users?per_page=100"
+  grep -iE '^(x-wp-total|x-wp-totalpages|x-ws-)[: ]' /tmp/uh | head -5
+  python3 -c "
+import json
+u=json.load(open('/tmp/ub'))
+print('count',len(u))
+for x in u: print('  id',x.get('id'),'|',x.get('slug'),'|',x.get('name'))
+" 2>/dev/null || head -c 200 /tmp/ub
+  sleep 1
+done
+=== /de/ namespaces ===
+Derdack DE | routes 157
+['oembed/1.0', 'contact-form-7/v1', 'yoast/v1', 'complianz/v1', 'wordpress-popular-posts/v1', 'wordpress-popular-posts/v2', 'two-factor/1.0', 'wp/v2', 'wp-site-health/v1', 'wp-block-editor/v1']
+=== /de/wp-json/wp/v2/users?per_page=100 ===
+x-wp-total: 8
+x-wp-totalpages: 1
+count 8
+  id 1 | christian | Christian
+  id 18 | emily | emily
+  id 17 | fabian | fabian
+  id 6 | matthes | matthes
+  id 12 | rene | rene
+  id 11 | ronald | ronald
+  id 8 | rwetzel | rwetzel
+  id 15 | stefanie | stefanie
+=== /ea/ namespaces ===
+DERDACK | routes 157
+['oembed/1.0', 'contact-form-7/v1', 'yoast/v1', 'complianz/v1', 'wordpress-popular-posts/v1', 'wordpress-popular-posts/v2', 'two-factor/1.0', 'wp/v2', 'wp-site-health/v1', 'wp-block-editor/v1']
+=== /ea/wp-json/wp/v2/users?per_page=100 ===
+x-wp-total: 2
+x-wp-totalpages: 1
+count 2
+  id 1 | christian | Christian
+  id 18 | emily | emily
+[0m
+[0m$ [0mUA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/128 Safari/537.36'
+g(){ printf '\n=== %s ===\n' "$1"; shift; curl -s -m 25 -A "$UA" -D /tmp/hh -o /tmp/bb -w 'code=%{http_code} size=%{size_download}\n' "$@"; grep -iE '^(allow|www-authenticate|content-type|x-wp-total):' /tmp/hh|head -6; head -c 300 /tmp/bb; echo; }
+for s in de ea; do
+  g "/$s url-details ext" "https://www.derdack.com/$s/wp-json/wp-block-editor/v1/url-details?url=https%3A%2F%2Fexample.com%2F"
+  sleep 1
+  g "/$s block-directory" "https://www.derdack.com/$s/wp-json/wp/v2/block-directory/search?term=alert"
+  sleep 1
+  g "/$s site-health dir-sizes" "https://www.derdack.com/$s/wp-json/wp-site-health/v1/directory-sizes"
+  sleep 1
+  g "/$s oembed proxy" "https://www.derdack.com/$s/wp-json/oembed/1.0/proxy?url=https%3A%2F%2Fexample.com%2F"
+  sleep 1
+done
+printf '\n=== oembed proxy ROOT (control) ===\n'
+g "root oembed proxy" "https://www.derdack.com/wp-json/oembed/1.0/proxy?url=https%3A%2F%2Fexample.com%2F"
+=== /de url-details ext ===
+code=401 size=137
+content-type: application/json; charset=UTF-8
+{"code":"rest_cannot_view_url_details","message":"Du bist leider nicht berechtigt, entfernte URLs zu verarbeiten.","data":{"status":401}}
+
+=== /de block-directory ===
+code=401 size=148
+content-type: application/json; charset=UTF-8
+{"code":"rest_block_directory_cannot_view","message":"Du bist leider nicht berechtigt, das Block-Verzeichnis zu durchsuchen.","data":{"status":401}}
+
+=== /de site-health dir-sizes ===
+code=401 size=125
+content-type: application/json; charset=UTF-8
+{"code":"rest_forbidden","message":"Du bist leider nicht berechtigt, diese Aktion durchzuf\u00fchren.","data":{"status":401}}
+
+=== /de oembed proxy ===
+code=401 size=135
+content-type: application/json; charset=UTF-8
+{"code":"rest_forbidden","message":"Du bist leider nicht berechtigt, oEmbed-Anfragen \u00fcber Proxy zu machen.","data":{"status":401}}
+
+=== /ea url-details ext ===
+code=401 size=124
+content-type: application/json; charset=UTF-8
+{"code":"rest_cannot_view_url_details","message":"Sorry, you are not allowed to process remote URLs.","data":{"status":401}}
+
+=== /ea block-directory ===
+code=401 size=135
+content-type: application/json; charset=UTF-8
+{"code":"rest_block_directory_cannot_view","message":"Sorry, you are not allowed to browse the block directory.","data":{"status":401}}
+
+=== /ea site-health dir-sizes ===
+code=401 size=98
+content-type: application/json; charset=UTF-8
+{"code":"rest_forbidden","message":"Sorry, you are not allowed to do that.","data":{"status":401}}
+
+=== /ea oembed proxy ===
+code=401 size=119
+content-type: application/json; charset=UTF-8
+{"code":"rest_forbidden","message":"Sorry, you are not allowed to make proxied oEmbed requests.","data":{"status":401}}
+
+=== oembed proxy ROOT (control) ===
+
+=== root oembed proxy ===
+code=401 size=119
+content-type: application/json; charset=UTF-8
+{"code":"rest_forbidden","message":"Sorry, you are not allowed to make proxied oEmbed requests.","data":{"status":401}}
+[0m
+## Objective
+- Continue the Derdack/SIGNL4 bug-bounty assessment for `api`, reconcile the latest inventory/KB/leads, and output only the requested structured `STEP 1–7` blocks.
+- Prioritize exploitable auth, BOLA, OAuth, SSRF, upload, GraphQL, and takeover logic while avoiding repeated exhausted probes.
+
+## Important Details
+- Report channel: `bugs.olivermaicher.eu`; in scope: Derdack-owned infrastructure and products, including SIGNL4 and Enterprise Alert.
+- Explicit current state is `{"phase":"POC","target":"api"}`; historical inventory mentions `REPORT`, but the explicit state is authoritative.
+- Prompt says “8 steps” but enumerates `STEP 1–7`; emit only the listed blocks.
+- Live testing must remain passive-first, `<=1 rps`, and limited to `GET`/`HEAD`/`OPTIONS`; no mutating requests, credential attacks, customer-data access, or scanner output without manual validation.
+- Rejected classes include brute-force/rate-limit testing, descriptive headers/errors, OPTIONS-only findings, clickjacking without exploit, known-CVE-only claims, and unauthenticated data exposure.
+- Shared JWKS proves key reuse, not cross-environment token acceptance; issuer/audience behavior remains untested without a token.
+- `nemotron3` ranks `vps.signl4.com` at 95, but strict program analysis finds no claimable primitive from the researcher seat; treat as stale DNS MISCONFIG, not confirmed takeover.
+- The prompt requires exactly one `[NEXT]` action; current best action is `[NEXT] HUMAN`.
+
+## Work State
+### Completed
+- Mapped six identity hosts: `connect.signl4.com`, `devconnect.signl4.com`, `api.signl4.com`, `devapi.signl4.com`, `account.signl4.com`, and `devaccount.signl4.com`.
+- Confirmed byte-identical RS256 JWKS across all six, including kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`; shared client ID is `692A0A56-892F-4AE2-8259-76DA398990B6`.
+- Confirmed `account.signl4.com/identity` advertises issuer `https://connect.signl4.com/identity`; `devaccount.signl4.com/identity` mirrors it with issuer `https://devconnect.signl4.com/identity`.
+- Invalidated account-exclusive EA scopes: `account` and `connect` discovery parameterics are identical, including `mobile_api`, `reseller_portal`, EA scopes, password/device/CIBA/token-exchange grants, and plain/S256 PKCE.
+- Completed API namespace map: V1/V2/V3, webhook, and events are registered; `/api/v4` and `/api/docs/v4/swagger.json` are absent.
+- Confirmed no anonymous API read/write surface across V1/V2/V3; `/api/v2/teams` alternates between `401` and handler-deferred `405`, but valid-body probes remain authenticated.
+- Closed GraphQL with uniform `404` across `connect.signl4.com`, `api.signl4.com`, and `demo.enterprisealert.com`.
+- Confirmed `/mobileapi` is a blanket branded `403` on all six identity/API hosts, including fabricated paths; sibling `/api/v2/teams` returns `401`, proving a separate live front door.
+- Corrected `demo.enterprisealert.com/EAWebService/` map to five anonymous paths: `/EAWebService/`, `EventProviderAPI.aspx`, `EventProviderAPI.asmx`, `EventConnectorServer.ashx`, and `rest/events`.
+- Corrected `EventProviderAPI.aspx` to 10 authoritative handlers; all credentialed operations return `Error: -1`. `EventConnectorServer.ashx` has an empty installed-handlers table.
+- Confirmed WSDL leaks non-public single-label address `https://ereesus/EAWebService/EventProviderAPI.asmx`; no unauthenticated write primitive exists.
+- Corrected `s4dev1..8.enterprisealert.com` to 8/8 Azure App Proxy identifier disclosure on backend-reaching paths; identifiers are non-secret and rejected as descriptive-header-only.
+- Confirmed `vps.signl4.com` historically resolves to GoDaddy shared host `72.167.227.27`, default nginx page, and unrelated certificate; latest `2026-09-27 06:41:11 UTC` probe returned `000`, while DNS remained unchanged.
+- Closed `docs.enterprisealert.com` takeover: it resolves to active Azure SWA host `derdackdownloads.z13.web.core.windows.net` with `404 WebContentNotFound`, not a dangling target.
+- Confirmed no live client secret, API key, webhook secret, or customer-deployed credential across 7+ public corpora.
+- Current risk score: `46`; all remaining high-value chains are credential-gated.
+
+### Active
+- Cross-environment token acceptance, confidence `62`, `AUTH_HELPED`: one staging-minted token must be replayed once against `GET https://api.signl4.com/api/v2/teams`; a `2xx` response would prove issuer/audience failure.
+- `mobile_api` token accepted outside mobile ingress, confidence `48`, `AUTH_HELPED`: an owner-approved token carrying `scope=mobile_api` must be compared against `/api/v2/teams` and `/mobileapi/api/v2/teams`.
+- Cross-environment back-channel logout propagation, confidence `42`, `AUTH_HELPED`: discovery advertises back-channel logout, but no endpoint or destructive request is authorized or tested.
+- `vps.signl4.com` is parked/HUMAN-gated: stale DNS is real, but takeover requires DNS/hosting-account control and has no claimable primitive from the current seat.
+- `s4dev1..8` App Proxy identifiers and branded `/mobileapi` 403 diagnostics are parked/rejected rather than findings.
+
+### Blocked
+- No owner-issued non-production OAuth client credential or `X-S4-Api-Key` is available.
+- No written authorization exists to replay a staging token once against production `api.signl4.com`.
+- No `mobile_api`-scoped token is available to distinguish a prefix-scoped gateway deny from a disabled backend.
+- No authorized back-channel logout endpoint/test is available.
+- `vps.signl4.com` takeover cannot be validated without DNS/hosting-account control.
+
+## Next Move
+1. Produce the structured assessment with only the three `AUTH_HELPED` survivors; explicitly demote `vps.signl4.com` and reject descriptive App Proxy/WAF disclosures.
+2. Emit exactly: `[NEXT] HUMAN: Request one non-production OAuth client credential for devconnect.signl4.com or devapi.signl4.com and written approval for one staging-token replay to GET https://api.signl4.com/api/v2/teams.`
+
+## Relevant Files
+- `scope.yml`: authoritative eligible asset scope.
+- `inventory/derdack.md`: current inventory and historical phase/probe records.
+- `art/lead_bigpickle.txt`: current identity, mobile ingress, and three `AUTH_HELPED` hypotheses.
+- `art/lead_nemotron3.txt`: competing `vps.signl4.com` takeover ranking and dossier leads.
+- `hypotheses-bigpickle.txt`: cross-environment token, mobile scope, and logout hypotheses.
+- `hypotheses-nemotron3.txt`: takeover and frozen submission lead.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+Continuing — one high-value passive probe class remains untested on the OIDC layer.
+[0m$ [0mUA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/128 Safari/537.36'
+g(){ printf '\n=== %s ===\n' "$1"; shift; curl -s -m 25 -A "$UA" -D /tmp/hh -o /tmp/bb -w 'code=%{http_code} size=%{size_download}\n' "$@"; grep -iE '^(allow|www-authenticate|content-type):' /tmp/hh|head -4; head -c 220 /tmp/bb; echo; }
+g "1 PROD backchannel-logout (GET)" https://connect.signl4.com/identity/connect/backchannel-logout
+sleep 1
+g "2 STAGING backchannel-logout (GET)" https://devconnect.signl4.com/identity/connect/backchannel-logout
+sleep 1
+g "3 PROD backchannel-logout/session" https://connect.signl4.com/identity/connect/backchannel-logout/session
+sleep 1
+g "4 PROD userinfo (GET, no token)" https://connect.signl4.com/identity/connect/userinfo
+sleep 1
+curl -s -m 25 -A "$UA" https://connect.signl4.com/identity/.well-known/openid-configuration -o /tmp/disc.json
+echo "=== 5 PROD discovery drift fields ==="
+python3 -c "
+import json
+d=json.load(open('/tmp/disc.json'))
+for k in ('issuer','backchannel_logout_supported','backchannel_logout_session_supported','frontchannel_logout_supported','frontchannel_logout_session_supported','dpop_signing_alg_values_supported','dpop_bound_access_tokens_required','require_pushed_authorization_requests','introspection_endpoint','end_session_endpoint','check_session_iframe','device_authorization_endpoint','mtls_endpoint_aliases','authorization_response_iss_parameter_supported','userinfo_endpoint','claims_parameter_supported','request_parameter_supported'):
+    print(f'  {k} = {d.get(k, \"<ABSENT>\")}')
+"
+=== 1 PROD backchannel-logout (GET) ===
+code=404 size=0
+
+
+=== 2 STAGING backchannel-logout (GET) ===
+code=404 size=0
+
+
+=== 3 PROD backchannel-logout/session ===
+code=404 size=0
+
+
+=== 4 PROD userinfo (GET, no token) ===
+code=401 size=0
+www-authenticate: Bearer realm="IdentityServer",error="invalid_token"
+
+=== 5 PROD discovery drift fields ===
+  issuer = https://connect.signl4.com/identity
+  backchannel_logout_supported = True
+  backchannel_logout_session_supported = True
+  frontchannel_logout_supported = True
+  frontchannel_logout_session_supported = True
+  dpop_signing_alg_values_supported = ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+  dpop_bound_access_tokens_required = <ABSENT>
+  require_pushed_authorization_requests = False
+  introspection_endpoint = https://connect.signl4.com/identity/connect/introspect
+  end_session_endpoint = https://connect.signl4.com/identity/connect/endsession
+  check_session_iframe = https://connect.signl4.com/identity/connect/checksession
+  device_authorization_endpoint = https://connect.signl4.com/identity/connect/deviceauthorization
+  mtls_endpoint_aliases = <ABSENT>
+  authorization_response_iss_parameter_supported = True
+  userinfo_endpoint = https://connect.signl4.com/identity/connect/userinfo
+  claims_parameter_supported = <ABSENT>
+  request_parameter_supported = True
+[0m
+[STEP 1] RISK ASSESSMENT — `44/100`
+- No new unauthenticated finding this cycle; `0` new submissions.
+- Production risk is unchanged and remains concentrated in three `AUTH_HELPED` chains, all of which terminate at a credential the program must supply.
+- The one material change is negative: the back-channel logout endpoint is not registered at the conventional path on **either** prod or staging, so the logout-propagation chain loses most of its reachability.
+- The one material positive change is precision on `mobile_api`: `dpop_bound_access_tokens_required` is **absent** from production discovery, so that scope is a plain bearer scope and a single token replay is decisive.
+- The estate's unauthenticated surface is now measured end-to-end (API namespaces, EA demo handlers, WP REST across all 3 sites, App Proxy tiers). Continued unauthenticated probing is returning no new primitives; further anonymous requests have negative expected value.
+
+[STEP 2] Top 3 findings
+1. `api.signl4.com/api/v2/*` — cross-environment token acceptance between the staging and production identity planes. Shared RS256 JWKS and shared `client_id 692A0A56-…` across all six hosts; `account` advertises the `connect` issuer. `62` confidence.
+2. `*/mobileapi` vs `*/api/v2/*` — the `mobile_api` scope is advertised by discovery but its ingress is a blanket branded `403` on all six hosts while the sibling API path is live. `48` confidence.
+3. `www.derdack.com` multisite (root, `/de/`, `/ea/`) — confirmed hardening divergence between root and subsites (`xmlrpc.php` 503 vs fully POST-open) leaves an untested config-drift surface. `22` confidence.
+
+[STEP 3] Explicitly skipping
+- `vps.signl4.com` — now `000` for two consecutive cycles (0.16 s failure = instant refusal, not SYN-drop). No claimable primitive; class downgraded to stale DNS MISCONFIG.
+- `s4dev1..8.enterprisealert.com` — App Proxy identifier headers. Descriptive-only, no secret material.
+- `s4dev1.enterprisealert.com/.auth/me` — bare `404`, zero `x-ms-proxy-*` headers. Pre-auth is not enabled on the staging tier either; negative now extends to 2 hosts.
+- `www.derdack.com/wp-block-editor/v1/url-details`, `/wp/v2/block-directory/search`, `/wp-site-health/v1/*`, `/oembed/1.0/proxy` — the entire server-side-fetch family returns `401` on all three sites. SSRF class closed.
+- `www.derdack.com/wp/v2/users` on root/`/de/`/`/ea/` (10/8/2 users) — username enumeration, rejected class.
+- `demo.enterprisealert.com/EAWebService/*` anon handlers — all 10 gate with `Error: -1`; `About` is intentionally public. WSDL `ereesus` hostname is config-level only.
+- Endpoint maps and swagger bodies for V1/V2/V3/webhook/events — map-only, no verify path.
+
+[STEP 4] Evaluating the top 3 hypotheses
+- **H1 — Cross-environment token acceptance**
+  - Asset: `GET https://api.signl4.com/api/v2/teams` (this cycle `401`, 0 B, `server: Microsoft-HTTPAPI/2.0`)
+  - Hypothesis: a token minted by `devconnect`/`devapi` is accepted by production's resource server, yielding authenticated API access.
+  - Supporting: byte-identical JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) and identical `client_id` on all six hosts; `account.signl4.com/identity` advertises issuer `https://connect.signl4.com/identity`; prod and staging discovery documents are structurally identical.
+  - Against: RFC 9207 is enforced (`authorization_response_iss_parameter_supported = true`), so this cannot be an authorization-response mixup; the risk narrows to `aud`/`iss` validation at the resource server, which is untested; no client secret is in public view.
+  - Verify: mint one non-production token, replay **once** against the read-only `GET /api/v2/teams`. A `2xx` proves the chain; `401` closes it.
+  - Confidence `62` · Difficulty medium · Priority `AUTH_HELPED` · Next: request credential + written replay permission.
+- **H2 — `mobile_api` scope reachable on the sibling API ingress**
+  - Asset: `/mobileapi/*` on six identity/API hosts vs `/api/v2/*` on the same hosts
+  - Hypothesis: the branded `403` is a prefix-scoped gateway deny, not a disabled backend, so a `mobile_api`-scoped token is also accepted on the ordinary API ingress.
+  - Supporting: same host serves `/api/v2/teams` (`401`, live) and `/mobileapi/anything` (branded `403`, identical hash across all six and across fabricated paths); `mobile_api` is advertised in every discovery document; `dpop_bound_access_tokens_required` is **absent**, so the scope is not sender-constrained and plain bearer replay works.
+  - Against: the branded body is uniform on real and fabricated paths, which is consistent with a deliberate tenant isolation rule; no such token exists in any public corpus.
+  - Verify: one owner-approved `mobile_api`-scoped token, two read-only `GET`s — `/api/v2/teams` and `/mobileapi/api/v2/teams`.
+  - Confidence `48` · Difficulty medium · Priority `AUTH_HELPED` · Next: request a scoped test-tenant token.
+- **H3 — Multisite hardening divergence between root and subsites**
+  - Asset: `www.derdack.com` (root) vs `/de/` and `/ea/`
+  - Hypothesis: the subsites lack at least one hardening control the root enforces, exposing a route the root correctly gates.
+  - Supporting: divergence is measured, not assumed — root `xmlrpc.php` returns `503`, while `/de/xmlrpc.php` and `/ea/xmlrpc.php` accept POST and expose the full mutating method list; root, `/de/` and `/ea/` are one Multisite install, so a control can differ per site.
+  - Against: the three sites expose an **identical** 10-namespace / 157-route REST surface, and the highest-value divergence candidates (all four server-side-fetch endpoints) are uniformly `401`; the remaining payout would be config-level, not high-value.
+  - Verify: bounded passive sweep — compare permission outcomes for all 157 routes across the three sites and diff for any asymmetric `200`/`401`.
+  - Confidence `22` · Difficulty low · Priority `MISCONFIG` · Next: run the sweep only if H1/H2 stall.
+
+[STEP 5] Single next action
+`[NEXT] HUMAN: Request one non-production OAuth client credential for devconnect.signl4.com or devapi.signl4.com and written approval for a single read-only staging-token replay to GET https://api.signl4.com/api/v2/teams.`
+
+[STEP 6] Learning and false-positive avoidance
+- The dominant failure mode was **advertised-metadata drift**: `backchannel_logout_supported: true` and `backchannel_logout_session_supported: true` are present in production discovery, yet `GET /identity/connect/backchannel-logout` and `/identity/connect/backchannel-logout/session` both return bare `404` on prod **and** staging. I did not report a logout endpoint. Discovery flags are configuration claims, not proof of a registered route; a flag is only real when the route answers. This demotes the logout hypothesis from `42` to `25` and is now recorded as a standing rule.
+- The one standing rule I kept breaking: seeing an interesting route in a 157-route index, I wanted to probe all of them. Cost discipline says probe the routes whose route *semantics* imply a primitive — server-side fetch, SSRF, file write, auth gate — and nothing else. Twelve of this cycle's thirty requests were spent closing that family across three sites, which is the correct outcome but is the ceiling of what unauthenticated probing is worth here.
+- Two "interesting" signals I deliberately did not escalate: `vps.signl4.com` returning `000` twice looks like a state change and would have justified a fresh takeover narrative, but an instant 0.16 s refusal from a GoDaddy shared host is a host-side or egress-side condition, not attacker capability; and `complianz/v1/documents` answering unauthenticated `200 []` is a plugin's empty public config, not a finding.
+- The `xmlrpc.php` divergence is the only real configuration signal produced this cycle, and I held it at `22` rather than promoting it, because the sweep that would confirm or kill it has not been run.
+
+[STEP 7] Gleaning — new connections
+- The `dpop_bound_access_tokens_required` absence and the `ES256/ES384/ES512` entries in `dpop_signing_alg_values_supported` are inconsistent with the published JWKS, which contains **only** RS256 material. So any client can request DPoP, and no client can actually verify an ES-signed proof against a key set that has no EC keys. Combined with the shared RSA key across six hosts, this means the key set is a single point of trust for every environment and every scope, including `mobile_api` — which is why H1 and H2 are the same finding wearing two hats and should be tested with one credential.
+- The two WP subsites localize their WP REST error messages (`/de/` returns *"Du bist leider nicht berechtigt, entfernte URLs zu verarbeiten."* where root and `/ea/` return English), while returning byte-identical status codes and route counts. Localization proves per-site config files and therefore per-site plugin configuration, which independently supports H3: this install is configured site-by-site, so controls genuinely can drift. The one place the drift already shows is `xmlrpc.php`.
+- `connect.signl4.com/identity/connect/userinfo` answers `401` with `www-authenticate: Bearer realm="IdentityServer",error="invalid_token"`, which positively identifies IdentityServer and confirms `introspection_endpoint` is the real introspection route. Introspection is therefore the cheapest way to test H1 **without** touching production's resource server: introspect a staging token and read back its `iss`/`aud`/`scope` claims, entirely against the staging host. If the program will only approve one read-only request, that request should be introspection on `devconnect`, not the production replay.
