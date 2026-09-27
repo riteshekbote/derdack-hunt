@@ -1741,3 +1741,14 @@ www.derdack.com
 - CHANGED api.signl4.com/identity & account.signl4.com/identity OIDC discovery includes DPoP signing-algorithm metadata (RS256/RS384/RS512/PS256/PS384/PS512/ES256/ES384/ES512) — mitigating control
 - CHANGED labconnect/labaccount.signl4.com remain App Gateway v2 502 stable — persistently dead tier
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
+
+## 2026-09-27 23:07:25 UTC
+- NEW vps.signl4.com HTTPS probe returns 200 again (nginx default page, cert CN=server.d1g.it) after transient 000 — subdomain takeover vector live
+- NEW api.signl4.com/.well-known/openid-configuration → 404; live OIDC discovery at /identity/.well-known/openid-configuration (issuer=https://connect.signl4.com/identity)
+- NEW connect.signl4.com/mobileapi blanket 403 (79088 B branded page) confirmed on all 6 identity hosts (was 3-host record)
+- NEW demo.enterprisealert.com/EAWebService/ still 200 — full EA 9.5.26147 portal confirmed live behind App Proxy
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
+- CHANGED labconnect/labaccount.signl4.com remain App Gateway v2 502 stable — persistently dead tier
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping continues 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED Credential-in-URL vendor-template family: 7+ distinct sources (SolarWinds article, EA9 PDF, send-alerts-web-services, nagios, 2wayREST×3, SIGNL4, User-Monitoring) with md5-hash variant documented; lea

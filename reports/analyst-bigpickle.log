@@ -38958,3 +38958,155 @@ A byte-identical blocked page across eight normalization variants proves more th
 ## STEP 7: RISK
 
 46 (unchanged) — `R2 passive recon`. All executed actions were unauthenticated single GET requests, ≤1 rps, no valid credentials, no customer data, no enumeration, no mutating request against a reachable authenticated path. The two queued actions are credential-gated and owner-authorization-gated. `scope.yml` exclusions respected: no brute force, no rate-limit testing (the `x-ws-ratelimit-limit: 1000` value was read as response metadata only and never tested), no TLS best-practice claims, no scanner output, no descriptive-header findings.
+===== ANALYST bigpickle 2026-09-27 23:07:25 UTC =====
+[0m
+> build · big-pickle
+[0m
+I'll run the passive checks needed to ground a delta before writing the blocks.
+[0m$ [0mfor u in "https://api.signl4.com/identity/.well-known/openid-configuration" "https://connect.signl4.com/identity/.well-known/openid-configuration" "https://devconnect.signl4.com/identity/.well-known/openid-configuration"; do echo "=== $u"; curl -s -o /tmp/od.json -w "code=%{http_code} size=%{size_download}\n" --max-time 20 "$u"; python3 -c "
+import json,sys
+try:
+    d=json.load(open('/tmp/od.json'))
+except Exception as e:
+    print('parse-fail',e); sys.exit()
+print('issuer:',d.get('issuer'))
+print('jwks_uri:',d.get('jwks_uri'))
+print('scopes:',len(d.get('scopes_supported',[])))
+print('grants:',d.get('grant_types_supported'))
+print('pkce:',d.get('code_challenge_methods_supported'))
+print('tokenauth:',d.get('token_endpoint_auth_methods_supported'))
+print('dpop_bound_required:',d.get('dpop_bound_access_tokens_required'))
+print('dpop_algs:',d.get('dpop_signing_alg_values_supported'))
+"; done
+=== https://api.signl4.com/identity/.well-known/openid-configuration
+code=200 size=3413
+issuer: https://connect.signl4.com/identity
+jwks_uri: https://api.signl4.com/identity/.well-known/openid-configuration/jwks
+scopes: 12
+grants: ['authorization_code', 'client_credentials', 'refresh_token', 'implicit', 'password', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:openid:params:grant-type:ciba', 'urn:ietf:params:oauth:grant-type:token-exchange']
+pkce: ['plain', 'S256']
+tokenauth: ['client_secret_basic', 'client_secret_post']
+dpop_bound_required: None
+dpop_algs: ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+=== https://connect.signl4.com/identity/.well-known/openid-configuration
+code=200 size=3457
+issuer: https://connect.signl4.com/identity
+jwks_uri: https://connect.signl4.com/identity/.well-known/openid-configuration/jwks
+scopes: 12
+grants: ['authorization_code', 'client_credentials', 'refresh_token', 'implicit', 'password', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:openid:params:grant-type:ciba', 'urn:ietf:params:oauth:grant-type:token-exchange']
+pkce: ['plain', 'S256']
+tokenauth: ['client_secret_basic', 'client_secret_post']
+dpop_bound_required: None
+dpop_algs: ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+=== https://devconnect.signl4.com/identity/.well-known/openid-configuration
+code=200 size=3517
+issuer: https://devconnect.signl4.com/identity
+jwks_uri: https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks
+scopes: 13
+grants: ['authorization_code', 'client_credentials', 'refresh_token', 'implicit', 'password', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:openid:params:grant-type:ciba', 'urn:ietf:params:oauth:grant-type:token-exchange']
+pkce: ['plain', 'S256']
+tokenauth: ['client_secret_basic', 'client_secret_post']
+dpop_bound_required: None
+dpop_algs: ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+[0m
+[0m$ [0mfor h in connect api devconnect devapi account devaccount; do echo "=== $h"; curl -s -o /tmp/jw_$h.json -w "code=%{http_code} size=%{size_download}\n" --max-time 20 "https://$h.signl4.com/identity/.well-known/openid-configuration/jwks"; python3 -c "
+import json,hashlib
+try:
+    d=json.load(open('/tmp/jw_$h.json'))
+except Exception as e:
+    print('parse-fail',e); raise SystemExit
+for k in d.get('keys',[]):
+    print(k.get('kid'),k.get('kty'),k.get('alg'),k.get('use'))
+    print('  e_sha256:',hashlib.sha256(k['e'].encode()).hexdigest()[:16])
+    print('  n_sha256:',hashlib.sha256(k['n'].encode()).hexdigest()[:16])
+    print('  x5t:',k.get('x5t'))
+    print('  x5c_cn:',k['x5c'][0].split(',')[0][:60] if k.get('x5c') else None)
+"; done
+=== connect
+code=200 size=1611
+91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 RSA RS256 sig
+  e_sha256: 300119d97daa790a
+  n_sha256: 138f432ba8c1bbaf
+  x5t: ke5PPOlOtRevZrJU90l-yw4x7ic
+  x5c_cn: MIIDNDCCAhygAwIBAgIQd2nPiwxkQjSr9WopSTtKgzANBgkqhkiG9w0BAQsF
+=== api
+code=200 size=1611
+91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 RSA RS256 sig
+  e_sha256: 300119d97daa790a
+  n_sha256: 138f432ba8c1bbaf
+  x5t: ke5PPOlOtRevZrJU90l-yw4x7ic
+  x5c_cn: MIIDNDCCAhygAwIBAgIQd2nPiwxkQjSr9WopSTtKgzANBgkqhkiG9w0BAQsF
+=== devconnect
+code=200 size=1611
+91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 RSA RS256 sig
+  e_sha256: 300119d97daa790a
+  n_sha256: 138f432ba8c1bbaf
+  x5t: ke5PPOlOtRevZrJU90l-yw4x7ic
+  x5c_cn: MIIDNDCCAhygAwIBAgIQd2nPiwxkQjSr9WopSTtKgzANBgkqhkiG9w0BAQsF
+=== devapi
+code=200 size=1611
+91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 RSA RS256 sig
+  e_sha256: 300119d97daa790a
+  n_sha256: 138f432ba8c1bbaf
+  x5t: ke5PPOlOtRevZrJU90l-yw4x7ic
+  x5c_cn: MIIDNDCCAhygAwIBAgIQd2nPiwxkQjSr9WopSTtKgzANBgkqhkiG9w0BAQsF
+=== account
+code=200 size=1611
+91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 RSA RS256 sig
+  e_sha256: 300119d97daa790a
+  n_sha256: 138f432ba8c1bbaf
+  x5t: ke5PPOlOtRevZrJU90l-yw4x7ic
+  x5c_cn: MIIDNDCCAhygAwIBAgIQd2nPiwxkQjSr9WopSTtKgzANBgkqhkiG9w0BAQsF
+=== devaccount
+code=200 size=1611
+91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 RSA RS256 sig
+  e_sha256: 300119d97daa790a
+  n_sha256: 138f432ba8c1bbaf
+  x5t: ke5PPOlOtRevZrJU90l-yw4x7ic
+  x5c_cn: MIIDNDCCAhygAwIBAgIQd2nPiwxkQjSr9WopSTtKgzANBgkqhkiG9w0BAQsF
+[0m
+[93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
+[0m✗ [0mcd /tmp && for h in connect api devconnect devapi account devaccount; do curl -s --max-time 20 "https://$h.signl4.com/identity/.well-known/openid-configuration" -o od_$h.json; done
+python3 - <<'EOF'
+import json
+H=['connect','api','devconnect','devapi','account','devaccount']
+docs={h:json.load(open(f'od_{h}.json')) for h in H}
+# scope diff
+sets={h:set(docs[h].get('scopes_supported',[])) for h in H}
+prod=set().union(*[sets[h] for h in ['connect','api','account']])
+dev=set().union(*[sets[h] for h in ['devconnect','devapi','devaccount']])
+print("PROD scopes:",sorted(prod))
+print("DEV  scopes:",sorted(dev))
+print("DEV-ONLY (not in prod):",sorted(dev-prod))
+print("PROD-ONLY (not in dev):",sorted(prod-dev))
+print()
+# full deep diff connect vs devconnect ignoring url-ish keys
+def norm(d):
+    d=dict(d)
+    for k in list(d):
+        if isinstance(d[k],str) and d[k].startswith('https://'):
+            d[k]=d[k].replace('devconnect','ENV').replace('connect','ENV').replace('api.','ENV.').replace('account','ENV').replace('devapi','ENV').replace('devaccount','ENV')
+        elif isinstance(d[k],list):
+            d[k]=[(v.replace('devconnect','ENV').replace('connect','ENV') if isinstance(v,str) else v) for v in d[k]]
+    return d
+a=norm(docs['connect']); b=norm(docs['devconnect'])
+ka=set(a); kb=set(b)
+print("keys only in connect:",sorted(ka-kb))
+print("keys only in devconnect:",sorted(kb-ka))
+for k in sorted(ka&kb):
+    if a[k]!=b[k]:
+        print(f"DIFF {k}:\n  prod={a[k]}\n  dev ={b[k]}")
+EOF failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.
+[93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
+[0m✗ [0mcd /tmp && echo "--- claims/scopes per host (raw)"; python3 - <<'EOF'
+import json
+for h in ['connect','api','devconnect','devapi','account','devaccount']:
+    d=json.load(open(f'od_{h}.json'))
+    sc=d.get('scopes_supported',[])
+    print(f"{h:12s} iss={d.get('issuer')}")
+    print(f"   {sorted(sc)}")
+    print(f"   claims={d.get('claims_supported')}")
+EOF failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.
+Found a discrepancy: `devconnect` advertises 13 scopes vs 12. Let me deep-diff.

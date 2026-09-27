@@ -690,3 +690,9 @@ https://www.derdack.com/de/ -> 200 len=?
 
 ## 2026-09-27 20:15:17 UTC
 
+
+## 2026-09-27 23:07:32 UTC
+https://us.derdack.com/.well-known/ -> HTTP 300
+https://us.derdack.com/.ssh/ -> HTTP 403
+https://us.derdack.com/.bash_history/ -> HTTP 404
+https://us.derdack.com/fabricated-path/ -> HTTP 404

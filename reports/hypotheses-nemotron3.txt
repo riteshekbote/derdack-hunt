@@ -1,16 +1,19 @@
-## 2026-09-27 20:13:14 UTC [target] (model nemotron3)
-[NEW] vps.signl4.com HTTPS probe returns 200 (nginx default page, cert CN=server.d1g.it) vs last lead 000 TCP timeout — subdomain takeover vector live again
-[NEW] Fabricated subdomain https://fabricated-xyz.vps.signl4.com/ returns 000 (TCP timeout) vs main domain 200 — confirms no wildcard vhost, only explicit A-record serves default page
+## 2026-09-27 23:07:14 UTC [target] (model nemotron3)
+[NEW] vps.signl4.com HTTPS probe returns 200 again (nginx default page, cert CN=server.d1g.it) after transient 000 — subdomain takeover vector live
+[NEW] api.signl4.com/.well-known/openid-configuration → 404; live OIDC discovery at /identity/.well-known/openid-configuration (issuer=https://connect.signl4.com/identity)
+[NEW] connect.signl4.com/mobileapi blanket 403 (79088 B branded page) confirmed on all 6 identity hosts (was 3-host record)
 [NEW] demo.enterprisealert.com/EAWebService/ still 200 — full EA 9.5.26147 portal confirmed live behind App Proxy
-[CHANGED] connect.signl4.com/mobileapi blanket 403 (79088 B branded page) now confirmed on all 6 identity hosts (was 3-host record)
-[CHANGED] api.signl4.com/identity & account.signl4.com/identity OIDC discovery includes DPoP signing-algorithm metadata (RS256/RS384/RS512/PS256/PS384/PS512/ES256/ES384/ES512) — mitigating control
-[CHANGED] labconnect/labaccount.signl4.com remain App Gateway v2 502 stable — persistently dead tier
 [CHANGED] Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
+[CHANGED] labconnect/labaccount.signl4.com remain App Gateway v2 502 stable — persistently dead tier
+[CHANGED] Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain PKCE
+[CHANGED] api.signl4.com/api/v2/teams auth-status flapping continues 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+[CHANGED] Credential-in-URL vendor-template family: 7+ distinct sources (SolarWinds article, EA9 PDF, send-alerts-web-services, nagios, 2wayREST×3, SIGNL4, User-Monitoring) with md5-hash variant documented; leak-oracles negative across 7+ corpora
 [PRIO] vps.signl4.com,95,attack_surface:10,business_value:8,tech_exposure:9,gate_ease:10,cloud_surface:9,freshness:10
 [PRIO] demo.enterprisealert.com/EAWebService/,80,attack_surface:8,business_value:9,tech_exposure:7,gate_ease:10,cloud_surface:7,freshness:8
 [PRIO] connect/devconnect/api/devapi/account/devaccount.signl4.com/identity,88,attack_surface:9,business_value:10,tech_exposure:9,gate_ease:5,cloud_surface:9,freshness:7
 [PRIO] connect.signl4.com/mobileapi,45,attack_surface:5,business_value:6,tech_exposure:4,gate_ease:3,cloud_surface:5,freshness:5
 [PRIO] us.derdack.com,30,attack_surface:4,business_value:3,tech_exposure:3,gate_ease:10,cloud_surface:3,freshness:3
+[PRIO] api.signl4.com/api/v2/teams,55,attack_surface:6,business_value:7,tech_exposure:8,gate_ease:8,cloud_surface:7,freshness:8
 [HYP] Subdomain takeover via dangling A-record on vps.signl4.com
 class: MISCONFIG
 asset: vps.signl4.com
@@ -38,7 +41,27 @@ evidence_needed: Valid client_secret for client_id 692A0A56-892F-4AE2-8259-76DA3
 verify_steps: 1) POST https://devconnect.signl4.com/identity/connect/token with password grant + valid client_secret (confirm access_token minted by staging IdP) 2) Use token against https://api.signl4.com/api/v2/teams (confirm 200 cross-env acceptance) 3) Verify token issuer claim = connect.signl4.com/identity despite minting on account/devaccount
 impact: Full multi-tenant EA/SIGNL4 compromise — token forgery across all 6 identity hosts, access to all API scopes (CRUD alerts, teams, webhooks, subscriptions, billing, SCIM), cross-env privilege escalation via account IdP mint-mismatch; severity CRITICAL
 testability: AUTH_HELPED
+[HYP] Handler-deferred auth bypass on api.signl4.com/api/v2/teams enabling cross-env token acceptance
+class: AUTH
+asset: api.signl4.com/api/v2/teams
+confidence: 55
+reasoning: api.signl4.com/api/v2/teams returns 405 Allow:GET,POST on unauth GET (not 401) and 405 even with invalid Bearer token — auth validation deferred to handler, not route layer; this handler-deferred pattern combined with 6-host shared RS256 JWKS means a valid token from any identity host (staging or prod) could be accepted; auth-status flapping (401 vs 405 across cycles) indicates inconsistent enforcement
+evidence_needed: Valid Bearer token from any of the 6 identity hosts accepted by api.signl4.com/api/v2/teams returning 200 with team data
+verify_steps: 1) Obtain valid access_token from devconnect.signl4.com/identity/connect/token (password grant with client_secret) 2) GET https://api.signl4.com/api/v2/teams with Authorization: Bearer <token> (observe if 200 vs 401) 3) Repeat with token from account.signl4.com/identity (cross-host mint-mismatch test)
+impact: Cross-environment token acceptance — staging token works against prod API, bypassing environment isolation; combined with shared client_id enables full API access; severity HIGH
+testability: AUTH_HELPED
+[HYP] MultiViews path disclosure on us.derdack.com mirroring dev.derdack.com
+class: MISCONFIG
+asset: us.derdack.com
+confidence: 60
+reasoning: us.derdack.com (217.160.0.28, IONOS) serves 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/); /.ssh/ returns 403; fabricated paths return 300 with same basename echo pattern; second host confirming estate-wide parked-minimal config class behind shared x-ws reverse-proxy
+evidence_needed: Confirm 300 response lists sensitive paths and direct file access returns 403/404 (no actual file disclosure)
+verify_steps: 1) GET https://us.derdack.com/.well-known/ (confirm 300 with /.ssh/, /.bash_history/, /.viminfo/) 2) GET https://us.derdack.com/.ssh/ (confirm 403) 3) GET https://us.derdack.com/.bash_history/ (confirm 404) 4) GET https://us.derdack.com/fabricated-path/ (confirm 300 with basename echo)
+impact: Path disclosure only — static namespace echo, no sensitive file disclosure confirmed; severity LOW
+testability: PASSIVE
 [PARKED] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch: AUTH_HELPED — requires valid client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 OR leaked X-S4-Api-Key / team-secret to complete chain; no passive-only path to token acquisition
+[PARKED] Handler-deferred auth bypass on api.signl4.com/api/v2/teams enabling cross-env token acceptance: AUTH_HELPED — requires valid token from any identity host to test cross-env acceptance; no passive verification possible
+[PARKED] MultiViews path disclosure on us.derdack.com: confidence 60 but impact minimal (static namespace echo only, files 403/404) — same class as dev.derdack.com already documented; adds second host evidence but no new exploitability
 [FINAL] 1) Subdomain takeover via dangling A-record on vps.signl4.com (MISCONFIG, 95) — PASSIVE, CONFIRMED via live probes across 7+ cycles, HTTPS 200 nginx default + unrelated cert + GoDaddy NS
 [FINAL] 2) Public EA 9.5.26147 alert API exposure on demo.enterprisealert.com/EAWebService (MISCONFIG, 80) — PASSIVE, handler index + version disclosure + WSDL + internal hostname leak confirmed, all mutating handlers credential-gated
 [FINAL] 3) Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch (AUTH, 88) — AUTH_HELPED blocked on credential acquisition; strongest theoretical finding, all components live-verified except client_secret
