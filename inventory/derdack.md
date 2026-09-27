@@ -1731,3 +1731,13 @@ www.derdack.com
 - NEW labconnect/labaccount.signl4.com remain App Gateway v2 502 stable — persistently dead tier
 - NEW api.signl4.com/identity & account.signl4.com/identity OIDC discovery records DPoP signing-algorithm metadata (RS256/RS384/RS512/PS256/PS384/PS512/ES256/ES384/ES512) — mitigating control, not vuln
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
+
+## 2026-09-27 20:15:17 UTC
+- NEW `https://api.signl4.com/.well-known/openid-configuration` → 404, 0 B. Live path is `/identity/.well-known/openid-configuration` (200, 3413 B, `issuer=https://connect.signl4.com/identity`).
+- NEW vps.signl4.com HTTPS probe returns 200 (nginx default page, cert CN=server.d1g.it) vs last lead 000 TCP timeout — subdomain takeover vector live again
+- NEW Fabricated subdomain https://fabricated-xyz.vps.signl4.com/ returns 000 (TCP timeout) vs main domain 200 — confirms no wildcard vhost, only explicit A-record serves default page
+- NEW demo.enterprisealert.com/EAWebService/ still 200 — full EA 9.5.26147 portal confirmed live behind App Proxy
+- CHANGED connect.signl4.com/mobileapi blanket 403 (79088 B branded page) now confirmed on all 6 identity hosts (was 3-host record)
+- CHANGED api.signl4.com/identity & account.signl4.com/identity OIDC discovery includes DPoP signing-algorithm metadata (RS256/RS384/RS512/PS256/PS384/PS512/ES256/ES384/ES512) — mitigating control
+- CHANGED labconnect/labaccount.signl4.com remain App Gateway v2 502 stable — persistently dead tier
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
