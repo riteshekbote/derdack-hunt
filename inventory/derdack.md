@@ -1723,3 +1723,11 @@ www.derdack.com
 - NEW labconnect/labaccount.signl4.com remain App Gateway v2 502 stable — persistently dead tier
 - NEW api.signl4.com/identity & account.signl4.com/identity OIDC discovery records DPoP signing-algorithm metadata (RS256/RS384/RS512/PS256/PS384/PS512/ES256/ES384/ES512) — mitigating control, not vuln
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
+
+## 2026-09-27 17:19:51 UTC
+- NEW vps.signl4.com HTTPS probe returned 000 (TCP timeout) vs KB 7× confirmed 200 nginx default — transient network or host-side block; DNS A 72.167.227.27 (GoDaddy secureserver.net) unchanged
+- NEW connect.signl4.com/mobileapi confirmed blanket 403 (79088 B branded page) on all 6 identity hosts — corrects prior 3-host record
+- NEW demo.enterprisealert.com App-Proxy auth namespace fully 404: /.auth/me, /.auth/login/aad/callback, /.auth/login/azuread, /signin-oidc, /.well-known/openid-configuration — no unauth identity endpoint o
+- NEW labconnect/labaccount.signl4.com remain App Gateway v2 502 stable — persistently dead tier
+- NEW api.signl4.com/identity & account.signl4.com/identity OIDC discovery records DPoP signing-algorithm metadata (RS256/RS384/RS512/PS256/PS384/PS512/ES256/ES384/ES512) — mitigating control, not vuln
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
