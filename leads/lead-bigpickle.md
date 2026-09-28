@@ -7157,3 +7157,4 @@ testability: AUTH_HELPED
 [NEXT] HUMAN: request one approved non-production OAuth client credential for `devconnect.signl4.com`/`devapi.signl4.com` plus written permission to replay one staging-minted token against production for a non-mutating read. Discriminating script: mint one token, single `GET https://api.signl4.com/api/v2/teams`, read HTTP status and `WWW-Authenticate` verbatim, stop on first non-401, no enumeration, sha256-redact any secret.
 [NEXT] EXEC: one SOAP `GetTicketStatus` POST to `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx` with fabricated provider credentials and a non-existent ticket identifier; record the fault code, no real ticket ID, no fuzzing — the only mutating EA operation never exercised.
 ## 2026-09-27 23:05:12 UTC [target] (model bigpickle)
+## 2026-09-28 01:49:58 UTC [target] (model bigpickle)

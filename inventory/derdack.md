@@ -1752,3 +1752,12 @@ www.derdack.com
 - CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
 - CHANGED api.signl4.com/api/v2/teams auth-status flapping continues 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
 - CHANGED Credential-in-URL vendor-template family: 7+ distinct sources (SolarWinds article, EA9 PDF, send-alerts-web-services, nagios, 2wayREST×3, SIGNL4, User-Monitoring) with md5-hash variant documented; lea
+
+## 2026-09-28 01:50:08 UTC
+- NEW vps.signl4.com HTTPS probe returned 000 (TCP timeout) vs KB 7× confirmed 200 nginx default — transient network/host-side block; DNS A 72.167.227.27 (GoDaddy secureserver.net) unchanged
+- NEW api.signl4.com/api/v2/teams returns 401 on unauth GET and 401 with invalid Bearer (was 405/405 in prior cycles) — route-gated this cycle, differs from V1/V2 handler-deferred pattern
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl exposes internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` — internal hostname leak confirmed
+- NEW Fresh OIDC discovery on api.signl4.com + account.signl4.com records `dpop_signing_alg_values_supported: ["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"]` — DPoP mitigating con
+- CHANGED vps.signl4.com subdomain takeover vector live again after transient 000 — 200 nginx default page, cert CN=server.d1g.it, fabricated-host byte-identical response
+- CHANGED connect.signl4.com/mobileapi blanket 403 (79088 B branded page) confirmed on all 6 identity hosts (was 3-host record)
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
