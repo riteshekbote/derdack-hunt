@@ -1761,3 +1761,10 @@ www.derdack.com
 - CHANGED vps.signl4.com subdomain takeover vector live again after transient 000 — 200 nginx default page, cert CN=server.d1g.it, fabricated-host byte-identical response
 - CHANGED connect.signl4.com/mobileapi blanket 403 (79088 B branded page) confirmed on all 6 identity hosts (was 3-host record)
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
+
+## 2026-09-28 08:04:59 UTC
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl exposes internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` — internal hostname leak confirmed
+- NEW Fresh OIDC discovery on api.signl4.com + account.signl4.com records `dpop_signing_alg_values_supported: ["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"]` — DPoP mitigating con
+- CHANGED vps.signl4.com subdomain takeover vector live again after transient 000 — 200 nginx default page, cert CN=server.d1g.it, fabricated-host byte-identical response
+- CHANGED connect.signl4.com/mobileapi blanket 403 (79088 B branded page) confirmed on all 6 identity hosts (was 3-host record)
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable

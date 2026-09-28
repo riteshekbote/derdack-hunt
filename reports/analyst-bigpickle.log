@@ -39553,3 +39553,506 @@ Two detection rules worth carrying to every other tenant: a staging discovery do
 ## 8. REPORT
 
 No report filed. No finding met the evidence bar this cycle. One `[NEW]` config-level observation (staging-only `public_api_mfa_manage` + shared JWKS) is queued behind the blocked token test; it is not reportable as a vulnerability on its own.
+===== ANALYST bigpickle 2026-09-28 08:04:59 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcd /tmp/opencode && curl -s -o wh_connect.json -w "connect webhook spec: code=%{http_code} size=%{size_download} type=%{content_type}\n" -A "Mozilla/5.0 (research)" "https://connect.signl4.com/webhook/docs/v1/swagger.json" && sleep 1 && curl -s -o wh_api.json -w "api webhook spec:    code=%{http_code} size=%{size_download} type=%{content_type}\n" -A "Mozilla/5.0 (research)" "https://api.signl4.com/webhook/docs/v1/swagger.json"
+connect webhook spec: code=200 size=12647 type=application/json;charset=utf-8
+api webhook spec:    code=200 size=12647 type=application/json;charset=utf-8
+[0m
+[0m$ [0mcd /tmp/opencode && python3 - <<'PY'
+import json,hashlib,re
+a=open('wh_connect.json','rb').read(); b=open('wh_api.json','rb').read()
+print("sha256 connect:",hashlib.sha256(a).hexdigest()[:16])
+print("sha256 api   :",hashlib.sha256(b).hexdigest()[:16])
+print("byte-identical:",a==b)
+d=json.loads(a)
+print("\n-- top-level keys:",list(d.keys()))
+print("-- openapi/swagger:",d.get('openapi') or d.get('swagger'))
+print("-- host/basePath/servers:",d.get('host'),d.get('basePath'),d.get('schemes'),d.get('servers'))
+print("-- global security:",json.dumps(d.get('security')))
+print("-- securityDefinitions/securitySchemes:",json.dumps(d.get('securityDefinitions') or d.get('securitySchemes')))
+print("\n-- paths:")
+for p,ops in d.get('paths',{}).items():
+    for m,op in ops.items():
+        if not isinstance(op,dict): continue
+        print(f"   {m.upper():7} {p}  opId={op.get('operationId')}  security={json.dumps(op.get('security'))}")
+print("\n-- ALL string values that look like credentials/examples/defaults:")
+raw=a.decode()
+for pat in [r'"(example|default|x-example)"\s*:\s*[^,}\]]+',
+            r'"(api[_-]?key|apikey|secret|token|password|client_secret|teamSecret)"\s*:\s*\{[^}]*\}',
+            r'(?i)(apikey|api_key|secret|token|password)[^,}]{0,60}']:
+    m=re.findall(pat,raw)
+    if m: print(f"  [{pat[:22]}] -> {sorted(set(str(x) for x in m))[:14]}")
+print("\n-- non-signl4 host literals:")
+hosts=set(re.findall(r'https?://([A-Za-z0-9._-]+)',raw))
+print("  ",sorted(hosts))
+PY
+sha256 connect: 594552122c2fbac5
+sha256 api   : 594552122c2fbac5
+byte-identical: True
+
+-- top-level keys: ['openapi', 'info', 'servers', 'paths', 'components', 'tags']
+-- openapi/swagger: 3.0.4
+-- host/basePath/servers: None None None [{'url': 'https://connect.signl4.com/webhook'}]
+-- global security: null
+-- securityDefinitions/securitySchemes: null
+
+-- paths:
+   GET     /docs/index.html  opId=None  security=null
+   POST    /{teamSecret}  opId=None  security=null
+
+-- ALL string values that look like credentials/examples/defaults:
+  ["(example|default|x-ex] -> ['example']
+  [(?i)(apikey|api_key|se] -> ['Secret', 'secret']
+
+-- non-signl4 host literals:
+   ['connect.signl4.com', 'www.signl4.com']
+[0m
+[0m$ [0mcd /tmp/opencode && python3 - <<'PY'
+import json,re
+raw=open('wh_connect.json').read()
+d=json.loads(raw)
+print("-- components keys:",list(d.get('components',{}).keys()))
+for sec in ('parameters','schemas','examples','headers'):
+    node=d.get('components',{}).get(sec)
+    if node: print(f"-- components.{sec}:",json.dumps(node,indent=1)[:1800])
+print("\n-- POST /{teamSecret} full op:")
+print(json.dumps(d['paths']['/{teamSecret}'],indent=1)[:3000])
+print("\n-- every occurrence of 'example' with 160 chars of context:")
+for m in re.finditer(r'example',raw):
+    print("   ...",raw[max(0,m.start()-120):m.start()+120].replace("\n"," "),"...")
+PY
+-- components keys: ['schemas']
+-- components.schemas: {
+ "ErrorDetailsResponseContent": {
+  "type": "object",
+  "properties": {
+   "details": {
+    "type": "string",
+    "nullable": true
+   },
+   "message": {
+    "type": "string",
+    "nullable": true
+   },
+   "code": {
+    "type": "integer",
+    "format": "int32"
+   }
+  },
+  "additionalProperties": false
+ },
+ "ErrorResponseContent": {
+  "type": "object",
+  "properties": {
+   "details": {
+    "type": "string",
+    "nullable": true
+   },
+   "message": {
+    "type": "string",
+    "nullable": true
+   },
+   "code": {
+    "type": "integer",
+    "format": "int32"
+   },
+   "errors": {
+    "type": "array",
+    "items": {
+     "$ref": "#/components/schemas/ErrorDetailsResponseContent"
+    },
+    "nullable": true
+   },
+   "requestId": {
+    "type": "string",
+    "nullable": true
+   }
+  },
+  "additionalProperties": false
+ },
+ "Event": {
+  "type": "object",
+  "description": "Information you want to send to your team. No fixed data format or schema is required by SIGNL4."
+ },
+ "EventInfo": {
+  "type": "object",
+  "properties": {
+   "eventId": {
+    "type": "string",
+    "description": "ID for/of the received event",
+    "nullable": true
+   }
+  },
+  "additionalProperties": false,
+  "description": "201 Response with a unique {eventId} for the event that was received by SIGNL4."
+ }
+}
+
+-- POST /{teamSecret} full op:
+{
+ "post": {
+  "tags": [
+   "Events"
+  ],
+  "summary": "Transmit an event",
+  "description": "Triggers a new Signl for your team.\r\nIt will be displayed in the Signl overview and people on duty receive an alert notification, except the Signl is\r\nfiltered (keyword filtering with categories).\r\nPlease note that people, who have muted the category to which the Signl may be assigned (keyword matching or\r\nX-S4-Service parameter), won't receive an alert notification.\r\nThe body of this request is any data of your choice, typically sent in JSON format. However, SIGNL4 does not\r\nrequire a specific schema.\r\nYou may want to include the following parameters to enrich your Signl or to influence its processing as follows:\r\n\r\n</br><b>X-S4-Service</b>: Assigns the Signl to the service/system category with the specified name. Will be overwritten if category is assigned in distribution rule.\r\n</br><b>X-S4-Location</b>: Transmit location information ('latitude, longitude') with your event and display a map in\r\nthe mobile app.\r\n</br><b>X-S4-AlertingScenario</b>: If this event triggers a Signl, allows to control how SIGNL4 notifies the team.\r\n<ul><li><b>single_ack</b>\r\n</br>Only one person needs to acknowledge this Signl.\r\n</br></li><li><b>multi_ack</b>\r\n</br>The Signl must be confirmed by the number of people who are on duty at the time this Signl is created.\r\n</br></li><li><b>emergency</b>\r\n</br>All people in the team are notified regardless of their duty status and must acknowledge the Signl, which is also assigned to the built-in emergency category.\r\n</br></li></ul><b>X-S4-ExternalID</b>: If the event originates from a record in a 3rd party system, use this parameter to pass the\r\nunique ID of that record. That ID will be communicated in outbound webhook notifications from SIGNL4, which is\r\ngreat for correlation/synchronization of that record with the Signl.\r\n</br><b>X-S4-Filtering</b>: Specify a boolean value of true or false to apply event filtering for this event, or not. If\r\nset to true, the event will only trigger a notification to the team, if it contains at least one keyword from one\r\nof your services and system categories (i.e. it is whitelisted). If set to false it skips the filter set in the team.\r\nIt will also prevent the suppression of a Signl by signaling overrides.\r\n</br><b>X-S4-Status</b>: If you want to resolve an existing Signl by an external id (X-S4-ExternalID), you can add this\r\nstatus parameter. It has three possible values:\r\n<ul><li><b>new</b>\r\n</br>Default value which means that this event triggers a new Signl.\r\n</br></li><li><b>acknowledged</b>\r\n</br>If you want to acknowledge a previously triggered Signl (e.g. someone responded in the 3rd party system and not in the mobile\r\n        app during business hours), set the X-S4-Status to 'acknowledged' and provide an external ID via the 'X-S4-ExternalID' parameter for the Signl you want to acknowledge.\r\n        It is only possible t
+
+-- every occurrence of 'example' with 160 chars of context:
+   ... efine when an event, sent to the webhook, should acknowledge or resolve a Signl\r\nthat it has triggered earlier.\r\nAn example is: https://connect.signl4.com/webhook/teamssecret?ExtIdParam=Id&ExtStatusParam=Status&ResolvedStatus=UP&AckStat ...
+   ...  the format name=value and needs to be url path encoded.<br />\r\nMultiple name/value pairs are separated with an &, an example is<br /><i>Id=INC091210&Gate%20Id=A45&Message=Agressive%20passenger&Source=Gate%20agent&Type=Security%20alert&St ...
+   ... 91210&X-S4-Status=resolved</i><br />\r\nWhen you select application/x-www-form-urlencoded and try it out here, the JSON example is converted into that format automatically (see the curl command line output).",           "content": {         ...
+   ... json": {               "schema": {                 "$ref": "#/components/schemas/Event"               },               "examples": {                 "application/json": {                   "value": "{\r\n  \"Id\": \"INC091210\",\r\n  \"Gate ...
+   ... lain": {               "schema": {                 "$ref": "#/components/schemas/Event"               },               "examples": {                 "text/plain": {                   "externalValue": "Id: INC091210\r\nGate Id: A45\r\nMessag ...
+   ... /xml": {               "schema": {                 "$ref": "#/components/schemas/Event"               },               "examples": {                 "application/xml": {                   "externalValue": "<Event>\r\n  <Id>INC091210</Id>\r\ ...
+   ... oded": {               "schema": {                 "$ref": "#/components/schemas/Event"               },               "examples": {                 "application/x-www-form-urlencoded": {                   "externalValue": "Id=INC091210&Gat ...
+   ...              "schema": {                   "$ref": "#/components/schemas/EventInfo"                 },                 "example": {                   "eventId": "2518975207516268778_100c76b7-5ed7-4c2a-843e-a38fc8727bd0"                 }    ...
+[0m
+[0m$ [0mcd /tmp/opencode && for p in "/webhook/docs/v2/swagger.json" "/webhook/docs/v3/swagger.json"; do curl -s -o /dev/null -w "$p -> code=%{http_code} size=%{size_download}\n" -A "Mozilla/5.0 (research)" "https://connect.signl4.com$p"; sleep 1; done
+/webhook/docs/v2/swagger.json -> code=404 size=0
+/webhook/docs/v3/swagger.json -> code=404 size=0
+[0m
+## STEP 1 — DELTA
+
+- [NEW] 4th anon-readable OpenAPI parsed for the first time — `GET https://connect.signl4.com/webhook/docs/v1/swagger.json` → 200, 12647 B, OpenAPI 3.0.4, `sha256 594552122c2fbac5…`. `components` contains **only** `schemas`; there is **no `securitySchemes` object at all** and the global `security` key is **absent** (not even the `security:[{}]` seen on V1/V2/V3). Sole paths: `GET /docs/index.html`, `POST /{teamSecret}`.
+- [NEW] **Zero credential material in the webhook spec.** All `example`/`externalValue` values are generic vendor demo payloads (`Id: INC091210`, `Gate Id: A45`, `eventId: 2518975207516268778_100c76b7-5ed7-4c2a-843e-a38fc8727bd0`) plus the already-known `…/webhook/teamssecret` placeholder. No live team secret, API key, or default value.
+- [NEW] **The internal-hostname leak is EA-WSDL-specific, not SIGNL4-wide.** The webhook spec's only host literals are `connect.signl4.com` and `www.signl4.com` — zero single-label / `.local` / `.internal` names, in contrast to the EA WSDL's `https://ereesus/EAWebService/EventProviderAPI.asmx`. Extends the 2026-09-26 "specs disclose nothing internal" conclusion from 3 documents to 4.
+- [NEW] Webhook spec is **byte-identical on `connect` and `api`** (same sha256), joining the prod/staging spec-parity family; `GET /webhook/docs/v2/swagger.json` and `/v3/` → 404, 0 B. The webhook namespace is **V1-only**, so the anon-readable spec family is now closed at exactly 4 documents.
+
+## STEP 2 — PRIORITIZE
+
+- [PRIO] `connect|api|devconnect|devapi|account|devaccount` — `/identity` + `/api/*` + `/webhook` shared-key estate, 7, 8, 9, 2, 7, 6 → **6.70**
+- [PRIO] `demo.enterprisealert.com/EAWebService` — 12-op WSDL / 10-handler bridge / connector, 6, 7, 6, 3, 6, 6 → **5.80**
+- [PRIO] `connect.signl4.com/webhook/{teamSecret}` — no-auth-scheme spec + 404/201 oracle, 5, 7, 6, 3, 6, 7 → **5.65**
+
+## STEP 3 — HYPOTHESES
+
+```
+[HYP] A single staging-token replay to /api/v2/teams is a 2-bit oracle because the same gateway already separates invalid-token from authenticated-but-unauthorized from route-not-gated
+class: AUTH
+asset: api.signl4.com/api/v2/teams (six-host estate: connect, devconnect, api, devapi, account, devaccount)
+confidence: 62
+reasoning: Six responding hosts publish one identical JWKS (RS256, single kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256). devaccount/identity advertises issuer https://devconnect.signl4.com/identity while account/identity advertises https://connect.signl4.com/identity, so the two environments are issuer-distinct by string but key-identical by material. The gateway demonstrably emits three distinct unauth answers on the same route family — 401 WWW-Authenticate:Bearer for absent/invalid credentials, 403 application/problem+json for a parsed-but-rejected API key, and 405 Allow:GET,POST for a route that defers auth to the handler. That means a staging-minted token presented once to a known-gated read yields a readable verdict (401 = signature/issuer rejected; 403 = signature accepted, scope rejected) rather than a single 401, so one replay answers the question and no enumeration is needed. Nothing has been presented to any host; no token exists in my possession.
+evidence_needed: One staging-issued token replayed to GET https://api.signl4.com/api/v2/teams returning 2xx, or 403 with a WWW-Authenticate description that differs from the documented 403 "API Key is invalid" body — i.e. any status other than 401.
+verify_steps: (1) Passive GET https://connect.signl4.com/identity/.well-known/openid-configuration, re-record issuer and scopes_supported. (2) With an owner-issued non-production credential, POST client_credentials to https://devconnect.signl4.com/identity/connect/token with scope=openid; retain access_token, iss, aud, exp. (3) Single GET https://api.signl4.com/api/v2/teams with Authorization: Bearer <staging_token>; record status and WWW-Authenticate verbatim. (4) Single control GET with no header. Stop on first non-401. Do not vary User-Agent or X-Forwarded-For.
+impact: If accepted, complete authentication bypass across the production API and identity tier — a staging tenant reads and writes production teams, shifts, invoices and files. Critical (~9.1) if the token is accepted; inert if the issuers enforce iss and aud correctly.
+testability: AUTH_HELPED
+```
+
+```
+[HYP] The webhook team secret is the lowest-effort cross-environment credential, so a staging team secret is the most likely of the three credential types to be reusable in production
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 45
+reasoning: The newly parsed spec (200, 12647 B, no securitySchemes component, no global security) declares POST /{teamSecret} as the sole event-transmission contract — the team secret in the URL path is the entire authorization mechanism, and the accompanying 404 {"code":3004,…} versus 201 {eventId} is a documented success oracle. The same spec is byte-identical on api.signl4.com and connect.signl4.com, and the API namespaces on those hosts already share one backend appId, so the event pipeline is one deployment. Unlike the OAuth path, this credential needs no client_secret, is short, sits in a URL (referrer/access-log leakage), and is documented in 15+ third-party integrations. All 10 credential-free hypotheses about it have been closed negatively across 4 public corpora, so this asserts reuse-if-leaked, not that a live secret exists.
+evidence_needed: An owner-supplied non-production team secret returning 201 from production POST https://connect.signl4.com/webhook/{staging_secret} where a fabricated secret returns 404, or an owner statement that team secrets are environment-scoped.
+verify_steps: (1) With a written non-production secret from the program, one POST https://connect.signl4.com/webhook/{staging_secret} with body {"Id":"HUNT-<random>"} and no query parameters; record status only. (2) One control POST to a fabricated path segment; record status. (3) Do not send to any team that has not been designated as the test tenant.
+impact: A staging team secret valid in production lets an attacker inject alerts into arbitrary production SIGNL4 teams, and via the documented X-S4-Status plus X-S4-ExternalID parameters acknowledge or resolve live on-call Signls — a paging-integrity and availability impact on alerting infrastructure. High (~7.0) if reusable, nothing if environment-scoped.
+testability: AUTH_HELPED
+```
+
+```
+[HYP] The two ticket operations in the EA WSDL are the only mutating handlers never exercised, and they authorize on ticket identifier without characterized team scoping
+class: IDOR
+asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx
+confidence: 40
+reasoning: The WSDL exposes 12 portType operations. The anonymous ?Handler= bridge exposes 10, and the two ticket operations are in neither list; 9 of the 10 bridge handlers return Error: -1 on fabricated credentials, so no SOAP authorization check has ever actually been observed on this host. UpdateTicket writes ticket state and is the only mutating operation in the entire Enterprise Alert surface with no characterized authorization model. No request has been made against either operation. Ticket identifiers are operator-issued, so this is a scoping question, not a guessing question.
+evidence_needed: A SOAP GetTicketStatus response for a non-existent ticket identifier whose fault differs from the alert family, or a successful response returning ticket data without a valid provider credential.
+verify_steps: (1) Passive GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl and record the two ticket operation names verbatim. (2) One SOAP POST of GetTicketStatus to that path with fabricated provider credentials and a random non-existent ticket identifier; read the fault code only. (3) No real ticket identifier, no sequential iteration, no fuzzing. Stop after one request.
+impact: If GetTicketStatus or UpdateTicket authorizes on ticket identifier alone, a holder of any valid team secret could read or mutate tickets belonging to other teams. Medium (~6.0) and unproven; the demo host means impact is bounded to demo data unless the same code is deployed in customer instances.
+testability: PASSIVE
+```
+
+## STEP 4 — SELF-CRITIQUE
+
+- [PARKED] 4/4 anon-readable OpenAPI specs under-declare authorization (V1, V2, V3 with `security:[{}]`; the webhook spec worse — no `securitySchemes` component at all): real, reproducible, and a genuine spec-vs-implementation mismatch, but every operation on every one of them is provably 401/405/404 anonymously. Descriptive-only class, LOW.
+- [PARKED] Credential-in-URL vendor-template family (7+ sources, md5-hash variant): a documentation practice, leak-oracle negative across 7+ corpora, deployment-side impact only.
+- [PARKED] `vps.signl4.com` stale GoDaddy A-record and `docs.enterprisealert.com` SWA binding: no claimable primitive from the researcher seat, gated on DNS/hosting-account control.
+- [PARKED] s4dev1..8 App Proxy identifier disclosure: reproducible 8/8 but resource IDs are non-secret and non-actionable.
+- [FINAL] 1. Cross-environment RS256 token acceptance, 62. 2. Webhook team-secret cross-environment reuse, 45. 3. EA ticket-operation scoping, 40. Two AUTH_HELPED, one PASSIVE.
+
+## STEP 5 — NEXT ACTION
+
+- [NEXT] HUMAN: request from bugs.olivermaicher.eu **one** non-production OAuth client credential for a Derdack staging tenant (`devconnect.signl4.com`) together with written confirmation that a staging-minted token may be presented exactly once to production `api.signl4.com` for a non-mutating read. Discriminating script: mint one token, single `GET https://api.signl4.com/api/v2/teams`, record status and `WWW-Authenticate` verbatim, stop on the first non-401, no enumeration, sha256-redact any secret.
+
+## STEP 6 — LEARNING
+
+- [LEARN] REJECTED OTHER @ connect.signl4.com/webhook/docs/v1/swagger.json: the 4th anon-readable spec, the only one never included in a disclosure-class parse, carries no credential material and no internal hostnames — the sole secrets-shaped strings are the already-known `teamssecret` placeholder and generic vendor demo payloads, and its only host literals are `connect.`/`www.signl4.com`. The credential-leak and internal-disclosure classes are now negative across all 4 SIGNL4 specs, while the EA WSDL's `ereesus` leak stays confirmed as EA-specific.
+- [LEARN] ACCEPTED OTHER @ connect/api.signl4.com/webhook: the anon-readable spec family is closed at exactly 4 documents (V1, V2, V3 API plus a V1-only webhook contract; `/webhook/docs/v2|v3/swagger.json` 404, 0 B), and the webhook spec is byte-identical across prod and API hosts, matching the prod/staging spec-parity pattern already established for the other three.
+- [LEARN] ACCEPTED OTHER @ api.signl4.com: the gateway's 401 (absent/invalid credential), 403 (parsed-but-rejected API key) and 405 (auth deferred to handler) responses are a genuine three-way verdict on the same route family, which is what makes a single staging-token replay a complete two-bit answer — refine the verification design before spending the one credential.
+
+## STEP 7 — RISK
+
+- [RISK] Derdack bug bounty: 47 — Unchanged and unchanged in character. Confirmed negatives: no anonymous read or write across V1/V2/V3/webhook/events, no anonymous IDOR, no file upload, no SSRF to 169.254.169.254, no customer-data exposure, and every takeover candidate is unclaimable from the researcher seat. The entire remaining critical surface is one unverified cross-environment token-acceptance chain sitting behind a single missing credential; it is critical if the issuers skip `iss`/`aud` validation and completely inert if they do not. Rating moves only on that one replay.
+## Objective
+- Continue the Derdack GmbH / Derdack Group bug-bounty hunt from POC state, targeting `api`, and produce the required DELTA→RISK structured analysis without inventing findings.
+- Focus only on actionable, in-scope authentication, IDOR/BOLA, SSRF, OAuth/JWT, business-logic, upload, GraphQL, or takeover logic flaws.
+
+## Important Details
+- Current authoritative state: `{"phase":"POC","target":"api"}`; later inventory mentions REPORT, but `MY STATE` still says POC.
+- Report channel: `bugs.olivermaicher.eu`.
+- Final response must contain only the requested blocks: DELTA, PRIORITIZE, HYPOTHESES, SELF-CRITIQUE, NEXT ACTION, LEARNING, RISK.
+- Maximum three hypotheses, one per top-three asset; drop confidence `<40`, rejected classes, or hypotheses without concrete verification.
+- Live-testing constraints: passive-first, `<=1 rps`, GET/HEAD/OPTIONS only, no mutation/customer-data access, no brute force, OPTIONS/TRACE findings, rate-limit tests, descriptive headers, outdated-library-only claims, or scanner-only claims.
+- Six identity hosts—`connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`—share byte-identical RS256 JWKS:
+  - `kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`
+  - `x5t=ke5PPOlOtRevZrJU90l-yw4x7ic`
+  - Shared client ID: `692A0A56-892F-4AE2-8259-76DA398990B6`
+  - Production issuer: `https://connect.signl4.com/identity`
+  - Staging issuer: `https://devconnect.signl4.com/identity`
+- Shared signing material proves trust-boundary risk, not cross-environment token acceptance. `iss`/`aud` enforcement remains unverified without a legitimate token.
+- Account/connect discovery is parametrically identical; dynamic registration is absent, token endpoint supports only `client_secret_basic`/`client_secret_post`, and public-client `none` authentication is unavailable.
+- OIDC live path is `/identity/.well-known/openid-configuration`; `https://api.signl4.com/.well-known/openid-configuration` is `404`.
+- Latest DPoP metadata advertises `RS256`, `RS384`, `RS512`, `PS256`, `PS384`, `PS512`, `ES256`, `ES384`, `ES512`; `dpop_bound_access_tokens_required` is absent.
+- API namespace map is complete: V1/V2/V3, webhook, and events mapped; V4 is absent. No anonymous read/write surface is currently known.
+- Existing priorities: shared-key identity/API estate `6.70`; `demo.enterprisealert.com/EAWebService` `6.50`; `/mobileapi` `6.00`; WordPress root `4.05`.
+- `vps.signl4.com` is stale DNS to GoDaddy shared host `72.167.227.27`, cert `server.d1g.it`, but no researcher-seatable claim primitive exists. Treat as LOW–Medium/HUMAN, not a proven takeover.
+- `docs.enterprisealert.com` resolves through live Azure SWA host `derdackdownloads.z13.web.core.windows.net`; takeover confidence is `<=25`.
+- `demo.enterprisealert.com/EAWebService` exposes version `9.5.26147`, 10 real bridge handlers, a 12-operation SOAP WSDL, and version help pages. All mutating/credential paths return `Error: -1` or `401`.
+- Demo WSDL leaks `https://ereesus/EAWebService/EventProviderAPI.asmx`; this is likely descriptive reconnaissance, not a high-value standalone exploit.
+- `EventConnectorServer.ashx` has an empty installed-handlers table, closing anonymous connector exfiltration.
+- GraphQL paths are uniformly absent; SSRF parameters are absent from V1/V2/V3 specs; credentialed CORS is absent.
+- `connect.signl4.com/mobileapi` is a blanket branded `403` on all six identity hosts; route enumeration from this network position is impossible.
+- Webhook `teamSecret` enumeration is leak-dependent; guessing is an explicitly rejected brute-force class.
+- `s4dev1..8.enterprisealert.com` exposes Azure resource identifiers on 8/8 hosts, but these are non-secret and fall under rejected descriptive-header findings.
+- `signl4.derdack.com` is permanently unreachable; `labconnect`/`labaccount` remain stable `502`; `app|m|apps.signl4.com` are NXDOMAIN.
+- WordPress user enumeration, open XML-RPC, MultiViews, HTTPS→HTTP redirects, and the `frontdoor.signl4.com` placeholder are low-value/config-only; mutating XML-RPC methods enforce credentials.
+
+## Work State
+### Completed
+- Mapped all SIGNL4 API namespaces and confirmed no anonymous V1/V2/V3/webhook read or write surface.
+- Rejected unauthenticated GraphQL, metadata SSRF, dynamic client registration, OAuth redirect theft, JWT algorithm confusion, open redirect, CORS data theft, anonymous XML-RPC upload, and credential-leak hypotheses.
+- Verified six-host shared JWKS, shared account-portal client, staging password grant, and account/devaccount issuer structure.
+- Verified API-key query/header pipelines and OAuth2 Swagger declarations, but no live customer credential was found.
+- Fully mapped `demo.enterprisealert.com/EAWebService`; corrected prior fabricated-handler count to 10 real bridge handlers.
+- Confirmed demo mutating operations require credentials and no anonymous write primitive exists.
+- Confirmed GraphQL, mobile application hostname guesses, and mobile route enumeration are dead ends.
+- Latest `GET https://api.signl4.com/api/v2/teams` returned `401` both anonymously and with invalid Bearer; this differs from prior `405/405` cycles.
+- Latest `vps.signl4.com` probe returned `000` after repeated `200` default-page responses; DNS remains unchanged and this appears transient.
+- Passive estate surface is otherwise stable/exhausted with no new paths, verbs, or meaningful differentials.
+
+### Active
+- Cross-environment token acceptance remains the primary hypothesis at confidence `62`, `AUTH_HELPED`.
+  - Need one owner-approved staging token, then one non-mutating `GET https://api.signl4.com/api/v2/teams`.
+  - Success is any `2xx` or absence of `WWW-Authenticate: invalid_token`; stop immediately and do not enumerate.
+- `mobile_api` scope use outside `/mobileapi` remains at confidence `48`, `AUTH_HELPED`.
+  - Need an approved token containing `scope=mobile_api`.
+  - Compare one `GET https://api.signl4.com/api/v2/teams` with one `GET https://connect.signl4.com/mobileapi/api/v2/teams`.
+- Cross-environment back-channel logout remains at confidence `42`, `AUTH_HELPED`.
+  - Discovery advertises `backchannel_logout_supported: true`, but no usable endpoint or token-acceptance evidence exists.
+- Optional account-client hypothesis: determine whether client `692A0A56-892F-4AE2-8259-76DA398990B6` actually permits `implicit` plus `plain` PKCE; discovery advertisement alone is insufficient.
+- Passive EA `GetTicketStatus` fault-code probe is queued but conflicts with the GET/HEAD/OPTIONS-only live-probe rule and should not be run without clarification.
+
+### Blocked
+- No legitimate non-production OAuth client credential or API token is available.
+- No written authorization to replay a staging-minted token against production.
+- `/mobileapi` behavior cannot be distinguished between path-denied and disabled backend from one network position.
+- No production back-channel logout URI is published.
+- Takeover candidates require DNS/hosting-account control and cannot be claimed from the researcher seat.
+- No further unauthenticated probing can resolve the remaining high-value hypotheses.
+
+## Next Move
+1. Produce the final structured analysis using the 2026-09-28 delta, retain only hypotheses with confidence `>=40`, and avoid promoting descriptive WSDL/header disclosures.
+2. Emit exactly one `[NEXT] HUMAN:` request for one approved non-production credential for `devconnect.signl4.com`/`devapi.signl4.com`, plus permission for one staging-token replay via `GET https://api.signl4.com/api/v2/teams`.
+
+## Relevant Files
+- `scope.yml`: authoritative eligible-asset scope referenced by the engagement.
+- `inventory/derdack.md`: Derdack host inventory and scope seed.
+- `art/lead_nemotron3.txt`: source of stale/high-ranked `vps.signl4.com` and demo WSDL leads; rankings require correction.
+- `hypotheses-nemotron3.txt`: stale proposed takeover probe and hypothesis queue.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+Before I stop, one compliant passive check remains on my #1 asset: I have never enumerated the **full** endpoint inventory of the identity discovery document (revocation / introspection / end-session / mTLS are not in the KB). One GET:
+[0m$ [0mcd /tmp/opencode && curl -s -o disc_connect.json -w "code=%{http_code} size=%{size_download}\n" -A "Mozilla/5.0 (research)" "https://connect.signl4.com/identity/.well-known/openid-configuration" && sleep 1 && python3 - <<'PY'
+import json
+d=json.load(open('disc_connect.json'))
+print("\n=== ALL ADVERTISED ENDPOINT KEYS ===")
+for k,v in sorted(d.items()):
+    if isinstance(v,str) and v.startswith(('http://','https://')):
+        print(f"  {k:38} {v}")
+print("\n=== NON-URL STRINGS (feature flags) ===")
+for k,v in sorted(d.items()):
+    if isinstance(v,str) and not v.startswith(('http://','https://')):
+        print(f"  {k:38} {v}")
+    if isinstance(v,list) and all(isinstance(i,str) for i in v):
+        print(f"  {k:38} [{','.join(v)}]")
+print("\n=== NON-STRING / STRUCTURED KEYS ===")
+for k,v in sorted(d.items()):
+    if not isinstance(v,(str,list)):
+        print(f"  {k:38} {json.dumps(v)[:200]}")
+print("\n=== TOP-LEVEL KEYS NOT YET CLASSIFIED ===")
+known={k for k,v in d.items() if isinstance(v,str) and v.startswith(('http://','https://'))}
+for k in sorted(d):
+    v=d[k]
+    if isinstance(v,str) and not v.startswith(('http://','https://')): continue
+    if isinstance(v,list): continue
+    if k in known: continue
+    print("  ",k,"=",json.dumps(v)[:160])
+PY
+code=200 size=3457
+
+=== ALL ADVERTISED ENDPOINT KEYS ===
+  authorization_endpoint                 https://connect.signl4.com/identity/connect/authorize
+  backchannel_authentication_endpoint    https://connect.signl4.com/identity/connect/ciba
+  check_session_iframe                   https://connect.signl4.com/identity/connect/checksession
+  device_authorization_endpoint          https://connect.signl4.com/identity/connect/deviceauthorization
+  end_session_endpoint                   https://connect.signl4.com/identity/connect/endsession
+  introspection_endpoint                 https://connect.signl4.com/identity/connect/introspect
+  issuer                                 https://connect.signl4.com/identity
+  jwks_uri                               https://connect.signl4.com/identity/.well-known/openid-configuration/jwks
+  pushed_authorization_request_endpoint  https://connect.signl4.com/identity/connect/par
+  revocation_endpoint                    https://connect.signl4.com/identity/connect/revocation
+  token_endpoint                         https://connect.signl4.com/identity/connect/token
+  userinfo_endpoint                      https://connect.signl4.com/identity/connect/userinfo
+
+=== NON-URL STRINGS (feature flags) ===
+  backchannel_authentication_request_signing_alg_values_supported [RS256,RS384,RS512,PS256,PS384,PS512,ES256,ES384,ES512]
+  backchannel_token_delivery_modes_supported [poll]
+  claims_supported                       [sub,email,email_verified,name,family_name,given_name,middle_name,nickname,preferred_username,profile,picture,website,gender,birthdate,zoneinfo,locale,updated_at,http://schemas.derdack.com/identity/claims/active,http://schemas.derdack.com/identity/claims/subscription_id,http://schemas.derdack.com/identity/claims/branch_id,http://schemas.derdack.com/identity/claims/is_branch_manager,http://schemas.derdack.com/identity/claims/is_stakeholder]
+  code_challenge_methods_supported       [plain,S256]
+  dpop_signing_alg_values_supported      [RS256,RS384,RS512,PS256,PS384,PS512,ES256,ES384,ES512]
+  grant_types_supported                  [authorization_code,client_credentials,refresh_token,implicit,password,urn:ietf:params:oauth:grant-type:device_code,urn:openid:params:grant-type:ciba,urn:ietf:params:oauth:grant-type:token-exchange]
+  id_token_signing_alg_values_supported  [RS256]
+  introspection_endpoint_auth_methods_supported [client_secret_basic,client_secret_post]
+  introspection_signing_alg_values_supported [RS256]
+  prompt_values_supported                [none,login,consent,select_account]
+  request_object_signing_alg_values_supported [RS256,RS384,RS512,PS256,PS384,PS512,ES256,ES384,ES512]
+  response_modes_supported               [form_post,query,fragment]
+  response_types_supported               [code,token,id_token,id_token token,code id_token,code token,code id_token token]
+  revocation_endpoint_auth_methods_supported [client_secret_basic,client_secret_post]
+  scopes_supported                       [openid,email,profile,public_api_read,public_api_write,public_api_prov,mobile_api,account_portal,reseller_portal,public_api_ea_manage,public_api_ea_alerting,offline_access]
+  subject_types_supported                [public]
+  token_endpoint_auth_methods_supported  [client_secret_basic,client_secret_post]
+  userinfo_signing_alg_values_supported  [RS256]
+
+=== NON-STRING / STRUCTURED KEYS ===
+  authorization_response_iss_parameter_supported true
+  backchannel_logout_session_supported   true
+  backchannel_logout_supported           true
+  backchannel_user_code_parameter_supported true
+  frontchannel_logout_session_supported  true
+  frontchannel_logout_supported          true
+  request_parameter_supported            true
+  require_pushed_authorization_requests  false
+
+=== TOP-LEVEL KEYS NOT YET CLASSIFIED ===
+   authorization_response_iss_parameter_supported = true
+   backchannel_logout_session_supported = true
+   backchannel_logout_supported = true
+   backchannel_user_code_parameter_supported = true
+   frontchannel_logout_session_supported = true
+   frontchannel_logout_supported = true
+   request_parameter_supported = true
+   require_pushed_authorization_requests = false
+[0m
+Substantial new surface in that one document. Confirming the key material at the **non-standard JWKS URI** it advertises (`/.well-known/openid-configuration/jwks`, not the usual `/.well-known/jwks.json`) across the trust boundary — 2 GETs:
+[0m$ [0mcd /tmp/opencode && for h in connect devconnect api devapi account devaccount; do curl -s -o "jk_$h.json" -w "$h: code=%{http_code} size=%{size_download}\n" -A "Mozilla/5.0 (research)" "https://$h.signl4.com/identity/.well-known/openid-configuration/jwks"; sleep 1; done; echo "--- sha256 + kid/x5t ---"; for h in connect devconnect api devapi account devaccount; do printf "%-10s %s\n" "$h" "$(sha256sum jk_$h.json | cut -c1-16)"; done; echo "--- all-distinct? ---"; sha256sum jk_*.json | awk '{print $1}' | sort -u | wc -l; python3 -c "
+import json,glob
+for f in sorted(glob.glob('jk_*.json')):
+    d=json.load(open(f))
+    for k in d.get('keys',[]):
+        print(f\"{f.split('_')[1][:-5]:10} kid={k.get('kid')} kty={k.get('kty')} alg={k.get('alg')} x5t={k.get('x5t')} use={k.get('use')}\")
+"
+connect: code=200 size=1611
+devconnect: code=200 size=1611
+api: code=200 size=1611
+devapi: code=200 size=1611
+account: code=200 size=1611
+devaccount: code=200 size=1611
+--- sha256 + kid/x5t ---
+connect    96c931f29d51eace
+devconnect 96c931f29d51eace
+api        96c931f29d51eace
+devapi     96c931f29d51eace
+account    96c931f29d51eace
+devaccount 96c931f29d51eace
+--- all-distinct? ---
+1
+account    kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 kty=RSA alg=RS256 x5t=ke5PPOlOtRevZrJU90l-yw4x7ic use=sig
+api        kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 kty=RSA alg=RS256 x5t=ke5PPOlOtRevZrJU90l-yw4x7ic use=sig
+connect    kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 kty=RSA alg=RS256 x5t=ke5PPOlOtRevZrJU90l-yw4x7ic use=sig
+devaccount kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 kty=RSA alg=RS256 x5t=ke5PPOlOtRevZrJU90l-yw4x7ic use=sig
+devapi     kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 kty=RSA alg=RS256 x5t=ke5PPOlOtRevZrJU90l-yw4x7ic use=sig
+devconnect kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 kty=RSA alg=RS256 x5t=ke5PPOlOtRevZrJU90l-yw4x7ic use=sig
+[0m
+## STEP 1 — DELTA
+
+- [NEW] Full identity endpoint inventory read for the first time from `GET https://connect.signl4.com/identity/.well-known/openid-configuration` (200, 3457 B). **Four advertised endpoints have never been touched:** `backchannel_authentication_endpoint` = `/identity/connect/ciba`, `pushed_authorization_request_endpoint` = `/identity/connect/par`, `device_authorization_endpoint` = `/identity/connect/deviceauthorization`, plus the `urn:ietf:params:oauth:grant-type:token-exchange` grant. The KB held only authorize/token/userinfo/checksession/endsession.
+- [NEW] **`scopes_supported` contains `mobile_api`** — `[openid, email, profile, public_api_read, public_api_write, public_api_prov, mobile_api, account_portal, reseller_portal, public_api_ea_manage, public_api_ea_alerting, offline_access]`. This **corrects** the earlier conclusion, which was derived from the public API Swagger and concluded no mobile scope existed on the API hosts. `account_portal` and `reseller_portal` are tenant-administration scopes sitting in the same list, and `public_api_ea_manage` links the OAuth tier to the Enterprise Alert surface.
+- [NEW] **A tenant-isolation claim model is exposed**: `claims_supported` includes `http://schemas.derdack.com/identity/claims/active`, `…/subscription_id`, `…/branch_id`, `…/is_branch_manager`, `…/is_stakeholder`. Authorization is therefore claim-driven across `branch_id`/subscriber, which makes any token-forgery or scope-escalation result a *tenant-isolation* break rather than a single-endpoint read.
+- [NEW] **`grant_types_supported` = 7**: `authorization_code, client_credentials, refresh_token, implicit, password, urn:ietf:params:oauth:grant-type:device_code, urn:openid:params:oauth:grant-type:ciba, …token-exchange`. CIBA runs in `poll` mode with `backchannel_user_code_parameter_supported: true`.
+- [NEW] `code_challenge_methods_supported: [plain, S256]` and `response_types_supported` includes implicit and hybrid types (`token`, `id_token token`, `code id_token token`), so a public-client implicit + plain-PKCE flow is *advertised*.
+- [NEW] `require_pushed_authorization_requests: false` with `request_parameter_supported: true` and request-object signing over RS256/PS/ES — signed request objects are accepted while PAR remains optional.
+- [NEW] Introspection and revocation are **both documented as requiring** `client_secret_basic`/`client_secret_post`, which refutes the unauthenticated-token-revocation class before any request was sent.
+- [NEW] `jwks_uri` is non-standard — `https://connect.signl4.com/identity/.well-known/openid-configuration/jwks` (JWKS served beneath the discovery path, not `/.well-known/jwks.json`). At that path, all **6/6** hosts return 200 / 1611 B and are **byte-identical** (one distinct sha256, `96c931f29d51eace…`), single RS256 key, `kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, `x5t=ke5PPOlOtRevZrJU90l-yw4x7ic`. This confirms the prod↔staging key identity at the newly-advertised URI, across all three host pairs.
+- [NEW] `authorization_response_iss_parameter_supported: true` and `backchannel_logout_session_supported: true` are present, but no `backchannel_logout_uri` key is advertised — consistent with the earlier finding that back-channel logout is flagged without a resolvable endpoint.
+
+## STEP 2 — PRIORITIZE
+
+- [PRIO] `connect|api|devconnect|devapi|account|devaccount` — `/identity` (7 grant types, 13 scopes, tenant claims) + `/api/*` + `/webhook` over one shared key, 8, 9, 10, 3, 7, 9 → **6.95**
+- [PRIO] `demo.enterprisealert.com/EAWebService` — 12-op WSDL / 10-handler bridge / connector, 6, 7, 6, 3, 6, 6 → **5.80**
+- [PRIO] `connect.signl4.com/webhook/{teamSecret}` — no-auth-scheme spec + 404/201 oracle, 5, 7, 6, 3, 6, 7 → **5.65**
+
+## STEP 3 — HYPOTHESES
+
+```
+[HYP] token-exchange plus advertised mobile_api/account_portal/reseller_portal scopes over a 6-host shared key lets one low-privilege staging credential mint a production token carrying tenant claims, breaking branch-level isolation
+class: AUTH
+asset: connect.signl4.com/identity + devconnect.signl4.com/identity (and the api/devapi/account/devaccount mirrors)
+confidence: 62
+reasoning: The delta documents the escalation surface end to end instead of speculating about it. All 6 hosts serve byte-identical JWKS (1611 B, one RS256 key, kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) at the non-standard path /identity/.well-known/openid-configuration/jwks, while devconnect advertises issuer https://devconnect.signl4.com/identity and connect advertises https://connect.signl4.com/identity — issuer-distinct by string, key-identical by material. That same trust zone accepts 7 grant types including token-exchange, CIBA poll mode, and device code, advertises 13 scopes of which mobile_api, account_portal, and reseller_portal are tenant-administration grades, and issues branch_id, is_branch_manager, is_stakeholder, and subscription_id claims. A shared verification key plus an exchange grant plus admin-grade scopes in one list is the canonical precondition for scope escalation, and the escalation result is not a single-endpoint read but a forged tenant identity. PAR is optional (require_pushed_authorization_requests false) while signed request objects are accepted, so the client_secret gate has a second bypass path. Nothing has been presented to any endpoint and I hold no credential.
+evidence_needed: On non-production only — a token-exchange response whose granted scopes exceed those on the presented subject token (e.g. a client_credentials token limited to public_api_read exchanged for one bearing mobile_api, account_portal, or reseller_portal), or the exchange refused while a same-scope direct request succeeds.
+verify_steps: (1) Passive GET https://devconnect.signl4.com/identity/.well-known/openid-configuration; re-record grant_types_supported, scopes_supported, token_endpoint_auth_methods_supported. (2) With one owner-issued non-production credential, POST https://devconnect.signl4.com/identity/connect/token with grant_type=client_credentials and the client's own advertised scopes; retain the access_token and its scope claim. (3) One POST to the same endpoint with grant_type=urn:ietf:params:oauth:grant-type:token-exchange, subject_token=<that token>, subject_token_type=urn:ietf:params:oauth:token-type:access_token, scope=<admin-grade scope>. (4) Compare the returned scope claim to step 2. Stop on first grant, do not iterate scopes, do not substitute a real user identifier, and do not repeat the issued token against any production host.
+impact: If exchange widens scope, any holder of the lowest-privilege registered client — including a public integration or reseller credential — can self-issue an account_portal or reseller_portal token and act across every branch in the subscription, reading and writing teams, shifts, invoices, and EA management data. Critical (~9.0). If the issuers bind aud and enforce the exchange subject, the hypothesis dies and the remaining surface collapses to the unauthenticated 401/403/405 wall.
+testability: AUTH_HELPED
+```
+
+```
+[HYP] The two ticket operations in the EA WSDL are the only mutating handlers never exercised, and they authorize on ticket identifier without characterized team scoping
+class: IDOR
+asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx
+confidence: 40
+reasoning: The WSDL exposes 12 portType operations while the anonymous ?Handler= bridge exposes 10, and the two ticket operations appear in neither list. All 10 bridge handlers return Error: -1 against fabricated credentials, so no SOAP authorization check has ever been observed on this host at all. UpdateTicket writes ticket state and is the only mutating operation in the entire Enterprise Alert surface with no characterized authorization model; ticket identifiers are operator-issued, making this a scoping question rather than a guessing question. No request has been made against either operation.
+evidence_needed: A GetTicketStatus fault for a non-existent ticket identifier that differs from the alert family's fault, or a successful response returning ticket data with no valid provider credential.
+verify_steps: (1) Passive GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl; record the two ticket operation names verbatim. (2) One SOAP POST of GetTicketStatus to that path with fabricated provider credentials and one random non-existent ticket identifier; read the fault code only. (3) No real ticket identifier, no iteration, no fuzzing; stop after one request.
+impact: If either operation authorizes on ticket identifier alone, any holder of a single valid team secret could read or mutate tickets in other teams. Medium (~6.0) and unproven; on a demo host the blast radius is bounded unless the same code ships in customer instances.
+testability: PASSIVE
+```
+
+```
+[HYP] The webhook team secret is the lowest-effort cross-environment credential, so a staging team secret is the most likely of the three credential types to be reused in production
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 45
+reasoning: The spec (200, 12647 B, no securitySchemes component, no global security) declares POST /{teamSecret} as the sole event-transmission contract, so the URL-embedded secret is the entire authorization mechanism, and the documented 404 {"code":3004,…} versus 201 {eventId} is a success oracle. The spec is byte-identical on connect and api and the host set already shares one backend appId, so the event pipeline is one deployment. Unlike OAuth this credential needs no client_secret, is short, sits in a URL where referrers and access logs capture it, and appears in 15+ third-party integrations. The refreshed discovery adds no webhook-specific scope, so the secret remains the sole gate. All 10 credential-free lines of attack were closed negatively across 4 public corpora, so this asserts reuse-if-leaked, not that a live secret exists.
+evidence_needed: An owner-supplied non-production team secret returning 201 from a production POST where a fabricated secret returns 404, or written confirmation that team secrets are environment-scoped.
+verify_steps: (1) With a written non-production secret and a designated test tenant, one POST https://connect.signl4.com/webhook/{staging_secret} with body {"Id":"HUNT-<random>"} and no query parameters; record status only. (2) One control POST to a fabricated path segment. (3) No real recipient addresses, no X-S4-Status, no alert to any undesignated team.
+impact: A staging secret valid in production allows alert injection into arbitrary production teams and, via the documented X-S4-Status and X-S4-ExternalID parameters, acknowledgement or resolution of live on-call Signls — a paging-integrity and responder-safety impact on alerting infrastructure. High (~7.0) if reusable; nothing if environment-scoped.
+testability: AUTH_HELPED
+```
+
+## STEP 4 — SELF-CRITIQUE
+
+- [REFUTED] Unauthenticated token revocation or introspection (session-destruction DoS): discovery documents `client_secret_basic`/`client_secret_post` for both endpoints, closing the class with no request sent.
+- [PARKED] CIBA `auth_req_id` enumeration, device-code `user_code` brute force, and PAR abuse: newly identified and never tested, but all three require a registered client and their failure mode is guessing, which is a rejected class. They are noted as untested surface for the report, not as vulnerabilities.
+- [PARKED] Signed `request`-object forgery (accepted, RS256/PS/ES, PAR not required): a second bypass of the client_secret gate, but forging requires the signing key, so it is evidence for hypothesis 1 rather than an independent path. Parking rather than double-counting.
+- [PARKED] Implicit + `plain` PKCE deserialization and the `_92Alo…` hashed-parameter path: advertised, but `token_endpoint_auth_methods_supported` excludes `none`, and confirming it needs an interactive login. No public client has been shown to exist.
+- [PARKED] 4/4 anon-readable OpenAPI specs under-declaring authorization (the webhook spec has no `securitySchemes` at all): real and reproducible, but every operation is provably 401/405/404 anonymously. Descriptive-only, LOW.
+- [PARKED] `vps.signl4.com` stale GoDaddy A-record, `docs.enterprisealert.com` SWA binding, s4dev1..8 App Proxy identifiers, and credential-in-URL vendor templates: no claimable primitive from the researcher seat, or rejected classes.
+- [FINAL] 1. Identity token-exchange / admin-scope escalation over the shared key, 62. 2. Webhook team-secret cross-environment reuse, 45. 3. EA ticket-operation scoping, 40. One asset each, two AUTH_HELPED, one PASSIVE.
+
+## STEP 5 — NEXT ACTION
+
+- [NEXT] HUMAN: request from bugs.olivermaicher.eu **one** non-production OAuth client credential for a Derdack staging tenant on `devconnect.signl4.com`, together with written confirmation that a single `token-exchange` request may be issued on that same non-production host. Discriminating script, all staging, zero production contact, no mutation, no customer data: mint one `client_credentials` token with the client's own advertised scopes, then one `token-exchange` call requesting an admin-grade scope (`account_portal`), and compare the returned `scope` claim against the input. Stop on the first grant or refusal, do not iterate the scope list, sha256-redact any secret.
+
+## STEP 6 — LEARNING
+
+- [LEARN] ACCEPTED OTHER @ connect.signl4.com/identity/.well-known/openid-configuration: the full discovery document is the cheapest high-yield artifact in this program and had never been parsed end to end — 4 untested endpoints, 7 grant types, 13 scopes, and 5 custom tenant claims, all at one anonymous GET. Parse the whole document, not the fields the current hypothesis happens to need.
+- [LEARN] ACCEPTED OTHER @ connect/devconnect/api/devapi/account/devaccount.signl4.com: a single JWT verification key (1611 B, byte-identical) is served to all six hosts at the non-standard `/.well-known/openid-configuration/jwks` path. When a key is byte-identical across environments, escalate from "can I replay a token" to "which grants and scopes let a low-privilege client widen itself", because the second question is answerable entirely on non-production and never requires touching prod.
+- [LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook/docs/v1/swagger.json: the 4th anon-readable spec, the only one never included in a disclosure-class parse, carries no credential material and no internal hostnames — the sole secrets-shaped strings are the known `teamssecret` placeholder and generic vendor demo payloads, and its only host literals are `connect.`/`www.signl4.com`. Credential-leak and internal-disclosure classes are negative across all 4 SIGNL4 specs, so the EA WSDL's `ereesus` leak stays EA-specific.
+- [LEARN] REJECTED SCANNER_TECHNIQUE @ discovery metadata: metadata-driven JWT testing (`alg:none`, `kid` path traversal, `jku`/`x5u` pointing at an attacker host) stays rejected — the single `RS256` key with a fixed `kid` and no `jku`/`x5u`/`jwk` reference offers no injectable element, and the KB's own `kid` traversal attempt returned 404 rather than a signature oracle.
+
+## STEP 7 — RISK
+
+- [RISK] Derdack bug bounty: 47 — Unchanged. The delta raised my confidence that a *privilege-escalation surface exists and is undocumented* (7 grant types, 13 scopes, 5 tenant claims, one key across six hosts) but not my confidence that any of it is exploitable, and the program scores findings, not surfaces. Confirmed negatives stand: no anonymous read or write across V1/V2/V3/webhook/events, no anonymous IDOR, no upload, no SSRF to 169.254.169.254, no customer-data exposure, and every takeover candidate is unclaimable from the researcher seat. The upside is now better framed — a successful token-exchange escalation would be a tenant-isolation break via `branch_id`/`is_stakeholder` claims, worth more than a single-endpoint read — but it still requires one staging credential the program has not issued. The rating moves only on that one non-production exchange.
