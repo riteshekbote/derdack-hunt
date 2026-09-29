@@ -41482,3 +41482,52 @@ Impact: it **falsifies the "staging is a 1:1 parametric twin of prod"** assumpti
 
 ## Current next step
 `[NEXT] PROBE`: `GET https://devconnect.signl4.com/api/docs/v1/swagger.json` and `GET https://api.signl4.com/api/docs/v1/swagger.json` — V2 and V3 both showed a one-route staging delta; V1 has never been diffed. If the same pattern holds, the template-attachment feature is a *release-train* divergence rather than a one-off, which converts this from a single undocumented route into a deployment-governance finding. Read-only, 2 requests.
+===== ANALYST bigpickle 2026-09-29 08:11:30 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor u in "https://api.signl4.com/.well-known/oauth-authorization-server/identity" "https://api.signl4.com/.well-known/openid-configuration/identity" "https://devapi.signl4.com/.well-known/oauth-authorization-server/identity" "https://devapi.signl4.com/.well-known/openid-configuration/identity"; do printf "%s -> " "$u"; curl -s -o /tmp/b.txt -w "%{http_code} len=%{size_download}" --max-time 12 "$u"; printf " | "; head -c 200 /tmp/b.txt | tr -d '\n'; echo; sleep 1; done
+https://api.signl4.com/.well-known/oauth-authorization-server/identity -> 404 len=0 | 
+https://api.signl4.com/.well-known/openid-configuration/identity -> 404 len=0 | 
+https://devapi.signl4.com/.well-known/oauth-authorization-server/identity -> 404 len=0 | 
+https://devapi.signl4.com/.well-known/openid-configuration/identity -> 404 len=0 |
+[0m
+[0m$ [0mfor u in "https://api.signl4.com/identity/connect/introspect" "https://api.signl4.com/identity/connect/revocation" "https://devapi.signl4.com/identity/connect/introspect" "https://devapi.signl4.com/identity/connect/revocation" "https://connect.signl4.com/identity/connect/introspect" "https://connect.signl4.com/identity/connect/revocation" "https://api.signl4.com/identity/connect/userinfo" "https://api.signl4.com/identity/connect/backchannel-authentication"; do printf "%-70s -> " "$u"; curl -s -D /tmp/h.txt -o /tmp/b.txt -w "%{http_code} len=%{size_download}" --max-time 12 "$u"; printf " allow=%s" "$(grep -i '^allow:' /tmp/h.txt | tr -d '\r')"; printf " body="; head -c 160 /tmp/b.txt | tr -d '\n'; echo; sleep 1; done
+https://api.signl4.com/identity/connect/introspect                     -> 405 len=0 allow= body=
+https://api.signl4.com/identity/connect/revocation                     -> 405 len=0 allow= body=
+https://devapi.signl4.com/identity/connect/introspect                  -> 405 len=0 allow= body=
+https://devapi.signl4.com/identity/connect/revocation                  -> 405 len=0 allow= body=
+https://connect.signl4.com/identity/connect/introspect                 -> 405 len=0 allow= body=
+https://connect.signl4.com/identity/connect/revocation                 -> 405 len=0 allow= body=
+https://api.signl4.com/identity/connect/userinfo                       -> 401 len=0 allow= body=
+https://api.signl4.com/identity/connect/backchannel-authentication     -> 404 len=0 allow= body=
+[0m
+[0m$ [0mecho "== discovery api =="; curl -s --max-time 12 "https://api.signl4.com/identity/.well-known/openid-configuration" | python3 -c "import sys,json;d=json.load(sys.stdin);print(json.dumps({k:d.get(k) for k in ['issuer','introspection_endpoint','revocation_endpoint','userinfo_endpoint','pushed_authorization_request_endpoint','backchannel_logout_supported','end_session_endpoint']},indent=1))"; echo "== prepaid GET baseline =="; curl -s -D /tmp/h2.txt -o /tmp/b2.txt -w "code=%{http_code} len=%{size_download}\n" --max-time 12 "https://connect.signl4.com/api/prepaid/1/prepaidSettings"; grep -iE '^(allow|www-authenticate):' /tmp/h2.txt | tr -d '\r'; head -c 200 /tmp/b2.txt
+== discovery api ==
+{
+ "issuer": "https://connect.signl4.com/identity",
+ "introspection_endpoint": "https://api.signl4.com/identity/connect/introspect",
+ "revocation_endpoint": "https://api.signl4.com/identity/connect/revocation",
+ "userinfo_endpoint": "https://api.signl4.com/identity/connect/userinfo",
+ "pushed_authorization_request_endpoint": "https://api.signl4.com/identity/connect/par",
+ "backchannel_logout_supported": true,
+ "end_session_endpoint": "https://api.signl4.com/identity/connect/endsession"
+}
+== prepaid GET baseline ==
+code=405 len=0
+allow: PUT
+[0m
+[93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
+[0m✗ [0mcd /tmp && for h in connect api devconnect devapi account devaccount; do curl -s --max-time 12 "https://$h.signl4.com/identity/.well-known/openid-configuration" -o od-$h.json; sleep 1; done; python3 - <<'EOF'
+import json
+d={h:json.load(open(f'/tmp/od-{h}.json')) for h in ['connect','api','devconnect','devapi','account','devaccount']}
+for h,v in d.items():
+    print(h, '| issuer=',v.get('issuer'), '| hostset=', sorted({__import__('urllib.parse',fromlist=['x']).urlparse(v[k]).netloc for k in ('token_endpoint','introspection_endpoint','revocation_endpoint','userinfo_endpoint') if v.get(k)}))
+keys=['issuer','token_endpoint','introspection_endpoint','revocation_endpoint','userinfo_endpoint','par','end_session_endpoint']
+print('\n--- per-key host differential ---')
+for k in keys:
+    hosts={h:__import__('urllib.parse',fromlist=['x']).urlparse(v.get(k,'')).netloc or v.get(k,'') for h,v in d.items()}
+    u=set(hosts.values())
+    print(('DIFF ' if len(u)>1 else 'SAME '),k, hosts if len(u)>1 else list(u)[0])
+EOF failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.
