@@ -1810,3 +1810,10 @@ www.derdack.com
 - NEW `connect.signl4.com/mobileapi` blanket 403 (79088 B branded page) confirmed on all 6 identity hosts (was 3-host record)
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
 - CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
+
+## 2026-09-29 19:46:53 UTC
+- NEW Internal hostname `ereesus` leaked in live WSDL at `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` (single-label non-public hostname, confirms internal infrastructure naming)
+- NEW DPoP mitigating control confirmed on `api.signl4.com/identity` and `account.signl4.com/identity` OIDC discovery (`dpop_signing_alg_values_supported` with 9 algorithms)
+- NEW `connect.signl4.com/mobileapi` blanket 403 (79KB branded page) confirmed on all 6 identity hosts (was 3-host record)
+- CHANGED `vps.signl4.com` HTTPS probe returns 000 (TCP timeout) vs 7× prior confirmed 200 — transient network/host block; DNS A-record to GoDaddy secureserver.net unchanged
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable

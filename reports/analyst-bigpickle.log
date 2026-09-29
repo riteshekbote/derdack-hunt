@@ -41786,3 +41786,135 @@ New fact: `PrepaidSettingsInfo` is `{"topUpAmount": int32, "topUpEnabled": bool,
 Net: the only survivor with fresh, self-verified data is the Enterprise Alert WSDL internal-hostname leak (`https://ereesus/EAWebService/EventProviderAPI.asmx` inside `EventProviderAPI.asmx?wsdl`), which reads as informational recon.
 
 I want to emit the STEP 1–8 blocks now, but I don't have the required block schema in context — the summary referenced it without reproducing the verbatim per-step fields and delimiters. Paste the template and I'll format all of the above into it directly; otherwise tell me the block names and field order and I'll infer the rest.
+===== ANALYST bigpickle 2026-09-29 19:46:53 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor u in "https://api.signl4.com/.well-known/oauth-authorization-server/identity" "https://api.signl4.com/.well-known/openid-configuration/identity" "https://api.signl4.com/.well-known/jwks.json"; do echo "=== $u"; curl -s -o /tmp/oa.txt -w "code=%{http_code} len=%{size_download}\n" --max-time 15 "$u"; head -c 400 /tmp/oa.txt; echo; sleep 1; done
+=== https://api.signl4.com/.well-known/oauth-authorization-server/identity
+code=404 len=0
+
+=== https://api.signl4.com/.well-known/openid-configuration/identity
+code=404 len=0
+
+=== https://api.signl4.com/.well-known/jwks.json
+code=404 len=0
+[0m
+[0m$ [0mfor u in "https://devapi.signl4.com/.well-known/oauth-authorization-server/identity" "https://devapi.signl4.com/.well-known/openid-configuration/identity" "https://api.signl4.com/identity/connect/introspect" "https://api.signl4.com/identity/connect/revocation" "https://api.signl4.com/identity/connect/userinfo"; do echo "=== $u"; curl -s -o /tmp/ob.txt -w "code=%{http_code} len=%{size_download}\n" --max-time 15 "$u"; head -c 300 /tmp/ob.txt; echo; sleep 1; done
+=== https://devapi.signl4.com/.well-known/oauth-authorization-server/identity
+code=404 len=0
+
+=== https://devapi.signl4.com/.well-known/openid-configuration/identity
+code=404 len=0
+
+=== https://api.signl4.com/identity/connect/introspect
+code=405 len=0
+
+=== https://api.signl4.com/identity/connect/revocation
+code=405 len=0
+
+=== https://api.signl4.com/identity/connect/userinfo
+code=401 len=0
+[0m
+[0m$ [0mfor u in "https://api.signl4.com/identity/connect/introspect" "https://api.signl4.com/identity/connect/revocation" "https://devapi.signl4.com/identity/connect/introspect" "https://connect.signl4.com/identity/connect/introspect"; do echo "=== $u"; curl -s -X OPTIONS -o /tmp/oc.txt -D /tmp/oh.txt -w "code=%{http_code} len=%{size_download}\n" --max-time 15 "$u"; grep -iE "^(allow|www-authenticate|content-type):" /tmp/oh.txt; head -c 200 /tmp/oc.txt; echo; sleep 1; done
+=== https://api.signl4.com/identity/connect/introspect
+code=405 len=0
+
+=== https://api.signl4.com/identity/connect/revocation
+code=405 len=0
+
+=== https://devapi.signl4.com/identity/connect/introspect
+code=405 len=0
+
+=== https://connect.signl4.com/identity/connect/introspect
+code=405 len=0
+[0m
+[93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
+[0m✗ [0mcd /tmp && for h in connect account api devconnect devapi devaccount; do curl -s --max-time 15 "https://$h.signl4.com/identity/.well-known/openid-configuration" -o od_$h.json -w "$h code=%{http_code} len=%{size_download}\n"; sleep 1; done failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.
+## Objective
+- Continue the Derdack/SIGNL4 bug-bounty hunt from `phase: POC`, `target: api`, and produce the requested eight structured analyst blocks.
+- Prioritize high-value auth/business-logic issues using passive-first, read-only verification.
+
+## Important Details
+- Scope: Derdack-owned infrastructure and products, including SIGNL4 and Enterprise Alert; report via `bugs.olivermaicher.eu`.
+- Live-probe rules: `<=1 rps`; only `GET`/`HEAD`/`OPTIONS`; no credentials, parameters, tokens, customer data, or mutating requests.
+- Rejected classes include brute-force/rate-limit tests, standalone `OPTIONS`/`TRACE`, descriptive headers, TLS best practice, scanner-only findings, and unauthenticated customer-data exposure.
+- Six identity ingresses serve static-identical JWKS: `connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`; shared `kid` is `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`.
+- Shared public client ID: `692A0A56-892F-4AE2-8259-76DA398990B6`.
+- Critical wording constraint: discovery/JWKS parity proves configured symmetry only, not token-endpoint acceptance or cross-environment forgery. Token endpoints were exercised on only 2/6 ingresses; introspection/revocation on 0/6.
+- `account.signl4.com/identity` advertises issuer `https://connect.signl4.com/identity`; `devaccount.signl4.com/identity` advertises `https://devconnect.signl4.com/identity`. Earlier “account-exclusive EA scopes” claims were invalidated by deep comparison.
+- DPoP signing metadata is a mitigating control, not a vulnerability.
+- Current priorities: `api.signl4.com/identity` 7.5, `devapi.signl4.com/identity` 6.9, `connect.signl4.com/api/prepaid/{id}/prepaidSettings` 6.15.
+- The stale proposed `POST` to `account.signl4.com/identity/connect/token` conflicts with the current read-only directive and must not be executed.
+
+## Work State
+### Completed
+- Mapped SIGNL4 API namespaces: V1/V2/V3, webhook, and events; V4 is absent.
+- Confirmed public V1/V2/V3 Swagger documents use empty global `security: [{}]`; authenticated data routes return `401` or validation sinks.
+- Closed credentialed-CORS, metadata-SSRF, GraphQL, SCIM-anonymous access, dynamic client registration, OAuth redirect, logout redirect, and public credential-leak hypotheses.
+- Confirmed webhook invalid-secret oracle is leak-dependent and guessing is program-rejected brute force.
+- Confirmed `demo.enterprisealert.com/EAWebService/` exposes EA `9.5.26147`; `EventConnectorServer.ashx` has an empty handler table and no alert-exfiltration path.
+- Confirmed EA WSDL leaks `https://ereesus/EAWebService/EventProviderAPI.asmx`.
+- Confirmed `vps.signl4.com` is stale Derdack DNS on GoDaddy shared hosting, but researcher-seat takeover exploitability is HUMAN-gated.
+- Latest estate sweep found no drift in known identity/API/CT/WP/EA surfaces.
+
+### Active
+- Test populated RFC 8414 alternate metadata placement on `api`/`devapi`, especially `/.well-known/oauth-authorization-server/identity`.
+- Characterize the advertised but previously untested `/identity/connect/introspect`, `/identity/connect/revocation`, and `/identity/connect/userinfo` families.
+- Preserve the cross-environment dossier as “documented configuration symmetry with unverified enforcement,” not a confirmed forgery chain.
+- `prepaidSettings` bind-before-authorize remains unverified; any body-bearing `PUT {}` is forbidden under the current passive-only rules.
+
+### Blocked
+- Cross-environment token acceptance, V1 `userId` BOLA, V2 `changePassword`, V3 invoice/download BOLA, and subscription-license BOLA require an owner-supplied non-production tenant and legitimate credentials.
+- No legitimate `client_secret`, API key, webhook secret, or designated tenant has been supplied.
+- `api.signl4.com/identity` prefix deny cannot be distinguished from a disabled service from the same network position.
+- `signl4.derdack.com` remains TCP-unreachable; `labconnect`/`labaccount` remain stable `502`.
+
+## Next Move
+1. Sequentially GET, at no more than 1 rps: `https://api.signl4.com/.well-known/oauth-authorization-server/identity`, `https://api.signl4.com/.well-known/openid-configuration/identity`, and `https://devapi.signl4.com/.well-known/oauth-authorization-server/identity`; record status, body length, and any `issuer`, `token_endpoint`, or `jwks_uri`.
+2. If all are negative, GET without parameters or tokens: `/identity/connect/introspect`, `/identity/connect/revocation`, and `/identity/connect/userinfo` on `api`, `devapi`, and `connect`, recording status and `Allow`.
+
+## Relevant Files
+- `scope.yml`: authoritative program scope.
+- `inventory/derdack.md`: in-scope asset inventory.
+- `art/lead_nemotron3.txt`: source of the EA WSDL internal-hostname lead.
+- `hypotheses-nemotron3.txt`: nemotron3 hypothesis/proposal source.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+Stopped — the 6-host discovery re-fetch was denied, so I can't verify the cross-host `introspection_endpoint`/`revocation_endpoint` question I was about to check. No further probing until you clear it.
+
+What the three queued probes actually produced:
+
+**1. Alternate RFC 8414 placements — all negative**
+
+| URL | Result |
+|---|---|
+| `api.signl4.com/.well-known/oauth-authorization-server/identity` | 404, 0 bytes |
+| `api.signl4.com/.well-known/openid-configuration/identity` | 404, 0 bytes |
+| `api.signl4.com/.well-known/jwks.json` | 404, 0 bytes |
+| `devapi.signl4.com/.well-known/oauth-authorization-server/identity` | 404, 0 bytes |
+| `devapi.signl4.com/.well-known/openid-configuration/identity` | 404, 0 bytes |
+
+**2. Advertised-but-untested identity endpoints — now characterized**
+
+| URL | Result |
+|---|---|
+| `api/identity/connect/introspect` | GET 405, `OPTIONS` 405, no `Allow` |
+| `api/identity/connect/revocation` | GET 405, `OPTIONS` 405, no `Allow` |
+| `api/identity/connect/userinfo` | GET 401 |
+| `devapi/identity/connect/introspect` | 405 (uniform) |
+| `connect/identity/connect/introspect` | 405 (uniform) |
+
+Two things worth recording:
+
+- The `405` is **uniform across `api`, `devapi`, and `connect`** and carries **no `Allow` header** — that's a router/gateway 405, not a registered OAuth endpoint. This is the first per-host response asymmetry I've found, and it *undercuts* the "shared identity config ⇒ shared token surface" story on `api`/`devapi` rather than supporting it.
+- `userinfo` returning `401` (not `405` or `404`) on the prefix-gated `api` host is the notable exception: the prefix deny is not applied uniformly across the `/identity/connect/` subtree.
+
+I also want to flag that my earlier `[NEXT]` item (POST to `account/identity/connect/token`) conflicts with your read-only live-probe constraint, so I've dropped it rather than run it.
+
+Two options — tell me which:
+
+1. **Re-approve a narrower read.** Just two GETs, `https://account.signl4.com/identity/.well-known/openid-configuration` and `https://connect.signl4.com/identity/.well-known/openid-configuration`, to settle whether `account`'s metadata points `introspection_endpoint`/`revocation_endpoint` at a *different host*. If it does, that's a documented cross-host delegation worth a careful writeup; if not, the whole cross-host lead closes.
+2. **Park it.** I'll write up the current POC state as-is, with the metadata-parity wording tightened to "documented configuration symmetry, enforcement unverified" and `introspection`/`revocation` recorded as gateway-level 405s rather than live endpoints.
+
+The `prepaidSettings` bind-before-authorize test also stays parked — it needs a `PUT` with a body, which your read-only rule rules out from this seat, so it would have to move to a designated-tenant HUMAN check.
