@@ -1803,3 +1803,10 @@ www.derdack.com
 - NEW connect.signl4.com/mobileapi blanket 403 (79088 B branded page) confirmed on all 6 identity hosts (was 3-host record)
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
 - CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
+
+## 2026-09-29 14:55:11 UTC
+- NEW Internal hostname leak via EA WSDL confirmed live — `https://ereesus/EAWebService/EventProviderAPI.asmx` exposed in `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` (single-label non
+- NEW Fresh OIDC discovery on `api.signl4.com` + `account.signl4.com` records `dpop_signing_alg_values_supported: ["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"]` — DPoP mitigating
+- NEW `connect.signl4.com/mobileapi` blanket 403 (79088 B branded page) confirmed on all 6 identity hosts (was 3-host record)
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
