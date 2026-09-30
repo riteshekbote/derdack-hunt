@@ -1,8 +1,8 @@
-## 2026-09-30 02:12:36 UTC [target] (model nemotron3)
-[NEW] EA WSDL at `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname) — live confirmed 200
-[NEW] `vps.signl4.com` HTTPS probe returns 000 (TCP timeout) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net unchanged
-[NEW] Fresh OIDC discovery on `api.signl4.com/identity` + `account.signl4.com/identity` records `dpop_signing_alg_values_supported: ["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"]` — DPoP mitigating control
-[NEW] `connect.signl4.com/mobileapi` blanket 403 (79KB branded page) confirmed on all 6 identity hosts (was 3-host record)
+## 2026-09-30 08:40:00 UTC [target] (model nemotron3)
+[NEW] demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname) — live confirmed 200
+[NEW] vps.signl4.com HTTPS probe returns 000 (TCP timeout) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net unchanged
+[NEW] Fresh OIDC discovery on api.signl4.com/identity + account.signl4.com/identity records `dpop_signing_alg_values_supported: ["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"]` — DPoP mitigating control
+[NEW] connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on all 6 identity hosts (was 3-host record)
 [CHANGED] Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
 [PRIO] demo.enterprisealert.com/EAWebService,8.5,attack_surface=9,business_value=9,tech_exposure=8,gate_ease=10,cloud_surface=7,freshness=8
 [PRIO] connect/devconnect/api/devapi/account/devaccount.signl4.com/identity,7.5,attack_surface=8,business_value=8,tech_exposure=9,gate_ease=3,cloud_surface=8,freshness=7
@@ -22,7 +22,7 @@ testability: PASSIVE
 class: AUTH
 asset: connect/devconnect/api/devapi/account/devaccount.signl4.com/identity
 confidence: 88
-reasoning: 6 identity hosts share byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with full scope set (incl EA scopes reseller_portal/public_api_ea_manage/public_api_ea_alerting/mobile_api); account.signl4.com/identity claims issuer=https://connect.signl4.com/identity (cross-host mint-mismatch); plain PKCE allowed; password grant enabled on staging; API accepts Bearer tokens from this IdP family; handler-deferred auth on V1/V2 teams (unauth GET→405, invalid Bearer→405) enables cross-env token acceptance
+reasoning: 6 identity hosts share byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, SHA256 96c931f29d51eacede0b07ac3526b88e8f4d25859bde6bb6e2c5cc5adf86bbce); shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with full scope set (incl EA scopes reseller_portal/public_api_ea_manage/public_api_ea_alerting/mobile_api); account.signl4.com/identity claims issuer=https://connect.signl4.com/identity (cross-host mint-mismatch); plain PKCE allowed; password grant enabled on staging; API accepts Bearer tokens from this IdP family; handler-deferred auth on V1/V2 teams (unauth GET→405, invalid Bearer→405) enables cross-env token acceptance
 evidence_needed: Valid client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 OR leaked X-S4-Api-Key / team-secret to complete chain
 verify_steps: 1) POST https://devconnect.signl4.com/identity/connect/token with password grant + valid client_secret (confirm access_token minted by staging IdP) 2) Use token against https://api.signl4.com/api/v2/teams (confirm 200 cross-env acceptance) 3) Verify token issuer claim = connect.signl4.com/identity despite minting on account/devaccount
 impact: Full multi-tenant EA/SIGNL4 compromise — token forgery across all 6 identity hosts, access to all API scopes (CRUD alerts, teams, webhooks, subscriptions, billing, SCIM), cross-env privilege escalation via account IdP mint-mismatch; severity CRITICAL
