@@ -7368,3 +7368,4 @@ testability: PASSIVE
 [NEW] devconnect.signl4.com/identity/connect/token password grant returns "invalid_client" for test creds (client_secret required) — grant listed but not usable without secrets
 ## 2026-10-01 03:15:01 UTC [target] (model bigpickle)
 ## 2026-10-01 10:15:06 UTC [target] (model bigpickle)
+## 2026-10-01 17:04:13 UTC [target] (model bigpickle)
