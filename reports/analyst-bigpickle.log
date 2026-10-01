@@ -44378,3 +44378,68 @@ So there is nothing for me to advance here on my own authority. Three ways you c
 My recommendation is 1 if you have credentials, otherwise 3. Option 2 is bookkeeping and I would not spend a cycle on it.
 
 One correction to my earlier summary while I have it: I wrote that `api` introspection and revocation both returned `404`. That is accurate, but I should be precise that the `404`s are host-level, not method-level — `connect` answered `405` to a `GET` because the endpoints exist there and are POST-only, whereas `api` answered `404` because they are not deployed there at all. Different mechanism, same conclusion, and the distinction matters if anyone later tries to use the `404` as evidence the endpoints are unreachable everywhere.
+===== ANALYST bigpickle 2026-10-01 21:52:16 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor h in api account devaccount connect devconnect devapi; do for p in ".well-known/oauth-authorization-server/identity" ".well-known/openid-configuration/identity"; do printf "%s /%s -> " "$h" "$p"; curl -s -o /tmp/oa.$$ -w "%{http_code} %{size_download}b " --max-time 20 "https://$h.signl4.com/$p"; head -c 90 /tmp/oa.$$ | tr -d '\n'; echo; sleep 1; done; done 2>&1
+api /.well-known/oauth-authorization-server/identity -> 404 0b 
+api /.well-known/openid-configuration/identity -> 404 0b 
+account /.well-known/oauth-authorization-server/identity -> 404 0b 
+account /.well-known/openid-configuration/identity -> 404 0b 
+devaccount /.well-known/oauth-authorization-server/identity -> 404 0b 
+devaccount /.well-known/openid-configuration/identity -> 404 0b 
+connect /.well-known/oauth-authorization-server/identity -> 404 0b 
+connect /.well-known/openid-configuration/identity -> 404 0b 
+devconnect /.well-known/oauth-authorization-server/identity -> 404 0b 
+devconnect /.well-known/openid-configuration/identity -> 404 0b 
+devapi /.well-known/oauth-authorization-server/identity -> 404 0b 
+devapi /.well-known/openid-configuration/identity -> 404 0b
+[0m
+## Objective
+- Continue the Derdack/SIGNL4/Enterprise Alert bug-bounty hunt and produce only the required STEP 1–7 structured blocks, prioritizing a passive POC for the strongest surviving anomaly.
+
+## Important Details
+- Current authoritative state: `{"phase":"POC","target":"api"}`; report channel is `bugs.olivermaicher.eu`.
+- Scope is limited to Derdack-owned infrastructure and SIGNL4/Enterprise Alert products defined by `scope.yml` and `inventory/derdack.md`.
+- Live probing must be passive-first, `<=1 rps`, and limited to GET/HEAD/OPTIONS. Ignore stale queued POST/PUT probes against token, password-grant, prepaid, or customer-data paths.
+- Brute-force/rate-limit testing, OPTIONS/TRACE alone, descriptive headers, outdated-library claims, TLS hardening, clickjacking without exploit, public login pages, and unauthenticated customer-data exposure are rejected.
+- Root-only status does not establish full-host status; probe path families before declaring multi-app/App-Proxy hosts inert.
+- Latest correction: identical OIDC discovery/JWKS proves configured trust symmetry only, not enforced cross-environment token acceptance. Six hosts are `connect`, `devconnect`, `api`, `devapi`, `account`, and `devaccount`; shared key kid is `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, shared client ID is `692A0A56-892F-4AE2-8259-76DA398990B6`.
+- `vps.signl4.com` is stale GoDaddy DNS, not researcher-exploitable takeover: `72.167.227.27`, formerly nginx default page with cert CN `server.d1g.it`; DNS/hosting-account control is `HUMAN_ONLY`, and recent probes alternate between HTTP 200 and TCP timeout.
+- `docs.enterprisealert.com` CNAMEs to live Azure SWA host `derdackdownloads.z13.web.core.windows.net`; it is not a dangling takeover.
+
+## Work State
+### Completed
+- Repeatedly confirmed `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`.
+- Ranked that WSDL leak first: priority `9.0` with `attack_surface=1.0,business_value=0.9,tech_exposure=0.9,gate_ease=1.0,cloud_surface=0.8,freshness=1.0`; confidence `85`, class `MISCONFIG`, severity `LOW`.
+- Fully mapped the anonymous EA metadata surface: `/EAWebService/`, `EventProviderAPI.aspx`, `EventProviderAPI.asmx` including `?wsdl`, `EventConnectorServer.ashx`, and `rest/events`.
+- Corrected `EventProviderAPI.aspx` to 10 authoritative handlers: About, CloseAlert, GetAlertStatus, GetEventStatus, RaiseEvent, RaiseEventAsynchronous, RegisterEventProvider, ResetEvent, SubmitEventUpdate, UnregisterEventProvider.
+- Confirmed credential-bearing EA handlers return `Error: -1`; `EventConnectorServer.ashx` has an empty handler table; `rest/events` is auth-gated. Reflected `Handler` input is URL-encoded and not XSS.
+- Confirmed GraphQL is absent across `connect`, `api`, and `demo`; API V4 is absent; V1/V2/V3, webhook, and events route maps are complete with no anonymous read surface.
+- Closed brute-force, SSRF, CORS, mobile-hostname, OIDC open-redirect, dynamic-client-registration, Blazor assembly, GraphQL, and EA anonymous-write hypotheses.
+- Determined the full passive identity/API/CT/WP/EA surface is exhausted with zero material drift.
+
+### Active
+- Final evidence capture remains pending for the internal SOAP hostname disclosure at `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl`.
+- Parked secondary leads: `vps.signl4.com` stale DNS and RFC 8414 path-inserted OIDC metadata drift.
+- Current risk posture is `35/100`: only one credential-free WSDL metadata GET is proposed.
+
+### Blocked
+- Token-forgery/BOLA verification lacks a legitimate `client_secret`, `X-S4-Api-Key`, team secret, or designated non-production tenant.
+- OIDC token behavior was exercised on only 2 of 6 ingresses; introspection/revocation behavior on 0 of 6. Static metadata cannot establish enforcement parity.
+- `vps.signl4.com` takeover validation requires DNS/GoDaddy account control and is also affected by intermittent TCP timeouts.
+
+## Next Move
+1. Send exactly one unauthenticated `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` with `Accept: text/xml,application/xml`; record HTTP status, `Content-Type`, body length, and the verbatim `soap:address location` value.
+2. If confirmed, generate the STEP 1–7 output with the WSDL disclosure as the sole `[FINAL]`; park stale DNS and OIDC diagnostic hypotheses.
+
+## Relevant Files
+- `scope.yml`: authoritative eligible-asset scope.
+- `inventory/derdack.md`: Derdack inventory seed and host ownership context.
+- `art/lead_nemotron3.txt`: source of the ranked EA WSDL internal-hostname lead.
+- `hypotheses-nemotron3.txt`: prior ranked hypotheses and probe notes; older mutating proposals are superseded by current GET/HEAD/OPTIONS-only rules.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
+[0m✗ [0mcd /tmp && curl -sS -D headers.txt -o body.xml -w "http_code=%{http_code}\nsize_download=%{size_download}\ntime_total=%{time_total}\n" --max-time 25 -H 'Accept: text/xml,application/xml' 'https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl'; sleep 1; echo "--- headers ---"; cat headers.txt; echo "--- soap:address ---"; grep -o 'soap:address location="[^"]*"' body.xml | sort -u; echo "--- service/port ---"; grep -o '<wsdl:service name="[^"]*"' body.xml | head -5 failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.
