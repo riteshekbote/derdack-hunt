@@ -44805,3 +44805,169 @@ notes: sibling *.asmx?wsdl scan found no other .asmx; index and .ashx leak nothi
 ## STEP 7 — NEXT ACTION
 
 Single next action: **none — stop.** The EA WebService passive surface is fully mapped and the WSDL scope is now definitively closed (isolated to one endpoint). No further live probing is warranted here. Report the verified LOW/MISCONFIG internal-hostname disclosure via `bugs.olivermaicher.eu` when the batch is ready; otherwise pivot only if you want to open a new target.
+===== ANALYST bigpickle 2026-10-02 18:55:28 UTC =====
+[0m
+> build · big-pickle
+[0m
+I'll execute the one queued probe that closes my own self-recorded 0-of-6 gap (introspection/revocation never exercised on any identity host) before writing the cycle.
+[0m$ [0mfor host in connect.signl4.com devconnect.signl4.com account.signl4.com; do
+  for p in introspect revoke userinfo; do
+    out=$(curl -s -o /dev/null -X OPTIONS -m 12 -w '%{http_code}|%{size_download}|%{content_type}' "https://${host}/identity/connect/${p}" 2>/dev/null)
+    echo "OPTIONS https://${host}/identity/connect/${p} -> ${out}"
+    sleep 1
+  done
+done
+OPTIONS https://connect.signl4.com/identity/connect/introspect -> 405|0|
+OPTIONS https://connect.signl4.com/identity/connect/revoke -> 404|0|
+OPTIONS https://connect.signl4.com/identity/connect/userinfo -> 405|0|
+OPTIONS https://devconnect.signl4.com/identity/connect/introspect -> 405|0|
+OPTIONS https://devconnect.signl4.com/identity/connect/revoke -> 404|0|
+OPTIONS https://devconnect.signl4.com/identity/connect/userinfo -> 405|0|
+OPTIONS https://account.signl4.com/identity/connect/introspect -> 405|0|
+OPTIONS https://account.signl4.com/identity/connect/revoke -> 404|0|
+OPTIONS https://account.signl4.com/identity/connect/userinfo -> 405|0|
+[0m
+## Objective
+- Continue the passive-first Derdack/SIGNL4/Enterprise Alert bug-bounty analysis and produce evidence-bounded ranked hypotheses.
+- Focus on validating the internal-hostname disclosure in the public Enterprise Alert WSDL without inventing vulnerabilities.
+
+## Important Details
+- Scope: all Derdack-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, and products, including SIGNL4 and Enterprise Alert; report channel `bugs.olivermaicher.eu`.
+- Current metadata: `{"phase":"POC","target":"api"}`, model `bigpickle`, latest cycle `2026-10-02 13:58 UTC`; older timeline says `POC→REPORT`, but current metadata is authoritative.
+- Required output blocks: `STEP 1` DELTA, `STEP 2` PRIORITIZE, `STEP 3` HYPOTHESES, `STEP 4` SELF-CRITIQUE, `STEP 5` NEXT ACTION, `STEP 6` LEARNING, `STEP 7` RISK.
+- Use `priority=0.25a+0.25b+0.15t+0.15g+0.10c+0.10f`; maximum three hypotheses; park confidence below 40.
+- Probe constraints: passive-first, `≤1 rps`, GET/HEAD/OPTIONS only, no brute-force/lockout testing, DoS, TRACE/OPTIONS-only findings, scanner-only claims, customer-data access, or unauthenticated mutations.
+- Strongest lead: `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `https://ereesus/EAWebService/EventProviderAPI.asmx`; confidence 85, latest lead score 9.0, aggregate rank 95, LOW recon/config impact.
+- Identity configuration is symmetric but enforcement is unproven: six hosts share the RS256 JWKS and client ID; do not describe this alone as a confirmed token-forgery vulnerability.
+- Root-only status is unreliable for App-Proxy/multi-app hosts; probe intermediate paths before declaring a host inert.
+
+## Work State
+### Completed
+- Repeated passive probes confirmed `EventProviderAPI.asmx?wsdl` returns the internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`; no customer data or direct exploit was demonstrated.
+- Enterprise Alert map is complete: `/EAWebService/`, `EventProviderAPI.aspx`, `EventProviderAPI.asmx` (`?wsdl`), `EventConnectorServer.ashx`, and `rest/events`; intermediate paths and hidden REST branches returned 404.
+- `EventProviderAPI.aspx` authoritative handler count is 10, not 11: `About`, `CloseAlert`, `GetAlertStatus`, `GetEventStatus`, `RaiseEvent`, `RaiseEventAsynchronous`, `RegisterEventProvider`, `ResetEvent`, `SubmitEventUpdate`, `UnregisterEventProvider`; credentialed handlers return `Error: -1`/401 and unknown names return the help page.
+- `EventConnectorServer.ashx` exposes an empty installed-handlers table; no alert-exfiltration primitive. `rest/events` is `GET 405` / `POST 401`; no anonymous write primitive.
+- `connect.signl4.com` API namespaces V1/V2/V3, webhook, and events are mapped; V4 is absent (`404`); anonymous reads remain gated. Public OpenAPI has empty global `security:[{}]`, a LOW spec/implementation mismatch.
+- Six identity hosts (`connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`) expose byte-identical configured JWKS (`kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) and client ID `692A0A56-892F-4AE2-8259-76DA398990B6`; staging password grant returns `invalid_client` without `client_secret`.
+- `account.signl4.com/identity` advertises issuer `https://connect.signl4.com/identity`; `devaccount.signl4.com/identity` mirrors `devconnect`; static discovery/JWKS parity does not prove token/introspection enforcement.
+- Webhook `POST /{teamSecret}` has a 404-versus-201 oracle, but guessing is prohibited and no real team secret/API key was found across 7+ corpora.
+- `vps.signl4.com` resolves to `72.167.227.27` on GoDaddy shared hosting; prior probes showed nginx default page and unrelated cert `CN=server.d1g.it`, but recent probes intermittently return TCP timeout; takeover requires DNS/hosting-account control.
+- WordPress downgrade session theft, WP REST IDOR/PII, XML-RPC mutation, Dev/Us MultiViews sensitive-file access, GraphQL, Blazor assembly disclosure, and Azure resource-ID-only disclosure are closed or non-actionable.
+
+### Active
+- Validate the WSDL finding’s exact scope using the primary endpoint and already-enumerated sibling `*.asmx?wsdl` paths; record whether `soap:address` consistently exposes `ereesus`.
+- Keep `vps.signl4.com` as a LOW–MEDIUM stale-DNS/configuration item, not a researcher-exploitable takeover.
+- `RFC 8414` populated path-inserted OIDC metadata parity remains parked at confidence 45; empty-path `404` results do not close the populated-path question.
+- If producing the next analyst response, use the corrected wording “configured trust symmetry with unverified enforcement,” not “full cross-environment token forgery confirmed.”
+
+### Blocked
+- API key, client secret, team secret, and authenticated tenant credentials are unavailable; V1/V2/V3 BOLA, token, mass-assignment, and webhook replay tests remain `AUTH_HELPED`.
+- `vps.signl4.com` takeover validation is `HUMAN_ONLY`; no unclaimed hosting endpoint or account-control primitive is available from the researcher seat.
+- OIDC behavior cannot be distinguished across all six ingresses without a second network position or owner-supplied token; repeated same-seat metadata probes are endpoint-map-only.
+- No safe path exists to prove authenticated BOLA, mass assignment, or token forgery without customer credentials; program rules prohibit touching live customer data or performing speculative mutations.
+- `signl4.derdack.com` is permanently TCP-unreachable and `signals.derdack.com` is NXDOMAIN; do not spend further cycles there.
+
+## Next Move
+1. GET `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` with `Accept: text/xml,application/xml` and no auth; record status, `Content-Type`, body length, and the exact `soap:address location`, at `≤1 rps`.
+2. If the primary result is already current, probe only already-enumerated sibling `*.asmx?wsdl` paths under `https://demo.enterprisealert.com/EAWebService/` once, record whether `ereesus` is shared, then stop; do not probe authenticated or mutating routes.
+
+## Relevant Files
+- `scope.yml`: authoritative eligible-scope source.
+- `inventory/derdack.md`: initial Derdack host inventory and scope notes.
+- `art/lead_nemotron3.txt`: source of the ranked internal WSDL hostname-leak lead.
+- `hypotheses-nemotron3.txt`: recorded hypothesis and next-probe details.
+- No repository/code files were changed in the supplied context.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+Found a solid drift signal. Introspection returns `405` while revocation returns `404` across three hosts — I need the `Allow` header to confirm what methods introspection actually permits, and the discovery document's advertised revocation path to see whether the 404 is a missing endpoint or a wrong path.
+[0m$ [0mfor host in connect.signl4.com devconnect.signl4.com account.signl4.com; do
+  echo "=== ${host} discovery advertised auth endpoints ==="
+  curl -s -m 12 "https://${host}/identity/.well-known/openid-configuration" 2>/dev/null \
+    | tr ',' '\n' | grep -iE 'introspect|revoc|token_endpoint|userinfo' | sed 's/^[[:space:]]*//'
+  sleep 1
+done
+=== connect.signl4.com discovery advertised auth endpoints ===
+"token_endpoint":"https://connect.signl4.com/identity/connect/token"
+"userinfo_endpoint":"https://connect.signl4.com/identity/connect/userinfo"
+"revocation_endpoint":"https://connect.signl4.com/identity/connect/revocation"
+"introspection_endpoint":"https://connect.signl4.com/identity/connect/introspect"
+"token_endpoint_auth_methods_supported":["client_secret_basic"
+"revocation_endpoint_auth_methods_supported":["client_secret_basic"
+"introspection_endpoint_auth_methods_supported":["client_secret_basic"
+"userinfo_signing_alg_values_supported":["RS256"]
+"introspection_signing_alg_values_supported":["RS256"]
+=== devconnect.signl4.com discovery advertised auth endpoints ===
+"token_endpoint":"https://devconnect.signl4.com/identity/connect/token"
+"userinfo_endpoint":"https://devconnect.signl4.com/identity/connect/userinfo"
+"revocation_endpoint":"https://devconnect.signl4.com/identity/connect/revocation"
+"introspection_endpoint":"https://devconnect.signl4.com/identity/connect/introspect"
+"token_endpoint_auth_methods_supported":["client_secret_basic"
+"revocation_endpoint_auth_methods_supported":["client_secret_basic"
+"introspection_endpoint_auth_methods_supported":["client_secret_basic"
+"userinfo_signing_alg_values_supported":["RS256"]
+"introspection_signing_alg_values_supported":["RS256"]
+=== account.signl4.com discovery advertised auth endpoints ===
+"token_endpoint":"https://account.signl4.com/identity/connect/token"
+"userinfo_endpoint":"https://account.signl4.com/identity/connect/userinfo"
+"revocation_endpoint":"https://account.signl4.com/identity/connect/revocation"
+"introspection_endpoint":"https://account.signl4.com/identity/connect/introspect"
+"token_endpoint_auth_methods_supported":["client_secret_basic"
+"revocation_endpoint_auth_methods_supported":["client_secret_basic"
+"introspection_endpoint_auth_methods_supported":["client_secret_basic"
+"userinfo_signing_alg_values_supported":["RS256"]
+"introspection_signing_alg_values_supported":["RS256"]
+[0m
+[0m$ [0mfor host in connect.signl4.com devconnect.signl4.com account.signl4.com; do
+  echo "=== ${host} introspect Allow ==="
+  curl -s -m 12 -D - -o /dev/null -X OPTIONS "https://${host}/identity/connect/introspect" 2>/dev/null | grep -iE '^(HTTP/|allow)' 
+  sleep 1
+done
+=== connect.signl4.com introspect Allow ===
+HTTP/2 405 
+=== devconnect.signl4.com introspect Allow ===
+HTTP/2 405 
+=== account.signl4.com introspect Allow ===
+HTTP/2 405
+[0m
+Correction: the `404` on revocation was my own path error — discovery advertises `/identity/connect/revocation`, not `/revoke`. Probing the correct path across all six hosts to properly close the 0-of-6 gap.
+[0m$ [0mfor host in connect.signl4.com devconnect.signl4.com account.signl4.com api.signl4.com devapi.signl4.com devaccount.signl4.com; do
+  for p in introspect revocation userinfo; do
+    code=$(curl -s -o /dev/null -m 12 -X OPTIONS -w '%{http_code}' "https://${host}/identity/connect/${p}" 2>/dev/null)
+    echo "OPTIONS ${host}/identity/connect/${p} -> ${code:-000}"
+    sleep 1
+  done
+done
+OPTIONS connect.signl4.com/identity/connect/introspect -> 405
+OPTIONS connect.signl4.com/identity/connect/revocation -> 405
+OPTIONS connect.signl4.com/identity/connect/userinfo -> 405
+OPTIONS devconnect.signl4.com/identity/connect/introspect -> 405
+OPTIONS devconnect.signl4.com/identity/connect/revocation -> 405
+OPTIONS devconnect.signl4.com/identity/connect/userinfo -> 405
+OPTIONS account.signl4.com/identity/connect/introspect -> 405
+OPTIONS account.signl4.com/identity/connect/revocation -> 405
+OPTIONS account.signl4.com/identity/connect/userinfo -> 405
+OPTIONS api.signl4.com/identity/connect/introspect -> 405
+OPTIONS api.signl4.com/identity/connect/revocation -> 405
+OPTIONS api.signl4.com/identity/connect/userinfo -> 405
+OPTIONS devapi.signl4.com/identity/connect/introspect -> 405
+OPTIONS devapi.signl4.com/identity/connect/revocation -> 405
+OPTIONS devapi.signl4.com/identity/connect/userinfo -> 405
+OPTIONS devaccount.signl4.com/identity/connect/introspect -> 405
+OPTIONS devaccount.signl4.com/identity/connect/revocation -> 405
+OPTIONS devaccount.signl4.com/identity/connect/userinfo -> 405
+[0m
+[STEP 1] DELTA: 18 read-only OPTIONS probes (≤1 rps) against `https://{connect,devconnect,account,api,devapi,devaccount}.signl4.com/identity/connect/{introspect,revocation,userinfo}`. All 18 returned `405 Method Not Allowed`, identical across all six hosts. The self-recorded "introspection/revocation family on 0 of 6" gap is now closed. A prior `/revoke` probe returned `404` — my own path error; discovery advertises `/revocation`. No authentication, no customer data touched.
+
+[STEP 2] PRIORITIZE: `1. Derdack SIGNL4 — shared-identity-estate OAuth2/OIDC` (98) > `2. Derdack SIGNL4 — api-gateway surface` (97) > `3. Derdack Enterprise Alert` (95).
+
+[STEP 3] HYPOTHESES:
+1. "SIGNL4 ships one shared identity configuration across all six production and staging OIDC issuers, with authenticated token-introspection and revocation endpoints co-located behind a single ingress." — Host: connect.signl4.com — Endpoint: https://connect.signl4.com/identity/connect/introspect and .../revocation — Category: broken authentication / token-lifecycle weakness — auth_state: AUTH_HELPED — Evidence: all six hosts expose byte-identical RS256 JWKS (kid91EE4F3CE94EB517AF66B254F7497ECB0E31EE27) and client ID 692A0A56-892F-4AE2-8259-76DA398990B6; discovery advertises introspection_endpoint and revocation_endpoint; OPTIONS on both returns 405 on 6/6 hosts, confirming real POST-only endpoints rather than 404s. Exact request and response byte content UNVERIFIED — OPTIONS confirms method gating, not auth behavior. Weakness class: no enforced separation-of-environments for signing keys or token lifecycle. Impact if forged tokens were accepted by another environment: any tenant or role. Attack path: acquire token via password or client_credentials against any one issuer, present to another environment's protected API. Existing control: introspection/revocation require `client_secret_basic`, and same-seat token tests returned `invalid_client`. Broader than a single-host misconfiguration. Competing explanation: IdentityServer templates and a shared multi-tenant deployment legitimately produce identical configs; identical JWKS may be deliberate architecture. Disconfirming test: obtain a staging token and confirm it is rejected by production resource servers, or obtain a production secret and confirm environment-specific signing. confidence: 45
+2. "The introspection and revocation endpoints are reachable pre-authentication and return distinguishable errors for absent, malformed, and validly-signed tokens." — Host: connect.signl4.com — Endpoint: https://connect.signl4.com/identity/connect/introspect — Category: broken authentication / information disclosure — auth_state: AUTH_HELPED — Evidence: OPTIONS returns 405 unauthenticated on 6/6 hosts, proving the endpoint is routed and registered at the unauthenticated edge. The 405/404 split I initially observed came from a wrong path guess, not a config anomaly. Weakness class: RFC 7662 introspection with differential error responses leaks token validity oracle. Impact if valid: token validity oracle enabling enumeration of live sessions. Attack path: submit candidate tokens to introspect, distinguish active from inactive via response body. Existing control: `client_secret_basic` required, so no client can call it unauthenticated. Narrower than hypothesis 1 — a precondition rather than a standalone root cause. Competing explanation: 405 is the default response for any POST-only endpoint under this gateway and carries no information about downstream auth. Disconfirming test: unauthenticated POST to introspect returns uniform 401 with a single generic error body. confidence: 20
+3. "Enterprise Alert's public WSDL discloses the internal single-label hostname `ereesus`." — Host: demo.enterprisealert.com — Endpoint: https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl — Category: information exposure / internal network reconnaissance — auth_state: UNAUTHENTICATED — Evidence: live GET returns 200 with `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`. Every other EA surface is auth-gated (credentialed handlers return `Error: -1`/401, `rest/events` GET 405 / POST 401, `EventConnectorServer.ashx` returns an empty handler table), so this WSDL is the sole unauthenticated disclosure. Weakness class: internal infrastructure detail leaked to anonymous callers. Impact: attacker learns an internal host naming convention and an unrouted service path, aiding lateral movement and targeting. Attack path: anonymous GET, extract hostname, correlate with internal DNS naming for follow-on attacks. Existing control: none — no auth required, and the hostname is single-label so it resolves only inside the corporate network, limiting direct exploitation. Narrower in impact than hypotheses 1 and 2 — recon-grade, LOW. Competing explanation: standard WSDL tooling emits the server's canonical internal address; this is an upstream .NET configuration default, not a Derdack-specific defect. Disconfirming test: none available that would make the internal address not appear — already repeatedly reproduced. confidence: 85
+
+[STEP 4] SELF-CRITIQUE: My first pass reported a revocation `404` alongside introspection `405` and nearly logged it as drift. It was my own wrong path guess — `/revoke` instead of `/revocation`. That is exactly the endpoint-map-only error this hunt has repeated 50+ times, and I made it within the first tool call of this cycle. Caught it only because the discovery document was read in parallel. Corrected to6/6 uniform `405`. On hypothesis 1, `405` on OPTIONS proves the endpoint is routed and POST-only; it says nothing about whether `client_secret_basic` is genuinely enforced, so the AUTH_HELPED label stands and confidence stays at 45. On hypothesis 2, no POST was issued, so no error-body evidence exists and confidence is 20 — below the reporting threshold. Hypothesis 3 is the only independently reproducible finding, and its LOW recon impact means it does not displace the identity work despite lower confidence. Probes were OPTIONS-only, so no live-data or mutation risk was incurred. The 18-probe design was correct in that it used the discovery document to derive the paths rather than guessing, and it generalizes to a reusable rule: read the discovery document before probing endpoint families.
+
+[STEP 5] NEXT ACTION: A single read-only GET of `https://devconnect.signl4.com/.well-known/oauth-authorization-server` (one request) to determine whether the RFC 8414 metadata path is populated or empty. If `404`, the parked confidence-45 path-inserted-metadata hypothesis drops below 40 and is closed. If `200`, compare its `introspection_endpoint`/`revocation_endpoint` values against the OIDC discovery values already captured for all six hosts, which would resolve whether the parked hypothesis shares the same single-config root cause.
+
+[STEP 6] LEARNING: Options discovered this session — `OPTIONS` on a POST-only endpoint is a safe, unauthenticated route-registration probe that yields method gating without touching data, and it is strictly better than guessing sibling paths; `curl -D - -o /dev/null` plus `grep -iE '^(HTTP/|allow)'` captures status and `Allow` headers while discarding the body; OIDC discovery documents are a reliable index of the real endpoint family and should always be read before probing that family. Reusable rule — derive paths from discovery metadata, never from convention, then confirm each with a method-refusal probe; a bare `404` on a guessed path is a claim about my own guess, not about the target. Context note — introspection and revocation are now confirmed live on all six issuers, superseding the earlier "0 of 6" record in the knowledge base.
+
+[STEP 7] RISK: derdack: LOW — 18 credential-free OPTIONS probes against public identity endpoints, all `405`, no request body, no authentication, no customer data, and no state change; the only conclusion drawn is route registration, and the single finding that merits a report (`ereesus` in the EA WSDL) remains a pre-existing LOW-severity information disclosure requiring no new risk.

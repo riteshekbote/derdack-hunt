@@ -1911,3 +1911,14 @@ www.derdack.com
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
 
 ## 2026-10-02 13:58:07 UTC
+
+## 2026-10-02 18:55:28 UTC
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl exposes internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` — live confirmed across 5+ cycles
+- NEW vps.signl4.com HTTPS probe returns 000 (TCP timeout) vs 7 prior confirmed 200 — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
+- NEW us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping continues 10th+ cycles (unauth GET 401 vs 405, invalid Bearer 401) — handler/routing layer unstable
+- CHANGED connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on all 6 identity hosts (was 3-host record)
+- CHANGED demo.enterprisealert.com App-Proxy auth namespace fully 404 — no unauth identity endpoint on public custom hostname
+- CHANGED labconnect/labaccount.signl4.com remain App Gateway v2 502 stable — persistently dead tier
