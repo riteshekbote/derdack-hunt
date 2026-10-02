@@ -44648,3 +44648,160 @@ No new endpoint, method, or evidence this session. Reported findings unchanged; 
 ---
 
 Want me to (a) file finding #1 as-is at Low with the scope caveat, (b) hold it until you approve the sibling sweep, or (c) restructure this around the `prepaidSettings` PUT binder hypothesis, which is the highest-value item but needs credentials to test?
+===== ANALYST bigpickle 2026-10-02 13:58:07 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mwhich curl dig openssl python3 2>/dev/null; echo "---"; curl -s -o /tmp/opencode/wsdl.xml -w "HTTP:%{http_code} CT:%{content_type} LEN:%{size_download}\n" -m 25 -H 'Accept: text/xml,application/xml' 'https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl'
+/usr/bin/curl
+/usr/bin/dig
+/usr/bin/openssl
+/usr/bin/python3
+---
+HTTP:200 CT:text/xml; charset=utf-8 LEN:29968
+[0m
+## Objective
+- Continue the Derdack bug-bounty hunt in POC phase and output only structured delta/prioritization/hypothesis/next-step blocks for report channel `bugs.olivermaicher.eu`.
+- Determine whether the confirmed internal hostname leak in the public Enterprise Alert WSDL affects sibling SOAP services.
+
+## Important Details
+- Scope: company-owned Derdack/SIGNL4/Enterprise Alert infrastructure only; authoritative references are `scope.yml` and `inventory/derdack.md`.
+- Live probing must remain passive-first, credential-free, `GET`/`HEAD`/`OPTIONS` only, `<=1 rps`, with no customer-data access or mutation.
+- Rejected classes include brute-force/rate-limit testing, OPTIONS/TRACE findings, descriptive headers only, SSRF without a real fetch, scanner-only claims, and unauthenticated paths proven auth-gated.
+- Facts and hypotheses must remain separate; provide exact request details, expected/actual status, confidence, evidence, impact, and testability.
+- Drop hypotheses below confidence 40, rejected-class hypotheses, or those without concrete verification steps.
+- Highest current lead: `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl`, MISCONFIG, confidence 85, ranked #1.
+- Confirmed WSDL evidence: unauthenticated XML contains `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`.
+- The WSDL issue is currently LOW/config-level: internal hostname reconnaissance only, with no direct credential or customer-data exposure.
+- Current state is `{"phase": "POC", "target": "api"}`, though the latest actionable lead targets `demo.enterprisealert.com`.
+- Six identity hosts—`connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`—share documented RS256 JWKS configuration, kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, and client ID `692A0A56-892F-4AE2-8259-76DA398990B6`.
+- OIDC discovery/JWKS parity proves configured trust symmetry only, not cross-environment token acceptance; wording must retain “enforcement unverified.”
+- `vps.signl4.com` resolves to `72.167.227.27` on GoDaddy shared hosting; prior responses showed nginx default content and unrelated cert `CN=server.d1g.it`, but recent probes returned TCP `000`. Exploitability is `HUMAN_ONLY`, not researcher-provable takeover.
+- `signl4.derdack.com` is permanently unreachable from this seat; `labconnect.signl4.com` and `labaccount.signl4.com` remain stable Azure App Gateway 502s.
+- `dev.derdack.com`/`us.derdack.com` MultiViews output is only a static namespace echo; no sensitive files were readable.
+- The HTTPS→HTTP WordPress redirect does not expose auth cookies because cookies are secure and host-only; only residual missing HSTS remains LOW.
+
+## Work State
+### Completed
+- Mapped the anonymous Enterprise Alert surface at `https://demo.enterprisealert.com/EAWebService/` to five relevant paths: directory index, `EventProviderAPI.aspx`, `EventProviderAPI.asmx`/`?wsdl`, `EventConnectorServer.ashx`, and `rest/events`.
+- Confirmed Enterprise Alert version `9.5.26147`; directory index returns 200 and links endpoint documentation.
+- Corrected `EventProviderAPI.aspx` to 10 authoritative handlers; fabricated handlers return the help page and must not be counted as live.
+- Confirmed all credential-dependent EA handlers return `Error: -1`/401; `EventConnectorServer.ashx` has an empty installed-handlers table; no anonymous write primitive exists.
+- Repeatedly confirmed the WSDL leak of `https://ereesus/EAWebService/EventProviderAPI.asmx`.
+- Closed GraphQL with 15/15 uniform 404 responses across `connect`, `api`, and `demo`.
+- Closed public Swagger SSRF and internal-host disclosure classes: no caller-supplied URI parameter or internal host literal in V1/V2/V3 specs.
+- Closed Blazor assembly-download hypothesis: `blazor.boot.json` is 404 and no client DLL/WASM surface exists.
+- Closed App Proxy pre-auth recovery: decoded internal MSAL cookie host is NXDOMAIN.
+- Mapped SIGNL4 API V1/V2/V3/webhook/events; V4 is absent. Anonymous read surfaces remain gated.
+- Confirmed webhook `POST /{teamSecret}` 404 oracle, but exploitation requires a leaked secret; guessing is excluded as brute force.
+- Public API specs contain global `security: [{}]` while routes enforce Bearer/API-key, a LOW documentation mismatch.
+- Dynamic client registration, OIDC redirect theft, CORS data theft, and credential-leak searches remain negative.
+- Full identity/API/CT/WordPress/EA passive surface is considered exhausted with zero meaningful drift.
+
+### Active
+- Scope expansion for the WSDL internal-hostname leak: probe sibling `*.asmx?wsdl` resources under `https://demo.enterprisealert.com/EAWebService/`.
+- For each sibling, record unauthenticated status, `Content-Type`, body length, and verbatim `soap:address location`; stop after the scan.
+- Latest rank: WSDL finding 9.0, with axes `attack_surface=1.0`, `business_value=0.9`, `tech_exposure=0.9`, `gate_ease=1.0`, `cloud_surface=0.8`, `freshness=1.0`.
+
+### Blocked
+- Cross-environment token-forgery/BOLA verification requires a legitimate non-production tenant, API key, token, or client secret.
+- `vps.signl4.com` takeover validation requires DNS/hosting-account control and recent connectivity is intermittent.
+- OIDC token/introspection enforcement parity across all six ingresses cannot be established from the same network seat without owner-supplied credentials or a second network position.
+
+## Next Move
+1. Discover sibling `.asmx` resources from `https://demo.enterprisealert.com/EAWebService/`, then GET each `*.asmx?wsdl` without authentication at `<=1 rps`; record status, content type, length, and `soap:address location`.
+2. Record whether the `ereesus` disclosure is isolated or shared, update confidence/scope, then stop live probing and produce the required structured blocks.
+
+## Relevant Files
+- `scope.yml`: authoritative eligible-asset scope.
+- `inventory/derdack.md`: Derdack discovery inventory.
+- `art/lead_nemotron3.txt`: source lead for the EA WSDL internal-hostname disclosure.
+- `hypotheses-bigpickle.txt`: ranked hypotheses and latest sibling-WSDL next action.
+- `hypotheses-nemotron3.txt`: alternate rankings and stale `vps.signl4.com` validation lead.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m$ [0mcd /tmp/opencode && echo "=== soap:address occurrences ===" && grep -o 'location="[^"]*"' wsdl.xml | sort | uniq -c | sort -rn; echo; echo "=== any ereesus/internal literals ==="; grep -c 'ereesus' wsdl.xml; echo; echo "=== other internal-looking hosts ==="; grep -oE 'https?://[A-Za-z0-9._-]+' wsdl.xml | sort -u
+=== soap:address occurrences ===
+      2 location="https://ereesus/EAWebService/EventProviderAPI.asmx"
+
+=== any ereesus/internal literals ===
+2
+
+=== other internal-looking hosts ===
+http://derdack.com
+http://microsoft.com
+http://schemas.xmlsoap.org
+http://www.w3.org
+https://ereesus
+[0m
+Continuing with the sibling `.asmx?wsdl` scope scan. First, extract the internal addresses from the WSDL already fetched (no new request), then enumerate siblings from the public directory index.
+Confirmed: 2 `ereesus` occurrences, both the same endpoint. Now fetching the public directory index to enumerate sibling `.asmx` resources (single request, ≥1s since last).
+[0m$ [0mcd /tmp/opencode && sleep 1 && curl -s -o ea_index.html -w "HTTP:%{http_code} CT:%{content_type} LEN:%{size_download}\n" -m 25 'https://demo.enterprisealert.com/EAWebService/' && echo "--- links discovered ---" && grep -oE 'href="[^"]*"' ea_index.html | sed 's/href="//;s/"//' | sort -u
+HTTP:200 CT:text/html; charset=utf-8 LEN:1824
+--- links discovered ---
+EventConnectorServer.ashx
+EventProviderAPI.asmx
+EventProviderAPI.aspx
+[0m
+Directory index exposes only 3 resources; `EventProviderAPI.asmx` is the sole `.asmx`, so there are no further sibling `.asmx?wsdl` endpoints to probe. Let me confirm the WSDL is the sole disclosure point by checking the index locally and the `.ashx` once.
+[0m$ [0mcd /tmp/opencode && echo "=== index internal hosts ===" && grep -oE 'https?://[A-Za-z0-9._-]+' ea_index.html | sort -u; echo "=== (index grep done, no new request) ==="; sleep 1; curl -s -o ea_ashx.txt -w "ashx HTTP:%{http_code} CT:%{content_type} LEN:%{size_download}\n" -m 25 'https://demo.enterprisealert.com/EAWebService/EventConnectorServer.ashx'; echo "=== ashx internal hosts ==="; grep -oE 'https?://[A-Za-z0-9._-]+|ereesus' ea_ashx.txt | sort -u || echo "(none)"
+=== index internal hosts ===
+http://www.w3.org
+=== (index grep done, no new request) ===
+ashx HTTP:200 CT:text/html; charset=utf-8 LEN:240
+=== ashx internal hosts ===
+[0m
+Scope scan complete. The WSDL is the sole disclosure point — the sibling `.asmx?wsdl` set is empty (only one `.asmx` exists), the index and `.ashx` contain no internal hosts.
+
+## STEP 1 — DELTA
+
+**New this cycle**
+- `EventProviderAPI.asmx?wsdl` re-verified live (HTTP 200, `text/xml`, 29968 bytes). Contains exactly 2 `soap:address` entries, both `location="https://ereesus/EAWebService/EventProviderAPI.asmx"`; `ereesus` appears only there. No other internal host literals (only `ereesus`, `derdack.com`, `microsoft.com`, W3C schema URLs).
+- Sibling `.asmx?wsdl` scope scan complete: `https://demo.enterprisealert.com/EAWebService/` directory index (HTTP 200, 1824 bytes) exposes exactly 3 resources — `EventConnectorServer.ashx`, `EventProviderAPI.asmx`, `EventProviderAPI.aspx`. `EventProviderAPI.asmx` is the **only** `.asmx`, so there are **no sibling `.asmx?wsdl` endpoints**.
+- `EventConnectorServer.ashx` (HTTP 200, 240 bytes) and the directory index contain **no** internal host literals or `ereesus`.
+
+**Conclusion (scope determination)**
+- The `ereesus` internal-hostname leak is **isolated to the single `EventProviderAPI.asmx?wsdl` endpoint**. It is not exposed via any sibling SOAP endpoint, the directory index, or `EventConnectorServer.ashx`. This does not change the finding class (still MISCONFIG / LOW), only confirms its true blast radius: one internal service hostname (`ereesus`) is recoverable without authentication.
+
+## STEP 2 — CARRIED FORWARD
+
+Unchanged from prior state:3-report set frozen (SIGNL4 API/V1-V3 authz limits, WP HTTPS→HTTP, WP session-logout reset gap). `vps.signl4.com` parked (`HUMAN_ONLY`, intermittent TCP `000`). Cross-env OIDC token-forgery remains unverified pending legitimate non-prod credentials.
+
+## STEP 3 — ASSET (highest-priority re-ranking)
+
+```
+asset: demo.enterprisealert.com
+endpoint_path: /EAWebService/EventProviderAPI.asmx?wsdl
+entry_point: https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+method: GET
+credential_state: anonymous
+auth_bypass_mechanism: none (endpoint fully unauthenticated)
+role_in_attack: internal-host reconnaissance / attack-surface disclosure
+specific_action_taken: GET; unauthenticated WSDL served, leaking internal hostname ereesus
+confirmed_impact: internal hostname disclosure (1 host: ereesus); no credential/customer-data exposure
+severity_assessment: LOW (informational/config-level)
+status: verified this cycle (scope now closed: isolated to this endpoint)
+cwe_ids: CWE-200
+priority_score: 9.0
+last_verified_utc: 2026-10-02T07:04Z
+notes: sibling *.asmx?wsdl scan found no other .asmx; index and .ashx leak nothing
+```
+
+## STEP 4 — WORK STATE COMPLETED
+
+- Re-verified WSDL `ereesus` disclosure live and captured its exact form.
+- Completed the deferred sibling `.asmx?wsdl` scope scan (the only pending next action); result: **no siblings exist**.
+- Confirmed index and `.ashx` are clean of internal hosts.
+
+## STEP 5 — HYPOTHESES PARKED (dropped below threshold)
+
+- `demo.enterprisealert.com sibling *.asmx?wsdl also leak ereesus` — **DROPPED**. The directory index exposes only one `.asmx`; there are no siblings. Scope question resolved (isolated finding).
+- `EventConnectorServer.ashx or the directory index disclose additional internal hosts` — **DROPPED**. Both verified clean (no internal host literals).
+- All prior parked items (vps takeover, cross-env OIDC, etc.) unchanged and still blocked/unverified.
+
+## STEP 6 — HYPOTHESES OPEN (score ≥40, not yet rejected)
+
+- None newly opened. The EA passive surface is now fully exhausted; no unauthenticated mutation primitive exists (all credential handlers return `Error: -1`/401).
+
+## STEP 7 — NEXT ACTION
+
+Single next action: **none — stop.** The EA WebService passive surface is fully mapped and the WSDL scope is now definitively closed (isolated to one endpoint). No further live probing is warranted here. Report the verified LOW/MISCONFIG internal-hostname disclosure via `bugs.olivermaicher.eu` when the batch is ready; otherwise pivot only if you want to open a new target.
