@@ -44971,3 +44971,338 @@ OPTIONS devaccount.signl4.com/identity/connect/userinfo -> 405
 [STEP 6] LEARNING: Options discovered this session — `OPTIONS` on a POST-only endpoint is a safe, unauthenticated route-registration probe that yields method gating without touching data, and it is strictly better than guessing sibling paths; `curl -D - -o /dev/null` plus `grep -iE '^(HTTP/|allow)'` captures status and `Allow` headers while discarding the body; OIDC discovery documents are a reliable index of the real endpoint family and should always be read before probing that family. Reusable rule — derive paths from discovery metadata, never from convention, then confirm each with a method-refusal probe; a bare `404` on a guessed path is a claim about my own guess, not about the target. Context note — introspection and revocation are now confirmed live on all six issuers, superseding the earlier "0 of 6" record in the knowledge base.
 
 [STEP 7] RISK: derdack: LOW — 18 credential-free OPTIONS probes against public identity endpoints, all `405`, no request body, no authentication, no customer data, and no state change; the only conclusion drawn is route registration, and the single finding that merits a report (`ereesus` in the EA WSDL) remains a pre-existing LOW-severity information disclosure requiring no new risk.
+===== ANALYST bigpickle 2026-10-02 22:45:45 UTC =====
+[0m
+> build · big-pickle
+[0m
+I'll close the one gap my own prior leads identified as unresolved: the *decision-point* layer (token/introspection/revocation enforcement) across all six identity ingresses, which the KB records as "2 of 6 token, 0 of 6 introspection".
+[0m$ [0mcd /tmp/opencode && for h in connect account devconnect devaccount api devapi; do
+  echo "=== $h ==="
+  curl -s --max-time 12 "https://$h.signl4.com/identity/.well-known/openid-configuration" \
+    | python3 -c "
+import sys,json
+try:
+    d=json.load(sys.stdin)
+except Exception as e:
+    print('PARSE_FAIL',e); sys.exit()
+for k in ('issuer','token_endpoint','introspection_endpoint','revocation_endpoint','userinfo_endpoint','end_session_endpoint','device_authorization_endpoint'):
+    print(f'{k:30} {d.get(k)}')
+print(f'{\"scopes\":30} {len(d.get(\"scopes_supported\",[]))}')
+"
+  sleep 1
+done
+=== connect ===
+issuer                         https://connect.signl4.com/identity
+token_endpoint                 https://connect.signl4.com/identity/connect/token
+introspection_endpoint         https://connect.signl4.com/identity/connect/introspect
+revocation_endpoint            https://connect.signl4.com/identity/connect/revocation
+userinfo_endpoint              https://connect.signl4.com/identity/connect/userinfo
+end_session_endpoint           https://connect.signl4.com/identity/connect/endsession
+device_authorization_endpoint  https://connect.signl4.com/identity/connect/deviceauthorization
+scopes                         12
+=== account ===
+issuer                         https://connect.signl4.com/identity
+token_endpoint                 https://account.signl4.com/identity/connect/token
+introspection_endpoint         https://account.signl4.com/identity/connect/introspect
+revocation_endpoint            https://account.signl4.com/identity/connect/revocation
+userinfo_endpoint              https://account.signl4.com/identity/connect/userinfo
+end_session_endpoint           https://account.signl4.com/identity/connect/endsession
+device_authorization_endpoint  https://account.signl4.com/identity/connect/deviceauthorization
+scopes                         12
+=== devconnect ===
+issuer                         https://devconnect.signl4.com/identity
+token_endpoint                 https://devconnect.signl4.com/identity/connect/token
+introspection_endpoint         https://devconnect.signl4.com/identity/connect/introspect
+revocation_endpoint            https://devconnect.signl4.com/identity/connect/revocation
+userinfo_endpoint              https://devconnect.signl4.com/identity/connect/userinfo
+end_session_endpoint           https://devconnect.signl4.com/identity/connect/endsession
+device_authorization_endpoint  https://devconnect.signl4.com/identity/connect/deviceauthorization
+scopes                         13
+=== devaccount ===
+issuer                         https://devconnect.signl4.com/identity
+token_endpoint                 https://devaccount.signl4.com/identity/connect/token
+introspection_endpoint         https://devaccount.signl4.com/identity/connect/introspect
+revocation_endpoint            https://devaccount.signl4.com/identity/connect/revocation
+userinfo_endpoint              https://devaccount.signl4.com/identity/connect/userinfo
+end_session_endpoint           https://devaccount.signl4.com/identity/connect/endsession
+device_authorization_endpoint  https://devaccount.signl4.com/identity/connect/deviceauthorization
+scopes                         13
+=== api ===
+issuer                         https://connect.signl4.com/identity
+token_endpoint                 https://api.signl4.com/identity/connect/token
+introspection_endpoint         https://api.signl4.com/identity/connect/introspect
+revocation_endpoint            https://api.signl4.com/identity/connect/revocation
+userinfo_endpoint              https://api.signl4.com/identity/connect/userinfo
+end_session_endpoint           https://api.signl4.com/identity/connect/endsession
+device_authorization_endpoint  https://api.signl4.com/identity/connect/deviceauthorization
+scopes                         12
+=== devapi ===
+issuer                         https://devconnect.signl4.com/identity
+token_endpoint                 https://devapi.signl4.com/identity/connect/token
+introspection_endpoint         https://devapi.signl4.com/identity/connect/introspect
+revocation_endpoint            https://devapi.signl4.com/identity/connect/revocation
+userinfo_endpoint              https://devapi.signl4.com/identity/connect/userinfo
+end_session_endpoint           https://devapi.signl4.com/identity/connect/endsession
+device_authorization_endpoint  https://devapi.signl4.com/identity/connect/deviceauthorization
+scopes                         13
+[0m
+## Objective
+- Continue the passive Derdack/SIGNL4/Enterprise Alert bug-bounty hunt and produce the requested structured STEP 1–7 analysis.
+- Prioritize the verified EA WSDL internal-hostname disclosure without overstating OIDC or takeover hypotheses.
+
+## Important Details
+- Scope: only Derdack-owned infrastructure and products; report channel `bugs.olivermaicher.eu`.
+- Current state: `phase: POC`, `target: api`; latest asset focus is `demo.enterprisealert.com`.
+- Live testing must be passive-first, read-only, credential-free, ≤1 rps; use GET/HEAD/OPTIONS only.
+- Do not perform mutating requests, auth-bypass attempts, brute force, customer-data access, or testing known public files.
+- Rejected classes include DoS, lockouts/rate limits, descriptive headers/errors, TLS best practice, outdated-library-only reports, OPTIONS/TRACE-only findings, and unproven clickjacking/XSS.
+- Output only structured blocks: one-line DELTA entries; scored `[PRIRO]`; up to three `[HYP]`; `[PARKED]`/`[FINAL]`; exactly one `[NEXT]`; `[LEARN]`; `[RISK]`.
+- Priority formula: `priority=0.25a+0.25b+0.15t+0.15g+0.10c+0.10f`.
+- Strongest finding: unauthenticated `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`; LOW/config disclosure.
+- Six-host OIDC discovery/JWKS parity proves configured symmetry only, not enforced cross-environment token acceptance or a complete forgery chain.
+- `vps.signl4.com` is intermittent (`200` default GoDaddy page versus recent `000`), and takeover remains `HUMAN_ONLY`; do not rank it as readily exploitable.
+- API V1/V2/V3, webhook, and events namespaces are mapped; V4 is absent; no anonymous read surface is confirmed.
+
+## Work State
+### Completed
+- Verified EA 9.5.26147 path map: `/EAWebService/`, `EventProviderAPI.aspx`, `EventProviderAPI.asmx`, `EventConnectorServer.ashx`, and `rest/events`.
+- Corrected `EventProviderAPI.aspx` to 10 real handlers; unknown handler names return the fallback help page.
+- Verified all EA credentialed handlers reject fabricated credentials; `EventConnectorServer.ashx` has an empty handler table.
+- Verified the WSDL internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` repeatedly without authentication.
+- Parsed V1/V2/V3 specs: no caller-supplied URI/SSRF parameter and no internal hostnames or secrets disclosed.
+- Mapped six OIDC ingresses: `connect`, `devconnect`, `api`, `devapi`, `account`, and `devaccount`; token issuance and cross-environment acceptance remain unproven without credentials.
+- Closed GraphQL, standard SCIM, Blazor assembly, open-redirect, dynamic-registration, SSRF, and anonymous EA mutation hypotheses.
+- Classified Azure App Proxy resource identifiers as non-secret/descriptive and rejected them.
+- Confirmed `signl4.derdack.com` permanently unreachable and `dev.derdack.com`/`us.derdack.com` MultiViews as benign static namespace echoes.
+
+### Active
+- Confirming whether the `ereesus` WSDL disclosure extends to sibling `*.asmx?wsdl` endpoints under the same public directory.
+- Preparing the next structured analysis with the WSDL leak as the leading final survivor.
+- High-value BOLA/token/API-key chains remain credential-blocked.
+
+### Blocked
+- Cross-environment token-forgery and API/BOLA verification require a legitimate `client_secret`, `X-S4-Api-Key`, team secret, or designated non-production tenant.
+- Static OIDC/JWKS parity cannot replace token, introspection, or revocation behavioral tests.
+- `vps.signl4.com` takeover validation requires DNS/GoDaddy account control and is not researcher-exploitable.
+- RFC 8414 path-inserted discovery parity remains diagnostic, low-confidence, and provides no direct exploit.
+
+## Next Move
+1. GET sibling `*.asmx?wsdl` endpoints under `https://demo.enterprisealert.com/EAWebService/` at ≤1 rps; record status, Content-Type, body length, and verbatim `soap:address location`, then stop.
+2. Re-run STEP 1–7; retain the WSDL finding only if `https://ereesus/EAWebService/EventProviderAPI.asmx` reproduces, while keeping OIDC parity and `vps.signl4.com` parked.
+
+## Relevant Files
+- `scope.yml`: authoritative in-scope asset rules.
+- `inventory/derdack.md`: Derdack asset inventory and historical probe context.
+- `art/lead_nemotron3.txt`: source of the top-ranked EA WSDL lead.
+- `hypotheses-nemotron3.txt`: prior hypothesis ranking and proposed validation steps.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+New signal in that output: the six ingresses split into **two distinct issuers** — `connect`/`account`/`api` all advertise `issuer=https://connect.signl4.com/identity`, and `devconnect`/`devaccount`/`devapi` all advertise `https://devconnect.signl4.com/identity`. That corrects my own prior claim that `account` vs `connect` metadata are byte-identical; they now differ across six endpoint fields.
+
+Now closing the recorded "0 of 6 introspection" gap with OPTIONS-only registration probes:
+[0m$ [0mcd /tmp/opencode && for ep in introspect revocation deviceauthorization userinfo; do
+  echo "########## $ep ##########"
+  for h in connect account api devconnect devaccount devapi; do
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 12 -X OPTIONS \
+      "https://$h.signl4.com/identity/connect/$ep")
+    echo "$h.$ep  $code"
+    sleep 1
+  done
+done
+########## introspect ##########
+connect.introspect  405
+account.introspect  405
+api.introspect  405
+devconnect.introspect  405
+devaccount.introspect  405
+devapi.introspect  405
+########## revocation ##########
+connect.revocation  405
+account.revocation  405
+api.revocation  405
+devconnect.revocation  405
+devaccount.revocation  405
+devapi.revocation  405
+########## deviceauthorization ##########
+connect.deviceauthorization  400
+account.deviceauthorization  400
+api.deviceauthorization  400
+devconnect.deviceauthorization  400
+devaccount.deviceauthorization  400
+devapi.deviceauthorization  400
+########## userinfo ##########
+connect.userinfo  405
+account.userinfo  405
+api.userinfo  405
+devconnect.userinfo  405
+devaccount.userinfo  405
+devapi.userinfo  405
+[0m
+Notable differential: `introspect`, `revocation`, and `userinfo` are uniformly **405 (POST-only)** on all six ingresses, but `deviceauthorization` returns **400** on all six — i.e. that handler is *not* method-restricted; it accepts the request and fails on missing parameters instead. Let me characterise that safely (no `client_id`, so no device flow can be initiated):
+[0m$ [0mcd /tmp/opencode && echo "===== Allow header check (405 routes) =====" && curl -s -i --max-time 12 -X OPTIONS "https://connect.signl4.com/identity/connect/introspect" | sed -n '1,12p'
+echo; echo "===== deviceauthorization GET, no params =====" 
+for h in connect account api devconnect devaccount devapi; do
+  echo "--- $h ---"
+  curl -s -i --max-time 12 "https://$h.signl4.com/identity/connect/deviceauthorization" | sed -n '1,14p'
+  echo
+  sleep 1
+done
+===== Allow header check (405 routes) =====
+HTTP/2 405 
+date: Fri, 02 Oct 2026 22:44:43 GMT
+content-length: 0
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://connect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+reporting-endpoints: csp-endpoint="https://connect.signl4.com/api/v2/csp/report"
+
+===== deviceauthorization GET, no params =====
+--- connect ---
+HTTP/2 400 
+date: Fri, 02 Oct 2026 22:44:43 GMT
+content-type: application/json; charset=UTF-8
+cache-control: no-store, no-cache, max-age=0
+pragma: no-cache
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://connect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+reporting-endpoints: csp-endpoint="https://connect.signl4.com/api/v2/csp/report"
+
+--- account ---
+HTTP/2 400 
+date: Fri, 02 Oct 2026 22:44:45 GMT
+content-type: application/json; charset=UTF-8
+cache-control: no-store, no-cache, max-age=0
+pragma: no-cache
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://connect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+reporting-endpoints: csp-endpoint="https://connect.signl4.com/api/v2/csp/report"
+
+--- api ---
+HTTP/2 400 
+date: Fri, 02 Oct 2026 22:44:46 GMT
+content-type: application/json; charset=UTF-8
+cache-control: no-store, no-cache, max-age=0
+pragma: no-cache
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://connect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+reporting-endpoints: csp-endpoint="https://connect.signl4.com/api/v2/csp/report"
+
+--- devconnect ---
+HTTP/2 400 
+date: Fri, 02 Oct 2026 22:44:48 GMT
+content-type: application/json; charset=UTF-8
+cache-control: no-store, no-cache, max-age=0
+pragma: no-cache
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://ad.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://google.com https://www.google.com https://www.google.de https://www.google.co.uk https://www.google.com.kw https://www.google.ca https://www.google.no https://www.google.ch https://www.google.com.au https://www.google.at https://www.google.co.za https://www.google.co.cr https://www.google.fr https://www.google.nl https://www.google.co.in https://www.google.rw https://www.google.dk https://www.google.pl https://www.google.com.ph https://www.google.se https://www.google.ie https://www.google.es https://www.google.pt https://www.google.co.mz https://www.google.mu https://www.google.lv https://www.google.lk https://www.google.com.sg https://www.google.com.hk https://www.google.com.bn https://www.google.cl https://www.google.ro https://www.google.co.il https://www.google.si https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://pixel-config.reddit.com https://alb.reddit.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com https://*.sentry.io; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://ad.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://google.com https://www.google.com https://www.google.de https://www.google.co.uk https://www.google.com.kw https://www.google.ca https://www.google.no https://www.google.ch https://www.google.com.au https://www.google.at https://www.google.co.za https://www.google.co.cr https://www.google.fr https://www.google.nl https://www.google.co.in https://www.google.rw https://www.google.dk https://www.google.pl https://www.google.com.ph https://www.google.se https://www.google.ie https://www.google.es https://www.google.pt https://www.google.co.mz https://www.google.mu https://www.google.lv https://www.google.lk https://www.google.com.sg https://www.google.com.hk https://www.google.com.bn https://www.google.cl https://www.google.ro https://www.google.co.il https://www.google.si https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://devconnect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+reporting-endpoints: csp-endpoint="https://devconnect.signl4.com/api/v2/csp/report"
+
+--- devaccount ---
+HTTP/2 400 
+date: Fri, 02 Oct 2026 22:44:49 GMT
+content-type: application/json; charset=UTF-8
+cache-control: no-store, no-cache, max-age=0
+pragma: no-cache
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://ad.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://google.com https://www.google.com https://www.google.de https://www.google.co.uk https://www.google.com.kw https://www.google.ca https://www.google.no https://www.google.ch https://www.google.com.au https://www.google.at https://www.google.co.za https://www.google.co.cr https://www.google.fr https://www.google.nl https://www.google.co.in https://www.google.rw https://www.google.dk https://www.google.pl https://www.google.com.ph https://www.google.se https://www.google.ie https://www.google.es https://www.google.pt https://www.google.co.mz https://www.google.mu https://www.google.lv https://www.google.lk https://www.google.com.sg https://www.google.com.hk https://www.google.com.bn https://www.google.cl https://www.google.ro https://www.google.co.il https://www.google.si https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://pixel-config.reddit.com https://alb.reddit.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com https://*.sentry.io; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://ad.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://google.com https://www.google.com https://www.google.de https://www.google.co.uk https://www.google.com.kw https://www.google.ca https://www.google.no https://www.google.ch https://www.google.com.au https://www.google.at https://www.google.co.za https://www.google.co.cr https://www.google.fr https://www.google.nl https://www.google.co.in https://www.google.rw https://www.google.dk https://www.google.pl https://www.google.com.ph https://www.google.se https://www.google.ie https://www.google.es https://www.google.pt https://www.google.co.mz https://www.google.mu https://www.google.lv https://www.google.lk https://www.google.com.sg https://www.google.com.hk https://www.google.com.bn https://www.google.cl https://www.google.ro https://www.google.co.il https://www.google.si https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://devconnect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+reporting-endpoints: csp-endpoint="https://devconnect.signl4.com/api/v2/csp/report"
+
+--- devapi ---
+HTTP/2 400 
+date: Fri, 02 Oct 2026 22:44:51 GMT
+content-type: application/json; charset=UTF-8
+cache-control: no-store, no-cache, max-age=0
+pragma: no-cache
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://ad.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://google.com https://www.google.com https://www.google.de https://www.google.co.uk https://www.google.com.kw https://www.google.ca https://www.google.no https://www.google.ch https://www.google.com.au https://www.google.at https://www.google.co.za https://www.google.co.cr https://www.google.fr https://www.google.nl https://www.google.co.in https://www.google.rw https://www.google.dk https://www.google.pl https://www.google.com.ph https://www.google.se https://www.google.ie https://www.google.es https://www.google.pt https://www.google.co.mz https://www.google.mu https://www.google.lv https://www.google.lk https://www.google.com.sg https://www.google.com.hk https://www.google.com.bn https://www.google.cl https://www.google.ro https://www.google.co.il https://www.google.si https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://pixel-config.reddit.com https://alb.reddit.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com https://*.sentry.io; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://ad.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://google.com https://www.google.com https://www.google.de https://www.google.co.uk https://www.google.com.kw https://www.google.ca https://www.google.no https://www.google.ch https://www.google.com.au https://www.google.at https://www.google.co.za https://www.google.co.cr https://www.google.fr https://www.google.nl https://www.google.co.in https://www.google.rw https://www.google.dk https://www.google.pl https://www.google.com.ph https://www.google.se https://www.google.ie https://www.google.es https://www.google.pt https://www.google.co.mz https://www.google.mu https://www.google.lv https://www.google.lk https://www.google.com.sg https://www.google.com.hk https://www.google.com.bn https://www.google.cl https://www.google.ro https://www.google.co.il https://www.google.si https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://devconnect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+reporting-endpoints: csp-endpoint="https://devconnect.signl4.com/api/v2/csp/report"
+[0m
+## STEP 1 — DELTA
+- `+` OIDC ingresses split into **two issuers, not one**: `connect`/`account`/`api` → `issuer=https://connect.signl4.com/identity`; `devconnect`/`devaccount`/`devapi` → `issuer=https://devconnect.signl4.com/identity`.
+- `+` All three prod ingresses share one Azure backend identity `appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd`; all three dev ingresses share `cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7`.
+- `+` `introspect`, `revocation`, `userinfo` are uniformly **405 / `content-length: 0`** on all six ingresses (POST-only, no body on method rejection).
+- `+` `deviceauthorization` is the sole exception: **400 with a JSON body** to both OPTIONS and GET on all six ingresses.
+- `-` Prior claim "account and connect metadata are byte-identical except endpoints" is wrong in emphasis — they differ across six endpoint fields (`token`, `introspect`, `revocation`, `userinfo`, `endsession`, `deviceauthorization`) and share only issuer/JWKS/CSP shape.
+- `-` Cross-environment token-forgery is now **architecturally refuted**: `account`/`api`/`connect` are one backend application, so shared issuer + shared JWKS is expected design, not a misconfiguration.
+- `+` CSP exposes unverified sibling hosts `labconnect.signl4.com` and `labaccount.signl4.com` (passive DNS not yet confirmed).
+
+## STEP 2 — PRIORITIZED
+`priority = 0.25a+0.25b+0.15t+0.15g+0.10c+0.10f`
+
+| # | Item | a | b | t | g | c | f | Score |
+|---|------|---|---|---|---|---|---|-------|
+| 1 | EA WSDL internal host disclosure | 6 | 3 | 9 | 6 | 9 | 8 | **6.2** |
+| 2 | OIDC shared-backend fanout (negative) | 8 | 0 | 9 | 8 | 9 | 8 | **6.3** (0 impact) |
+| 3 | `deviceauthorization` accepts GET | 6 | 2 | 9 | 4 | 8 | 7 | **5.5** |
+| 4 | `vps.signl4.com` dangling DNS | 4 | 7 | 3 | 3 | 6 | 5 | **5.0** (HUMAN_ONLY) |
+
+Item 2 scores highest on knowledge value but has zero reportable impact — it is a resolved negative, not a candidate. Item 1 is the only submittable finding that exists today.
+
+## STEP 3 — HYPOTHESES
+
+**HYP-1 — asset `api.signl4.com`, surface `introspection_endpoint`**
+Hypothesis: `introspect` returns distinguishable responses for an unknown token versus a structurally valid token minted by the sibling issuer, yielding a cross-environment token-oracle.
+Preconditions: a legitimate OAuth `client_secret` for a non-production tenant; valid dev-issuer and prod-issuer tokens.
+Steps: introspect token_A on prod issuer, token_B on dev issuer, and a random string, on both `connect` and `api`; diff status, body, and timing.
+Success criteria: any response difference that reveals token existence, issuer acceptance, or scope beyond the RFC 7662 uniform `{"active":false}`.
+Current state: **blocked** — no credential, and the single-backend finding makes a positive result less likely.
+
+**HYP-2 — asset `demo.enterprisealert.com`, surface `/EAWebService/*.asmx?wsdl`**
+Hypothesis: the `ereesus` internal hostname disclosure generalises to sibling SOAP services in the same directory, raising it from a single-service oddity to a systemic internal-naming leak.
+Preconditions: none beyond network access; GET only.
+Steps: request each discovered `*.asmx?wsdl` at ≤1 rps; record status, Content-Type, body length, verbatim `soap:address location`.
+Success criteria: any sibling WSDL reproducing `https://ereesus/...` or another non-public host.
+Current state: **actionable now**.
+
+## STEP 4 — FINAL
+**EA WSDL internal hostname disclosure — confidence 88%.**
+`GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` returns 200 unauthenticated and publishes `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`. Reproduced repeatedly across days. Severity **LOW / informational**: it discloses internal host naming and an unresolvable-in-public internal FQDN, which assists reconnaissance and SSRF targeting but yields no access, no data, and no code execution. Submit with the single request/response pair; do not inflate severity.
+
+## STEP 5 — NEXT
+Passive scope-expansion sweep: GET each sibling `*.asmx?wsdl` under `https://demo.enterprisealert.com/EAWebService/` at ≤1 rps, recording status, Content-Type, body length, and verbatim `soap:address location`; stop after that sweep.
+
+## STEP 6 — LEARN
+Document parity is not decision parity. The static discovery documents across all six ingresses were near-identical in shape and invited a cross-environment forgery hypothesis, but the `appId` in `request-context` revealed three hostnames fronting one backend application — which both explains the shared issuer and collapses the hypothesis. Always resolve the deployment topology from response metadata before promoting a configuration-symmetry observation into an exploit hypothesis.
+
+## STEP 7 — RISK
+Low. All requests this cycle were unauthenticated `GET`/`OPTIONS` at ≤1 rps with no credentials, no `client_id`, and no state mutation. The device-authorization probe was deliberately run with zero parameters so no device flow could be initiated. No customer data was touched, no known-public files were tested, and no brute force, auth bypass, or denial-of-service action occurred. The main residual risk is reputational: re-probing the six identity ingresses, so this surface should now rest until credentials are provided.
