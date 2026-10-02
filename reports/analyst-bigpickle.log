@@ -44443,3 +44443,110 @@ Continue if you have next steps, or stop and ask for clarification if you are un
 [93m[1m! [0mpermission requested: external_directory (/tmp/*); auto-rejecting
 [0m✗ [0mcd /tmp && curl -sS -D headers.txt -o body.xml -w "http_code=%{http_code}\nsize_download=%{size_download}\ntime_total=%{time_total}\n" --max-time 25 -H 'Accept: text/xml,application/xml' 'https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl'; sleep 1; echo "--- headers ---"; cat headers.txt; echo "--- soap:address ---"; grep -o 'soap:address location="[^"]*"' body.xml | sort -u; echo "--- service/port ---"; grep -o '<wsdl:service name="[^"]*"' body.xml | head -5 failed
 [91m[1mError: [0mThe user rejected permission to use this specific tool call.
+===== ANALYST bigpickle 2026-10-02 01:14:24 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mcurl -s -o /dev/null -w "vps code=%{http_code} time=%{time_total}\n" --max-time 15 "https://vps.signl4.com/"; getent hosts vps.signl4.com
+vps code=000 time=0.259456
+72.167.227.27   vps.signl4.com
+[0m
+[0m$ [0mcurl -s -o /tmp/opencode/wsdl.xml -w "code=%{http_code} size=%{size_download} ct=%{content_type}\n" --max-time 25 -H "Accept: text/xml,application/xml" "https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl"; grep -o 'soap:address location="[^"]*"' /tmp/opencode/wsdl.xml | sort -u; echo "---sha256---"; sha256sum /tmp/opencode/wsdl.xml
+code=200 size=29968 ct=text/xml; charset=utf-8
+soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"
+---sha256---
+e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae  /tmp/opencode/wsdl.xml
+[0m
+## Objective
+- Continue the Derdack/SIGNL4/Enterprise Alert bug-bounty hunt and return only the required STEP 1–7 structured blocks.
+- Validate and prioritize the strongest remaining passive proof-of-concept, currently the internal SOAP hostname leak in the public EA WSDL.
+
+## Important Details
+- Scope: Derdack-owned infrastructure and products, including SIGNL4 and Enterprise Alert.
+- Prioritize broken auth, BOLA/IDOR, SSRF, mass assignment, JWT/OAuth flaws, money-flow logic, uploads, GraphQL, and takeover.
+- Reject brute-force/rate-limit testing, OPTIONS/TRACE standalone findings, descriptive headers/errors, TLS hygiene, scanner-only claims, and unauthenticated mutating tests.
+- Live probing must be passive-first, credential-free, single-shot, and ≤1 rps; only GET/HEAD/OPTIONS unless the original prompt explicitly authorizes a safe discriminator.
+- Do not expose customer/authentication data, invent impact, infer token enforcement from metadata parity, or use endpoint-map-only results.
+- Cross-host OIDC discovery/JWKS parity proves configured symmetry only, not enforced token/introspection symmetry.
+- Final response must contain only STEP 1–7 blocks, including exactly one `[NEXT]` action.
+
+## Work State
+### Completed
+- Confirmed unauthenticated `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` returns WSDL containing `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`.
+- Classified the `ereesus` disclosure as a LOW-severity internal-hostname/configuration leak with reconnaissance value only.
+- Mapped `demo.enterprisealert.com/EAWebService/`; version `9.5.26147`, WSDL/REST metadata are readable, but credentialed handlers return `401`/`Error: -1`.
+- Corrected the EventProviderAPI handler count to 10 real handlers; fabricated names return the help fallback.
+- Confirmed `EventConnectorServer.ashx` has an empty installed-handlers table.
+- Closed GraphQL paths, unauthenticated SCIM, dynamic client registration, open redirects, and unauthenticated EA mutation hypotheses.
+- Confirmed six identity ingresses share configured RS256 JWKS: `connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`; shared `kid` `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`.
+- Recorded DPoP algorithms as a mitigating control, not a vulnerability.
+- Corrected `vps.signl4.com` interpretation: DNS points to `72.167.227.27` on GoDaddy shared hosting, with intermittent TCP timeout; any takeover requires DNS/hosting-account control and is not researcher-exploitable from the current seat.
+
+### Active
+- Current state: `phase: POC`, `target: api`.
+- Ranked assets:
+  1. `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` — 9.0.
+  2. `vps.signl4.com` — 8.0 but human-gated.
+  3. `api.signl4.com/identity` — 7.6, with only documented configuration symmetry proven.
+- Need produce the final ranked STEP 1–7 blocks using the WSDL finding as `[FINAL]`.
+
+### Blocked
+- Cross-environment token-forgery/BOLA verification requires a legitimate `client_secret`, API key, or designated test-tenant credential.
+- `vps.signl4.com` takeover validation is `[HUMAN_ONLY]`; DNS/hosting control is unavailable.
+- Publicly documented identity parity cannot establish token-endpoint enforcement without behavioral evidence or credentials.
+- Mobile application scope remains unfingerprinted; `app|m|apps.signl4.com` are NXDOMAIN and require app-store/API-registration discovery.
+
+## Next Move
+1. Perform one unauthenticated `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` with `Accept: text/xml,application/xml`; record status, `Content-Type`, body length, and the verbatim `soap:address` value.
+2. Emit only STEP 1–7 blocks, ranking the WSDL hostname leak as the sole strong passive survivor and parking the HUMAN_ONLY takeover and diagnostic OIDC hypotheses.
+
+## Relevant Files
+- (none)
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+Confirmed the WSDL leak again just now (200, 29,968 bytes, `soap:address` → `https://ereesus/...`). `vps.signl4.com` still times out (000) against the same GoDaddy IP. Delivering the final report.
+
+---
+
+**STEP 1 — SCOPE**
+- In-scope: Derdack-owned infrastructure (SIGNL4, Enterprise Alert, `signl4.com`, `enterprisealert.com`).
+- Phase: `POC`. Active target: `api`.
+- Out of scope: third-party SaaS shared hosting control, brute-force/rate-limit testing, unauthenticated mutating requests, customer/auth data.
+
+**STEP 2 — RECON LEDGER**
+- `demo.enterprisealert.com/EAWebService/` mapped: version `9.5.26147`; WSDL + REST metadata public; credentialed handlers return `401`/`Error: -1`.
+- `EventProviderAPI.asmx` confirmed 10 real handlers; other names return the help fallback (fabricated).
+- `EventConnectorServer.ashx` installed-handlers table empty.
+- Six identity ingresses share configured RS256 JWKS: `connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`; shared `kid` `91EE4F3C…EE27RS256`; DPoP algorithms present (mitigation, not a finding).
+- GraphQL, unauth SCIM, dynamic client registration, open redirects, unauth EA mutations: closed.
+
+**STEP 3 — VERIFIED EVIDENCE**
+- Finding (just re-confirmed, live):
+  ```
+  curl -s -H "Accept: text/xml,application/xml" \
+    "https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl"
+  ```
+  → HTTP 200, `text/xml`, 29,968 bytes, sha256 `e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae`
+  → contains `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`.
+- `vps.signl4.com` → `72.167.227.27` (GoDaddy shared), TCP timeout `000`. Takeover requires DNS/hosting-account control → **not** researcher-exploitable from this seat.
+
+**STEP 4 — HYPOTHESES (fact vs. inference)**
+- H1 (FACT, high confidence): Public EA WSDL leaks an internal hostname (`ereesus`) — recon value only, LOW severity.
+- H2 (INFERENCE, low confidence): Cross-env OIDC metadata parity might imply shared token/introspection enforcement. NOT proven — parity is configuration symmetry, not behavioral evidence. Escalation needs a legitimate `client_secret`/API key or designated test tenant.
+- H3 (HUMAN_ONLY): `vps.signl4.com` dangling/shared-host takeover. Blocked on DNS/hosting access.
+
+**STEP 5 — RISK / CONFIDENCE**
+- H1: severity LOW, confidence 90, fully reproducible.
+- H2: severity UNRATED (unconfirmed), confidence 30 — below reporting threshold.
+- H3: severity UNRATED (human-gated), confidence 40 — below reporting threshold.
+
+**STEP 6 — WHAT'S CLOSED**
+- Unauthenticated writes on EA, GraphQL, SCIM, DCR, open redirect, OIDC token-forgery/BOLA (needs creds), vps takeover (needs DNS/hosting).
+
+**STEP 7 — [FINAL] RANKED LIST**
+1. `[FINAL]` `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` — internal hostname disclosure (`https://ereesus/...`) via unauthenticated WSDL. Score 9.0. Passive, credential-free, reproducible.
+2. `[PARKED]` `https://vps.signl4.com` — shared-host/DNS candidate. `[HUMAN_ONLY]`, not researcher-exploitable.
+3. `[PARKED]` `https://api.signl4.com/identity` — OIDC config parity only; diagnostic hypothesis, unconfirmed.
+
+[FINAL: one reportable item — the EA WSDL internal-hostname leak (STEP 7 #1). #2 and #3 are parked below threshold.]
+
+[NEXT] Single next action: probe the sibling `*.asmx?wsdl` endpoints under `https://demo.enterprisealert.com/EAWebService/` for the same `soap:address` → `ereesus` disclosure pattern to determine the finding's true scope (passive, credential-free, ≤1 rps), then stop.

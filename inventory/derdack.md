@@ -1897,3 +1897,10 @@ www.derdack.com
 - NEW connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on all 6 identity hosts (was 3-host record)
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
 - CHANGED vps.signl4.com currently returns 000 (TCP timeout) vs 7 prior confirmed 200 nginx default page — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
+
+## 2026-10-02 01:14:24 UTC
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+- NEW Fresh OIDC discovery on api.signl4.com/identity + account.signl4.com/identity records `dpop_signing_alg_values_supported: ["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES384","ES512"]` — D
+- NEW connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on all 6 identity hosts (was 3-host record)
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
+- CHANGED vps.signl4.com currently returns 000 (TCP timeout) vs 7 prior confirmed 200 nginx default page — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged

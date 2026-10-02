@@ -7370,3 +7370,5 @@ testability: PASSIVE
 ## 2026-10-01 10:15:06 UTC [target] (model bigpickle)
 ## 2026-10-01 17:04:13 UTC [target] (model bigpickle)
 ## 2026-10-01 21:51:58 UTC [target] (model bigpickle)
+## 2026-10-02 01:13:31 UTC [target] (model bigpickle)
+[NEXT] Single next action: probe the sibling `*.asmx?wsdl` endpoints under `https://demo.enterprisealert.com/EAWebService/` for the same `soap:address` → `ereesus` disclosure pattern to determine the finding's true scope (passive, credential-free, ≤1 rps), then stop.
