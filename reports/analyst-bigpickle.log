@@ -44550,3 +44550,101 @@ Confirmed the WSDL leak again just now (200, 29,968 bytes, `soap:address` → `h
 [FINAL: one reportable item — the EA WSDL internal-hostname leak (STEP 7 #1). #2 and #3 are parked below threshold.]
 
 [NEXT] Single next action: probe the sibling `*.asmx?wsdl` endpoints under `https://demo.enterprisealert.com/EAWebService/` for the same `soap:address` → `ereesus` disclosure pattern to determine the finding's true scope (passive, credential-free, ≤1 rps), then stop.
+===== ANALYST bigpickle 2026-10-02 07:04:25 UTC =====
+[0m
+> build · big-pickle
+[0m
+[93m[1m! [0mpermission requested: external_directory (/tmp/opencode/*, /tmp/*); auto-rejecting
+[0m✗ [0mcd /tmp/opencode 2>/dev/null || cd /tmp; for p in EventProviderAPI.asmx EventConnectorServer.ashx; do echo "=== $p"; curl -s -o /tmp/opencode/wsdl_$p.xml -w "code=%{http_code} type=%{content_type} size=%{size_download}\n" "https://demo.enterprisealert.com/EAWebService/$p?wsdl" --max-time 25; done; echo; echo "=== dir index"; curl -s -o /tmp/opencode/eaindex.html -w "code=%{http_code} type=%{content_type} size=%{size_download}\n" "https://demo.enterprisealert.com/EAWebService/" --max-time 25 failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.
+## Objective
+- Continue the Derdack/SIGNL4/Enterprise Alert bug-bounty hunt from `{"phase":"POC","target":"api"}`, producing the requested eight-step structured analysis.
+- Current focus: scope the passive EA WSDL internal-hostname disclosure before stopping further probing.
+
+## Important Details
+- Scope: Derdack-operated infrastructure only; report via `bugs.olivermaicher.eu`.
+- Rejected classes include brute-force/rate-limit testing, OPTIONS/TRACE standalone findings, descriptive headers/errors, outdated-library-only findings, unauthenticated GraphQL absent from surface, and TLS/clickjacking hardening without impact.
+- Live probes must be passive-first, credential-free, `GET`/`HEAD`/`OPTIONS` only, `<=1 rps`; no mutating requests, auth bypass, secrets, or customer data.
+- Facts and hypotheses must remain separate; every claim needs traceable evidence, and secrets must be SHA-256 hashed.
+- Use explicit current state `{"phase":"POC","target":"api"}`; older inventory entries mentioning REPORT/frozen deliverables are stale.
+- Correct OIDC wording: six byte-identical discovery/JWKS documents prove configured symmetry only, not enforced cross-environment token acceptance.
+- Prior priorities: EA WSDL `9.0`; `vps.signl4.com` `8.0`; `api.signl4.com/identity` `7.6`.
+
+## Work State
+### Completed
+- Confirmed `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`; LOW config-level internal hostname leak, confidence `85`.
+- Mapped the anonymous EA surface exactly: `/EAWebService/`, `EventProviderAPI.aspx`, `EventProviderAPI.asmx(?wsdl)`, `EventConnectorServer.ashx`, and `rest/events`.
+- Corrected `EventProviderAPI.aspx` to 10 real handlers; unknown handler names return the fallback help page. Credentialed handlers reject fabricated credentials, with no anonymous write primitive.
+- Confirmed `EventConnectorServer.ashx` has an empty installed-handlers table; no alert-exfiltration path.
+- Closed GraphQL 15/15 with bare 404s and found no URI-fetch parameters or internal hostnames in V1/V2/V3 OpenAPI.
+- Confirmed `api.signl4.com/identity` metadata is served at `/identity/.well-known/openid-configuration`; root `/.well-known/openid-configuration` is `404`.
+- Confirmed six identity hosts share configured JWKS/client parameters, but behavioral cross-environment acceptance remains unverified and credential-gated.
+- Confirmed V4 API namespace absent; V1/V2/V3 anonymous reads remain gated.
+- `vps.signl4.com` historically resolved to `72.167.227.27` on GoDaddy shared hosting, but recent HTTPS probes return `000`; claimability is `HUMAN_ONLY`, so it is parked.
+
+### Active
+- Determine whether sibling `*.asmx?wsdl` endpoints under `https://demo.enterprisealert.com/EAWebService/` share the `ereesus` SOAP-address disclosure.
+- RFC 8414 populated-path metadata placement remains diagnostic only and parked at confidence `45`.
+- `vps.signl4.com` remains parked at confidence `65`; do not promote a takeover claim without DNS/hosting-account validation.
+
+### Blocked
+- No legitimate `X-S4-Api-Key`, `client_secret`, API token, or webhook secret; BOLA, token-forgery, and authenticated mutation tests remain `AUTH_HELPED`.
+- No exact sibling `.asmx` filenames are currently recorded.
+- `api.signl4.com/identity` prefix-scoped gateway behavior cannot be distinguished without another network position or owner-supplied token.
+- No claimable `vps.signl4.com` takeover primitive is available from the researcher seat.
+
+## Next Move
+1. Probe the sibling `*.asmx?wsdl` endpoints under `https://demo.enterprisealert.com/EAWebService/` for the same `soap:address` → `ereesus` disclosure pattern, credential-free and `<=1 rps`.
+2. Record each discovered `soap:address location`, determine the WSDL leak’s true scope, then stop probing.
+
+## Relevant Files
+- `scope.yml`: authoritative in-scope asset rules.
+- `inventory/derdack.md`: Derdack asset inventory.
+- `art/lead_nemotron3.txt`: source of the ranked EA WSDL hostname-leak lead.
+- `hypotheses-nemotron3.txt`: referenced nemotron3 next actions.
+- `hypotheses-bigpickle.txt`: referenced bigpickle next actions.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+Probe denied — no new evidence gathered, and I won't retry it. Proceeding to the deliverable using only previously verified facts, with the finding's *scope* marked unverified.
+
+---
+
+**[STEP 1] TARGET**
+`api` → `https://demo.enterprisealert.com/EAWebService/` (Enterprise Alert demo). Anchored on the one confirmed live primitive in the `api` target: internal-hostname disclosure via `EventProviderAPI.asmx?wsdl`.
+
+**[STEP 2] TOP 3**
+1. `demo.enterprisealert.com` — WSDL internal-host leak — **9.0** (AS 1.0 / BV 0.9 / TE 0.9 / GE 1.0 / CS 0.8 / F 1.0)
+2. `vps.signl4.com` — GoDaddy shared-host stale DNS/CNG — **8.0** — *parked `HUMAN_ONLY`*
+3. `api.signl4.com/identity` — cross-env JWKS/config symmetry — **7.6** — *parked, credential-gated*
+
+**[STEP 3] FACTS (verified)**
+- `GET /EAWebService/EventProviderAPI.asmx?wsdl` → 200, `text/xml`; body contains `<soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"/>`. Host `ereesus` is not publicly resolvable.
+- Anonymous surface is exactly 5 paths: `/EAWebService/`, `EventProviderAPI.aspx`, `EventProviderAPI.asmx(?wsdl)`, `EventConnectorServer.ashx`, `rest/events`. No drift as of 2026-10-02.
+- `EventProviderAPI.aspx` has **10** authoritative handlers; unknown handler names return the fallback help page. All handlers require credentials (401/403).
+- `EventConnectorServer.ashx` → empty installed-handlers table. No alert read/exfil path.
+- `rest/events` → GET 405, POST 401.
+- `api.signl4.com/identity` serves RFC 8414 at `/identity/.well-known/openid-configuration`; root `/.well-known/openid-configuration` → 404.
+- V4 API namespace absent; V1/V2/V3 anonymous reads all gated.
+
+**[STEP 4] FINDING**
+**Low — internal infrastructure hostname disclosed in public WSDL.** `EventProviderAPI.asmx?wsdl` publishes the backend URL `https://ereesus/EAWebService/EventProviderAPI.asmx`, revealing internal naming (`ereesus`), an unresolvable host, and the exact service path/naming convention. Assists internal host enumeration and pivoting from any third-party foothold. **Scope below this single endpoint is UNVERIFIED** — sibling `*.asmx?wsdl` enumeration was not authorized, so I cannot state whether the pattern is systemic or isolated.
+
+**[STEP 5] NEXT**
+Single action: obtain owner authorization (or run it myself with an approved read-only budget) to GET the sibling `*.asmx?wsdl` endpoints under `https://demo.enterprisealert.com/EAWebService/` and compare each `soap:address` against `https://ereesus/EAWebService/EventProviderAPI.asmx`, then stop.
+
+**[STEP 6] PARKED / BLOCKED**
+- **PARKED 65 · `HUMAN_ONLY`** — `vps.signl4.com`: stale GoDaddy shared-host DNS (`72.167.227.27`, CN `server.d1g.it`, default nginx cert). Latest HTTPS probes return `000`; evidence is contradictory and no claimable primitive exists from the researcher seat. Needs hosting-account validation by the owner.
+- **PARKED 45 · DIAGNOSTIC** — `api.signl4.com/identity`: six hosts serve byte-identical discovery/JWKS and share client ID. This proves *configured symmetry only* — **not** enforced cross-environment token acceptance. Populated RFC 8414 path forms untested.
+- **BLOCKED · `AUTH_HELPED`** — all BOLA / token-forgery / authenticated-mutation work on V1–V3, the10 SOAP handlers, and `prepaidSettings` PUT (binder hypothesis). No `X-S4-Api-Key`, `client_secret`, API token, or webhook secret.
+
+**[STEP 7] NO_DELTA**
+No new endpoint, method, or evidence this session. Reported findings unchanged; only the *scope* confidence of finding #1 is downgraded to unverified pending authorization.
+
+**[HYPOTHESES]**
+- `EventProviderAPI.asmx?wsdl` leaks internal host — **Confidence 85 · FINAL · PASSIVE** — get-only, no auth, no rate-limit pressure.
+- Leak extends to sibling `*.asmx` WSDLs — **Confidence 40 · PARKED** — blocked on enumeration authorization.
+- Cross-env OIDC token acceptance — **Confidence 45 · PARKED** — requires a legitimate token.
+- `vps.signl4.com` subdomain takeover — **Confidence 20 · PARKED · HUMAN_ONLY** — latest responses `000`.
+
+---
+
+Want me to (a) file finding #1 as-is at Low with the scope caveat, (b) hold it until you approve the sibling sweep, or (c) restructure this around the `prepaidSettings` PUT binder hypothesis, which is the highest-value item but needs credentials to test?

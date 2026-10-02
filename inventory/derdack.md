@@ -1904,3 +1904,8 @@ www.derdack.com
 - NEW connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on all 6 identity hosts (was 3-host record)
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
 - CHANGED vps.signl4.com currently returns 000 (TCP timeout) vs 7 prior confirmed 200 nginx default page — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
+
+## 2026-10-02 07:04:25 UTC
+- NEW vps.signl4.com currently returns 000 (TCP timeout) vs 7 prior confirmed 200 nginx default page — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
+- NEW us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
