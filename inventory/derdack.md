@@ -1951,3 +1951,15 @@ www.derdack.com
 - CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
 - CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6, passwor
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
+
+## 2026-10-03 12:45:01 UTC
+- CHANGED My three queued hypotheses from the 2026-10-03 07:07 cycle are now closed, all three negative: `us.derdack.com` path-family (11 GETs, control baseline first, zero divergence → genuinely inert), X-Forw
+- NEW Gap identified in my own dossier by re-reading the KB rather than the target: `/de/` and `/ea/` multisite plugin namespaces (complianz, popular-posts, two-factor, wp-site-health) were logged on **2026
+- CHANGED `dev.derdack.com` has an unclosed lead *inside* my own inventory: the 2026-09-04 entry states `/backups/` and `/logs/` are "still served by Apache" while root is a parked IONOS page — and no cycle eve
+- CHANGED My Finding 2 wording remains hedged at "configured symmetry, enforcement unverified" because the token endpoint was exercised on 2 of 6 ingresses and introspection/revocation on 0 of 6. That gap is un
+- NEW vps.signl4.com HTTPS probe returns 000 (TCP timeout) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record 72.167.227.27 (GoDaddy secureserver.net) unchanged
+- NEW api.signl4.com/api/v2/teams returns 401 on unauth GET and 401 with invalid Bearer (was 405/405 in prior cycles) — route-gated this cycle, differs from V1/V2 handler-deferred pattern
+- NEW us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
+- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6, passwor
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable

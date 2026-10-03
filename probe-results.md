@@ -773,3 +773,14 @@ https://us.derdack.com/fabricated-path/ -> HTTP 404
 https://us.derdack.com/nonexistent-control-xyz` -> HTTP 404
 https://us.derdack.com/EAWebService/` -> HTTP 404
 https://us.derdack.com/EAWebService/EventProviderAPI.asmx?wsdl` -> HTTP 404
+
+## 2026-10-03 12:45:18 UTC
+https://www.derdack.com/de/wp-json/<namespace>/` -> HTTP 404
+https://www.derdack.com/de/wp-json/` -> HTTP 404
+https://www.derdack.com/wp-json/` -> HTTP 404
+https://dev.derdack.com/nonexistent-control-xyz` -> HTTP 404
+https://dev.derdack.com/backups/` -> HTTP 403
+https://dev.derdack.com/logs/` -> HTTP 403
+https://us.derdack.com/nonexistent-control-xyz` -> HTTP 404
+https://us.derdack.com/EAWebService/` -> HTTP 404
+https://us.derdack.com/EAWebService/EventProviderAPI.asmx?wsdl` -> HTTP 404

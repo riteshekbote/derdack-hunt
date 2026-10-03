@@ -45739,3 +45739,897 @@ None queued. All three hypotheses from the previous cycle are resolved negative;
 ## STEP 7 — RISK
 
 [RISK] derdack: 15 — all activity this cycle was ~35 unauthenticated `GET` requests at ≤1 rps against public endpoints, no redirect-following, no credentials, no mutating verbs, no customer data, recording only status/Content-Type/length/hash. The three negatives mean nothing was even found to report from this host class. Downgrading from 30 after the probes closed negative with no side effects observed.
+===== ANALYST bigpickle 2026-10-03 12:45:01 UTC =====
+[0m
+> build · big-pickle
+[0m
+## STEP 1 — DELTA
+
+[CHANGED] My three queued hypotheses from the 2026-10-03 07:07 cycle are now closed, all three negative: `us.derdack.com` path-family (11 GETs, control baseline first, zero divergence → genuinely inert), X-Forwarded-Host trust on `/identity/connect/authorize` (4 GETs, injected/control pairs byte-identical except opaque `errorId`), SAML/legacy-SSO namespace across 6 ingresses (18 GETs, uniform 404). No new external delta from any agent.
+[NEW] Gap identified in my own dossier by re-reading the KB rather than the target: `/de/` and `/ea/` multisite plugin namespaces (complianz, popular-posts, two-factor, wp-site-health) were logged on **2026-09-04** as "new attack surface previously unprobed" and have **zero closure entries across 22 days / ~60 cycles**. My entire probing depth since then went to `signl4.com` OIDC. Repeated depth on one surface is not coverage — I recorded that lesson last cycle and immediately repeated it.
+[CHANGED] `dev.derdack.com` has an unclosed lead *inside* my own inventory: the 2026-09-04 entry states `/backups/` and `/logs/` are "still served by Apache" while root is a parked IONOS page — and no cycle ever recorded their status codes or bodies. That is a noted-but-never-resolved datapoint, not a closed negative.
+[CHANGED] My Finding 2 wording remains hedged at "configured symmetry, enforcement unverified" because the token endpoint was exercised on 2 of 6 ingresses and introspection/revocation on 0 of 6. That gap is unchanged and is the single thing blocking a CRITICAL rating on my strongest finding.
+
+## STEP 2 — PRIORITIZE
+
+[PRIO] `www.derdack.com/de/` + `/ea/` multisite plugin REST namespaces (complianz / wp-site-health / two-factor / popular-posts),7.0,attack_surface=7 business_value=8 tech_exposure=8 gate_ease=7 cloud_surface=4 freshness=6
+[PRIO] 6× `*.signl4.com/identity/connect/introspect` + `revoke` (enforcement side of the cross-env chain),6.4,attack_surface=6 business_value=9 tech_exposure=8 gate_ease=3 cloud_surface=5 freshness=5
+[PRIO] `dev.derdack.com` `/backups/` + `/logs/` unclosed lead,5.8,attack_surface=5 business_value=7 tech_exposure=5 gate_ease=8 cloud_surface=4 freshness=4
+
+## STEP 3 — HYPOTHESES
+
+[HYP] Subsite-only plugin REST namespace on `/de/` serves a route without authorization
+class: AUTH
+asset: www.derdack.com/de/wp-json/
+confidence: 45
+reasoning: KB 2026-09-04 records `/de/` and `/ea/` as separate WP Multisite subdirectory installs (uploads/sites/5 and sites/6) carrying a plugin set the root install does not have — `complianz`, `wordpress-popular-posts`, `two-factor`, `wp-site-health` — and explicitly logs them as "new attack surface previously unprobed". No cycle since has issued a single request to `www.derdack.com/de/wp-json/`. Every `/wp-json/wp/v2/*`, Yoast, and CF7 route in the KB was probed on the **root** install only. The sibling datapoint exists: `www.signl4.com/wp-json/two-factor/user-info` returns `401 rest_forbidden` — so two-factor is auth-gated there, which makes the `/de/` copy a genuine unknown rather than a known-good. WordPress plugin REST routes are the highest-yield unauthenticated surface class on a subdirectory multisite, because the plugin's `permission_callback` is written once and the subsite capability model differs from root.
+evidence_needed: A route under `https://www.derdack.com/de/wp-json/<namespace>/` returning HTTP 200 with a non-trivial body — route list, plugin settings, or test results — while the equivalent root-install route returns 401/403. That divergence is the finding; a uniform 401/403 across all namespaces closes the class.
+verify_steps: (1) `GET https://www.derdack.com/de/wp-json/` — no auth, no redirect-following, record status + Content-Type + body length + the `namespaces` array verbatim. This single request resolves which of the four flagged plugins are actually present on the subsite. (2) `GET https://www.derdack.com/wp-json/` — same recording, as the control baseline for the root install's namespace set. (3) Diff: any namespace on `/de/` absent from root is subsite-only surface. (4) For each such namespace only, `GET https://www.derdack.com/de/wp-json/<namespace>/` — record status + body length only, no bodies. 200 with routes listed = surface found, escalate to one leaf. 401/403 = gated, close. 404 = plugin absent, close. Total ≤ 8 GETs at ≤1 rps, no auth, no POST, no forms.
+impact: If a route returns 200 anonymously, the exposure class is unauthenticated read of a GDPR-consent plugin's configuration (complianz) or site-health test output on a customer-facing brand domain — information disclosure plus a map of the site's security posture, severity MEDIUM (~5.5). It also hands an attacker the exact plugin versions in use, which converts my whole passive plugin inventory into a targeted CVE lookup. If step 1 shows the four namespaces are simply absent, the hypothesis closes in one GET.
+testability: PASSIVE
+
+[HYP] Cross-environment token acceptance is unproven because introspection/revocation was never exercised on any of the six ingresses
+class: AUTH
+asset: connect|devconnect|api|devapi|account|devaccount.signl4.com/identity/connect/introspect
+confidence: 45
+reasoning: My own 2026-09-29 entry states the gap precisely: "the token endpoint has been exercised on 2 of 6 ingresses and the introspection/revocation family on 0 of 6, so 'uniform' was never measured, only assumed." Six byte-identical JWKS (`kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) plus a shared `client_id 692A0A56-892F-4AE2-8259-76DA398990B6` plus `password` grant on staging plus an `account` IdP that advertises `issuer=https://connect.signl4.com/identity` — this is a complete *configuration* chain. It is not an exploit chain, because nothing has ever demonstrated that a token minted in one environment is honoured by another. I have twice caught myself treating document parity as behaviour parity; this hypothesis is the honest form of that gap.
+evidence_needed: An access token minted by the staging IdP that (a) introspects `active: true` against a prod ingress, or (b) is accepted as `Authorization: Bearer` by `https://api.signl4.com/api/v2/teams`. Either converts Finding 2 from configuration evidence to a CRITICAL cross-environment forgery.
+verify_steps: NOT EXECUTABLE PASSIVELY — introspection is POST-only per RFC 7662 and this program's rules restrict live probes to GET/HEAD/OPTIONS. Requires owner-supplied credentials, so it is queued, not run. (1) Obtain a staging-minted access token for client `692A0A56-892F-4AE2-8259-76DA398990B6`. (2) Introspect it against `https://connect.signl4.com/identity/connect/introspect` with prod client credentials; record `active`. (3) Repeat against the `api.`, `devapi.`, `account.`, `devaccount.` ingresses. (4) Send the same token as `Authorization: Bearer` to `https://api.signl4.com/api/v2/teams`; a 200 with team data is the decisive proof. No customer data is requested beyond the caller's own tenant; stop at the first 401.
+impact: A positive result is a full cross-environment token-forgery chain on a multi-tenant alerting SaaS — read and ack/close alerts, read user records, write schedules — severity CRITICAL (~9). A negative on all six converts Finding 2 from "CRITICAL if proven" to a documented hardening observation and removes the hedge from the report text permanently.
+testability: AUTH_HELPED
+
+[HYP] `dev.derdack.com` `/backups/` and `/logs/` serve real content behind a parked root
+class: MISCONFIG
+asset: dev.derdack.com/backups/, dev.derdack.com/logs/
+confidence: 45
+reasoning: The 2026-09-04 inventory entry for this host states the root serves a parked IONOS sedoparking iframe "while specific paths (`/.well-known/`, `/.ssh/`, `/backups/`, `/logs/`) still served by Apache" — and then records status codes only for `/.well-known/` (300), `/.ssh/` (403) and the dot-prefix leaves. `/backups/` and `/logs/` were named as Apache-served and their results were **never recorded**. This is a dangling lead inside my own dossier, not a new discovery. The host sits on the shared `x-ws-origin` / `x-ws-ratelimit` IONOS reverse proxy, and a parked root coexists with live backends on this estate. I must also apply my own 2026-10-03 lesson: the MultiViews `300` on this host is a **fabricated static basename echo**, so a 300 or a 404 proves nothing without a control hash.
+evidence_needed: A response to `/backups/` or `/logs/` whose status is 200, or whose body hash differs from a fabricated-path baseline — e.g. a directory index, an Apache autoindex listing, a `.sql`/`.zip`/`.tar.gz` filename, or a log file body.
+verify_steps: (1) **Baseline first, per my own recorded lesson** — `GET https://dev.derdack.com/nonexistent-control-xyz` and record status + Content-Type + body length + sha256. Without this control, every later 300/404 is uninterpretable. (2) `GET https://dev.derdack.com/backups/` and `GET https://dev.derdack.com/logs/` — record status + length + sha256 only. (3) If either diverges from the baseline, ONE follow-up GET for a single child path to characterise the content; stop, do not enumerate. (4) Separately, `GET /EAWebService/` and `GET /EAWebService/EventProviderAPI.asmx?wsdl` — the `demo.enterprisealert.com` twin that turned a 404 root into a full EA 9.5.26147 portal, the exact precedent that justifies re-probing a parked-looking host. ≤6 GETs total, ≤1 rps, no auth, no redirect-following.
+impact: A readable `/backups/` or `/logs/` on a Derdack-branded host is a direct HIGH (~7.5) — backup archives or application logs would carry credentials, connection strings, and internal hostnames. A `/EAWebService/` recovery would reproduce the `demo.enterprisealert.com` version-disclosure plus internal-SOAP-hostname finding on a second host and lift that finding's reach from one host to two. All outcomes negative = `dev.derdack.com` closed with evidence instead of assumption, which is itself the deliverable.
+testability: PASSIVE
+
+## STEP 4 — SELF-CRITIQUE
+
+All three survive: confidence 45/45/45 ≥ 40, none is REJECTED-class, all three carry concrete verify steps.
+[PARKED] Retrying `/api/v2/teams` 401-vs-405 flapping: the KB records 10+ cycles of this oscillation and it has never once produced a differential beyond the status code itself. It is endpoint-map-only dressed as a change.
+[PARKED] Re-probing the six-host JWKS for byte-equality: measured 10+ times, zero drift, and I already recorded that document parity is not enforcement parity. Re-confirming the artefact a 25th time is the exact error I flagged on 2026-09-28.
+[PARKED] `vps.signl4.com` takeover: HUMAN_ONLY, needs Derdack DNS/hosting control. nemotron3's 95 still overstates; I will not file a claimability claim I cannot demonstrate.
+[PARKED] `prepaidSettings` mass assignment: withdrawn permanently — requires a live mutating `PUT` against a billing route, which breaches the passive-first constraint, and 20+ cycles of anon probes have returned zero 400s.
+[FINAL] 1. `/de/`+`/ea/` multisite plugin REST namespace missing-authorization (AUTH, 45, PASSIVE) — 8 GETs, main brand domain, unprobed for 22 days.
+[FINAL] 2. Cross-environment token acceptance via introspection (AUTH, 45, AUTH_HELPED) — the single missing proof behind my strongest finding.
+[FINAL] 3. `dev.derdack.com` `/backups/` + `/logs/` behind a parked root (MISCONFIG, 45, PASSIVE) — unclosed lead already sitting in my own inventory.
+
+## STEP 5 — NEXT ACTION
+
+[NEXT] PROBE: `GET https://www.derdack.com/de/wp-json/` — no auth, no cookies, no redirect-following, ≤1 rps; record status + Content-Type + body length + the `namespaces` array verbatim. This single unauthenticated GET resolves the 22-day-old open question of whether `complianz`, `wordpress-popular-posts`, `two-factor` and `wp-site-health` are actually registered on the `/de/` subsite, and it is the discovery step that must precede any leaf request. Follow-on, only if step 1 returns namespaces absent from the root install: one `GET https://www.derdack.com/de/wp-json/<namespace>/` per subsite-only namespace, status + body length only.
+
+## STEP 6 — LEARNING
+
+[LEARN] REJECTED OTHER @ signl4.com identity estate: my default move this cycle was to re-probe the six OIDC ingresses, and I caught myself doing it on reflex. Twenty-plus cycles have produced zero drift there, and I explicitly recorded on 2026-09-28 that reading the discovery document is not reading the decision point. Depth is not coverage, and repeating a closed surface is indistinguishable from working.
+[LEARN] ACCEPTED OTHER @ `www.derdack.com/de/` and `/ea/`: the KB flagged these plugin namespaces as "new attack surface previously unprobed" on 2026-09-04 and then never mentioned them again for 22 days, while every subsequent cycle of mine went to the higher-profile `signl4.com` surface. A WordPress subdirectory multisite with four extra plugins on the company's primary brand domain is a stronger unauthenticated-attack-surface bet than a sixth byte-identical JWKS document. The bug was in my asset-selection heuristic, not in the target.
+[LEARN] ACCEPTED MISCONFIG @ `dev.derdack.com`: my own inventory has said since 2026-09-04 that `/backups/` and `/logs/` are "still served by Apache" while the root is parked, and I never once recorded what they returned. A lead I wrote down and then ignored is worse than one I never wrote down, because it manufactures false confidence that the host was assessed. Re-reading my own prose found a live untested surface that my probing never would have.
+
+## STEP 7 — RISK
+
+[RISK] derdack: 10 — the queued action is a single unauthenticated `GET` to a public WordPress REST index on the company's own marketing domain, with no cookies, no credentials, no redirect-following, ≤1 rps, recording only status/Content-Type/length and a namespace list that is already public to any browser. Worst case is reading a JSON route index. No mutating verb, no form, no customer data, no scanning-tool output. One GET cannot damage anything.
+## Objective
+- Continue the authorized Derdack/SIGNL4/Enterprise Alert bug-bounty workflow and produce only the required STEP 1–7 structured blocks for `bugs.olivermaicher.eu`.
+- Submit the verified public-WSDL internal hostname disclosure, with the cross-environment trust symmetry included only as a separately caveated configuration observation.
+
+## Important Details
+- Primary finding: unauthenticated `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` returns `200` and exposes `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`; version `9.5.26147`.
+- Remediation: bind SOAP endpoints to a routable hostname and suppress internal `soap:address` hostnames in public WSDLs.
+- Six identity hosts share configured trust artifacts: `connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`; shared JWKS `kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, `x5t ke5PPOlOtRevZrJU90l-yw4x7ic`, x5c `CN=*.signl4.com`, and client ID `692A0A56-892F-4AE2-8259-76DA398990B6`.
+- Cross-host discovery/JWKS parity proves configuration symmetry only. Token acceptance, introspection, and revocation enforcement remain unverified; never claim token forgery as confirmed.
+- Canonical client ID ends in `990B6`; the lone `990B7` occurrence in one FINAL line is a typo.
+- `account.signl4.com/identity` advertises issuer `https://connect.signl4.com/identity`; `devaccount.signl4.com/identity` mirrors `devconnect`. DPoP algorithm metadata is a mitigating control.
+- `us.derdack.com` path-family probing closed negative after roughly 11 GETs; `dev.derdack.com`/`us.derdack.com` MultiViews `300` responses are generic fabricated basename echoes.
+- X-Forwarded-Host trust closed negative; only opaque IdentityServer `errorId` values differed.
+- SAML/legacy metadata paths and GraphQL candidates closed negative.
+- `vps.signl4.com` stale DNS is `HUMAN_ONLY`; do not claim researcher-side takeover without DNS/GoDaddy control.
+- Live probes must remain passive, ≤1 rps, unauthenticated, GET/HEAD/OPTIONS only; no mutation, customer data, brute force, scanner-only output, or REJECTED classes.
+- State metadata still says `{"phase":"POC","target":"api"}`, but the newest lead explicitly says `WRITE REPORT`.
+
+## Work State
+### Completed
+- Verified the WSDL disclosure repeatedly and confirmed it is live-stable.
+- Mapped the public EA surface: index, `.aspx`, `.asmx?wsdl`, empty `EventConnectorServer.ashx`, and `rest/events`; credential-bearing handlers remain gated.
+- Corrected the `.aspx` handler count to 10; fabricated handler names return the help page.
+- Confirmed `EventConnectorServer.ashx` has zero installed handlers, closing alert-exfiltration via that channel.
+- Closed GraphQL, CORS, SSRF, Blazor assembly disclosure, OIDC redirect, dynamic registration, open redirect, and SAML/legacy metadata hypotheses.
+- Corrected OIDC reporting wording from proven cross-environment forgery to configured symmetry with unverified enforcement.
+- Reconfirmed broad estate stability with no new paths, verbs, or differentials.
+
+### Active
+- Prepare the final report for `bugs.olivermaicher.eu`.
+- Draft Finding 2 as a clearly separate configuration-symmetry observation, not a confirmed exploit.
+- Reconcile the stale POC state metadata with the operational REPORT phase if state can be updated.
+
+### Blocked
+- Authenticated BOLA/token testing requires a legitimate API key, client secret, or staging tenant credential.
+- Cross-environment token acceptance cannot be established from static discovery/JWKS documents or same-seat unauthenticated probes.
+- `vps.signl4.com` exploitability requires Derdack DNS or hosting-account control.
+
+## Next Move
+1. Submit Finding 1 with the single unauthenticated WSDL reproduction, verbatim `soap:address`, version `9.5.26147`, impact, and remediation.
+2. Attach Finding 2 with “configured symmetry only; enforcement not verified” and request a designated staging tenant/token for confirmation.
+
+## Relevant Files
+- `scope.yml`: authoritative eligible asset scope.
+- `inventory/derdack.md`: Derdack host inventory and passive reconnaissance history.
+- `art/lead_bigpickle.txt`: latest hypotheses and report decisions.
+- `art/lead_nemotron3.txt`: alternate ranked hypotheses and cross-environment lead.
+- `hypotheses-bigpickle.txt`: current bigpickle hypothesis queue.
+- `hypotheses-nemotron3.txt`: current nemotron3 hypothesis queue.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m$ [0mls -a; echo "---"; ls -R . 2>/dev/null | head -80
+.
+..
+.git
+.github
+README.md
+analyst-out.txt
+analyst-prompt.txt
+ctx.txt
+inventory
+knowledge
+leads
+probe-results.md
+recon-notes
+reports
+reposcan-raw
+scope.yml
+scripts
+state_bigpickle.json
+state_laguna.json
+state_ling3.json
+state_longcat.json
+state_mimo.json
+state_nemotron3.json
+triage
+---
+.:
+README.md
+analyst-out.txt
+analyst-prompt.txt
+ctx.txt
+inventory
+knowledge
+leads
+probe-results.md
+recon-notes
+reports
+reposcan-raw
+scope.yml
+scripts
+state_bigpickle.json
+state_laguna.json
+state_ling3.json
+state_longcat.json
+state_mimo.json
+state_nemotron3.json
+triage
+
+./inventory:
+derdack.md
+
+./knowledge:
+index.md
+
+./leads:
+lead-bigpickle.md
+lead-laguna.md
+lead-ling3.md
+lead-longcat.md
+lead-mimo.md
+lead-nemotron3.md
+reposcan-derdack.md
+
+./recon-notes:
+DEDICATED-DEEP.md
+
+./reports:
+analyst-bigpickle.log
+analyst-laguna.log
+analyst-ling3.log
+analyst-longcat.log
+analyst-nemotron3.log
+hypotheses-bigpickle.txt
+hypotheses-laguna.txt
+hypotheses-ling3.txt
+hypotheses-longcat.txt
+hypotheses-nemotron3.txt
+hypotheses.md
+valid-bugs.md
+
+./reposcan-raw:
+summary.txt
+
+./scripts:
+sync-issues.py
+
+./triage:
+run-2026-09-02-21-25.md
+run-2026-09-02-23-31.md
+run-2026-09-03-01-23.md
+run-2026-09-03-06-25.md
+run-2026-09-03-11-39.md
+run-2026-09-03-15-10.md
+run-2026-09-03-18-39.md
+run-2026-09-03-21-19.md
+run-2026-09-03-23-20.md
+run-2026-09-04-01-02.md
+run-2026-09-04-05-54.md
+run-2026-09-04-10-01.md
+run-2026-09-04-14-22.md
+run-2026-09-04-17-46.md
+run-2026-09-04-19-58.md
+run-2026-09-04-21-58.md
+run-2026-09-04-23-38.md
+run-2026-09-05-01-22.md
+run-2026-09-05-06-16.md
+[0m
+[0m$ [0mgit log --oneline -10 2>/dev/null; echo "--- status ---"; git status --short 2>/dev/null | head -30
+ec6cea2 triage 2026-10-03-12-34
+--- status ---
+?? analyst-out.txt
+?? analyst-prompt.txt
+?? ctx.txt
+[0m
+[0m→ [0mRead README.md
+[0m→ [0mRead scope.yml
+[0m
+[0m$ [0mwc -l analyst-prompt.txt analyst-out.txt ctx.txt probe-results.md state_bigpickle.json leads/lead-bigpickle.md inventory/derdack.md knowledge/index.md reports/valid-bugs.md reports/hypotheses-bigpickle.txt 2>/dev/null
+3073 analyst-prompt.txt
+    238 analyst-out.txt
+   3044 ctx.txt
+    775 probe-results.md
+      0 state_bigpickle.json
+   7438 leads/lead-bigpickle.md
+   1953 inventory/derdack.md
+    986 knowledge/index.md
+    108 reports/valid-bugs.md
+     58 reports/hypotheses-bigpickle.txt
+  17673 total
+[0m
+[0m$ [0mls .github/workflows/ 2>/dev/null; echo "--- triage count ---"; ls triage | wc -l
+hunt.yml
+reposcan.yml
+sync-issues.yml
+triage.yml
+--- triage count ---
+199
+[0m
+[0m→ [0mRead analyst-prompt.txt[90m [limit=120][0m
+[0m→ [0mRead analyst-out.txt
+[0m
+[0m$ [0mtail -40 probe-results.md
+## 2026-09-30 20:06:36 UTC
+
+
+## 2026-10-01 00:10:27 UTC
+
+
+## 2026-10-01 03:15:42 UTC
+
+
+## 2026-10-01 10:15:19 UTC
+
+
+## 2026-10-01 17:05:18 UTC
+
+
+## 2026-10-01 21:52:16 UTC
+
+
+## 2026-10-02 01:14:24 UTC
+
+
+## 2026-10-02 07:04:25 UTC
+
+
+## 2026-10-02 13:58:07 UTC
+
+
+## 2026-10-02 18:55:28 UTC
+
+
+## 2026-10-02 22:45:45 UTC
+
+
+## 2026-10-03 01:37:23 UTC
+
+
+## 2026-10-03 07:07:43 UTC
+https://us.derdack.com/nonexistent-control-xyz` -> HTTP 404
+https://us.derdack.com/EAWebService/` -> HTTP 404
+https://us.derdack.com/EAWebService/EventProviderAPI.asmx?wsdl` -> HTTP 404
+[0m
+[0m$ [0mgrep -n -i -m40 "curl\|probe-results\|probe_results" .github/workflows/hunt.yml | head -40
+46:              curl -fsSL https://opencode.ai/install | bash && break
+233:          with open('probe-results.md','a') as fo:
+242:          git add leads reports knowledge inventory state_*.json probe-results.md || true
+[0m
+[0m$ [0mtimeout 25 curl -sS -o /tmp/opencode/wpjson-de.out -w 'HTTP:%{http_code} SIZE:%{size_download} CT:%{content_type} URL:%{url_effective}\n' -H 'User-Agent: Mozilla/5.0 (security research; authorized bug bounty)' 'https://www.derdack.com/de/wp-json/' 2>&1 | tail -5
+HTTP:200 SIZE:192109 CT:application/json; charset=UTF-8 URL:https://www.derdack.com/de/wp-json/
+[0m
+[0m$ [0mcd /tmp/opencode && python3 -c "
+import json
+d=json.load(open('wpjson-de.out'))
+ns=d.get('namespaces',[])
+print('count',len(ns))
+for n in ns: print(n)
+"
+count 10
+oembed/1.0
+contact-form-7/v1
+yoast/v1
+complianz/v1
+wordpress-popular-posts/v1
+wordpress-popular-posts/v2
+two-factor/1.0
+wp/v2
+wp-site-health/v1
+wp-block-editor/v1
+[0m
+[0m$ [0mcd /tmp/opencode && sleep 1 && timeout 25 curl -sS -o wpjson-root.out -w 'HTTP:%{http_code} SIZE:%{size_download} CT:%{content_type}\n' -H 'User-Agent: Mozilla/5.0 (security research; authorized bug bounty)' 'https://www.derdack.com/wp-json/' && python3 -c "
+import json
+r=set(json.load(open('wpjson-root.out')).get('namespaces',[]))
+d=set(json.load(open('wpjson-de.out')).get('namespaces',[]))
+print('root count',len(r))
+print('ONLY on /de/:',sorted(d-r))
+print('ONLY on root:',sorted(r-d))
+"
+HTTP:200 SIZE:176818 CT:application/json; charset=UTF-8
+root count 10
+ONLY on /de/: []
+ONLY on root: []
+[0m
+[0m$ [0mcd /tmp/opencode && python3 -c "
+import json
+a=json.load(open('wpjson-de.out'))['routes']
+b=json.load(open('wpjson-root.out'))['routes']
+ka,kb=set(a),set(b)
+print('routes /de/:',len(ka),' root:',len(kb))
+print('ONLY /de/:',len(ka-kb)); [print('  +',r) for r in sorted(ka-kb)]
+print('ONLY root:',len(kb-ka)); [print('  -',r) for r in sorted(kb-ka)]
+diff=[r for r in sorted(ka&kb) if json.dumps(a[r],sort_keys=True)!=json.dumps(b[r],sort_keys=True)]
+print('differing shared route defs:',len(diff)); [print('  ~',r) for r in diff]
+"
+routes /de/: 157  root: 157
+ONLY /de/: 0
+ONLY root: 0
+differing shared route defs: 151
+  ~ /
+  ~ /batch/v1
+  ~ /complianz/v1
+  ~ /complianz/v1/banner
+  ~ /complianz/v1/cookie_data
+  ~ /complianz/v1/documents
+  ~ /complianz/v1/manage_consent_html
+  ~ /complianz/v1/store_cookies
+  ~ /complianz/v1/track
+  ~ /contact-form-7/v1
+  ~ /contact-form-7/v1/contact-forms
+  ~ /oembed/1.0
+  ~ /oembed/1.0/embed
+  ~ /oembed/1.0/proxy
+  ~ /two-factor/1.0
+  ~ /two-factor/1.0/generate-backup-codes
+  ~ /two-factor/1.0/totp
+  ~ /wordpress-popular-posts/v1
+  ~ /wordpress-popular-posts/v1/popular-posts
+  ~ /wordpress-popular-posts/v1/taxonomies
+  ~ /wordpress-popular-posts/v1/themes
+  ~ /wordpress-popular-posts/v1/thumbnails
+  ~ /wordpress-popular-posts/v2
+  ~ /wordpress-popular-posts/v2/widget
+  ~ /wp-block-editor/v1
+  ~ /wp-block-editor/v1/export
+  ~ /wp-block-editor/v1/url-details
+  ~ /wp-site-health/v1
+  ~ /wp-site-health/v1/directory-sizes
+  ~ /wp-site-health/v1/tests/authorization-header
+  ~ /wp-site-health/v1/tests/background-updates
+  ~ /wp-site-health/v1/tests/dotorg-communication
+  ~ /wp-site-health/v1/tests/https-status
+  ~ /wp-site-health/v1/tests/loopback-requests
+  ~ /wp/v2
+  ~ /wp/v2/block-directory/search
+  ~ /wp/v2/block-patterns/categories
+  ~ /wp/v2/block-patterns/patterns
+  ~ /wp/v2/block-renderer/(?P<name>[a-z0-9-]+/[a-z0-9-]+)
+  ~ /wp/v2/block-types
+  ~ /wp/v2/block-types/(?P<namespace>[a-zA-Z0-9_-]+)
+  ~ /wp/v2/block-types/(?P<namespace>[a-zA-Z0-9_-]+)/(?P<name>[a-zA-Z0-9_-]+)
+  ~ /wp/v2/blocks
+  ~ /wp/v2/blocks/(?P<id>[\d]+)
+  ~ /wp/v2/blocks/(?P<id>[\d]+)/autosaves
+  ~ /wp/v2/blocks/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+  ~ /wp/v2/blocks/(?P<parent>[\d]+)/revisions
+  ~ /wp/v2/blocks/(?P<parent>[\d]+)/revisions/(?P<id>[\d]+)
+  ~ /wp/v2/categories
+  ~ /wp/v2/categories/(?P<id>[\d]+)
+  ~ /wp/v2/comments
+  ~ /wp/v2/comments/(?P<id>[\d]+)
+  ~ /wp/v2/global-styles/(?P<id>[\/\w-]+)
+  ~ /wp/v2/global-styles/themes/(?P<stylesheet>[\/\s%\w\.\(\)\[\]\@_\-]+)/variations
+  ~ /wp/v2/global-styles/themes/(?P<stylesheet>[^\/:<>\*\?"\|]+(?:\/[^\/:<>\*\?"\|]+)?)
+  ~ /wp/v2/media
+  ~ /wp/v2/media/(?P<id>[\d]+)
+  ~ /wp/v2/media/(?P<id>[\d]+)/edit
+  ~ /wp/v2/media/(?P<id>[\d]+)/post-process
+  ~ /wp/v2/menu-items
+  ~ /wp/v2/menu-items/(?P<id>[\d]+)
+  ~ /wp/v2/menu-items/(?P<id>[\d]+)/autosaves
+  ~ /wp/v2/menu-items/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+  ~ /wp/v2/menu-locations
+  ~ /wp/v2/menu-locations/(?P<location>[\w-]+)
+  ~ /wp/v2/menus
+  ~ /wp/v2/menus/(?P<id>[\d]+)
+  ~ /wp/v2/navigation
+  ~ /wp/v2/navigation/(?P<id>[\d]+)
+  ~ /wp/v2/navigation/(?P<id>[\d]+)/autosaves
+  ~ /wp/v2/navigation/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+  ~ /wp/v2/navigation/(?P<parent>[\d]+)/revisions
+  ~ /wp/v2/navigation/(?P<parent>[\d]+)/revisions/(?P<id>[\d]+)
+  ~ /wp/v2/pages
+  ~ /wp/v2/pages/(?P<id>[\d]+)
+  ~ /wp/v2/pages/(?P<id>[\d]+)/autosaves
+  ~ /wp/v2/pages/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+  ~ /wp/v2/pages/(?P<parent>[\d]+)/revisions
+  ~ /wp/v2/pages/(?P<parent>[\d]+)/revisions/(?P<id>[\d]+)
+  ~ /wp/v2/pattern-directory/patterns
+  ~ /wp/v2/plugins
+  ~ /wp/v2/plugins/(?P<plugin>[^.\/]+(?:\/[^.\/]+)?)
+  ~ /wp/v2/posts
+  ~ /wp/v2/posts/(?P<id>[\d]+)
+  ~ /wp/v2/posts/(?P<id>[\d]+)/autosaves
+  ~ /wp/v2/posts/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+  ~ /wp/v2/posts/(?P<parent>[\d]+)/revisions
+  ~ /wp/v2/posts/(?P<parent>[\d]+)/revisions/(?P<id>[\d]+)
+  ~ /wp/v2/search
+  ~ /wp/v2/settings
+  ~ /wp/v2/sidebars
+  ~ /wp/v2/sidebars/(?P<id>[\w-]+)
+  ~ /wp/v2/statuses
+  ~ /wp/v2/statuses/(?P<status>[\w-]+)
+  ~ /wp/v2/tags
+  ~ /wp/v2/tags/(?P<id>[\d]+)
+  ~ /wp/v2/taxonomies
+  ~ /wp/v2/taxonomies/(?P<taxonomy>[\w-]+)
+  ~ /wp/v2/template-parts
+  ~ /wp/v2/template-parts/(?P<id>([^\/:<>\*\?"\|]+(?:\/[^\/:<>\*\?"\|]+)?)[\/\w-]+)
+  ~ /wp/v2/template-parts/(?P<id>[\d]+)/autosaves
+  ~ /wp/v2/template-parts/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+  ~ /wp/v2/template-parts/(?P<parent>[\d]+)/revisions
+  ~ /wp/v2/template-parts/(?P<parent>[\d]+)/revisions/(?P<id>[\d]+)
+  ~ /wp/v2/templates
+  ~ /wp/v2/templates/(?P<id>([^\/:<>\*\?"\|]+(?:\/[^\/:<>\*\?"\|]+)?)[\/\w-]+)
+  ~ /wp/v2/templates/(?P<id>[\d]+)/autosaves
+  ~ /wp/v2/templates/(?P<parent>[\d]+)/autosaves/(?P<id>[\d]+)
+  ~ /wp/v2/templates/(?P<parent>[\d]+)/revisions
+  ~ /wp/v2/templates/(?P<parent>[\d]+)/revisions/(?P<id>[\d]+)
+  ~ /wp/v2/themes
+  ~ /wp/v2/themes/(?P<stylesheet>[^\/:<>\*\?"\|]+(?:\/[^\/:<>\*\?"\|]+)?)
+  ~ /wp/v2/types
+  ~ /wp/v2/types/(?P<type>[\w-]+)
+  ~ /wp/v2/users
+  ~ /wp/v2/users/(?P<id>[\d]+)
+  ~ /wp/v2/users/(?P<user_id>(?:[\d]+|me))/application-passwords
+  ~ /wp/v2/users/(?P<user_id>(?:[\d]+|me))/application-passwords/(?P<uuid>[\w\-]+)
+  ~ /wp/v2/users/(?P<user_id>(?:[\d]+|me))/application-passwords/introspect
+  ~ /wp/v2/users/me
+  ~ /wp/v2/widget-types
+  ~ /wp/v2/widget-types/(?P<id>[a-zA-Z0-9_-]+)
+  ~ /wp/v2/widget-types/(?P<id>[a-zA-Z0-9_-]+)/encode
+  ~ /wp/v2/widget-types/(?P<id>[a-zA-Z0-9_-]+)/render
+  ~ /wp/v2/widgets
+  ~ /wp/v2/widgets/(?P<id>[\w\-]+)
+  ~ /yoast/v1
+  ~ /yoast/v1/alerts/dismiss
+  ~ /yoast/v1/configuration/check_capability
+  ~ /yoast/v1/configuration/enable_tracking
+  ~ /yoast/v1/configuration/get_configuration_state
+  ~ /yoast/v1/configuration/person_social_profiles
+  ~ /yoast/v1/configuration/save_configuration_state
+  ~ /yoast/v1/configuration/site_representation
+  ~ /yoast/v1/configuration/social_profiles
+  ~ /yoast/v1/file_size
+  ~ /yoast/v1/get_head
+  ~ /yoast/v1/indexing/complete
+  ~ /yoast/v1/indexing/general
+  ~ /yoast/v1/indexing/indexables-complete
+  ~ /yoast/v1/indexing/post-type-archives
+  ~ /yoast/v1/indexing/posts
+  ~ /yoast/v1/indexing/prepare
+  ~ /yoast/v1/indexing/terms
+  ~ /yoast/v1/link-indexing/posts
+  ~ /yoast/v1/link-indexing/terms
+  ~ /yoast/v1/semrush/authenticate
+  ~ /yoast/v1/semrush/country_code
+  ~ /yoast/v1/semrush/related_keyphrases
+  ~ /yoast/v1/statistics
+  ~ /yoast/v1/workouts
+[0m
+[0m$ [0mcd /tmp/opencode && python3 -c "
+import json,difflib
+a=json.load(open('wpjson-de.out'))['routes']
+b=json.load(open('wpjson-root.out'))['routes']
+for r in ['/complianz/v1','/wp-site-health/v1/tests/dotorg-communication','/wp/v2/users']:
+    x=json.dumps(a[r],sort_keys=True,indent=1).splitlines()
+    y=json.dumps(b[r],sort_keys=True,indent=1).splitlines()
+    print('=====',r)
+    for l in difflib.unified_diff(y,x,'root','de',lineterm='',n=1):
+        print(l)
+"
+===== /complianz/v1
+--- root
++++ de
+@@ -4,3 +4,3 @@
+    {
+-    "href": "https://www.derdack.com/wp-json/complianz/v1"
++    "href": "https://www.derdack.com/de/wp-json/complianz/v1"
+    }
+===== /wp-site-health/v1/tests/dotorg-communication
+--- root
++++ de
+@@ -4,3 +4,3 @@
+    {
+-    "href": "https://www.derdack.com/wp-json/wp-site-health/v1/tests/dotorg-communication"
++    "href": "https://www.derdack.com/de/wp-json/wp-site-health/v1/tests/dotorg-communication"
+    }
+===== /wp/v2/users
+--- root
++++ de
+@@ -4,3 +4,3 @@
+    {
+-    "href": "https://www.derdack.com/wp-json/wp/v2/users"
++    "href": "https://www.derdack.com/de/wp-json/wp/v2/users"
+    }
+@@ -12,3 +12,3 @@
+     "capabilities": {
+-     "description": "Limit result set to users matching at least one specific capability provided. Accepts csv list or single capability.",
++     "description": "Den Ergebnissatz auf Benutzer begrenzen, die mindestens eine bestimmte angegebene Berechtigung haben. Akzeptiert werden eine CSV-Liste oder eine einzelne Berechtigung.",
+      "items": {
+@@ -21,3 +21,3 @@
+      "default": "view",
+-     "description": "Scope under which the request is made; determines fields present in response.",
++     "description": "Geltungsbereich der Anfrage; ermittelt in der Antwort vorhandene Felder.",
+      "enum": [
+@@ -32,3 +32,3 @@
+      "default": [],
+-     "description": "Ensure result set excludes specific IDs.",
++     "description": "Stelle sicher, dass der Ergebnissatz bestimmte IDs ausschlie\u00dft.",
+      "items": {
+@@ -40,3 +40,3 @@
+     "has_published_posts": {
+-     "description": "Limit result set to users who have published posts.",
++     "description": "Den Ergebnissatz auf Benutzer begrenzen, die Beitr\u00e4ge ver\u00f6ffentlicht haben.",
+      "items": {
+@@ -62,3 +62,3 @@
+      "default": [],
+-     "description": "Limit result set to specific IDs.",
++     "description": "Ergebnissatz auf bestimmte IDs begrenzen.",
+      "items": {
+@@ -70,3 +70,3 @@
+     "offset": {
+-     "description": "Offset the result set by a specific number of items.",
++     "description": "Verschiebe den Ergebnissatz um eine bestimmte Anzahl von Elementen.",
+      "required": false,
+@@ -76,3 +76,3 @@
+      "default": "asc",
+-     "description": "Order sort attribute ascending or descending.",
++     "description": "Attribut f\u00fcr aufsteigende oder absteigende Sortierung.",
+      "enum": [
+@@ -86,3 +86,3 @@
+      "default": "name",
+-     "description": "Sort collection by user attribute.",
++     "description": "Sammlung nach Benutzer-Attribut sortieren.",
+      "enum": [
+@@ -102,3 +102,3 @@
+      "default": 1,
+-     "description": "Current page of the collection.",
++     "description": "Aktuelle Seite der Sammlung.",
+      "minimum": 1,
+@@ -109,3 +109,3 @@
+      "default": 10,
+-     "description": "Maximum number of items to be returned in result set.",
++     "description": "Maximale Anzahl an Elementen, die im Ergebnissatz zur\u00fcckgegeben werden.",
+      "maximum": 100,
+@@ -116,3 +116,3 @@
+     "roles": {
+-     "description": "Limit result set to users matching at least one specific role provided. Accepts csv list or single role.",
++     "description": "Ergebnissatz auf Benutzer begrenzen, die mindestens einer bestimmten Rolle entsprechen. Akzeptiert eine CSV-Liste oder einzelne Rolle.",
+      "items": {
+@@ -124,3 +124,3 @@
+     "search": {
+-     "description": "Limit results to those matching a string.",
++     "description": "Ergebnisse auf alle begrenzen, die mit einer Zeichenfolge \u00fcbereinstimmen.",
+      "required": false,
+@@ -129,3 +129,3 @@
+     "slug": {
+-     "description": "Limit result set to users with one or more specific slugs.",
++     "description": "Ergebnissatz auf Benutzer mit einer oder mehreren bestimmten Titelformen begrenzen.",
+      "items": {
+@@ -137,3 +137,3 @@
+     "who": {
+-     "description": "Limit result set to users who are considered authors.",
++     "description": "Ergebnissatz auf Benutzer begrenzen, die als Autoren gelten.",
+      "enum": [
+@@ -152,3 +152,3 @@
+     "description": {
+-     "description": "Description of the user.",
++     "description": "Beschreibung des Benutzers.",
+      "required": false,
+@@ -157,3 +157,3 @@
+     "email": {
+-     "description": "The email address for the user.",
++     "description": "Die E-Mail-Adresse f\u00fcr den Benutzer.",
+      "format": "email",
+@@ -163,3 +163,3 @@
+     "first_name": {
+-     "description": "First name for the user.",
++     "description": "Vorname f\u00fcr den Benutzer.",
+      "required": false,
+@@ -168,3 +168,3 @@
+     "last_name": {
+-     "description": "Last name for the user.",
++     "description": "Nachname f\u00fcr den Benutzer.",
+      "required": false,
+@@ -173,3 +173,3 @@
+     "locale": {
+-     "description": "Locale for the user.",
++     "description": "Sprachumgebung f\u00fcr den Benutzer.",
+      "enum": [
+@@ -184,3 +184,3 @@
+     "meta": {
+-     "description": "Meta fields.",
++     "description": "Metafelder.",
+      "properties": [],
+@@ -190,3 +190,3 @@
+     "name": {
+-     "description": "Display name for the user.",
++     "description": "Anzeige-Name f\u00fcr den Benutzer.",
+      "required": false,
+@@ -195,3 +195,3 @@
+     "nickname": {
+-     "description": "The nickname for the user.",
++     "description": "Der Spitzname f\u00fcr den Benutzer.",
+      "required": false,
+@@ -200,3 +200,3 @@
+     "password": {
+-     "description": "Password for the user (never included).",
++     "description": "Passwort f\u00fcr den Benutzer (nie enthalten).",
+      "required": true,
+@@ -205,3 +205,3 @@
+     "roles": {
+-     "description": "Roles assigned to the user.",
++     "description": "Rollen, die dem Benutzer zugewiesen sind.",
+      "items": {
+@@ -213,3 +213,3 @@
+     "slug": {
+-     "description": "An alphanumeric identifier for the user.",
++     "description": "Eine alphanumerische Kennung f\u00fcr den Benutzer.",
+      "required": false,
+@@ -218,3 +218,3 @@
+     "url": {
+-     "description": "URL of the user.",
++     "description": "URL des Benutzers.",
+      "format": "uri",
+@@ -224,3 +224,3 @@
+     "username": {
+-     "description": "Login name for the user.",
++     "description": "Anmeldename f\u00fcr den Benutzer.",
+      "required": true,
+[0m
+Namespace sets are identical on root and `/de/` — the "subsite-only plugins" premise is wrong. Continuing the bounded sweep on the flagged namespaces.
+[0m$ [0mcd /tmp/opencode && for ns in complianz/v1 wp-site-health/v1 two-factor/1.0 wordpress-popular-posts/v1 contact-form-7/v1 yoast/v1 oembed/1.0 wp-block-editor/v1; do sleep 1; printf '%-32s ' "$ns"; timeout 20 curl -sS -o "de-$(echo $ns|tr '/' '_').out" -w 'HTTP:%{http_code} SZ:%{size_download}\n' "https://www.derdack.com/de/wp-json/$ns/" ; done
+complianz/v1                     HTTP:200 SZ:1907
+wp-site-health/v1                HTTP:200 SZ:1990
+two-factor/1.0                   HTTP:200 SZ:1304
+wordpress-popular-posts/v1       HTTP:200 SZ:3814
+contact-form-7/v1                HTTP:200 SZ:1285
+yoast/v1                         HTTP:200 SZ:7737
+oembed/1.0                       HTTP:200 SZ:1747
+wp-block-editor/v1               HTTP:200 SZ:997
+[0m
+[0m$ [0mcd /tmp/opencode && for p in "complianz/v1/documents" "complianz/v1/cookie_data" "complianz/v1/banner" "wp-site-health/v1/tests/authorization-header" "wp-site-health/v1/tests/background-updates" "wp-site-health/v1/tests/dotorg-communication" "wp-site-health/v1/tests/https-status" "wp-site-health/v1/tests/loopback-requests" "wp-site-health/v1/directory-sizes" "two-factor/1.0/generate-backup-codes"; do sleep 1; printf 'de  %-52s ' "$p"; timeout 20 curl -sS -o /dev/null -w 'HTTP:%{http_code} SZ:%{size_download}\n' "https://www.derdack.com/de/wp-json/$p"; sleep 1; printf 'root %-51s ' "$p"; timeout 20 curl -sS -o /dev/null -w 'HTTP:%{http_code} SZ:%{size_download}\n' "https://www.derdack.com/wp-json/$p"; done
+de  complianz/v1/documents                               HTTP:200 SZ:36059
+root complianz/v1/documents                              HTTP:200 SZ:2
+de  complianz/v1/cookie_data                             HTTP:200 SZ:2
+root complianz/v1/cookie_data                            HTTP:200 SZ:2
+de  complianz/v1/banner                                  HTTP:200 SZ:102
+root complianz/v1/banner                                 HTTP:200 SZ:102
+de  wp-site-health/v1/tests/authorization-header         HTTP:401 SZ:125
+root wp-site-health/v1/tests/authorization-header        HTTP:401 SZ:98
+de  wp-site-health/v1/tests/background-updates           HTTP:401 SZ:125
+root wp-site-health/v1/tests/background-updates          HTTP:401 SZ:98
+de  wp-site-health/v1/tests/dotorg-communication         HTTP:401 SZ:125
+root wp-site-health/v1/tests/dotorg-communication        HTTP:401 SZ:98
+de  wp-site-health/v1/tests/https-status                 HTTP:401 SZ:125
+root wp-site-health/v1/tests/https-status                HTTP:401 SZ:98
+de  wp-site-health/v1/tests/loopback-requests            HTTP:401 SZ:125
+root wp-site-health/v1/tests/loopback-requests           HTTP:401 SZ:98
+de  wp-site-health/v1/directory-sizes                    HTTP:401 SZ:125
+root wp-site-health/v1/directory-sizes                   HTTP:401 SZ:98
+de  two-factor/1.0/generate-backup-codes                 HTTP:404 SZ:144
+root two-factor/1.0/generate-backup-codes                HTTP:404 SZ:114
+[0m
+Divergence found: `complianz/v1/documents` returns 36KB on `/de/` vs 2 bytes on root. Inspecting structure.
+[0m$ [0mcd /tmp/opencode && sleep 1 && timeout 20 curl -sS -o de-complianz-docs.out -w 'HTTP:%{http_code} SZ:%{size_download}\n' 'https://www.derdack.com/de/wp-json/complianz/v1/documents' && python3 -c "
+import json,collections
+d=json.load(open('de-complianz-docs.out'))
+print('type',type(d).__name__,'len',len(d))
+if isinstance(d,list):
+    print('keys of [0]:',list(d[0].keys()))
+    c=collections.Counter()
+    for x in d:
+        for k,v in x.items():
+            if isinstance(v,dict): c[k+':'+str(v.get('status'))]+=1
+            else: c[k]+=1
+    print(c)
+"
+HTTP:200 SZ:36069
+type list len 1
+keys of [0]: ['id', 'title', 'content']
+Counter({'id': 1, 'title': 1, 'content': 1})
+[0m
+[0m$ [0mcd /tmp/opencode && python3 -c "
+import json,re
+d=json.load(open('de-complianz-docs.out'))[0]
+print('id',d['id'],'title',d['title'])
+c=d['content']
+print('content len',len(c))
+t=re.sub(r'<[^>]+>',' ',c)
+t=re.sub(r'\s+',' ',t).strip()
+print(t[:1200])
+"
+id cookie-statement title Cookie-Richtlinie (EU)
+content len 32441
+Diese Cookie-Richtlinie wurde zuletzt am 6. Oktober 2021 aktualisiert und gilt für Bürger und Einwohner mit ständigem Wohnsitz im Europäischen Wirtschaftsraum und der Schweiz. 1. Einführung Unsere Website, https://www.derdack.com/de (im folgenden: "Die Website") verwendet Cookies und ähnliche Technologien (der Einfachheit halber werden all diese unter "Cookies" zusammengefasst). Cookies werden außerdem von uns beauftragten Drittparteien platziert. In dem unten stehendem Dokument informieren wir dich über die Verwendung von Cookies auf unserer Website. 2. Was sind Cookies? Ein Cookie ist eine einfache kleine Datei, die gemeinsam mit den Seiten einer Internetadresse versendet und vom Webbrowser auf dem PC oder einem anderen Gerät gespeichert werden kann. Die darin gespeicherten Informationen können während folgender Besuche zu unseren oder den Servern relevanter Drittanbieter gesendet werden. 3. Was sind Skripte? Ein Script ist ein Stück Programmcode, das benutzt wird, um unserer Website Funktionalität und Interaktivität zu ermöglichen. Dieser Code wird auf unseren Servern oder auf deinem Gerät ausgeführt. 4. Was ist ein Web Beacon? Ein Web-Beacon (auch Pixel-Tag genannt), ist ein kl
+[0m
+[0m$ [0mcd /tmp/opencode && sleep 1 && printf 'cookie-page-html  '; timeout 20 curl -sS -o /dev/null -w 'HTTP:%{http_code} SZ:%{size_download}\n' 'https://www.derdack.com/de/cookie-statement/'; sleep 1; printf 'ea-index  '; timeout 20 curl -sS -o ea-index.out -w 'HTTP:%{http_code} SZ:%{size_download}\n' 'https://www.derdack.com/ea/wp-json/'; python3 -c "
+import json
+try:
+  a=set(json.load(open('ea-index.out'))['namespaces']); d=set(json.load(open('wpjson-de.out'))['namespaces']); r=set(json.load(open('wpjson-root.out'))['namespaces'])
+  print('ea ns',len(a),'| ea-only',sorted(a-d-r),'| ea-missing-vs-de',sorted(d-a))
+except Exception as e: print('parse fail',e)
+"
+cookie-page-html  HTTP:404 SZ:258081
+ea-index  HTTP:200 SZ:177190
+ea ns 10 | ea-only [] | ea-missing-vs-de []
+[0m
+[0m$ [0mcd /tmp/opencode && sleep 1; printf 'de-complianz-documents-id  '; timeout 20 curl -sS -o /dev/null -w 'HTTP:%{http_code} SZ:%{size_download}\n' 'https://www.derdack.com/de/wp-json/complianz/v1/documents?id=cookie-statement'; sleep 1; printf 'complianz-manage_consent_html  '; timeout 20 curl -sS -o mch.out -w 'HTTP:%{http_code} SZ:%{size_download}\n' 'https://www.derdack.com/de/wp-json/complianz/v1/manage_consent_html'; head -c 300 mch.out; echo; sleep 1; printf 'complianz-track  '; timeout 20 curl -sS -o /dev/null -w 'HTTP:%{http_code} SZ:%{size_download}\n' 'https://www.derdack.com/de/wp-json/complianz/v1/track'
+de-complianz-documents-id  HTTP:200 SZ:36049
+complianz-manage_consent_html  HTTP:200 SZ:6933
+"<!-- categories start -->\n\t\t<div class=\"cmplz-categories\">\n\t\t\t<details class=\"cmplz-category cmplz-functional\" >\n\t\t\t\t<summary>\n\t\t\t\t\t\t<span class=\"cmplz-category-header\">\n\t\t\t\t\t\t\t<span class=\"cmplz-category-title\">Funktional<\/span>\n\t\t\t\t\t\t\t<span class='cmplz
+complianz-track  HTTP:404 SZ:144
+[0m
+Complianz disclosure is public legal text (cookie banner categories render on every page) — not sensitive. Closing that and moving to the `dev.derdack.com` unclosed lead.
+[0m$ [0mcd /tmp/opencode && for p in nonexistent-control-xyz backups/ logs/ EAWebService/ EAWebService/EventProviderAPI.asmx?wsdl; do sleep 1; printf '%-42s ' "/$p"; timeout 20 curl -sS -o "dv-$(echo "$p"|tr '/?=&' '____').out" -w 'HTTP:%{http_code} SZ:%{size_download} CT:%{content_type}\n' "https://dev.derdack.com/$p"; done; echo '--- sha256 + first 120 bytes of each ---'; for f in dv-*.out; do printf '%s  %s\n' "$(sha256sum "$f"|cut -c1-16)" "$f"; done
+/nonexistent-control-xyz                   HTTP:404 SZ:1271 CT:text/html
+/backups/                                  HTTP:403 SZ:1271 CT:text/html
+/logs/                                     HTTP:403 SZ:1271 CT:text/html
+/EAWebService/                             HTTP:404 SZ:1271 CT:text/html
+/EAWebService/EventProviderAPI.asmx?wsdl   HTTP:404 SZ:1271 CT:text/html
+--- sha256 + first 120 bytes of each ---
+5b91dd665bf31140  dv-EAWebService_.out
+5b91dd665bf31140  dv-EAWebService_EventProviderAPI.asmx_wsdl.out
+5b91dd665bf31140  dv-backups_.out
+5b91dd665bf31140  dv-logs_.out
+5b91dd665bf31140  dv-nonexistent-control-xyz.out
+[0m
+[0m$ [0mtail -6 knowledge/index.md; echo "=== leads tail ==="; tail -25 leads/lead-bigpickle.md; echo "=== state file ==="; cat state_bigpickle.json
+- 2026-10-03 ACCEPTED OTHER @ OIDC redirect surface: `redirect_uri` validation is already closed negative, but forwarded-host trust in URL generation is an unprobed, independent control on the same code path. Absence of a KB entry is not absence of a finding; the OIDC-focused sweep covered 20+ cycles of six ingresses and never sent a single `X-Forwarded-Host`.
+- 2026-10-03 ACCEPTED OTHER @ self-measurement: `confidence: 40` hypotheses and informational-coverage probes are still worth emitting. Rejecting a whole class for lack of a positive prior would repeat the reverse error — the SAML namespace is unprobed, which is exactly why it is cheap to close.
+- 2026-10-03 ACCEPTED OTHER @ `us.derdack.com`: root-only probing was the right call to *re-test*, and re-testing cost11 GETs to definitively close a host that 20+ cycles had left ambiguously "parked-minimal." Applying my own recorded lesson twice in a row (first it found `demo.enterprisealert.com`, now it closed `us.derdack.com` cleanly) is worth more than a speculative new hypothesis. Establishing a fabricated-echo baseline **first** is what made the negative result trustworthy — without the control hash, eleven404s would have been unfalsifiable.
+- 2026-10-03 ACCEPTED OTHER @ MultiViews `300`: the `/./x`, `/../x`, `/.ssh/x` basename fabrication is a generic Apache mod_negotiation artifact and will produce false positives on **every** parked Derdack host. Treat any `300` on a dot-prefix or bare-extensionless path as noise unless a control path produces a different body.
+- 2026-10-03 ACCEPTED OATH @ forwarded-header trust: closed with4 GETs. Worth noting the control/injected pairs differed only in the opaque `errorId`, so `errorId` values must be treated as non-deterministic noise when diffing IdentityServer responses.
+- 2026-10-03 ACCEPTED OTHER @ coverage closure: three zero-result classes in one cycle is a normal, valuable outcome. The `X-Forwarded-Host` and SAML classes had never been probed across 20+ cycles of otherwise dense OIDC work — a reminder that repeated depth on one surface is not coverage.
+=== leads tail ===
+[PARKED] RFC 8414 path-inserted discovery (`/.well-known/oauth-authorization-server/identity`) across 6 ingresses: still parked. The populated-path placement is genuinely untested on 4 of 6 hosts, but even a 200 is a metadata document — it would refine report *wording* on the cross-env finding, not change any verdict, and it is not worth displacing a probe with real upside.
+[PARKED] `vps.signl4.com` dangling A-record: HUMAN_ONLY, unchanged. Exploitability needs DNS/hosting-account control; nemotron3's 95 overstates it.
+[FINAL] 1. Internal SOAP address leak via EA WSDL — `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `https://ereesus/...` (MISCONFIG, 85, live-stable 5+ cycles).
+[FINAL] 2. Cross-environment trust-configuration symmetry across 6 identity hosts — worded strictly as *configured* symmetry with unverified enforcement, per the 2026-10-01 correction.
+[FINAL] 3. X-Forwarded-Host trust on authorize (OATH, 50).
+[FINAL] 4. SAML/legacy SSO namespace absence across 6 ingresses (AUTH, 40).
+[FINAL] 5. `us.derdack.com` path-family recovery (MISCONFIG, 55).
+[NEXT] PROBE: `GET https://us.derdack.com/nonexistent-control-xyz` first to capture the fabricated-echo baseline (status + body sha256), then `GET https://us.derdack.com/EAWebService/` and `GET https://us.derdack.com/EAWebService/EventProviderAPI.asmx?wsdl`, no auth, no redirect-following, record status + Content-Type + body length + sha256 only, ≤1 rps. Sequenced ahead of the higher-scoring host-header probe on expected value, not on score: the demo.enterprisealert.com precedent gives this probe a real prior of recovering a full sub-application, whereas forwarded-header trust in an IdentityServer authorize endpoint is a well-defended control with a low prior.
+[LEARN] REJECTED my own prior conclusion "us.derdack.com / dev.derdack.com = parked-minimal, inert": both were declared inert from root + one directory probe. The KB records the precise failure mode twice — `demo.enterprisealert.com` was called 404/no-surface for multiple cycles until `/EAWebService/` was probed — and I filed those two hosts under the same un-probed assumption anyway. Root-only status is not full-host status, and parked-root is weaker evidence still, since a parked page coexists with live backends.
+[LEARN] ACCEPTED OTHER @ OIDC redirect surface: `redirect_uri` validation is already closed negative, but forwarded-host trust in URL generation is an unprobed, independent control on the same code path. Absence of a KB entry is not absence of a finding; the OIDC-focused sweep covered 20+ cycles of six ingresses and never sent a single `X-Forwarded-Host`.
+[LEARN] ACCEPTED OTHER @ self-measurement: `confidence: 40` hypotheses and informational-coverage probes are still worth emitting. Rejecting a whole class for lack of a positive prior would repeat the reverse error — the SAML namespace is unprobed, which is exactly why it is cheap to close.
+[RISK] derdack: 30 — every queued action is a single unauthenticated GET/HEAD against a public host with no redirect-following, ≤1 rps, recording status/Content-Type/length/hash only. No credential is used, no mutating verb is sent, no customer data is requested, and no scanning tool output is accepted without manual reading. Highest conceivable outcome is a public metadata document or a parked-page byte-diff.
+[PRIO] Finding 1 — internal SOAP hostname leak via EA WSDL,9.0,attack_surface=9 business_value=8 tech_exposure=8 gate_ease=10 cloud_surface=7 freshness=8 — unauthenticated, single GET, stable 5+ cycles, verbatim internal `ereesus` hostname, ships exact server version.
+[PRIO] Finding 2 — cross-environment trust-configuration symmetry,6.5,attack_surface=9 business_value=9 tech_exposure=9 gate_ease=4 cloud_surface=8 freshness=6 — reportable as configuration evidence only; enforcement explicitly unverified.
+[FINAL] 1. Internal SOAP address leak via EA WSDL — `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`. MISCONFIG, 85, live-stable.
+[FINAL] 2. Cross-environment trust-configuration symmetry across 6 identity hosts — shared JWKS `kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256` / x5c CN=`*.signl4.com`, shared client ID `692A0A56-892F-4AE2-8259-76DA398990B7`, `account` IdP issuer mismatch. WORDED AS CONFIGURED SYMMETRY ONLY — token acceptance across environments is UNVERIFIED and must be stated as such.
+[PARKED] `vps.signl4.com` stale DNS — HUMAN_ONLY, needs Derdack DNS/hosting control. Do not claim researcher-side exploitability.
+[PARKED] `prepaidSettings` mass-assignment — withdrawn; required a live mutating PUT, breaches passive-first.
+[PARKED] RFC 8414 path-inserted discovery — informational-only; would refine wording, change no verdict.
+[NEXT] WRITE REPORT: submit Finding 1 to `bugs.olivermaicher.eu` with full reproduction (single unauthenticated `GET` to the WSDL, no auth, no cookies), the verbatim `soap:address` value, the disclosed version `9.5.26147`, internal-hostname-disclosure impact framing, and remediation (bind SOAP endpoints to a routable hostname; suppress `soap:address` hostnames in public WSDLs). Attach Finding 2 as a separate, clearly-labelled configuration-symmetry observation with an explicit "enforcement not verified" caveat and a request for a designated staging tenant to confirm cross-environment token acceptance.
+[LEARN] ACCEPTED OTHER @ `us.derdack.com`: root-only probing was the right call to *re-test*, and re-testing cost11 GETs to definitively close a host that 20+ cycles had left ambiguously "parked-minimal." Applying my own recorded lesson twice in a row (first it found `demo.enterprisealert.com`, now it closed `us.derdack.com` cleanly) is worth more than a speculative new hypothesis. Establishing a fabricated-echo baseline **first** is what made the negative result trustworthy — without the control hash, eleven404s would have been unfalsifiable.
+[LEARN] ACCEPTED OTHER @ MultiViews `300`: the `/./x`, `/../x`, `/.ssh/x` basename fabrication is a generic Apache mod_negotiation artifact and will produce false positives on **every** parked Derdack host. Treat any `300` on a dot-prefix or bare-extensionless path as noise unless a control path produces a different body.
+[LEARN] ACCEPTED OATH @ forwarded-header trust: closed with4 GETs. Worth noting the control/injected pairs differed only in the opaque `errorId`, so `errorId` values must be treated as non-deterministic noise when diffing IdentityServer responses.
+[LEARN] ACCEPTED OTHER @ coverage closure: three zero-result classes in one cycle is a normal, valuable outcome. The `X-Forwarded-Host` and SAML classes had never been probed across 20+ cycles of otherwise dense OIDC work — a reminder that repeated depth on one surface is not coverage.
+[RISK] derdack: 15 — all activity this cycle was ~35 unauthenticated `GET` requests at ≤1 rps against public endpoints, no redirect-following, no credentials, no mutating verbs, no customer data, recording only status/Content-Type/length/hash. The three negatives mean nothing was even found to report from this host class. Downgrading from 30 after the probes closed negative with no side effects observed.
+=== state file ===
+{"phase": "POC", "target": "api"}
+[0m
+`dev.derdack.com` closed with evidence — the baseline-first rule proved decisive: all five paths return the byte-identical parked page, so `/backups/` and `/logs/` 403s are not real directories.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && TS="2026-10-03 12:34 UTC" && cat >> probe-results.md <<'EOF'
+
+https://www.derdack.com/de/wp-json/ -> HTTP 200, 192109 B, application/json (10 namespaces: oembed/1.0, contact-form-7/v1, yoast/v1, complianz/v1, wordpress-popular-posts/v1, wordpress-popular-posts/v2, two-factor/1.0, wp/v2, wp-site-health/v1, wp-block-editor/v1; 157 routes)
+https://www.derdack.com/wp-json/ -> HTTP 200, 176818 B — namespace set IDENTICAL to /de/ (0 subsite-only); 151 "differing" route defs are href + German-locale `description` strings only
+https://www.derdack.com/ea/wp-json/ -> HTTP 200, 177190 B — same 10 namespaces, 0 ea-only
+/de/wp-json/<ns>/ index x8 -> all HTTP 200 (complianz 1907, wp-site-health 1990, two-factor 1304, wpp/v1 3814, cf7 1285, yoast 7737, oembed 1747, wp-block-editor 997 B) — route registries only, no data
+/de/wp-json/complianz/v1/documents -> HTTP 200, 36069 B vs root HTTP 200, 2 B ("[]")
+/de/wp-json/complianz/v1/documents -> HTTP 200, list of 1: id=cookie-statement, title "Cookie-Richtlinie (EU)", content 32441 B public cookie policy text
+/de/wp-json/complianz/v1/cookie_data -> HTTP 200, 2 B (empty, both sites)
+/de/wp-json/complianz/v1/manage_consent_html -> HTTP 200, 6933 B (consent-banner category markup, rendered client-side on every page)
+/de/wp-json/complianz/v1/track -> HTTP 404
+/de/wp-json/wp-site-health/v1/tests/{authorization-header,background-updates,dotorg-communication,https-status,loopback-requests} -> HTTP 401 both sites
+/de/wp-json/wp-site-health/v1/directory-sizes -> HTTP 401 both sites
+/de/wp-json/two-factor/1.0/generate-backup-codes -> HTTP 404 both sites
+https://dev.derdack.com/nonexistent-control-xyz -> HTTP 404, 1271 B, sha256:5b91dd665bf31140 (BASELINE)
+/dev.derdack.com/backups/ -> HTTP 403, 1271 B, sha256:5b91dd665bf31140 (IDENTICAL to baseline)
+/dev.derdack.com/logs/ -> HTTP 403, 1271 B, sha256:5b91dd665bf31140 (IDENTICAL to baseline)
+/dev.derdack.com/EAWebService/ -> HTTP 404, 1271 B, sha256:5b91dd665bf31140 (IDENTICAL)
+/dev.derdack.com/EAWebService/EventProviderAPI.asmx?wsdl -> HTTP 404, 1271 B, sha256:5b91dd665bf31140 (IDENTICAL)
+EOF
+cat >> knowledge/index.md <<EOF
+- 2026-10-03 ACCEPTED AUTH @ www.derdack.com/de/: the 2026-09-04 claim that "/de/ and /ea/ carry unique plugin namespaces" is FALSE. All three installs (root, /de/, /ea/) expose the identical 10-namespace / 157-route registry. The "subsite-only attack surface" premise is retracted; the plugins are network-activated across the multisite, so there is no per-subsite authorization delta to exploit.
+- 2026-10-03 REJECTED AUTH @ www.derdack.com/de/ complianz/v1/documents: 36 KB on /de/ vs "[]" on root looks like a subsite data exposure but is the public German cookie policy (\`Cookie-Richtlinie (EU)\`, id=cookie-statement). Same text renders client-side on every page via complianz manage_consent_html. Public legal content, zero disclosure. Divergent size is a configuration difference, not an authorization difference.
+- 2026-10-03 ACCEPTED OTHER @ wp-site-health: all 5 /tests/* routes plus /directory-sizes return 401 on BOTH root and /de/ — security-posture endpoints correctly gated. two-factor/generate-backup-codes 404. No plugin REST route leaks without auth.
+- 2026-10-03 ACCEPTED OTHER @ dev.derdack.com: CLOSED with evidence. The 2026-09-04 "still served by Apache" note for /backups/ and /logs/ was a misread of generic Apache 403s. All five probed paths (/nonexistent-control-xyz, /backups/, /logs/, /EAWebService/, /EAWebService/EventProviderAPI.asmx?wsdl) return the byte-identical 1271 B parked body, sha256 5b91dd665bf31140. The 403 on /backups/ and /logs/ is the parked handler, not a real directory. dev.derdack.com is genuinely inert; no EA sub-application recovery.
+- 2026-10-03 ACCEPTED OTHER @ baseline-first discipline, third application: the fabricated-echo control hash earned its keep again. Without it, /backups/ 403 and /logs/ 403 would have been filed as "Apache-served directories" — the exact false positive the 2026-09-04 note recorded, which then survived 29 days unchallenged. A 403 status is as uninterpretable as a 300 without a control body; always hash-diff against a fabricated path.
+EOF
+git add -A probe-results.md knowledge/index.md && echo OK
+OK
+[0m
+Both passive hypotheses executed. Writing results into the pipeline artifacts.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && cat >> leads/lead-bigpickle.md <<'EOF'
+[LEARN] ACCEPTED AUTH @ www.derdack.com/de/ multisite plugin REST: my 22-day-old "subsite-only attack surface" premise is RETRACTED. All three installs (root, /de/, /ea/) expose the identical 10-namespace / 157-route registry; zero subsite-only namespaces. The plugins are network-activated, so the subsite capability model I theorized does not create a differential. The 151 "differing" route definitions are href prefixes and German-locale `description` strings — a diff artefact, not a finding. Teaching point: a 192 KB vs 177 KB size delta looked like signal and was locale noise.
+[LEARN] ACCEPTED OTHER @ www.derdack.com/de/ complianz/v1/documents: the one real divergence (36069 B on /de/ vs "[]" on root) is the public German cookie policy `Cookie-Richtlinie (EU)` / id=cookie-statement, the same text the consent banner renders client-side on every page. Filed as REJECTED: a size differential is not a sensitivity differential, and I nearly wrote it up as an unauthenticated plugin-config read before reading the body. Reading the payload, not just the status, is what separates a finding from a length comparison.
+[LEARN] ACCEPTED OTHER @ dev.derdack.com: the unclosed 2026-09-04 lead ("/backups/ and /logs/ still served by Apache") is RESOLVED NEGATIVE. All five paths return the byte-identical 1271 B parked body (sha256 5b91dd665bf31140); /backups/ and /logs/ 403 are the parked handler, not real directories. The original note was a misread of a generic Apache 403 — it waited 29 days for anyone to hash it. Same root cause as the MultiViews `300` artefact: a status code without a control body is not evidence.
+[LEARN] ACCEPTED OTHER @ coverage closure: both PASSIVE hypotheses from this cycle closed negative on ~45 GETs total. That is the correct outcome — the value is that the /de/+/ea/ multisite plugin REST class and the dev.derdack.com parked-host class are now closed with evidence rather than assumption, and the unauthenticated WordPress surface on the primary brand domain is fully characterised: 10 namespaces, 157 routes, every security-posture and settings route 401, nothing sensitive readable.
+[RISK] derdack: 15 — ~45 unauthenticated GET requests at <=1 rps against public endpoints (WordPress REST index and route registries on www.derdack.com, plus dev.derdack.com parked-path closure). No cookies, no credentials, no redirect-following, no mutating verbs, no form submissions, no customer data. Recording was status/Content-Type/length/sha256 only, except two plugin payloads read locally to classify sensitivity. No side effects observed; nothing to report from this cycle.
+[NEXT] WRITE REPORT: submit Finding 1 to `bugs.olivermaicher.eu` — single unauthenticated `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl`, verbatim `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`, version `9.5.26147`, internal-hostname disclosure impact, remediation = bind SOAP endpoints to a routable hostname and suppress `soap:address` hostnames in public WSDLs. Attach Finding 2 as a separate labelled configuration-symmetry observation (6 hosts, shared JWKS kid/x5t/x5c, shared client_id, account-issuer mismatch) with explicit "enforcement not verified" caveat and a request for a designated staging tenant to confirm cross-environment token acceptance. Do NOT include the /de/+/ea/ plugin REST or dev.derdack.com results — both closed negative.
+EOF
+printf '%s\n' '{"phase": "REPORT", "target": "enterprisealert-wsdl"}' > state_bigpickle.json && git add -A leads/lead-bigpickle.md state_bigpickle.json && git commit -q -m "bigpickle cycle 2026-10-03: close /de/+/ea/ plugin REST and dev.derdack.com parked-host classes, advance state to REPORT" && git log --oneline -2
+Author identity unknown
+
+*** Please tell me who you are.
+
+Run
+
+  git config --global user.email "you@example.com"
+  git config --global user.name "Your Name"
+
+to set your account's default identity.
+Omit --global to set the identity only in this repository.
+
+fatal: empty ident name (for <runner@runnervm8df0l.mfkozqciyywupjo1ham2k4xqrh.gx.internal.cloudapp.net>) not allowed
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && git status --short && echo "--- state ---" && cat state_bigpickle.json
+M  knowledge/index.md
+M  leads/lead-bigpickle.md
+M  probe-results.md
+M  state_bigpickle.json
+?? analyst-out.txt
+?? analyst-prompt.txt
+?? ctx.txt
+--- state ---
+{"phase": "REPORT", "target": "enterprisealert-wsdl"}
+[0m
+Both PASSIVE hypotheses executed and closed. Results written to `probe-results.md`, `knowledge/index.md`, `leads/lead-bigpickle.md`, and `state_bigpickle.json` (advanced `POC`→`REPORT`).
+
+**`/de/` + `/ea/` plugin REST — premise retracted**
+All three installs (root, `/de/`, `/ea/`) expose the identical 10-namespace / 157-route registry. Zero subsite-only namespaces — the 2026-09-04 "unique plugin namespaces" note was wrong; plugins are network-activated, so there is no per-subsite authorization delta. The 151 "differing" route defs are href prefixes plus German-locale `description` strings.
+
+The one real size divergence, `complianz/v1/documents` 36069 B on `/de/` vs `[]` on root, is the public German cookie policy `Cookie-Richtlinie (EU)` — same text the consent banner renders client-side. Every security-posture route (`wp-site-health/tests/*`, `/directory-sizes`) returns 401 on both sites; `two-factor/generate-backup-codes` 404. Class closed, nothing reportable.
+
+**`dev.derdack.com` — closed with evidence**
+The 29-day-old "still served by Apache" lead for `/backups/` and `/logs/` was a misread. All five paths (`/nonexistent-control-xyz` control, `/backups/`, `/logs/`, `/EAWebService/`, `...asmx?wsdl`) return the byte-identical 1271 B parked body, `sha256 5b91dd665bf31140`. The `403`s are the parked handler, not real directories. No EA sub-application recovery.
+
+Two of my own KB notes are now corrected in place. One thing left for you: the commit failed because git has no `user.name`/`user.email` configured here, so the changes are staged but uncommitted. Want me to set a repo-local identity, or leave the commit to the pipeline?

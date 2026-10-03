@@ -4837,3 +4837,39 @@
 - LEARN: ACCEPTED OTHER @ full estate: repeated probe cycles across identity/API/CT/WordPress/EA surfaces yield zero new paths, verbs, or differentials — passive surface
 - LEARN: REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is
 - LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier 
+
+## RANKED HYPOTHESES 2026-10-03 12:45:01 UTC
+- [92] connect/devconnect/api/devapi/account/devaccount.signl4.com/identity: Cross-environment token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch (from art/lead_nemotron3.txt)
+- [45] www.derdack.com/de/wp-json/: Subsite-only plugin REST namespace on `/de/` serves a route without authorization (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: `GET https://www.derdack.com/de/wp-json/` — no auth, no cookies, no redirect-following, ≤1 rps; record status + Content-Type + body length + the `namespa
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://vps.signl4.com/ (confirm HTTPS 200 nginx default page + cert CN=server.d1g.it + GoDaddy NS) — final validation for report submission
+- LEARN: REJECTED OTHER @ signl4.com identity estate: my default move this cycle was to re-probe the six OIDC ingresses, and I caught myself doing it on reflex. Twenty-p
+- LEARN: ACCEPTED OTHER @ `www.derdack.com/de/` and `/ea/`: the KB flagged these plugin namespaces as "new attack surface previously unprobed" on 2026-09-04 and then nev
+- LEARN: ACCEPTED MISCONFIG @ `dev.derdack.com`: my own inventory has said since 2026-09-04 that `/backups/` and `/logs/` are "still served by Apache" while the root is 
+- LEARN: REJECTED my own prior conclusion "us.derdack.com / dev.derdack.com = parked-minimal, inert": both were declared inert from root + one directory probe. The KB re
+- LEARN: ACCEPTED OTHER @ OIDC redirect surface: `redirect_uri` validation is already closed negative, but forwarded-host trust in URL generation is an unprobed, indepen
+- LEARN: ACCEPTED OTHER @ self-measurement: `confidence: 40` hypotheses and informational-coverage probes are still worth emitting. Rejecting a whole class for lack of a
+- LEARN: ACCEPTED OTHER @ `us.derdack.com`: root-only probing was the right call to *re-test*, and re-testing cost11 GETs to definitively close a host that 20+ cycles ha
+- LEARN: ACCEPTED OTHER @ MultiViews `300`: the `/./x`, `/../x`, `/.ssh/x` basename fabrication is a generic Apache mod_negotiation artifact and will produce false posit
+- LEARN: ACCEPTED OATH @ forwarded-header trust: closed with4 GETs. Worth noting the control/injected pairs differed only in the opaque `errorId`, so `errorId` values mu
+- LEARN: ACCEPTED OTHER @ coverage closure: three zero-result classes in one cycle is a normal, valuable outcome. The `X-Forwarded-Host` and SAML classes had never been 
+- LEARN: ACCEPTED AUTH @ www.derdack.com/de/ multisite plugin REST: my 22-day-old "subsite-only attack surface" premise is RETRACTED. All three installs (root, /de/, /ea
+- LEARN: ACCEPTED OTHER @ www.derdack.com/de/ complianz/v1/documents: the one real divergence (36069 B on /de/ vs "[]" on root) is the public German cookie policy `Cooki
+- LEARN: ACCEPTED OTHER @ dev.derdack.com: the unclosed 2026-09-04 lead ("/backups/ and /logs/ still served by Apache") is RESOLVED NEGATIVE. All five paths return the b
+- LEARN: ACCEPTED OTHER @ coverage closure: both PASSIVE hypotheses from this cycle closed negative on ~45 GETs total. That is the correct outcome — the value is that th
+- LEARN: REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are no
+- LEARN: REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the ver
+- LEARN: REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there 
+- LEARN: ACCEPTED AUTH @ api.signl4.com/identity: distinguishing a prefix-scoped gateway deny from a host-wide or genuinely-disabled service requires a second network po
+- LEARN: REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a tran
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response pr
+- LEARN: REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS)
+- LEARN: REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
+- LEARN: REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
+- LEARN: ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: path-family probing of a known-404 root host (IIS/App-Proxy) recovered a full live EA 9.5.26147 sub-
+- LEARN: ACCEPTED OTHER @ demo.enterprisealert.com/EAWebService: version disclosure 9.5.26147 + 12-op WSDL + REST events + EventProviderAPI.aspx all anon-readable, yet e
+- LEARN: REJECTED OTHER @ EA version CVE matching: no program-specific exploit derivable without credentials → REJECTED-class, not pursued
+- LEARN: ACCEPTED OTHER @ full estate: repeated probe cycles across identity/API/CT/WordPress/EA surfaces yield zero new paths, verbs, or differentials — passive surface
+- LEARN: REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is
+- LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier 
