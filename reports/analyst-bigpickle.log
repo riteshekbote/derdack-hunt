@@ -45306,3 +45306,159 @@ Document parity is not decision parity. The static discovery documents across al
 
 ## STEP 7 — RISK
 Low. All requests this cycle were unauthenticated `GET`/`OPTIONS` at ≤1 rps with no credentials, no `client_id`, and no state mutation. The device-authorization probe was deliberately run with zero parameters so no device flow could be initiated. No customer data was touched, no known-public files were tested, and no brute force, auth bypass, or denial-of-service action occurred. The main residual risk is reputational: re-probing the six identity ingresses, so this surface should now rest until credentials are provided.
+===== ANALYST bigpickle 2026-10-03 01:37:23 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mfor p in "EventProviderAPI.asmx?wsdl" "EventProviderAPI.asmx" ""; do echo "=== /$p ==="; curl -s -o /tmp/opencode/ea_out.$$ -w "status=%{http_code} type=%{content_type} bytes=%{size_download}\n" --max-time 25 "https://demo.enterprisealert.com/EAWebService/$p"; grep -o 'soap:address location="[^"]*"' /tmp/opencode/ea_out.$$ 2>/dev/null | sort -u; sleep 1; done
+=== /EventProviderAPI.asmx?wsdl ===
+status=200 type=text/xml; charset=utf-8 bytes=29968
+soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"
+=== /EventProviderAPI.asmx ===
+status=200 type=text/html; charset=utf-8 bytes=5292
+=== / ===
+status=200 type=text/html; charset=utf-8 bytes=1824
+[0m
+## Objective
+- Continue the Derdack/SIGNL4/Enterprise Alert bug-bounty hunt from `phase: POC`, `target: api`, using the supplied structured hypothesis workflow.
+- Produce only the requested STEP blocks; the prompt says “8 steps” but defines only STEP 1–STEP 7, so do not invent STEP 8.
+
+## Important Details
+- Scope: all Derdack-owned infrastructure, APIs, SaaS, mobile apps, backends, domains, and products including SIGNL4 and Enterprise Alert.
+- Live probing: passive-first, credential-free, GET/HEAD/OPTIONS only, `<=1 rps`; no mutating requests, auth bypass, customer data, brute force, OPTIONS/TRACE findings, descriptive-header-only findings, or scanner output without manual validation.
+- Report channel: `bugs.olivermaicher.eu`.
+- Current authoritative state is `{"phase":"POC","target":"api"}`; ignore older inventory entries claiming transition to REPORT.
+- Ranked final finding: unauthenticated `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"`; LOW-severity internal-hostname disclosure, confidence 85.
+- The demo EA anonymous map is exactly: `/EAWebService/`, `EventProviderAPI.aspx`, `EventProviderAPI.asmx` and `?wsdl`, `EventConnectorServer.ashx`, and `rest/events`.
+- Correction: `EventProviderAPI.aspx` has 10 authoritative handlers, not 11; unrecognized handlers return a 200 help page and are not live handlers.
+- `EventConnectorServer.ashx` is anonymous but its installed-handlers table is empty; no alert exfiltration path exists.
+- Six-host OIDC/JWKS parity proves configured symmetry only, not enforced cross-environment token acceptance; token endpoint was exercised on only 2 of 6 ingresses and introspection/revocation on 0 of 6.
+- `vps.signl4.com` is stale DNS to GoDaddy shared hosting, but claimability is HUMAN_ONLY and recent probes alternate between 200 default nginx and TCP timeout; park rather than overstate takeover.
+- Current risk score: `derdack: 35`; the remaining action is a single credential-free metadata read with no customer-data exposure.
+
+## Work State
+### Completed
+- Mapped SIGNL4 API namespaces V1/V2/V3 plus webhook/events; confirmed `/api/v4` and `/api/docs/v4/swagger.json` absent.
+- Closed GraphQL, CORS, public Swagger SSRF, Blazor assembly/config recovery, and anonymous SCIM hypotheses.
+- Discovered the live EA 9.5.26147 sub-app despite root `/` returning 404; demonstrated that intermediate path-family probing is required.
+- Confirmed all EA mutating/credential paths gate with `Error: -1`, 401, or equivalent; no anonymous write primitive.
+- Confirmed WSDL internal hostname `ereesus` across repeated live reads.
+- Closed GraphQL across `connect.signl4.com`, `api.signl4.com`, and `demo.enterprisealert.com`: 15/15 bare 404.
+- Completed CT/DNS breadth across `%derdack.com`, `%enterprisealert.com`, and `%signl4.com`; no new actionable hosts or drift.
+- Correctly downgraded Webhook team-secret enumeration to config/design because guessing is operator-entropy brute force and exploitation needs a leaked secret.
+
+### Active
+- Determine whether the `ereesus` SOAP-address disclosure is isolated to `EventProviderAPI.asmx?wsdl` or shared by sibling `.asmx` WSDLs.
+- Preserve exact status, Content-Type, body length, and verbatim `soap:address` values for report evidence.
+
+### Blocked
+- Authenticated BOLA, IDOR, token-forgery, webhook-secret, and billing-route verification requires legitimate credentials/client secrets designated by the owner.
+- `vps.signl4.com` takeover exploitability requires DNS/hosting-account control and cannot be proven from the researcher seat.
+- Cross-environment token acceptance cannot be inferred from identical discovery documents or JWKS.
+- Path-inserted RFC 8414 metadata hypothesis remains low-confidence and parked.
+
+## Next Move
+1. Run one passive scan of sibling `.asmx` services under `https://demo.enterprisealert.com/EAWebService/`; for each exact sibling, issue one unauthenticated `GET <path>?wsdl` with `Accept: text/xml,application/xml`, record status/Content-Type/body length/verbatim `soap:address`, stay `<=1 rps`, then stop.
+2. (none)
+
+## Relevant Files
+- `scope.yml`: authoritative eligible asset scope referenced by the directive.
+- `inventory/derdack.md`: Derdack host inventory and historical validation.
+- `art/lead_nemotron3.txt`: source of the ranked WSDL and vps leads.
+- `hypotheses-nemotron3.txt`: nemotron3 hypothesis/NEXT-action source.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+Continuing with the recorded next action: discovering actual sibling `.asmx` services from the directory index rather than guessing names.
+[0m$ [0mcd /tmp/opencode && curl -s -o ea_dir.html -w "status=%{http_code} type=%{content_type} bytes=%{size_download}\n" --max-time 25 "https://demo.enterprisealert.com/EAWebService/" && echo "--- links ---" && grep -oiE 'href="[^"]+"' ea_dir.html | sort -u
+status=200 type=text/html; charset=utf-8 bytes=1824
+--- links ---
+href="EventConnectorServer.ashx"
+href="EventProviderAPI.asmx"
+href="EventProviderAPI.aspx"
+[0m
+Directory index lists exactly three entries and no sibling `.asmx`. Confirming no other service endpoint is referenced from the authenticated gate page.
+[0m$ [0mcd /tmp/opencode && curl -s -o ea_wwwroot.html -w "wwwroot status=%{http_code} bytes=%{size_download}\n" --max-time 25 "https://demo.enterprisealert.com/" && curl -s -o ea_prov.aspx -w "aspx status=%{http_code} bytes=%{size_download}\n" --max-time 25 "https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx" && echo "--- other service refs ---" && grep -oiE '[A-Za-z0-9_]+\.asmx|soap:address location="[^"]*"|https?://[A-Za-z0-9._-]+' ea_dir.html ea_prov.aspx ea_wwwroot.html 2>/dev/null | sed 's/.*://' | sort -u | head -40
+wwwroot status=404 bytes=0
+aspx status=200 bytes=1843
+--- other service refs ---
+//www.w3.org
+EventProviderAPI.asmx
+[0m
+[0m$ [0mcd /tmp/opencode && date -u +"captured_utc=%Y-%m-%dT%H:%M:%SZ" && curl -s -o ea.wsdl -w "wsdl status=%{http_code} type=%{content_type} bytes=%{size_download}\n" --max-time 30 "https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl" && echo "--- evidence ---" && echo -n "operations=" && grep -o 'soap:operation name=' ea.wsdl | wc -l && grep -o 'soap:address location="[^"]*"' ea.wsdl | sort -u && grep -oE '<wsdl:service name="[^"]*"|<wsdl:portType name="[^"]*"' ea.wsdl | sort -u && echo -n "publicIP=" && curl -s --max-time 15 https://api.ipify.org && echo
+captured_utc=2026-10-03T01:36:49Z
+wsdl status=200 type=text/xml; charset=utf-8 bytes=29968
+--- evidence ---
+operations=0
+soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"
+<wsdl:portType name="EventProviderAPIWSSoap"
+<wsdl:service name="EventProviderAPIWS"
+publicIP=172.184.174.112
+[0m
+[0m$ [0mcd /tmp/opencode && echo "--- all operation-name decls ---" && grep -oE '<[A-Za-z0-9]*:?operation [^>]*name="[^"]*"' ea.wsdl | sed 's/.*name="/name="/' | sort -u && echo -n "count_unique=" && grep -oE '<[A-Za-z0-9]*:?operation [^>]*name="[^"]*"' ea.wsdl | sed 's/.*name="//;s/"//' | sort -u | wc -l && echo "--- prefix decls ---" && grep -oE 'xmlns:[A-Za-z0-9]+="[^"]*"' ea.wsdl | sort -u && echo "--- element decls ---" && grep -c '<wsdl:element' ea.wsdl; grep -oE '<wsdl:element name="[^"]*"' ea.wsdl | head -5
+--- all operation-name decls ---
+name="About"
+name="CloseAlert"
+name="GetAlertStatus"
+name="GetEventStatus"
+name="GetTicketStatus"
+name="RaiseEvent"
+name="RaiseEventAsynchronous"
+name="RegisterEventProvider"
+name="ResetEvent"
+name="SubmitEventUpdate"
+name="UnregisterEventProvider"
+name="UpdateTicket"
+count_unique=12
+--- prefix decls ---
+xmlns:http="http://schemas.xmlsoap.org/wsdl/http/"
+xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/"
+xmlns:s="http://www.w3.org/2001/XMLSchema"
+xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/"
+xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/"
+xmlns:tns="http://derdack.com/WebInterface/EnterpriseAlert"
+xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+--- element decls ---
+0
+[0m
+`operations=0` contradicts the cached "12 operations" claim. Verifying the WSDL structure directly before reporting.
+Sibling-scoping question closed. No sibling `.asmx` exists, so the leak is single-endpoint scoped.
+
+**Evidence (reproducible, 8 passive GETs total, ≤1 rps, no auth)**
+
+```
+GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+-> 200  text/xml; charset=utf-8  29968 bytes
+   captured_utc=2026-10-03T01:36:49Z  (byte-length identical across 3 reads)
+
+soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"
+service = EventProviderAPIWS
+portType = EventProviderAPIWSSoap
+tns      = http://derdack.com/WebInterface/EnterpriseAlert
+operations = 12
+```
+
+Operations: `About`, `CloseAlert`, `GetAlertStatus`, `GetEventStatus`, `GetTicketStatus`, `RaiseEvent`, `RaiseEventAsynchronous`, `RegisterEventProvider`, `ResetEvent`, `SubmitEventUpdate`, `UnregisterEventProvider`, `UpdateTicket`.
+
+**Correction to my own cache:** the "12 operations" figure holds, but my first grep returned `0` because it matched `soap:operation` when the WSDL uses the `wsdl:` prefix. The cached number was right; my verification pattern was wrong. Re-verified against the actual file.
+
+**Scope result**
+
+| Path | Status | Notes |
+|---|---|---|
+| `/EAWebService/` | 200, 1824 B | index lists exactly 3 entries |
+| `EventProviderAPI.asmx?wsdl` | 200, 29968 B | leaks `ereesus` |
+| `EventProviderAPI.asmx` | 200, 5292 B | HTML, no address leak |
+| `EventProviderAPI.aspx` | 200, 1843 B | gate page, 10 handlers |
+| `EventConnectorServer.ashx` | 200 | empty handler table |
+| `/` | 404, 0 B | no wwwroot |
+
+The only other service reference anywhere in the namespace surface is `EventProviderAPI.asmx` itself. No sibling `.asmx`, no second `soap:address`, no other internal hostname. The disclosure is isolated to one endpoint.
+
+**Assessment — I'm downgrading this.** Internal hostname + full API contract, unauthenticated. `ereesus` is not publicly resolvable, there is no auth bypass, no data exposure, and no write path. Mutating operations (`RaiseEvent`, `ResetEvent`, `UpdateTicket`, etc.) are advertised in the WSDL but sit behind the established `Error: -1`/401 gate, and I did not invoke them — mutating requests are out of scope for this pass. Honestly this is **Informational-to-LOW**; most programs will close it as informative, not pay it. Filing it as anything more would be inflating it.
+
+**Two notes for your call:**
+1. Whether to file at all, or fold it into a "EA demo instance exposed" informational note alongside the 9.5.26147 sub-app discovery.
+2. The valuable remaining work is the credentialed path — if the owner supplies a demo tenant, `RaiseEvent`/`SubmitEventUpdate` against a test provider is where BOLA/tenant-isolation questions actually live. That needs legit credentials, which I don't have.
+
+Want me to draft the report text for bugs.olivermaicher.eu, or move on to something else?
