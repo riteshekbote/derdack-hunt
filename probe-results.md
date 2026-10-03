@@ -768,3 +768,8 @@ https://us.derdack.com/fabricated-path/ -> HTTP 404
 
 ## 2026-10-03 01:37:23 UTC
 
+
+## 2026-10-03 07:07:43 UTC
+https://us.derdack.com/nonexistent-control-xyz` -> HTTP 404
+https://us.derdack.com/EAWebService/` -> HTTP 404
+https://us.derdack.com/EAWebService/EventProviderAPI.asmx?wsdl` -> HTTP 404
