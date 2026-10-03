@@ -46916,3 +46916,681 @@ testability: PASSIVE
 ## STEP 7 — RISK
 
 [RISK] derdack: 8 —7 GETs total this cycle (4 on `demo.`, 3 on `s4dev4.`), all unauthenticated, no cookies, no credentials, no redirect-following, ≤1 rps with inter-request sleeps, recording only status / Content-Type / length / sha256 and error-page text. No mutating verb, no form submission, no XML-RPC POST, no enumeration, no scanning tool, no customer data. The two504 pages fetched were Azure-generated error documents and the debug page was a diagnostic page the proxy itself linked from its own error output — reading them caused no state change and triggered no connector work. Unchanged from last cycle's 8 rather than lower, because `?appproxy=debug` is a diagnostic surface and I want the next probe on `demo.` to stay read-only and single-path.
+===== ANALYST bigpickle 2026-10-03 19:45:09 UTC =====
+[0m
+> build · big-pickle
+[0m
+I'll run the queued read-only probes now, control baseline first.
+[0m$ [0mcd /tmp/opencode 2>/dev/null || mkdir -p /tmp/opencode && cd /tmp/opencode
+UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36'
+for u in "https://demo.enterprisealert.com/zz-ctrl-9f3a-notreal" ; do
+  echo "=== $u"
+  curl -sS -o body.bin -D hdr.txt -w 'status=%{http_code} size=%{size_download} time=%{time_total}\n' --max-time 25 -A "$UA" "$u" 2>&1 | tail -2
+  echo "--- headers of interest:"
+  grep -iE '^(HTTP/|content-type|content-length|server|x-ms-proxy)' hdr.txt 2>/dev/null || true
+  echo "--- sha256:"; sha256sum body.bin 2>/dev/null
+done
+=== https://demo.enterprisealert.com/zz-ctrl-9f3a-notreal
+status=404 size=0 time=0.531977
+--- headers of interest:
+HTTP/1.1 404 Not Found
+--- sha256:
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  body.bin
+[0m
+## Objective
+- Continue the Derdack bug-bounty hunt in `POC` phase for target `api`, producing evidence-backed hypotheses and read-only probes.
+- Prioritize the current Enterprise Alert App Proxy leads on `demo.enterprisealert.com`.
+
+## Important Details
+- Scope includes Derdack/SIGNL4/Enterprise Alert infrastructure; report channel is `bugs.olivermaicher.eu`.
+- Live probes must remain unauthenticated `GET`/`HEAD`/`OPTIONS`, ≤1 rps, with no cookies, redirect-following, mutation, credential testing, brute force, or customer data access.
+- Use control-first probing: record status, `Content-Type`, length, `sha256`, selected headers, and compare full bodies; status codes alone are unreliable.
+- Current risk is `8/100`; only public diagnostic/metadata pages are in scope.
+- OIDC wording must be conservative: six hosts sharing discovery/JWKS proves configured symmetry, not cross-environment token acceptance or forged-token validity.
+- Stale leads must be removed, especially `www.derdack.com/de/` “subsite-only surface,” which was disproved.
+
+## Work State
+### Completed
+- Mapped `demo.enterprisealert.com`; root `404` hides live `/EAWebService/`.
+- Confirmed Enterprise Alert `9.5.26147` with five anonymous paths: `/EAWebService/`, `EventProviderAPI.aspx`, `EventProviderAPI.asmx` (`?wsdl`), `EventConnectorServer.ashx`, and `rest/events`.
+- Corrected `EventProviderAPI.aspx` to 10 real handlers; unknown handlers return a `200` fallback help page.
+- Confirmed all credentialed/mutating EA paths gate with `401`/`Error: -1`; no anonymous write primitive exists.
+- Confirmed WSDL leaks internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`.
+- Confirmed `EventConnectorServer.ashx` has an empty installed-handlers table, closing the alert-exfiltration path.
+- Corrected `s4dev4.enterprisealert.com`: `504` reports `NoActiveConnector` with null connector GUID, so no live backend exists.
+- Closed GraphQL across `connect`, `api`, and `demo` with uniform `404`.
+- Fully mapped SIGNL4 V1/V2/V3/webhook/events; V4 is absent.
+- Characterized WordPress root, `/de/`, and `/ea/`; no sensitive anonymous read surface; old subsite-only premise retracted.
+- Classified `vps.signl4.com` as stale GoDaddy DNS/default-vhost configuration, `HUMAN_ONLY`, not researcher-exploitable takeover.
+
+### Active
+- Test whether `https://demo.enterprisealert.com/EAWebService/?appproxy=debug` exposes the live connector’s internal hostname, FQDN, IP, or port.
+- Capture live `x-ms-proxy-*` headers from `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl`; KB already records a live non-null connector baseline.
+- If current probes are negative, `https://demo.enterprisealert.com/EA/` remains a possible sibling-portal coverage gap.
+- Cross-environment OIDC finding remains `AUTH_HELPED`: shared key/configuration documented, enforcement unverified.
+
+### Blocked
+- Cross-environment token acceptance requires a legitimate `client_secret`, `X-S4-Api-Key`, or token; token endpoint behavior was exercised on only 2 of 6 ingresses and introspection/revocation on 0 of 6.
+- App Proxy identifier disclosure may be rejected as descriptive-header-only if no actionable backend detail is disclosed.
+- `labconnect.signl4.com` and `labaccount.signl4.com` remain stable `502` dead infrastructure.
+- `signl4.derdack.com` remains permanently TCP-unreachable.
+
+## Next Move
+1. `GET https://demo.enterprisealert.com/EAWebService/` and record status, `Content-Type`, length, `sha256`, and `x-ms-proxy-*` headers to confirm the live connector.
+2. `GET https://demo.enterprisealert.com/EAWebService/?appproxy=debug`, then stop and inspect for internal hostname/FQDN/IP/port disclosure.
+
+## Relevant Files
+- `art/lead_nemotron3.txt`: nemotron3 ranked hypotheses and OIDC lead.
+- `art/lead_bigpickle.txt`: Enterprise Alert sibling-path lead.
+- `hypotheses-nemotron3.txt`: current nemotron3 probe queue.
+- `hypotheses-bigpickle.txt`: current bigpickle probe queue.
+- `inventory/derdack.md`: Derdack asset inventory and validation history.
+- `scope.yml`: authoritative program scope.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+Control baseline established: nonexistent path → bare `404`, 0 bytes, `sha256=e3b0c442...` (empty-body hash). That's my negative fingerprint for this host. Now the queued probes, paced.
+[0m$ [0mcd /tmp/opencode
+UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36'
+probe() {
+  echo "=== $1"
+  curl -sS -o b.bin -D h.txt -w 'status=%{http_code} size=%{size_download} time=%{time_total}\n' --max-time 25 -A "$UA" "$1" 2>&1 | tail -1
+  grep -iE '^(HTTP/|content-type|content-length|location|server)' h.txt 2>/dev/null
+  echo "--- sha256:"; sha256sum b.bin | cut -c1-64
+  cp b.bin "last_$(echo "$1" | md5sum | cut -c1-6).bin"
+  sleep 2
+}
+probe "https://demo.enterprisealert.com/EAWebService/"
+probe "https://demo.enterprisealert.com/EAWebService/?appproxy=debug"
+=== https://demo.enterprisealert.com/EAWebService/
+status=200 size=1857 time=11.390668
+HTTP/1.1 200 
+Content-Length: 1857
+Content-Type: text/html; charset=utf-8
+--- sha256:
+a766c542d5518a6bc3855a0ddc8ca5e3ee808ed33816a738cc1f06f95266e0b6
+=== https://demo.enterprisealert.com/EAWebService/?appproxy=debug
+status=200 size=1872 time=0.920318
+HTTP/1.1 200 
+Content-Length: 1872
+Content-Type: text/html; charset=utf-8
+--- sha256:
+98fffab3cc027b3bb60eb09b28d8a202ee07e9c6138c23c44d69bbe60fc66392
+[0m
+[0m$ [0mcd /tmp/opencode
+echo "===== BASELINE body (/EAWebService/)"; cat -A last_*.bin 2>/dev/null | head -5
+for f in last_*.bin; do echo "--- $f ($(wc -c <$f) bytes)"; done
+===== BASELINE body (/EAWebService/)
+^M$
+^M$
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">^M$
+^M$
+<html xmlns="http://www.w3.org/1999/xhtml" >^M$
+--- last_051c53.bin (1872 bytes)
+--- last_2feec6.bin (1857 bytes)
+[0m
+`?appproxy=debug` returned `200` at 1872 bytes vs 1857 baseline — a 15-byte delta. That's exactly the kind of delta I must not over-read. Let me see the bodies and run a query-string control.
+[0m$ [0mcd /tmp/opencode
+diff <(tr -d '\r' < last_2feec6.bin) <(tr -d '\r' < last_051c53.bin)
+echo "===== EXIT: $?"
+echo; echo "===== FULL DEBUG BODY:"; tr -d '\r' < last_051c53.bin
+10c10
+<     <form name="form1" method="post" action="./" id="form1">
+---
+>     <form name="form1" method="post" action="./?appproxy=debug" id="form1">
+===== EXIT: 1
+
+===== FULL DEBUG BODY:
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head id="Head1"><title>
+	Enterprise Alert&reg; Event Provider API &amp; Connector SDK (v9.5.26147)
+</title></head>
+<body>
+    <form name="form1" method="post" action="./?appproxy=debug" id="form1">
+<div>
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwUKMTc5MTQ3ODQwOQ8WAh4TVmFsaWRhdGVSZXF1ZXN0TW9kZQIBFgICAw9kFghmDw8WAh4EVGV4dAVyVGhlIEVudGVycHJpc2UgQWxlcnQmcmVnOyA8Yj5FdmVudCBQcm92aWRlciBBUEkgJmFtcDsgQ29ubmVjdG9yIFNESyAodjkuNS4yNjE0Nyk8L2I+IGNvbnRhaW5zIHRoZSBmb2xsb3dpbmcgcGFnZXM6ZGQCAQ8PFgIfAQUuRXZlbnQgUHJvdmlkZXIgQVBJIHZpYSBIVFRQIFBPU1QgYW5kIEhUVFAgR0VUOmRkAgIPDxYCHwEFM0V2ZW50IFByb3ZpZGVyIEFQSSB2aWEgV2ViIFNlcnZpY2UgcmVxdWVzdHMgKFNPQVApOmRkAgMPDxYCHwEFIUVudGVycHJpc2UgQWxlcnTCriBDb25uZWN0b3IgU0RLOmRkZDi7w7Z0oDzgSZISEwR3g0yEC0UJBPRQcOrR80T+aULJ" />
+</div>
+
+<div>
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="2D92FC3A" />
+</div>
+    <div>
+    
+    
+    <p>
+        <span id="m_labelHeadline">The Enterprise Alert&reg; <b>Event Provider API &amp; Connector SDK (v9.5.26147)</b> contains the following pages:</span>
+    </p>
+    <ul>
+    
+        <li><span id="m_labelEAEventProviderHttp">Event Provider API via HTTP POST and HTTP GET:</span> <a href="EventProviderAPI.aspx">EventProviderAPI.aspx</a></li>       
+
+        <li><span id="m_labelEAEventProviderWS">Event Provider API via Web Service requests (SOAP):</span> <a href="EventProviderAPI.asmx">EventProviderAPI.asmx</a></li>
+
+        <li><span id="m_labelEAEventConnectorServer">Enterprise Alert® Connector SDK:</span> <a href="EventConnectorServer.ashx">EventConnectorServer.ashx</a></li>
+
+    </ul>
+    </div>
+    </form>
+</body>
+</html>
+[0m
+The15-byte delta is **fully explained as a self-measurement artifact**: the delta is a single line, and it's the ASP.NET WebForms `action="./?appproxy=debug"` attribute reflecting my *own* query string. No diagnostic page, no internal host disclosure. Let me prove that with a random-query control and capture the `x-ms-proxy-*` headers first-hand.
+[0m$ [0mcd /tmp/opencode
+UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36'
+probe() {
+  echo "=== $1"
+  curl -sS -o "b_$2.bin" -D "h_$2.txt" -w 'status=%{http_code} size=%{size_download}\n' --max-time 25 -A "$UA" "$1" 2>&1 | tail -1
+  grep -iE '^x-ms-proxy' "h_$2.txt" || echo "(no x-ms-proxy headers)"
+  sleep 2
+}
+echo "### CONTROL: random query string (does backend just reflect it?)"
+probe "https://demo.enterprisealert.com/EAWebService/?zzctrl7f3=abc" qc
+echo "--- form action reflected in control body:"
+grep -o 'action="[^"]*"' b_qc.bin | head -2
+echo
+echo "### HEADERS: WSDL probe (hypothesis FINAL 2)"
+probe "https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl" wsdl
+### CONTROL: random query string (does backend just reflect it?)
+=== https://demo.enterprisealert.com/EAWebService/?zzctrl7f3=abc
+status=200 size=1871
+x-ms-proxy-app-id: f18ba879-3dea-4018-b9d1-e6dbdc9ce151
+x-ms-proxy-group-id: 6b26e6a4-c5ad-4b27-b31c-e1777730c354
+x-ms-proxy-subscription-id: ff2a095d-01ff-4edb-99e6-38b97f49467c
+x-ms-proxy-transaction-id: 8ed78ccc-5eb1-4acc-9006-6ae3c4af7f9d
+x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+x-ms-proxy-data-center: NEUR
+x-ms-proxy-connector-id: da867a92-3ba5-4e78-95f6-c97bac3c791f
+--- form action reflected in control body:
+action="./?zzctrl7f3=abc"
+
+### HEADERS: WSDL probe (hypothesis FINAL 2)
+=== https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+status=200 size=29968
+x-ms-proxy-app-id: f18ba879-3dea-4018-b9d1-e6dbdc9ce151
+x-ms-proxy-group-id: 6b26e6a4-c5ad-4b27-b31c-e1777730c354
+x-ms-proxy-subscription-id: ff2a095d-01ff-4edb-99e6-38b97f49467c
+x-ms-proxy-transaction-id: 04ce00bf-7f11-48cd-abe8-b356d42a709c
+x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3
+x-ms-proxy-data-center: NEUR
+x-ms-proxy-connector-id: da867a92-3ba5-4e78-95f6-c97bac3c791f
+[0m
+Conclusive. The arithmetic seals it: `appproxy=debug` (15 chars) →1872 bytes; `zzctrl7f3=abc` (14 chars) → 1871 bytes. Exactly 1 byte, from my own query string in the reflected `action` attribute. Now the last open item — host-root sibling paths.
+[0m$ [0mcd /tmp/opencode
+UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36'
+probe() {
+  echo "=== $1"
+  curl -sS -o "b_$2.bin" -D "h_$2.txt" -w 'status=%{http_code} size=%{size_download}\n' --max-time 25 -A "$UA" "$1" 2>&1 | tail -1
+  grep -iE '^(HTTP/|content-type|content-length|location)' "h_$2.txt" | head -4
+  echo "sha256: $(sha256sum b_$2.bin | cut -c1-16)…  (control 404 hash = e3b0c44298fc1c14…)"
+  sleep 2
+}
+echo "### UNTESTED-ON-DEMO: host-root sibling portal paths"
+probe "https://demo.enterprisealert.com/EA/" ea
+probe "https://demo.enterprisealert.com/EnterpriseAlert/" entalert
+probe "https://demo.enterprisealert.com/EventProviderAPI.aspx" rootapi
+### UNTESTED-ON-DEMO: host-root sibling portal paths
+=== https://demo.enterprisealert.com/EA/
+status=404 size=0
+HTTP/1.1 404 Not Found
+sha256: e3b0c44298fc1c14…  (control 404 hash = e3b0c44298fc1c14…)
+=== https://demo.enterprisealert.com/EnterpriseAlert/
+status=404 size=0
+HTTP/1.1 404 Not Found
+sha256: e3b0c44298fc1c14…  (control 404 hash = e3b0c44298fc1c14…)
+=== https://demo.enterprisealert.com/EventProviderAPI.aspx
+status=404 size=0
+HTTP/1.1 404 Not Found
+sha256: e3b0c44298fc1c14…  (control 404 hash = e3b0c44298fc1c14…)
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && ls -la 2>&1 | head -30; echo "--- art/:"; ls -la art/ 2>/dev/null | head -20; echo "--- hypotheses files:"; ls -la hypotheses-*.txt inventory/ scope.yml 2>/dev/null
+total 1160
+drwxr-xr-x 12 runner runner   4096 Oct  3 19:36 .
+drwxr-xr-x  3 runner runner   4096 Oct  3 19:36 ..
+drwxr-xr-x  7 runner runner   4096 Oct  3 19:36 .git
+drwxr-xr-x  3 runner runner   4096 Oct  3 19:36 .github
+-rw-r--r--  1 runner runner   1831 Oct  3 19:36 README.md
+-rw-r--r--  1 runner runner  13015 Oct  3 19:39 analyst-out.txt
+-rw-r--r--  1 runner runner 529035 Oct  3 19:36 analyst-prompt.txt
+-rw-r--r--  1 runner runner 525156 Oct  3 19:36 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct  3 19:36 inventory
+drwxr-xr-x  2 runner runner   4096 Oct  3 19:36 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct  3 19:36 leads
+-rw-r--r--  1 runner runner  20088 Oct  3 19:36 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct  3 19:36 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct  3 19:36 reports
+drwxr-xr-x  2 runner runner   4096 Oct  3 19:36 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct  3 19:36 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct  3 19:36 scripts
+-rw-r--r--  1 runner runner     33 Oct  3 19:36 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct  3 19:36 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct  3 19:36 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct  3 19:36 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct  3 19:36 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct  3 19:36 state_nemotron3.json
+drwxr-xr-x  2 runner runner  12288 Oct  3 19:36 triage
+--- art/:
+--- hypotheses files:
+-rw-r--r-- 1 runner runner 3292 Oct  3 19:36 scope.yml
+
+inventory/:
+total 280
+drwxr-xr-x  2 runner runner   4096 Oct  3 19:36 .
+drwxr-xr-x 12 runner runner   4096 Oct  3 19:36 ..
+-rw-r--r--  1 runner runner 276892 Oct  3 19:36 derdack.md
+[0m
+All three match the control fingerprint byte-for-byte (`e3b0c442` = empty body). `demo.enterprisealert.com` is now genuinely exhausted — no host-root sibling portal exists. Let me record the results and strike the closed leads.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt
+echo "=== leads/:"; ls -la leads/
+echo; echo "=== knowledge/:"; ls -la knowledge/
+echo; echo "=== recon-notes/:"; ls -la recon-notes/ | head
+echo; echo "=== state_nemotron3.json:"; cat state_nemotron3.json
+echo; echo "=== reports/:"; ls -la reports/ | head
+=== leads/:
+total 3468
+drwxr-xr-x  2 runner runner    4096 Oct  3 19:36 .
+drwxr-xr-x 12 runner runner    4096 Oct  3 19:36 ..
+-rw-r--r--  1 runner runner 1109272 Oct  3 19:36 lead-bigpickle.md
+-rw-r--r--  1 runner runner    9843 Oct  3 19:36 lead-laguna.md
+-rw-r--r--  1 runner runner    9650 Oct  3 19:36 lead-ling3.md
+-rw-r--r--  1 runner runner    9984 Oct  3 19:36 lead-longcat.md
+-rw-r--r--  1 runner runner      18 Oct  3 19:36 lead-mimo.md
+-rw-r--r--  1 runner runner 2306498 Oct  3 19:36 lead-nemotron3.md
+-rw-r--r--  1 runner runner   77940 Oct  3 19:36 reposcan-derdack.md
+
+=== knowledge/:
+total 232
+drwxr-xr-x  2 runner runner   4096 Oct  3 19:36 .
+drwxr-xr-x 12 runner runner   4096 Oct  3 19:36 ..
+-rw-r--r--  1 runner runner 225629 Oct  3 19:36 index.md
+
+=== recon-notes/:
+total 12
+drwxr-xr-x  2 runner runner 4096 Oct  3 19:36 .
+drwxr-xr-x 12 runner runner 4096 Oct  3 19:36 ..
+-rw-r--r--  1 runner runner  817 Oct  3 19:36 DEDICATED-DEEP.md
+
+=== state_nemotron3.json:
+{"phase": "POC", "target": "api"}
+=== reports/:
+total 8328
+drwxr-xr-x  2 runner runner    4096 Oct  3 19:36 .
+drwxr-xr-x 12 runner runner    4096 Oct  3 19:36 ..
+-rw-r--r--  1 runner runner 4048375 Oct  3 19:36 analyst-bigpickle.log
+-rw-r--r--  1 runner runner   41881 Oct  3 19:36 analyst-laguna.log
+-rw-r--r--  1 runner runner   41688 Oct  3 19:36 analyst-ling3.log
+-rw-r--r--  1 runner runner   41856 Oct  3 19:36 analyst-longcat.log
+-rw-r--r--  1 runner runner 3538687 Oct  3 19:36 analyst-nemotron3.log
+-rw-r--r--  1 runner runner   17248 Oct  3 19:36 hypotheses-bigpickle.txt
+-rw-r--r--  1 runner runner      51 Oct  3 19:36 hypotheses-laguna.txt
+[0m
+Repo layout differs from what the context claimed (no `art/`, no `hypotheses-*.txt`). Let me find the actual lead/knowledge files.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt
+ls -la reports/hypotheses-*.txt
+echo; echo "=== TAIL of hypotheses-bigpickle.txt:"; tail -60 reports/hypotheses-bigpickle.txt
+-rw-r--r-- 1 runner runner 17248 Oct  3 19:36 reports/hypotheses-bigpickle.txt
+-rw-r--r-- 1 runner runner    51 Oct  3 19:36 reports/hypotheses-laguna.txt
+-rw-r--r-- 1 runner runner    50 Oct  3 19:36 reports/hypotheses-ling3.txt
+-rw-r--r-- 1 runner runner    52 Oct  3 19:36 reports/hypotheses-longcat.txt
+-rw-r--r-- 1 runner runner 11411 Oct  3 19:36 reports/hypotheses-nemotron3.txt
+
+=== TAIL of hypotheses-bigpickle.txt:
+evidence_needed: A 200 (or any status whose body hash diverges from the bare-404 control) on a sibling path — an EA portal login page, a redirect to `/EA/`, an ASP.NET error with stack trace, or a directory index.
+verify_steps: (1) Control first: `GET https://demo.enterprisealert.com/zz-nonexistent-ctrl` — record status + Content-Type + length + sha256. Without this, a 404 is uninterpretable. (2) `GET https://demo.enterprisealert.com/EA/`, `/EnterpriseAlert/`, `/EventProviderAPI.aspx` — status + length + sha256 only. (3) If any diverges, ONE follow-up GET for a single child path to characterise; stop, no enumeration. ≤5 GETs, ≤1 rps, no auth, no cookies, no redirect-following.
+impact: The EA web portal is the tenant-facing application: if it is anon-readable, that is a second, much larger unauthenticated surface than the 5-path API namespace (alerts, schedules, users, reports) and would lift Finding "EA demo exposure" from a config-level 5-path disclosure to a portal disclosure. ASP.NET error pages on any of these could additionally leak stack traces / connection strings. All-negative = `demo.` closed as a single-app host with evidence.
+testability: PASSIVE
+[HYP] `s4dev4.enterprisealert.com` reaches a live Enterprise Alert backend that the other seven fleet hosts do not
+class: MISCONFIG
+asset: s4dev4.enterprisealert.com
+confidence: 40
+reasoning: The 8-host `s4dev*` fleet resolves to one IP behind Azure AD App Proxy. On 2026-09-26 the fleet split cleanly: s4dev4 returned **504 + `x-ms-proxy-*` headers** (proxy accepted, backend timed out — a backend exists) while s4dev1/2/3/5/6/7/8 returned bare 404 with zero proxy headers (no backend). Nobody has ever sent a deep EA path to s4dev4. A staging Enterprise Alert install is typically configured with production-shaped credentials, sample tenants, and live integrations — the highest-value target class in the fleet — and it is the single host whose 504 implies the backend is wired.
+evidence_needed: Any response from `s4dev4.enterprisealert.com/EAWebService/` or `?Handler=About` that is not the bare-404 body — including a distinct 504 body, which alone proves a routed backend path and would be a topology finding.
+verify_steps: (1) Control: `GET https://s4dev4.enterprisealert.com/zz-nonexistent-ctrl` — status + length + sha256. (2) `GET https://s4dev4.enterprisealert.com/EAWebService/` and `/EAWebService/EventProviderAPI.aspx?Handler=About` — status + Content-Type + length + sha256. (3) Compare against the s4dev1 recorded bare-404 fingerprint. ≤3 GETs, ≤1 rps, no auth, no redirect-following.
+impact: A reachable staging EA backend carrying production-shaped config or live integration credentials is HIGH (~7). A distinct-504-only result is LOW but establishes the fleet topology asymmetry as real. All-negative = s4dev4 closed and the fleet confirmed as 1-of-8 backend-present.
+testability: PASSIVE
+[PARKED] `/api/v2/teams` 401-vs-405 flapping: 10+ cycles, never once produced a differential beyond the status code. Endpoint-map-only.
+[PARKED] Six-host JWKS re-verification: measured 10+ times, zero drift, and I recorded on 2026-09-28 that reading the discovery document is not reading the decision point. A 25th measurement of the artefact is the error, not the work.
+[PARKED] `vps.signl4.com` takeover: HUMAN_ONLY. nemotron3's 95 overstates — no claimable primitive exists from the researcher seat.
+[PARKED] `prepaidSettings` mass assignment: withdrawn permanently, requires a live mutating PUT against a billing route.
+[PARKED] RFC 8414 path-inserted discovery: informational-only; refines wording, changes no verdict.
+[PARKED] `demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=` reflection: verified correctly URL-encoded in-context on 2026-09-26; looks like textbook XSS and is not.
+[FINAL] 1. Sibling application paths beside `/EAWebService/` on `demo.enterprisealert.com` (MISCONFIG, 45, PASSIVE) — 5 GETs, control baseline first, the one host proven to carry a full EA install.
+[FINAL] 2. `s4dev4.enterprisealert.com` backend reachability (MISCONFIG, 40, PASSIVE) — 3 GETs, sole fleet member whose recorded 504 implies a wired backend.
+[NEXT] PROBE: `GET https://demo.enterprisealert.com/zz-nonexistent-ctrl` first, to capture the bare-404 control (status + Content-Type + length + sha256) — the same control-first discipline that made the `us.derdack.com` closure trustworthy. Then `GET https://demo.enterprisealert.com/EA/`, `GET https://demo.enterprisealert.com/EnterpriseAlert/`, and `GET https://demo.enterprisealert.com/EventProviderAPI.aspx`, recording status + Content-Type + length + sha256 only. No auth, no cookies, no redirect-following, ≤1 rps, ≤5 GETs total.
+[LEARN] REJECTED OTHER @ `www.derdack.com/de/`: I retracted my own 22-day-old "subsite-only attack surface" premise last cycle and it is still sitting at [45] in the ranked set. A hypothesis I have already disproven must be struck from the queue, not left where the next cycle will pick it up — stale high-ranked entries are how a hunt re-spends a cycle on a closed question.
+[LEARN] ACCEPTED OTHER @ self-measurement: the recurring failure in this hunt is *mapping a namespace to exhaustion instead of mapping a host*. I closed `/EAWebService/` on `demo.enterprisealert.com` with five enumerated paths and called the host done, while `/EA/` — probed on a *different* host and never on this one — sat untested. This is the same root cause as the `root-only status is not full-host status` lesson I have recorded three times, one level deeper: a namespace is not a host, and a result observed on host A does not transfer to host B just because both run the same product.
+[LEARN] ACCEPTED MISCONFIG @ fleet asymmetry as a lead: s4dev4 is the only `s4dev*` host recorded with `504 + x-ms-proxy-*` rather than a bare 404, and the fleet was declared "1 backend, 7 absent" in a parenthetical that was never followed up. A 504 is the *most informative* response in that fleet — it is the only one that says a backend exists — and I filed it as noise. Informative anomalies deserve the follow-up probe, not a dismissal.
+[LEARN] ACCEPTED OTHER @ control-first discipline as a transferable rule: two of my three clean closures this month (`us.derdack.com`, `dev.derdack.com`) turned on hashing a fabricated-echo baseline *before* interpreting any 403/404/300. A status code without a control body is not evidence, and the MultiViews `300` in particular will manufacture false positives on every parked Derdack host.
+[RISK] derdack: 8 — every action queued this cycle is a single unauthenticated `GET` against a public host, with no cookies, no credentials, no redirect-following, ≤1 rps, recording only status / Content-Type / length / sha256. No mutating verb, no form submission, no XML-RPC POST, no customer data, no scanning-tool output. Highest conceivable outcome is reading a public metadata document, a directory index, or a parked-page byte-diff on a demo host — which is what the last three cycles returned. Risk down from 15 because the previous cycle's probes closed with nothing found and no side effects, and this cycle's scope is smaller still.
+[HYP] App Proxy diagnostic mode is enabled on `demo.enterprisealert.com`, and on a live connector it discloses the internal backend hostname and port the proxy forwards to
+class: MISCONFIG
+asset: demo.enterprisealert.com
+confidence: 50
+reasoning: Twelve minutes ago I proved on the **same tenant's** App Proxy that `?appproxy=debug` is reachable with no credentials and returns verbose connector diagnostics. The setting is per-published-application, so demo is not guaranteed to have it — hence50, not 90. But the deciding factor is asymmetry in the payoff: s4dev4's debug page was worthless for internal recon *precisely because* its connector group is empty and no backend address exists to report. `demo.` has a live connector serving real SOAP, so its debug page would name the actual internal backend — directly extending the `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"` internal-hostname leak already held for this host, and giving the full internal host:port rather than a bare short name.
+evidence_needed: A 200 (or any non-504) body from `demo.enterprisealert.com/EAWebService/?appproxy=debug` containing an internal hostname, FQDN, IP, or port for the connector's forward target; or a distinct error page proving debug mode is enabled on this app.
+verify_steps: (1) Control: `GET https://demo.enterprisealert.com/EAWebService/` — confirm the known-good 200 WSDL is still served, so a later 504 cannot be mistaken for a dead connector. (2) `GET https://demo.enterprisealert.com/EAWebService/?appproxy=debug` — status + size + sha256 + text extraction for hostnames/ports. (3) If a body diverges, stop; no further paths. ≤2 GETs, ≤1 rps, no auth, no cookies, no redirect-following.
+impact: An internal backend address for a live Enterprise Alert SaaS tenant is a direct pivot input for SSRF, DNS-rebinding, and Host-header work, and pairs with the existing `ereesus` WSDL leak to give a coherent internal topology. Debug mode disabled → `demo.` fully closed on this axis. A 504 `NoActiveConnector` on demo would itself be newsworthy (the live demo tenant losing its connector) and would be reported as availability, not security.
+testability: PASSIVE
+[HYP] Live App Proxy responses from `demo.enterprisealert.com` emit Azure tenant object identifiers in response headers
+class: MISCONFIG
+asset: demo.enterprisealert.com
+confidence: 70
+reasoning: On s4dev4 the App Proxy emitted `x-ms-proxy-app-id`, `-group-id`, `-subscription-id`, `-service-name`, `-data-center`, `-connector-id` and `-transaction-id` on a public hostname with no authentication and no session. That is a confirmed mechanism, not a guess. The only reason this is 70 and not 95 is that I never recorded `demo.`'s response headers — my KB captured the WSDL body and status only. On a live app the `connector-id` would be a **non-null** GUID, identifying a specific installed connector in a specific group, which is strictly more actionable than the null placeholder s4dev4 exposed.
+evidence_needed: `x-ms-proxy-connector-id` (and app/group/subscription IDs) present on the normal 200 WSDL response from `demo.enterprisealert.com`, with a non-null connector GUID.
+verify_steps: Single GET: `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` with response headers captured; record all `x-ms-proxy-*` values and whether `connector-id` is the null GUID. ≤1 GET, ≤1 rps, no auth.
+impact: Confirms and quantifies the tenant-object disclosure mechanism on a *production SaaS domain* rather than a dead staging host, which raises the credibility of the s4dev4 report considerably and gives Derdack a concrete, one-line fix (disable `?appproxy=debug` and strip proxy headers at the edge). CWE-200, LOW–Medium, no data and no auth bypass — the value is reconnaissance, and I will not inflate it.
+testability: PASSIVE
+[PARKED] `/api/v2/teams` 401-vs-405 flapping: 10+ cycles, only ever a status-code difference, no body differential ever obtained.
+[PARKED] Six-host JWKS: 10+ measurements, zero drift, zero informational return — reading the published document is not the decision point.
+[PARKED] `vps.signl4.com` takeover: HUMAN_ONLY, no claimable primitive from the researcher seat.
+[PARKED] `s4dev4.enterprisealert.com` as a *vulnerability*: the empty connector group is a hygiene/offboarding defect and nothing more — the absent backend actively **reduces** exposure. Report it as CWE-200 information disclosure plus debug-mode hygiene, not as a takeover or an outage-in-progress.
+[PARKED] `EventProviderAPI.aspx?Handler=` reflection: verified correctly URL-encoded; not XSS.
+[PARKED] RFC 8414 path-inserted discovery: wording refinement only.
+[FINAL] 1. App Proxy diagnostic mode on `demo.enterprisealert.com`, targeting the internal backend hostname/port behind a live Enterprise Alert connector (MISCONFIG, 50, PASSIVE) — 2 GETs, with a known-good 200 control first so a 504 cannot be misread.
+[FINAL] 2. Azure tenant object identifiers (`x-ms-proxy-app-id` / `-group-id` / `-subscription-id` / non-null `-connector-id`) present on `demo.enterprisealert.com`'s live 200 responses (MISCONFIG, 70, PASSIVE) — 1 GET, mechanism already proven on s4dev4 this cycle.
+[NEXT] PROBE: `GET https://demo.enterprisealert.com/EAWebService/` first, to confirm the known-good WSDL is still returning 200 and that the connector is live. Then `GET https://demo.enterprisealert.com/EAWebService/?appproxy=debug`, recording status, size, sha256, and any hostname/FQDN/IP/port in the body. ≤2 GETs, ≤1 rps, unauthenticated, no redirect-following.
+[LEARN] ACCEPTED MISCONFIG @ I read my own hypothesis's premise as a finding: I wrote "504 ⇒ a backend exists" and treated that as the result, when `x-ms-proxy-error-details: NoActiveConnector` and a null-GUID `connector-id` say the exact opposite — a proxy application with **nothing behind it**. A status code is a symptom; the vendor's own error-detail header is the diagnosis. I had the diagnostic header in my grep pattern last cycle and filtered it out, keeping only `HTTP/` and `server`. Filtering a response for the fields you expect is how a hypothesis gets confirmed by its own assumption.
+[LEARN] ACCEPTED OTHER @ same mechanism, asymmetric payoff: `?appproxy=debug` on s4dev4 was near-worthless precisely because the connector group is empty, and I nearly closed the whole diagnostic-mode angle on that basis. The identical feature on a host with a live connector returns the internal backend address. When a mechanism is proven to work, the correct follow-up is not "close the mechanism" but "apply the mechanism to the target where its output is valuable." Dead infrastructure is where you *learn* a technique; live infrastructure is where you *cash* it.
+[LEARN] ACCEPTED MISCONFIG @ security-relevant objects leak on unauthenticated error pages by default: App Proxy printed its own App ID, Connector Group ID, Subscription ID, region, and service name in both headers and body with no session, and the debug link was advertised by the error page itself. Azure gives operators this for free on every production front door and nobody treats it as a finding. Vendor-default debug surfaces deserve to be reported as CWE-200 hygiene — the payout is small, but the fix is one toggle and the reconnaissance value to an attacker is real.
+[LEARN] ACCEPTED OTHER @ a 404 with no body cannot be reasoned about: both App Proxy controls returned 404 with zero bytes and no Content-Type. My "identical404 ⇒ identical response" reasoning this cycle was only sound *because* I hashed the body — and both hashes were the empty-string digest, meaning App Proxy does not serve a 404 page at all. Had these returned any non-empty body, three matching status codes would have told me nothing. Byte-length and hash, always; the status code is the weakest of the four signals.
+[LEARN] ACCEPTED OTHER @ distinguishing "unproxied" from "proxied-and-broken": control paths on s4dev4 returned 404 with no `x-ms-proxy-*` headers while `/EAWebService/*` returned full proxy headers. That header presence/absence cleanly separates "no App Proxy application exists here" (7 hosts) from "one exists and is dead" (s4dev4) — a distinction I could not have made from status codes alone, and one that turns a single host's misconfiguration into a definitive fleet-wide statement.
+[RISK] derdack: 8 —7 GETs total this cycle (4 on `demo.`, 3 on `s4dev4.`), all unauthenticated, no cookies, no credentials, no redirect-following, ≤1 rps with inter-request sleeps, recording only status / Content-Type / length / sha256 and error-page text. No mutating verb, no form submission, no XML-RPC POST, no enumeration, no scanning tool, no customer data. The two504 pages fetched were Azure-generated error documents and the debug page was a diagnostic page the proxy itself linked from its own error output — reading them caused no state change and triggered no connector work. Unchanged from last cycle's 8 rather than lower, because `?appproxy=debug` is a diagnostic surface and I want the next probe on `demo.` to stay read-only and single-path.
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt
+echo "=== introspection/revocation mentions:"; grep -n -i "introspection\|revocation" knowledge/index.md | head -20
+echo; echo "=== token endpoint 2/6 measurement:"; grep -n -i "token endpoint\|token_endpoint\|2 of 6\|2/6" knowledge/index.md | head -20
+=== introspection/revocation mentions:
+889:- 2026-09-29 REJECTED AUTH @ six-host OIDC discovery parity as *proof*: six byte-identical discovery documents and six byte-identical JWKS establish configured trust symmetry only. I have been reading the artefact instead of the decision point — the same root-cause error as the recurring "root-only status is not full-host status" mistake in this hunt. The unreliability is not in the target, it is in my choice of layer: the token endpoint has been exercised on 2 of 6 ingresses and the introspection/revocation family on 0 of 6, so "uniform" was never measured, only assumed. Consequence for the dossier: the cross-environment token-forgery finding must be worded as *documented configuration symmetry with unverified enforcement*, and that wording survives review; the current phrasing does not.
+926:- 2026-10-01 REJECTED AUTH @ six-host OIDC discovery parity as *proof*: byte-identical issuer-relative discovery/JWKS establish configured trust symmetry only, not enforced symmetry at token/introspection endpoints. The layer verified (static documents) differs from the decision point.
+
+=== token endpoint 2/6 measurement:
+165:- 2026-09-08 REJECTED AUTH @ devconnect.signl4.com: no `registration_endpoint` in OIDC discovery + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration not supported; public-client registration hypothesis closed
+182:- 2026-09-09 REJECTED AUTH @ devconnect.signl4.com: no registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+220:- 2026-09-10 REJECTED AUTH @ devconnect.signl4.com: no registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+241:- 2026-09-10 REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no none) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+254:- 2026-09-11 REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no none) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+263:- 2026-09-11 REJECTED AUTH @ devconnect.signl4.com: no `registration_endpoint` in OIDC discovery + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration not supported; public-client registration hypothesis closed
+307:- 2026-09-11 REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+343:- 2026-09-12 REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+377:- 2026-09-13 REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+426:- 2026-09-14 REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+458:- 2026-09-14 REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+514:- 2026-09-15 REJECTED AUTH @ devconnect.signl4.com: No registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+886:- 2026-09-28 REJECTED AUTH @ connect/api/devapi/account/devaccount `.well-known/openid-configuration`: OIDC discovery documents are static files. Six byte-identical discovery documents and six byte-identical JWKS prove *configured* trust symmetry across the estate; they do not prove *enforced* symmetry at the token endpoint. I had been treating document parity as behaviour parity, which is the same root-cause error as the recurring "root-only status is not full-host status" mistake in this hunt — I verified the layer I could read rather than the layer that decides.
+889:- 2026-09-29 REJECTED AUTH @ six-host OIDC discovery parity as *proof*: six byte-identical discovery documents and six byte-identical JWKS establish configured trust symmetry only. I have been reading the artefact instead of the decision point — the same root-cause error as the recurring "root-only status is not full-host status" mistake in this hunt. The unreliability is not in the target, it is in my choice of layer: the token endpoint has been exercised on 2 of 6 ingresses and the introspection/revocation family on 0 of 6, so "uniform" was never measured, only assumed. Consequence for the dossier: the cross-environment token-forgery finding must be worded as *documented configuration symmetry with unverified enforcement*, and that wording survives review; the current phrasing does not.
+890:- 2026-09-29 ACCEPTED OTHER @ RFC 8414 path-inserted discovery placement: the one recorded datapoint (`/.well-known/oauth-authorization-server` → 404 on connect+account) tests the placement with an **empty** issuer path, which is the form an ASP.NET Core host most commonly leaves unconfigured. It cannot be generalised to the populated path-inserted form, and it covers 2 of 6 ingresses. A negative from that probe was recorded as a negative for the metadata surface; it was a negative for a different, unpopulated placement.
+891:- 2026-09-29 REJECTED AUTH @ connect/api/devapi/account/devaccount `.well-known/openid-configuration`: OIDC discovery documents are static files. Six byte-identical discovery documents and six byte-identical JWKS prove *configured* trust symmetry across the estate; they do not prove *enforced* symmetry at the token endpoint. I had been treating document parity as behaviour parity, which is the same root-cause error as the recurring "root-only status is not full-host status" mistake in this hunt — I verified the layer I could read rather than the layer that decides.
+929:- 2026-10-01 REJECTED AUTH @ connect/api/devapi/account/devaccount `.well-known/openid-configuration`: OIDC discovery documents are static files. Six byte-identical discovery documents and six byte-identical JWKS prove *configured* trust symmetry across the estate; they do not prove *enforced* symmetry at the token endpoint. I had been treating document parity as behaviour parity, which is the same root-cause error as the recurring "root-only status is not full-host status" mistake in this hunt — I verified the layer I could read rather than the layer that decides.
+[0m
+Now I have the real layout: `reports/hypotheses-bigpickle.txt` is the working queue. Every hypothesis in it is now resolved. Before I queue new work I need the exact OIDC host list rather than guessing.
+Six hosts are `connect / api / devapi / devconnect / account / devaccount`. The recorded gap is precise: **token endpoint measured2/6, introspection+revocation 0/6** — I verified the readable document instead of the decision point. That's genuinely open work. Let me read one discovery doc to learn the exact endpoint paths.
+[0m$ [0mcd /tmp/opencode
+UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36'
+echo "### One GET: connect.signl4.com discovery (to learn endpoint paths only)"
+curl -sS --max-time 25 -A "$UA" -w '\nstatus=%{http_code} size=%{size_download}\n' \
+  "https://connect.signl4.com/.well-known/openid-configuration" -o disc.json | tail -1
+echo "sha256: $(sha256sum disc.json | cut -c1-16)…"
+python3 -c "
+import json
+d=json.load(open('disc.json'))
+for k in ['issuer','token_endpoint','introspection_endpoint','revocation_endpoint','jwks_uri','userinfo_endpoint','end_session_endpoint','registration_endpoint']:
+    print(f'{k:26} = {d.get(k,\"<absent>\")}')
+print()
+for k in ['token_endpoint_auth_methods_supported','introspection_endpoint_auth_methods_supported','revocation_endpoint_auth_methods_supported','scopes_supported','grant_types_supported']:
+    v=d.get(k); print(f'{k:46} = {v if v else \"<absent>\"}')
+"
+### One GET: connect.signl4.com discovery (to learn endpoint paths only)
+status=404 size=0
+sha256: e3b0c44298fc1c14…
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+  File "/usr/lib/python3.12/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt
+echo "=== discovery URLs recorded:"; grep -o -h "https://[a-z0-9./-]*openid-configuration[a-z0-9./-]*" knowledge/index.md leads/lead-nemotron3.md inventory/derdack.md 2>/dev/null | sort | uniq -c | sort -rn | head -20
+echo; echo "=== oauth-authorization-server variants:"; grep -o -h "https://[a-z0-9./-]*oauth-authorization-server[a-z0-9./-]*" knowledge/index.md inventory/derdack.md 2>/dev/null | sort | uniq -c | sort -rn | head -20
+=== discovery URLs recorded:
+     58 https://account.signl4.com/identity/.well-known/openid-configuration
+     21 https://devconnect.signl4.com/identity/.well-known/openid-configuration
+      5 https://dev.derdack.com/.well-known/openid-configuration
+      3 https://labconnect.signl4.com/identity/.well-known/openid-configuration
+      1 https://signl4.derdack.com/.well-known/openid-configuration
+      1 https://devconnect.signl4.com/.well-known/openid-configuration
+      1 https://connect.signl4.com/identity/.well-known/openid-configuration
+      1 https://api.signl4.com/.well-known/openid-configuration
+
+=== oauth-authorization-server variants:
+[0m
+Path is wrong (bare 404, empty body). Let me get the exact discovery URL from the KB rather than guessing.
+Correct path is `/identity/.well-known/...` — issuer path is `/identity`, which also gives me the populated RFC 8414 form.
+[0m$ [0mcd /tmp/opencode
+UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36'
+curl -sS --max-time 25 -A "$UA" -w 'status=%{http_code} size=%{size_download}\n' \
+  "https://connect.signl4.com/identity/.well-known/openid-configuration" -o disc.json | tail -1
+echo "sha256: $(sha256sum disc.json | cut -c1-16)…"
+python3 -c "
+import json
+d=json.load(open('disc.json'))
+for k in ['issuer','token_endpoint','introspection_endpoint','revocation_endpoint','jwks_uri','userinfo_endpoint','end_session_endpoint','registration_endpoint']:
+    print(f'{k:26} = {d.get(k,\"<ABSENT>\")}')
+print()
+for k in ['token_endpoint_auth_methods_supported','introspection_endpoint_auth_methods_supported','revocation_endpoint_auth_methods_supported','grant_types_supported']:
+    v=d.get(k); print(f'{k:46} = {v if v else \"<ABSENT>\"}')
+"
+status=200 size=3457
+sha256: 3be4ab63ef83e28a…
+issuer                     = https://connect.signl4.com/identity
+token_endpoint             = https://connect.signl4.com/identity/connect/token
+introspection_endpoint     = https://connect.signl4.com/identity/connect/introspect
+revocation_endpoint        = https://connect.signl4.com/identity/connect/revocation
+jwks_uri                   = https://connect.signl4.com/identity/.well-known/openid-configuration/jwks
+userinfo_endpoint          = https://connect.signl4.com/identity/connect/userinfo
+end_session_endpoint       = https://connect.signl4.com/identity/connect/endsession
+registration_endpoint      = <ABSENT>
+
+token_endpoint_auth_methods_supported          = ['client_secret_basic', 'client_secret_post']
+introspection_endpoint_auth_methods_supported  = ['client_secret_basic', 'client_secret_post']
+revocation_endpoint_auth_methods_supported     = ['client_secret_basic', 'client_secret_post']
+grant_types_supported                          = ['authorization_code', 'client_credentials', 'refresh_token', 'implicit', 'password', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:openid:params:grant-type:ciba', 'urn:ietf:params:oauth:grant-type:token-exchange']
+[0m
+Now I have the exact decision-layer paths. The never-measured family is `introspect` / `revocation` (0/6) and `token` (only 2/6). Let me measure existence+auth-state across all six hosts — unauthenticated GET only, so no credential is ever supplied.
+[0m$ [0mcd /tmp/opencode
+UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36'
+HOSTS="connect api devapi devconnect account devaccount"
+printf "%-14s %-12s %-6s %-6s %-10s %s\n" HOST ENDPOINT ST LEN SHA256 BODY
+for h in $HOSTS; do
+  for ep in introspect revocation token; do
+    r=$(curl -sS --max-time 20 -A "$UA" -w '|%{http_code}|%{size_download}' \
+        "https://$h.signl4.com/identity/connect/$ep" 2>/dev/null)
+    code=$(echo "$r" | awk -F'|' '{print $(NF-1)}'); len=$(echo "$r" | awk -F'|' '{print $NF}')
+    body=$(echo "$r" | sed 's/|[0-9]*|[0-9]*$//')
+    sha=$(printf '%s' "$body" | sha256sum | cut -c1-10)
+    snip=$(printf '%s' "$body" | tr -d '\n' | cut -c1-58)
+    printf "%-14s %-12s %-6s %-6s %-10s %s\n" "$h" "$ep" "$code" "$len" "$sha" "$snip"
+    sleep 1.5
+  done
+done
+HOST           ENDPOINT     ST     LEN    SHA256     BODY
+connect        introspect   405    0      e3b0c44298 
+connect        revocation   405    0      e3b0c44298 
+connect        token        400    27     52977cef16 {"error":"invalid_request"}
+api            introspect   405    0      e3b0c44298 
+api            revocation   405    0      e3b0c44298 
+api            token        400    27     52977cef16 {"error":"invalid_request"}
+devapi         introspect   405    0      e3b0c44298 
+devapi         revocation   405    0      e3b0c44298 
+devapi         token        400    27     52977cef16 {"error":"invalid_request"}
+devconnect     introspect   405    0      e3b0c44298 
+devconnect     revocation   405    0      e3b0c44298 
+devconnect     token        400    27     52977cef16 {"error":"invalid_request"}
+account        introspect   405    0      e3b0c44298 
+account        revocation   405    0      e3b0c44298 
+account        token        400    27     52977cef16 {"error":"invalid_request"}
+devaccount     introspect   405    0      e3b0c44298 
+devaccount     revocation   405    0      e3b0c44298 
+devaccount     token        400    27     52977cef16 {"error":"invalid_request"}
+[0m
+Gap closed: introspection + revocation exist on **6/6** (405 = present, POST-only), token on **6/6** (400 `invalid_request`). That finally measures the *decision layer*, not the document. One more named gap remains — the RFC 8414 populated form, never tested.
+[0m$ [0mcd /tmp/opencode
+UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36'
+echo "### RFC 8414 populated form: /.well-known/oauth-authorization-server/identity"
+printf "%-14s %-6s %-6s %s\n" HOST ST LEN SHA
+for h in connect api devapi devconnect account devaccount; do
+  r=$(curl -sS --max-time 20 -A "$UA" -w '|%{http_code}|%{size_download}' \
+      "https://$h.signl4.com/.well-known/oauth-authorization-server/identity" 2>/dev/null)
+  code=$(echo "$r" | awk -F'|' '{print $(NF-1)}'); len=$(echo "$r" | awk -F'|' '{print $NF}')
+  body=$(echo "$r" | sed 's/|[0-9]*|[0-9]*$//')
+  printf "%-14s %-6s %-6s %s\n" "$h" "$code" "$len" "$(printf '%s' "$body" | sha256sum | cut -c1-12)"
+  sleep 1.5
+done
+echo; echo "### jwks_uri reachability spot-check (non-standard path-inserted location)"
+for h in connect account; do
+  curl -sS --max-time 20 -A "$UA" -o /dev/null -w "$h jwks: status=%{http_code} size=%{size_download}\n" \
+    "https://$h.signl4.com/identity/.well-known/openid-configuration/jwks"
+  sleep 1.5
+done
+### RFC 8414 populated form: /.well-known/oauth-authorization-server/identity
+HOST           ST     LEN    SHA
+connect        404    0      e3b0c44298fc
+api            404    0      e3b0c44298fc
+devapi         404    0      e3b0c44298fc
+devconnect     404    0      e3b0c44298fc
+account        404    0      e3b0c44298fc
+devaccount     404    0      e3b0c44298fc
+
+### jwks_uri reachability spot-check (non-standard path-inserted location)
+connect jwks: status=200 size=1611
+account jwks: status=200 size=1611
+[0m
+Two more named gaps closed. Let me record this cycle's verdicts and check the reporting conventions for the one genuinely reportable finding I produced.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt
+echo "=== head of hypotheses-bigpickle.txt (format/style):"; head -20 reports/hypotheses-bigpickle.txt
+echo; echo "=== any existing finding/report drafts?"; grep -rn "CWE-" probe-results.md analyst-out.txt 2>/dev/null | head -10
+echo; echo "=== git status:"; git status --porcelain | head
+=== head of hypotheses-bigpickle.txt (format/style):
+## 2026-10-03 16:45:37 UTC [target] (model bigpickle)
+[HYP] Sibling application paths beside `/EAWebService/` on `demo.enterprisealert.com` expose the Enterprise Alert web portal or a second anon-readable surface
+class: MISCONFIG
+asset: demo.enterprisealert.com
+confidence: 45
+reasoning: The host carries a complete Enterprise Alert 9.5.26147 installation (directory index titles itself "Enterprise Alert® Event Provider API & Connector SDK (v9.5.26147)", links to 3 endpoint docs) behind Azure AD App Proxy while `/` returns bare 404. My KB contains5 fully-enumerated `/EAWebService/` paths and **zero** probes of `/EA/`, `/EnterpriseAlert/`, or `/EventProviderAPI.aspx` (unprefixed) on this host. I probed exactly those paths on `downloads.enterprisealert.com` (404) and carried that result over to `demo.` without ever testing them. The `demo.` root404 is the same artefact that hid `/EAWebService/` for multiple cycles.
+evidence_needed: A 200 (or any status whose body hash diverges from the bare-404 control) on a sibling path — an EA portal login page, a redirect to `/EA/`, an ASP.NET error with stack trace, or a directory index.
+verify_steps: (1) Control first: `GET https://demo.enterprisealert.com/zz-nonexistent-ctrl` — record status + Content-Type + length + sha256. Without this, a 404 is uninterpretable. (2) `GET https://demo.enterprisealert.com/EA/`, `/EnterpriseAlert/`, `/EventProviderAPI.aspx` — status + length + sha256 only. (3) If any diverges, ONE follow-up GET for a single child path to characterise; stop, no enumeration. ≤5 GETs, ≤1 rps, no auth, no cookies, no redirect-following.
+impact: The EA web portal is the tenant-facing application: if it is anon-readable, that is a second, much larger unauthenticated surface than the 5-path API namespace (alerts, schedules, users, reports) and would lift Finding "EA demo exposure" from a config-level 5-path disclosure to a portal disclosure. ASP.NET error pages on any of these could additionally leak stack traces / connection strings. All-negative = `demo.` closed as a single-app host with evidence.
+testability: PASSIVE
+[HYP] `s4dev4.enterprisealert.com` reaches a live Enterprise Alert backend that the other seven fleet hosts do not
+class: MISCONFIG
+asset: s4dev4.enterprisealert.com
+confidence: 40
+reasoning: The 8-host `s4dev*` fleet resolves to one IP behind Azure AD App Proxy. On 2026-09-26 the fleet split cleanly: s4dev4 returned **504 + `x-ms-proxy-*` headers** (proxy accepted, backend timed out — a backend exists) while s4dev1/2/3/5/6/7/8 returned bare 404 with zero proxy headers (no backend). Nobody has ever sent a deep EA path to s4dev4. A staging Enterprise Alert install is typically configured with production-shaped credentials, sample tenants, and live integrations — the highest-value target class in the fleet — and it is the single host whose 504 implies the backend is wired.
+evidence_needed: Any response from `s4dev4.enterprisealert.com/EAWebService/` or `?Handler=About` that is not the bare-404 body — including a distinct 504 body, which alone proves a routed backend path and would be a topology finding.
+verify_steps: (1) Control: `GET https://s4dev4.enterprisealert.com/zz-nonexistent-ctrl` — status + length + sha256. (2) `GET https://s4dev4.enterprisealert.com/EAWebService/` and `/EAWebService/EventProviderAPI.aspx?Handler=About` — status + Content-Type + length + sha256. (3) Compare against the s4dev1 recorded bare-404 fingerprint. ≤3 GETs, ≤1 rps, no auth, no redirect-following.
+impact: A reachable staging EA backend carrying production-shaped config or live integration credentials is HIGH (~7). A distinct-504-only result is LOW but establishes the fleet topology asymmetry as real. All-negative = s4dev4 closed and the fleet confirmed as 1-of-8 backend-present.
+testability: PASSIVE
+[PARKED] `/api/v2/teams` 401-vs-405 flapping: 10+ cycles, never once produced a differential beyond the status code. Endpoint-map-only.
+
+=== any existing finding/report drafts?
+analyst-out.txt:364:impact: Confirms and quantifies the tenant-object disclosure mechanism on a *production SaaS domain* rather than a dead staging host, which raises the credibility of the s4dev4 report considerably and gives Derdack a concrete, one-line fix (disable `?appproxy=debug` and strip proxy headers at the edge). CWE-200, LOW–Medium, no data and no auth bypass — the value is reconnaissance, and I will not inflate it.
+analyst-out.txt:369:[PARKED] `s4dev4.enterprisealert.com` as a *vulnerability*: the empty connector group is a hygiene/offboarding defect and nothing more — the absent backend actively **reduces** exposure. Report it as CWE-200 information disclosure plus debug-mode hygiene, not as a takeover or an outage-in-progress.
+analyst-out.txt:377:[LEARN] ACCEPTED MISCONFIG @ security-relevant objects leak on unauthenticated error pages by default: App Proxy printed its own App ID, Connector Group ID, Subscription ID, region, and service name in both headers and body with no session, and the debug link was advertised by the error page itself. Azure gives operators this for free on every production front door and nobody treats it as a finding. Vendor-default debug surfaces deserve to be reported as CWE-200 hygiene — the payout is small, but the fix is one toggle and the reconnaissance value to an attacker is real.
+
+=== git status:
+?? analyst-out.txt
+?? analyst-prompt.txt
+?? ctx.txt
+[0m
+Recording the cycle. I'll append a new block and explicitly close the stale `[FINAL]` entries — my own recorded lesson is that stale high-ranked leads get re-picked if they aren't struck.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && cat >> reports/hypotheses-bigpickle.txt <<'EOF'
+
+## 2026-10-03 20:05:12 UTC [api] (model bigpickle) -- CYCLE CLOSURE: entire probe queue resolved
+[VERDICT] STRIKE prior [FINAL] 1 -- `?appproxy=debug` on `demo.enterprisealert.com`: CONFIRMED ARTIFACT, NOT A FINDING.
+  Evidence: control `/zz-ctrl-9f3a-notreal` = 404, 0 bytes, sha256 `e3b0c442...` (empty-body digest). Baseline `/EAWebService/` = 200, 1857 bytes, sha256 `a766c542...`. `?appproxy=debug` = 200, 1872 bytes. A 15-byte delta on a "diagnostic page" is exactly the over-read this hunt keeps making. Diffed the two bodies: the **only** difference in the entire document is line 10, `<form ... action="./?appproxy=debug">` vs `action="./"`. The ASP.NET WebForms page reflects my own query string into the form action. Control with a random query, `?zzctrl7f3=abc`, returned 1871 bytes and `action="./?zzctrl7f3=abc"`. Arithmetic seal: query is 15 chars -> 1872, 14 chars -> 1871, delta exactly 1 byte, tracking the length of *my own string*. Debug mode is NOT honoured on demo; the App Proxy ignores the parameter and the backend merely echoes it. No internal hostname, FQDN, IP or port disclosed. Hypothesis struck on its own premise, exactly as `Handler=` reflection was struck on 2026-09-26.
+[VERDICT] STRIKE prior [FINAL] 2 -- `x-ms-proxy-*` on `demo.enterprisealert.com`: CONFIRMED, and it is a real reportable finding.
+  Evidence: `GET /EAWebService/EventProviderAPI.asmx?wsdl` = 200, 29968 bytes, emitting unauthenticated: `x-ms-proxy-app-id: f18ba879-3dea-4018-b9d1-e6dbdc9ce151`, `-group-id: 6b26e6a4-c5ad-4b27-b31c-e1777730c354`, `-subscription-id: ff2a095d-01ff-4edb-99e6-38b97f49467c`, `-service-name: proxy-appproxy-NEUR-DUB01P-3`, `-data-center: NEUR`, `-connector-id: da867a92-3ba5-4e78-95f6-c97bac3c791f` (NON-NULL), `-transaction-id: 04ce00bf-...`. Second request on `/EAWebService/?zzctrl7f3=abc` returned the identical six stable IDs with only `-transaction-id` rotating (`8ed78ccc-...`). Identifiers are stable across requests; only the transaction GUID rotates. Values match the 2026-09-26 KB baseline exactly, so this is a first-hand re-confirmation rather than a new discovery -- but it is now measured on my own request with a non-null connector GUID on a live production SaaS tenant, which is the evidentiary form the report needs. CWE-200, LOW-MEDIUM. Not struck -- promoted to deliverable.
+[VERDICT] STRIKE prior [45] sibling-paths hypothesis -- `demo.enterprisealert.com` is now host-exhausted. `/EA/`, `/EnterpriseAlert/`, and `/EventProviderAPI.aspx` (host root, unprefixed) all returned 404, **0 bytes, sha256 `e3b0c44298fc1c14...` -- byte-identical to the nonexistent-path control.** This is the closure my 2026-10-03 [LEARN] demanded: the `/EA/` path had been probed on a *different* host and never on this one. It is now probed on this one, and it is empty. The host carries exactly the five enumerated `/EAWebService/` paths and no host-root sibling portal. The recurring `root-only status is not full-host status` mistake is finally discharged for this asset.
+[MEASUREMENT] FIRST-EVER MEASUREMENT OF THE OIDC DECISION LAYER (closes the 0/6 and 2/6 coverage gaps).
+  The 2026-09-29 [LEARN] correctly identified that I had been reading the static artefact instead of the decision point, and named the gap precisely: token endpoint exercised on 2 of 6 ingresses, introspection/revocation family on 0 of 6. Endpoint paths were recovered from `connect.signl4.com/identity/.well-known/openid-configuration` (200, 3457 bytes): token `/identity/connect/token`, introspection `/identity/connect/introspect`, revocation `/identity/connect/revocation`, jwks `/identity/.well-known/openid-configuration/jwks`, issuer `https://connect.signl4.com/identity`. Unauthenticated GET across all six hosts (connect/api/devapi/devconnect/account/devaccount):
+    - `/identity/connect/introspect`  = **405**, 0 bytes, sha256 `e3b0c442...` on 6/6  => endpoint PRESENT, POST-only.
+    - `/identity/connect/revocation` = **405**, 0 bytes, sha256 `e3b0c442...` on 6/6  => endpoint PRESENT, POST-only.
+    - `/identity/connect/token`       = **400**, 27 bytes, sha256 `52977cef16...`, body `{"error":"invalid_request"}` on 6/6 => endpoint PRESENT, expects a form body.
+  All three endpoints exist and are auth-gated on every ingress, with byte-identical unauthenticated behaviour. Coverage is now 6/6 / 6/6 / 6/6 instead of 2/6 / 0/6 / 0/6. **Consequence for the dossier wording:** the cross-environment finding is no longer "documented configuration symmetry with unverified enforcement" in the weak sense -- surface existence and uniform auth-gating at the decision point are now *measured*. What remains unverified is the only part that needs a real credential: whether a token minted on one environment is *accepted* on another. That boundary must stay in the report.
+[MEASUREMENT] RFC 8414 populated path-inserted discovery form -- CLOSED, hypothesis retired. Issuer is populated (`/identity`), so the correct RFC 8414 form is `/.well-known/oauth-authorization-server/identity`. Tested on 6/6 hosts: **404, 0 bytes, sha256 `e3b0c442...`** everywhere. The 2026-09-29 note correctly flagged that the earlier negative covered only the EMPTY-issuer-path form on 2 hosts; the populated form is now tested at full coverage and is unsupported estate-wide. JWKS at its non-standard path-inserted location `/identity/.well-known/openid-configuration/jwks` returns 200 / 1611 bytes on both spot-checked hosts (connect, account), reachable and identical size.
+[LEARN] ACCEPTED OTHER @ a size delta is not a finding until the control uses a *different* query string: I measured +15 bytes on `?appproxy=debug` and was one step from filing a debug-mode disclosure on production SaaS. The control that killed it was not the status code and not the hash of the debug page -- it was re-running with a RANDOM query string and noticing the response grew by exactly the length of my own query. WebForms reflects `Request.RawUrl` into the form action, so any parameter I add changes the page size. When a probe adds a query string to a dynamic page, the control must add a query string too, or the control is not comparable. I had already been burned by `Handler=` reflection on 2026-09-26 and still walked this path a second time; the generalisable rule is that **any server-rendered page reflects its own URL**, so URL-derived deltas are noise by default.
+[LEARN] ACCEPTED AUTH @ the "document vs decision point" correction is now paid out, and it cost one cycle of delay: the correct critique sat unexecuted from 2026-09-29 to today while I queued EA App Proxy work. The fix was small -- recover endpoint paths from the discovery document I had already read hundreds of times, then spend nine GETs closing a gap I had explicitly named in my own knowledge base. Naming a gap in [LEARN] without converting it into queued work is the same failure as leaving a disproven hypothesis in the ranked set, one layer up: both are known-unfinished work that survives because nothing forces it into an executable item.
+[PARKED] Introspection / revocation error-shape probing via POST: `introspect` and `revocation` are confirmed present and POST-only on 6/6. Differential error-shape analysis (e.g. whether any ingress returns a verbose framework error, stack trace or version banner instead of the clean 27-byte JSON) would be genuinely new information, but it requires submitting form bodies to the token/introspection endpoints, which violates this cycle's own stated envelope ("no mutating verb, no form submission"). It grants no access and mutates no state, so it may well be in scope for the program -- but that is a judgment call for the operator, not something to self-authorize. PARKED pending explicit approval.
+[RISK] derdack: 6 -- 30 unauthenticated GETs total this cycle against public endpoints only: 1 control + 2 on `demo.enterprisealert.com/EAWebService*`, 3 host-root paths, 1 discovery document, 18 across the six SIGNL4 OIDC hosts, 6 RFC 8414 forms, 2 JWKS. No cookies, no credentials, no redirect-following, no POST, no form submission, no enumeration, no scanning tool, no customer data, <=1 rps with inter-request sleeps. Every response was a public metadata document or a bare error page. Reduced from 8 to 6: nothing this cycle touched a mutating verb or a credential, and the only actionable output is a header-disclosure finding I can now report with first-hand evidence.
+[QUEUE] EMPTY at the passive layer. Every hypothesis from the previous three cycles is now resolved with evidence: App Proxy debug mode struck as an artifact, App Proxy header disclosure confirmed and promoted to a reportable deliverable, `demo.enterprisealert.com` host-exhausted, `s4dev4` closed as dead infrastructure, the OIDC decision layer measured at 6/6 across token + introspection + revocation, and RFC 8414 populated-form support retired at full coverage. I will not manufacture a new ranked lead to fill the space.
+EOF
+echo "appended. new line count:"; wc -l < reports/hypotheses-bigpickle.txt
+appended. new line count:
+85
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && tail -3 knowledge/index.md | cut -c1-300
+- 2026-10-03 ACCEPTED MISCONFIG @ security-relevant objects leak on unauthenticated error pages by default: App Proxy printed its own App ID, Connector Group ID, Subscription ID, region, and service name in both headers and body with no session, and the debug link was advertised by the error page it
+- 2026-10-03 ACCEPTED OTHER @ a 404 with no body cannot be reasoned about: both App Proxy controls returned 404 with zero bytes and no Content-Type. My "identical404 ⇒ identical response" reasoning this cycle was only sound *because* I hashed the body — and both hashes were the empty-string dige
+- 2026-10-03 ACCEPTED OTHER @ distinguishing "unproxied" from "proxied-and-broken": control paths on s4dev4 returned 404 with no `x-ms-proxy-*` headers while `/EAWebService/*` returned full proxy headers. That header presence/absence cleanly separates "no App Proxy application exists here" (7 hosts)
+[0m
+Now the knowledge base entry, so the next cycle doesn't re-derive this.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && cat >> knowledge/index.md <<'EOF'
+- 2026-10-03 REJECTED MISCONFIG @ `demo.enterprisealert.com/EAWebService/?appproxy=debug`: reported 200 and 1872 bytes vs the 1857-byte baseline, a +15 delta that reads exactly like a vendor diagnostic page. Full-body diff showed the sole difference in the document is `<form action="./?appproxy=debug">` vs `action="./"` — ASP.NET WebForms reflects the request URL into the form action. Re-probed with a random query `?zzctrl7f3=abc`: 1871 bytes, `action="./?zzctrl7f3=abc"`. Query 15 chars → 1872 bytes, 14 chars → 1871 bytes; delta tracks my own string exactly. Debug mode is NOT enabled on demo; the App Proxy discards the parameter. No internal host/FQDN/IP/port disclosed. Control-fingerprinted `/zz-ctrl-9f3a-notreal` = 404, 0 bytes, sha256 `e3b0c442...` (empty-body digest), which is the baseline for interpreting every bare-404 on this host.
+- 2026-10-03 ACCEPTED MISCONFIG @ App Proxy tenant-object header disclosure CONFIRMED first-hand on a live production tenant: unauthenticated `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` (200, 29968 bytes) returns `x-ms-proxy-app-id: f18ba879-3dea-4018-b9d1-e6dbdc9ce151`, `x-ms-proxy-group-id: 6b26e6a4-c5ad-4b27-b31c-e1777730c354`, `x-ms-proxy-subscription-id: ff2a095d-01ff-4edb-99e6-38b97f49467c`, `x-ms-proxy-service-name: proxy-appproxy-NEUR-DUB01P-3`, `x-ms-proxy-data-center: NEUR`, `x-ms-proxy-connector-id: da867a92-3ba5-4e78-95f6-c97bac3c791f` (NON-NULL), `x-ms-proxy-transaction-id` (rotates per request). Six identifiers are byte-stable across requests; only the transaction GUID rotates. Values match the 2026-09-26 baseline exactly. CWE-200, LOW–MEDIUM, reportable.
+- 2026-10-03 REJECTED OTHER @ `demo.enterprisealert.com` sibling-portal paths: `/EA/`, `/EnterpriseAlert/`, and host-root `/EventProviderAPI.aspx` all return 404, 0 bytes, sha256 `e3b0c44298fc1c14...` — byte-identical to the nonexistent-path control. Host is now exhausted: exactly the five enumerated `/EAWebService/` paths exist and there is no host-root sibling portal. Discharges the recurring "namespace ≠ host / a result on host A does not transfer to host B" lesson for this asset.
+- 2026-10-03 ACCEPTED AUTH @ OIDC decision layer measured for the first time, closing the named 2/6 and 0/6 gaps: endpoint paths recovered from `connect.signl4.com/identity/.well-known/openid-configuration` (200, 3457 bytes) — token `/identity/connect/token`, introspection `/identity/connect/introspect`, revocation `/identity/connect/revocation`, jwks `/identity/.well-known/openid-configuration/jwks`, issuer `https://connect.signl4.com/identity`. Unauthenticated GET across connect/api/devapi/devconnect/account/devaccount: introspect = 405/0 bytes on 6/6; revocation = 405/0 bytes on 6/6; token = 400, 27 bytes, sha256 `52977cef16...`, `{"error":"invalid_request"}` on 6/6. All three endpoints EXIST and are auth-gated estate-wide with byte-identical unauthenticated behaviour. Dossier wording can therefore strengthen from "documented configuration symmetry, enforcement unverified" to "surface existence and uniform auth-gating at the decision point are measured"; what still requires a real credential — whether a token minted in one environment is *accepted* in another — must remain explicitly unverified.
+- 2026-10-03 REJECTED OTHER @ RFC 8414 populated path-inserted discovery: issuer is populated (`/identity`), so the correct form is `/.well-known/oauth-authorization-server/identity`. Tested on 6/6 hosts → 404, 0 bytes, sha256 `e3b0c442...` everywhere. The 2026-09-29 negative covered only the EMPTY-issuer-path form on 2 hosts; the populated form is now at full coverage and is unsupported estate-wide. Hypothesis retired. JWKS at its non-standard path-inserted location returns 200/1611 bytes on connect and account.
+- 2026-10-03 ACCEPTED OTHER @ a size delta is not a finding until the control uses a *different* query string: I measured +15 bytes on `?appproxy=debug` and was one step from filing a production-SaaS debug-disclosure. Neither the status code nor the hash of the debug page would have caught it — what caught it was re-probing with a RANDOM query and watching the response grow by exactly the length of my own query. Any server-rendered page reflects its own URL, so when a probe adds a query string the control must add one too, or the two responses are not comparable. Second occurrence after the 2026-09-26 `Handler=` reflection; the generalisable rule is that URL-derived deltas are noise by default.
+- 2026-10-03 ACCEPTED OTHER @ naming a gap in [LEARN] without converting it into queued work is a failure mode: the "verify the decision point, not the document" critique was recorded 2026-09-29 and sat unexecuted for four days while I queued EA App Proxy work instead. The remedy was trivial — recover endpoint paths from a discovery document I had already read hundreds of times, then spend nine GETs closing a gap I had named myself. Both a disproven hypothesis left in the ranked set and a known-unfinished item left only in [LEARN] survive for the same reason: nothing forces them into an executable queue item.
+EOF
+echo "knowledge/index.md lines: $(wc -l < knowledge/index.md)"
+knowledge/index.md lines: 1009
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt
+echo "=== cycle markers now in hypotheses file:"; grep -c "^\[VERDICT\]\|^\[MEASUREMENT\]" reports/hypotheses-bigpickle.txt
+grep -n "^## 2026-10-03 20:05" reports/hypotheses-bigpickle.txt
+echo; echo "=== files changed:"; git status --porcelain reports/hypotheses-bigpickle.txt knowledge/index.md
+echo; echo "=== state file (untouched):"; cat state_bigpickle.json 2>/dev/null
+=== cycle markers now in hypotheses file:
+5
+68:## 2026-10-03 20:05:12 UTC [api] (model bigpickle) -- CYCLE CLOSURE: entire probe queue resolved
+
+=== files changed:
+ M knowledge/index.md
+ M reports/hypotheses-bigpickle.txt
+
+=== state file (untouched):
+{"phase": "POC", "target": "api"}
+[0m
+Cycle complete — every queued lead resolved, and two long-standing gaps in my own map are now closed.
+
+**Probes run (30 unauthenticated GETs, ≤1 rps, no POST/cookies/redirects):**
+
+| Lead | Verdict |
+|---|---|
+| `?appproxy=debug` on demo | **Struck — self-measurement artifact** |
+| `x-ms-proxy-*` on demo | **Confirmed — reportable CWE-200** |
+| Sibling paths `/EA/`, `/EnterpriseAlert/`, root `EventProviderAPI.aspx` | **All bare 404 — host exhausted** |
+| OIDC token/introspect/revocation | **First-ever decision-layer measurement, 6/6** |
+| RFC 8414 populated discovery | **404 on 6/6 — hypothesis retired** |
+
+The important catch: `?appproxy=debug` returned 200 at +15 bytes, which reads exactly like a vendor diagnostic page. It wasn't. A full-body diff showed the sole difference was `<form action="./?appproxy=debug">`, and a **random-query control** (`?zzctrl7f3=abc` → 1871 bytes) proved the delta tracks the length of my own query string, not any debug output. Had I filed it, I'd have reported a production-SaaS debug disclosure that doesn't exist. All three sibling paths hashed byte-identical to the nonexistent-path control (`e3b0c442`).
+
+I also paid out the 2026-09-29 critique I'd left unexecuted: introspection and revocation exist and are POST-only on 6/6, token returns clean `400 {"error":"invalid_request"}` on 6/6. That upgrades the OIDC dossier wording from "documented symmetry, enforcement unverified" to "surface existence and auth-gating measured" — while cross-environment *token acceptance* still needs a real credential and must stay marked unverified.
+
+Recorded in `reports/hypotheses-bigpickle.txt:68` and `knowledge/index.md` (not committed).
+
+Two decisions are yours, since the passive queue is genuinely empty and I won't manufacture a lead to fill it:
+
+1. **Draft the App Proxy report now?** I have what it needs —7 unauthenticated headers, non-null `connector-id da867a92-…` on a live tenant, byte-stable across requests, one-line fix.
+2. **Authorize POST error-shape probing?** Differential error analysis on `introspect`/`revocation`/`token` would be new information, but it needs form bodies and so breaks this cycle's own "no form submission" envelope. It grants no access and mutates nothing, so it's likely in scope — but that's your call, not mine to self-authorize.
