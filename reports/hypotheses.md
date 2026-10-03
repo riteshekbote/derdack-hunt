@@ -4937,3 +4937,28 @@
 - LEARN: ACCEPTED OTHER @ full estate: repeated probe cycles across identity/API/CT/WordPress/EA surfaces yield zero new paths, verbs, or differentials — passive surface
 - LEARN: REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is
 - LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier 
+
+## RANKED HYPOTHESES 2026-10-03 22:41:26 UTC
+- [92] connect/devconnect/api/devapi/account/devaccount.signl4.com/identity: Cross-environment token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch (from art/lead_nemotron3.txt)
+- [50] demo.enterprisealert.com: App Proxy diagnostic mode on demo.enterprisealert.com/EAWebService (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: `GET https://demo.enterprisealert.com/EAWebService/?appproxy=debug` (and control) per HYP-1; <=2 GETs, <=1 rps, no auth/cookies/redirect-following.
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://vps.signl4.com/ (confirm HTTPS 200 nginx default page + cert CN=server.d1g.it + GoDaddy NS) — final validation for report submission
+- LEARN: ACCEPTED OTHER @ demo.enterprisealert.com/EAWebService: root-only status is not full-host status — path-family probing recovered live EA sub-app behind App Prox
+- LEARN: REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: header-only Azure resource IDs are non-secret/actionable; focus on backend reachability not descriptive head
+- LEARN: ACCEPTED MISCONFIG @ control-first discipline: status without body hash/control is not evidence; fabricate control first (zz-nonexistent-ctrl) before interpreti
+- LEARN: REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are no
+- LEARN: REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the ver
+- LEARN: REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there 
+- LEARN: ACCEPTED AUTH @ api.signl4.com/identity: distinguishing a prefix-scoped gateway deny from a host-wide or genuinely-disabled service requires a second network po
+- LEARN: REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a tran
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: explicit A record to GoDaddy shared host serving default vhost + unrelated cert; fabricated-host byte-identical response pr
+- LEARN: REJECTED OTHER @ www.vps.signl4.com: NXDOMAIN (CT token, no DNS)
+- LEARN: REJECTED MISCONFIG @ go.signl4.com: Cloudflare 403 error 1034 — third-party/CDN configuration, not a Derdack defect
+- LEARN: REJECTED OTHER @ admin.signl4.com: TCP timeout on 132.220.132.233 — inert
+- LEARN: ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: path-family probing of a known-404 root host (IIS/App-Proxy) recovered a full live EA 9.5.26147 sub-
+- LEARN: ACCEPTED OTHER @ demo.enterprisealert.com/EAWebService: version disclosure 9.5.26147 + 12-op WSDL + REST events + EventProviderAPI.aspx all anon-readable, yet e
+- LEARN: REJECTED OTHER @ EA version CVE matching: no program-specific exploit derivable without credentials → REJECTED-class, not pursued
+- LEARN: ACCEPTED OTHER @ full estate: repeated probe cycles across identity/API/CT/WordPress/EA surfaces yield zero new paths, verbs, or differentials — passive surface
+- LEARN: REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is
+- LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier 

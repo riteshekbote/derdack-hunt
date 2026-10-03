@@ -1979,3 +1979,11 @@ www.derdack.com
 - CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
 - CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6, passwor
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
+
+## 2026-10-03 22:41:26 UTC
+- CHANGED vps.signl4.com HTTPS probe returns 000 (TCP timeout) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record 72.167.227.27 (GoDaddy secureserver.net) unchanged
+- CHANGED api.signl4.com/api/v2/teams returns 401 on unauth GET and 401 with invalid Bearer (was 405/405 in prior cycles) — route-gated this cycle, differs from V1/V2 handler-deferred pattern
+- CHANGED us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
+- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6, passwor
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed; passive route maps exhausted; V4 API absent; signl4.derdack.com permanently unreachable
