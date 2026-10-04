@@ -2004,3 +2004,15 @@ www.derdack.com
 - NEW api.signl4.com/identity & account.signl4.com/identity OIDC discovery both expose `dpop_signing_alg_values_supported` with 9 algorithms (RS256/RS384/RS512/PS256/PS384/PS512/ES256/ES384/ES512) — mitigat
 - NEW vps.signl4.com currently returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net unchanged
 - NEW us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
+
+## 2026-10-04 13:41:19 UTC
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl → 200, Content-Type text/xml; charset=utf-8, Content-Length 29968, sha256 e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07ea
+- NEW demo.enterprisealert.com is fronted by a LIVE App Proxy connector: x-ms-proxy-connector-id=da867a92-3ba5-4e78-95f6-c97bac3c791f, x-ms-proxy-service-name=proxy-appproxy-NEUR-DUB01P-3, x-ms-proxy-data-c
+- NEW `?appproxy=debug` on the live-connector demo host is SILENT. Baseline /EAWebService/ = 1824 B; ?appproxy=debug = 1839 B; ?appproxy=zzzzzz = 1840 B; ?x=appproxydbg1 = 1839 B. Delta equals query-string 
+- NEW Public OpenAPI /api/docs/v2/swagger.json (200, 1216391 B) exposes an undocumented money-flow write family: PUT /v2/prepaid/settings and PUT /v2/prepaid/{subscriptionId}/prepaidSettings both accept app
+- NEW PUT /v2/prepaid/settings carries NO subscription identifier in path, while its sibling GET/PUT /v2/subscriptions/{subscriptionId}/prepaid{Settings,Balance,Transactions} make subscriptionId a REQUIRED 
+- NEW GET /v2/subscriptions/{subscriptionId}/prepaidTransactions returns PrepaidTransactionInfo including amount, currency, transactionId, statusCode, packageCode and createdBy (actor identity), keyed solel
+- NEW Set-Cookie AzureAppProxyAnalyticCookie_f18ba879-... on the anonymous demo GET carries a base64 App Proxy claim-request document naming a custom claim (customReport…dkcsdkcsdkdkcsdkdkdseucr) and reques
+- NEW EventConnectorServer.ashx?WSDL → 200, 240 B, sha256 eb3f77ccdd2b83b531f87225130a7237ff4b3a5fd98875177f707d2c9a1ab1c1; body is the v9.5.26147 "installed Event Handlers" table with a header row and zero
+- CHANGED api.signl4.com/api/v2/teams flapping is TEMPORAL, not per-request. 6 consecutive unauthenticated GETs, 1.2 s apart, returned 401/401/401/401/401/401, all with 0-byte body (sha256 e3b0c44298fc1c14…7852
+- CHANGED WWW-Authenticate on that401 is `Bearer` only. Discovery advertises dpop_signing_alg_values_supported (9 algs) but the API gateway demands no DPoP scheme on /api/v2/*, so token-binding enforcement is n

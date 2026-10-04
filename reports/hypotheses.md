@@ -5007,3 +5007,30 @@
 - LEARN: ACCEPTED OTHER @ full estate: repeated probe cycles across identity/API/CT/WordPress/EA surfaces yield zero new paths, verbs, or differentials — passive surface
 - LEARN: REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is
 - LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier 
+
+## RANKED HYPOTHESES 2026-10-04 13:41:19 UTC
+- [95] demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal hostname leak via EA WSDL enabling infrastructure reconnaissance (from art/lead_nemotron3.txt)
+- [55] connect.signl4.com/api/v2/prepaid/settings: Prepaid auto-top-up settings accept unbounded client-controlled integers over a JSON-Patch money-write route (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: request subscription-specific API client credentials from SIGNL4 support through the channel the vendor itself documents — the published OAuth2 scheme re
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://vps.signl4.com/ (confirm HTTPS 200 nginx default page + cert CN=server.d1g.it + GoDaddy NS) — final validation for report submission
+- LEARN: REJECTED OTHER @ my own 2026-10-03 lesson "?appproxy=debug pays off on a host with a live connector": FALSIFIED by direct test. demo.enterprisealert.com has a n
+- LEARN: ACCEPTED OTHER @ query-matched control design: the +15/+16/+15 byte pattern tracking query-string length exactly, with a clean diff after normalising the form a
+- LEARN: ACCEPTED OTHER @ distribution-vs-snapshot: I had recorded api/v2/teams auth-status "flapping" for 20+ cycles from exactly one sample per cycle, and had begun wr
+- LEARN: ACCEPTED OTHER @ reading the document's requestBody, not just its path list: extracting requestBody + $ref + additionalProperties + field types from the prepaid
+- LEARN: ACCEPTED OTHER @ additionalProperties:false is a client-side fiction, not a server-side control: the prepaid schema declares additionalProperties:false, which i
+- LEARN: ACCEPTED OTHER @ milestone-style costs are not liabilities: 15 requests closed the appproxy mechanism, the teams distribution, the prepaid schema and the demo c
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventPro
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host (72.167.227.27, secureserver.net) serves default vhost when reachable (cert CN=ser
+- LEARN: ACCEPTED IDOR @ connect.signl4.com/api/v1: V1 bulk endpoints (`/alerts/acknowledgeAll`, `/alerts/closeAll`, `/alerts/paged`, `/alerts/report`) accept `userId` q
+- LEARN: REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are no
+- LEARN: REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the ver
+- LEARN: REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there 
+- LEARN: ACCEPTED AUTH @ api.signl4.com/identity: distinguishing a prefix-scoped gateway deny from a host-wide or genuinely-disabled service requires a second network po
+- LEARN: REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a tran
+- LEARN: ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps remain exhausted
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: path-family probing of a known-404 root host (IIS/App-Proxy) recovered a full live EA 9.5.26147 sub-
+- LEARN: ACCEPTED OTHER @ demo.enterprisealert.com/EAWebService: version disclosure 9.5.26147 + 12-op WSDL + REST events + EventProviderAPI.aspx all anon-readable, yet e
+- LEARN: REJECTED OTHER @ EA version CVE matching: no program-specific exploit derivable without credentials → REJECTED-class, not pursued
+- LEARN: ACCEPTED OTHER @ full estate: repeated probe cycles across identity/API/CT/WordPress/EA surfaces yield zero new paths, verbs, or differentials — passive surface
+- LEARN: REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is
+- LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier 
