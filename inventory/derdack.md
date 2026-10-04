@@ -2020,3 +2020,11 @@ www.derdack.com
 ## 2026-10-04 17:55:21 UTC
 - NEW api.signl4.com/api/docs/v2/swagger.json exposes undocumented prepaid money-flow write family: PUT /v2/prepaid/settings (no subscriptionId in path) + PUT /v2/prepaid/{subscriptionId}/prepaidSettings; s
 - NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl returns 200 with internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname)
+
+## 2026-10-04 20:48:30 UTC
+- NEW api.signl4.com/api/docs/v2/swagger.json exposes undocumented prepaid money-flow write family: PUT /v2/prepaid/settings (no subscriptionId in path) + PUT /v2/prepaid/{subscriptionId}/prepaidSettings; s
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl returns 200 with internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname)
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping re-confirmed as TEMPORAL (not per-request) — 6 consecutive unauth GETs returned 401 with identical 0-byte body; handler-deferred auth pattern re-confir
+- CHANGED vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
+- CHANGED us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials
