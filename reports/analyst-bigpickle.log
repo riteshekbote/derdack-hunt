@@ -49126,3 +49126,449 @@ STEP 6 — LEARNING
 STEP 7 — RISK
 [RISK] derdack: 5 — 15 requests total this cycle, all HTTP GET, all unauthenticated, no cookies sent or stored, no Authorization or x-s4-api-key header, no redirect-following, ≥1.2 s spacing (≥1 rps respected). Targets touched: demo.enterprisealert.com (4 GETs), connect.signl4.com (1 GET), api.signl4.com (6 GETs of an already-known401 route), plus 2 liveness checks. Data read was public anonymous metadata only: an XML WSDL, a directory index page, a Swagger JSON document, an App Proxy error/claim cookie, and empty401 bodies. No mutation, no form submission, no credential use, no customer or tenant data accessed or attempted, no scanning. Materially below the established passive envelope, which has been risk6-8 across prior cycles.
 ```
+===== ANALYST bigpickle 2026-10-04 17:55:21 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la /home/runner/work/derdack-hunt/derdack-hunt
+total 1188
+drwxr-xr-x 12 runner runner   4096 Oct  4 17:48 .
+drwxr-xr-x  3 runner runner   4096 Oct  4 17:48 ..
+drwxr-xr-x  7 runner runner   4096 Oct  4 17:48 .git
+drwxr-xr-x  3 runner runner   4096 Oct  4 17:48 .github
+-rw-r--r--  1 runner runner   1831 Oct  4 17:48 README.md
+-rw-r--r--  1 runner runner     32 Oct  4 17:48 analyst-out.txt
+-rw-r--r--  1 runner runner 552170 Oct  4 17:48 analyst-prompt.txt
+-rw-r--r--  1 runner runner 548291 Oct  4 17:48 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct  4 17:48 inventory
+drwxr-xr-x  2 runner runner   4096 Oct  4 17:48 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct  4 17:48 leads
+-rw-r--r--  1 runner runner  20233 Oct  4 17:48 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct  4 17:48 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct  4 17:48 reports
+drwxr-xr-x  2 runner runner   4096 Oct  4 17:48 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct  4 17:48 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct  4 17:48 scripts
+-rw-r--r--  1 runner runner     33 Oct  4 17:48 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct  4 17:48 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct  4 17:48 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct  4 17:48 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct  4 17:48 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct  4 17:48 state_nemotron3.json
+drwxr-xr-x  2 runner runner  12288 Oct  4 17:48 triage
+[0m
+## Objective
+- Continue the authorized Derdack GmbH / SIGNL4 & Enterprise Alert bug bounty hunt against the full in-scope estate (all company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages and domains operated by Derdack GmbH and its products including SIGNL4 and Enterprise Alert).
+- Prioritize HIGH-VALUE classes (broken auth/session, IDOR/BOLA, SSRF-to-cloud-metadata, JWT/OAuth flaws, business logic on money/auth flows, etc.), apply passive-first probing (<=1 rps, GET/HEAD/OPTIONS only for live probes), enforce the defined out-of-scope list and produce structured findings ready for report handoff.
+
+## Important Details
+- **Scope rules**: only the approved Derdack/SIGNL4/Enterprise Alert estate. Brute-force/rate-limit/lockout, OPTIONS/TRACE, descriptive-headers-only, social engineering, DoS, CSRF on logout/anonymous forms are REJECTED. All live probing must be read-only unless explicitly AUTH_HELPED with written vendor approval.
+- **Identity estate (6 hosts)**: `connect.signl4.com`, `devconnect.signl4.com`, `api.signl4.com`, `devapi.signl4.com`, `account.signl4.com`, `devaccount.signl4.com` all serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) + identical client_id `692A0A56-892F-4AE2-8259-76DA398990B6`. `account.signl4.com/identity` claims issuer `https://connect.signl4.com/identity` (cross-host mint-mismatch) and allows `code_challenge_methods_supported: ["plain","S256"]`. Password grant present on staging hosts but secret-gated. `dpop_signing_alg_values_supported` advertised on `api.signl4.com/identity` and `account.signl4.com/identity` as a mitigating control.
+- **API surface**: SIGNL4 APIs span V1 (93 paths), V2, V3 and webhook namespaces across `connect.signl4.com`, `api.signl4.com`, `devapi.signl4.com`. Handler-deferred auth is common (unauth GET often returns 405 not 401 in flapping cycles), dual auth pipeline (Bearer + `X-S4-Api-Key` header and `?x-s4-api-key=` query param) confirmed. V1/V2/V3 Swagger/OpenAPI publish many internal/self-service routes with `security: [{}]` (spec-vs-implementation mismatch). Notable families: `prepaid/*`, `subscriptions/{id}/invoices/{inv}/zugferd`, `subscriptions/{id}/prepaid*`, `users/{userId}/changePassword`, V1 bulk alerts with `userId` query (`acknowledgeAll/closeAll/paged/report`), webhook `POST /{teamSecret}` (404-vs-201 oracle, operator-chosen secret).
+- **Enterprise Alert (demo)**: `demo.enterprisealert.com/EAWebService/` is a live EA 9.5.26147 app behind Azure AD App Proxy. `EventProviderAPI.asmx?wsdl` exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`. `EventProviderAPI.aspx` enumerates handlers, `EventConnectorServer.ashx` returns empty installed-handlers table. All credential paths gate (Error-1/401); exposure is config-level only.
+- **Derdack web estate**: `www.derdack.com` WordPress Multisite (`/de/`, `/ea/`) with auth-gated WP REST/XML-RPC (mutating XML-RPC methods return 403 on credentials). `dev.derdack.com` and `us.derdack.com` show MultiViews 300 with byte-identical dot-prefix echo (`/.ssh/`, `/.bash_history/`, `/.viminfo/`) — parked-minimal, no readable sensitive files. `blog.derdack.com`/`techblog.derdack.com` HTTPS→HTTP redirect chain live but WP auth cookies are `secure` + host-only (session-theft mechanism invalidated); residual missing HSTS only.
+- **CT/other hosts**: `fix.signl4.com` (Blazor Server, `/signin-oidc` 500), `frontdoor.signl4.com` (unconfigured SPA placeholder), `s4dev1-8.enterprisealert.com` App-Proxy-fronted (404/504), `docs.enterprisealert.com` Azure SWA 404 binding, `vps.signl4.com` A-record to GoDaddy shared host serving nginx default page with unrelated cert (dangling DNS binding, transient reachability). `signl4.derdack.com` permanently unreachable. CT coverage across derdack.com/signl4.com/enterprisealert.com closed with zero new live names.
+- **Hunt state**: POC→REPORT committed. Passive route maps exhausted across identity/API/CT/WP/EA. Top unvalidated items require AUTH_HELPED credentials (legitimate X-S4-Api-Key, subscription-specific API credentials or valid tokens) to test prepaid money-write bounds, V1 `userId` impersonation, and cross-tenant prepaidTransactions/BOLA.
+
+## Work State
+
+### Completed
+- **Estate mapping**: full inventory of derdack.com/signl4.com/enterprisealert.com completed (DNS, CT, live HTTP). 6-identity host set confirmed with shared RS256 key + client_id + issuer-mismatch identified.
+- **API enumeration**: V1/V2/V3 + webhook + events namespaces mapped; Swagger specs downloaded; handler-deferred auth, dual auth pipeline, and global `security:[{}]` documented.
+- **EA surface**: `demo.enterprisealert.com/EAWebService/` discovered (path-family probing overcame root-404), WSDL/SOAP/Connector SDK enumerated, internal hostname leak captured, gate checks confirm AUTH_HELPED only.
+- **Control-first validation**: body-hash controls established for MultiViews 300, App Proxy debug parameters, and auth-status flapping (6-sample session) to separate time-correlated state from per-request behavior.
+- **Classes closed**: GraphQL (absent), V4 API (absent), dynamic client registration (unsupported), open redirect on authorize (blocked), webhook secret leak oracle (operator-entropy, REJECTED brute-force), HTTPS→HTTP session-theft (invalidated), Blazor assembly disclosure (Server-only, no boot manifest).
+
+### Active
+- **Reporting/preparation**: POC complete, deliverable set frozen at 3 reportable items (cross-env token forgery chain with caveats on enforcement, demo EAWebService config-level exposure/internal hostname leak, credential-in-URL vendor-template family) plus `vps.signl4.com` dangling-DNS dossier item (LOW, HUMAN_ONLY).
+- **AUTH_HELPED queue documented**: `connect.signl4.com/api/v2/prepaid/settings` and `/api/v2/prepaid/{subscriptionId}/prepaidSettings` (money-write bounds, JSON-Patch DTO binding), `api.signl4.com/api/v2/subscriptions/{subscriptionId}/prepaidTransactions` (cross-tenant financial+createdBy), V1 bulk alerts `userId` query impersonation.
+
+### Blocked
+- **Credential acquisition required**: cannot validate prepaid BOLA/money-write, V1 impersonation, or cross-tenant prepaidTransactions without legitimate subscription-specific API credentials (X-S4-Api-Key) and/or OAuth tokens. Vendor go-ahead required for mutating prepaid tests.
+- **Enforcement unverified for token forgery**: 6-identity hosts share RS256 key + client_id + password grant on staging, but token endpoint/introspection/revocation behavior across all 6 ingresses not exhaustively exercised from single seat; finding must state "configured symmetry, enforcement unverified".
+- **vps.signl4.com reachability**: observed 200 nginx default (7×) then TCP timeout (000) — transient; DNS A `72.167.227.27` (GoDaddy secureserver.net) unchanged, no researcher-exploitable takeover primitive from this seat (HUMAN_ONLY).
+- **Temporal auth flapping**: `api.signl4.com/api/v2/teams` returns 401 vs 405 across cycles (handler/routing state) — single-sample cross-cycle cannot prove mixed pool; needs in-session sampling.
+
+## Next Move
+1. **Immediate concrete action**: Request subscription-specific API client credentials from SIGNL4 support (per vendor-documented OAuth2 scheme: “request subscription specific client credentials from SIGNL4 support”), asking for (a) one API key for a dedicated non-production test subscription and (b) a second key on a different tenant to falsify the cross-tenant prepaidTransactions IDOR. Do not run prepaid mutating steps without written vendor go-ahead.
+2. **Next action if known**: While awaiting credentials, finalize the three report findings with the exact evidence hashes/lengths (demo WSDL sha256 `e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae`, 29968 bytes; internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`; prepaid/OpenAPI excerpts and the 6-host JWKS deep-equal matrix) and explicitly record “configured symmetry, enforcement unverified” for the cross-env token forgery chain.
+
+## Relevant Files
+- `(none)`
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m→ [0mRead reports
+## Next step: inspect actual artifacts
+
+I need to see what’s in reports/, leads/, triage/, and full probe-results to know what’s already written vs what remains. Let’s load them.
+[0m✗ [0mRead valid-bugs.md 2>/dev/null | head -50 failed
+[91m[1mError: [0mFile not found: /home/runner/work/derdack-hunt/derdack-hunt/valid-bugs.md 2>/dev/null | head -50
+[0m
+[0m$ [0mcat /home/runner/work/derdack-hunt/derdack-hunt/reports/valid-bugs.md 2>&1 | head -100
+# Validated findings (running count 0)
+
+- 2 lead(s) marked VALID at 2026-09-03 23:20:09 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 3 lead(s) marked VALID at 2026-09-04 17:46:22 UTC
+  - | Q7 Reasonable triager? | **Yes** | Information disclosure of sensitive file paths on a live dev host is a valid finding |
+  - **Verdict: VALID**
+  - | dev.derdack.com MultiViews path disclosure | **VALID** | 5.3 | Report to bugs.olivermaicher.eu |
+
+- 1 lead(s) marked VALID at 2026-09-05 13:31:45 UTC
+  - Please paste the lead(s) you want me to triage, and I'll run each through the 7-Question Gate with verdict, reasoning, and (if VALID) proof steps, impact, CVSS 3.1, and reporting channel.
+
+- 2 lead(s) marked VALID at 2026-09-06 06:28:40 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 2 lead(s) marked VALID at 2026-09-08 10:34:26 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+
+- 4 lead(s) marked VALID at 2026-09-09 06:38:04 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+  - | 1 | Cross-Env JWKS Key + Client/Scope Reuse | **VALID** | 7.4 |
+  - | 6 | Staging IdP Directly Reachable | **VALID** | 6.5 |
+
+- 4 lead(s) marked VALID at 2026-09-10 10:37:58 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | Q7 Reasonable triager? | Yes — hardcoded real secrets in public code is a standard valid finding |
+  - **Verdict: VALID**
+
+- 14 lead(s) marked VALID at 2026-09-11 05:08:59 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: HOLD** — valid code defect, but impact gated on EA Scripting Host deployment and attacker ability to control event parameters; needs confirmatory evidence of production deployment
+  - **Verdict: HOLD** — valid code defect, but impact requires confirmation that parameters originate from external/user input in production
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | Cross-env JWKS key reuse (4 hosts) | **VALID** | 7.4 | HIGH |
+  - | 2 | Hardcoded SQL Server SA creds | **VALID** | 8.1 | HIGH |
+  - | 5 | Hardcoded Checkmk creds + internal IP | **VALID** | 7.5 | MEDIUM |
+  - | 6 | SIGNL4 secret logged at INFO (ioBroker) | **VALID** | 5.3 | MEDIUM |
+  - | 7 | Team secrets in public repos | **VALID** | 5.3 | MEDIUM |
+  - | 8 | PII in public CSV export | **VALID** | 5.3 | MEDIUM |
+
+- 7 lead(s) marked VALID at 2026-09-13 21:11:57 UTC
+  - | 1 | Cross-env JWKS key + client/scope reuse (devconnect + connect.signl4.com) | VALID | 7.4 | Reported |
+  - | 2 | Staging IdentityServer directly reachable (devconnect.signl4.com, password grant) | VALID | 6.5 | Reported |
+  - | 3 | Hardcoded SQL Server SA creds (`Derdack!`) in public EA plugin | VALID | 8.1 | Reported |
+  - | 4 | Hardcoded Checkmk admin creds + internal IP in public plugin | VALID | 7.5 | Reported |
+  - | 5 | SIGNL4 team secrets in public repos (Google IoT, Postman, DevTools) | VALID | 5.3 | Reported |
+  - | 6 | SIGNL4 secret logged at INFO level in ioBroker adapter | VALID | 5.3 | Reported |
+  - | 7 | PII + internal infra URLs in public CSV export | VALID | 5.3 | Reported |
+
+- 6 lead(s) marked VALID at 2026-09-14 21:52:08 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | Cross-env JWKS key reuse | **VALID** | 8.1 |
+  - | 2 | Password grant on staging IdP | **VALID** | 7.3 |
+  - | 5 | /de/ XML-RPC exposed | **VALID** | 7.5 |
+
+- 2 lead(s) marked VALID at 2026-09-18 23:43:24 UTC
+  - **VERDICT: VALID**
+  - | devconnect↔prod signing key + client reuse | **VALID** | 8.1 High | Yes — bugs.olivermaicher.eu |
+
+- 26 lead(s) marked VALID at 2026-09-20 01:52:55 UTC
+  - | Q5 Novel? | **No** — already reported in valid-bugs.md (multiple entries: 2026-09-09, 09-11, 09-13, 09-14, 09-18) |
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.4 HIGH. No new action needed.
+  - | Q5 Novel? | **No** — already reported in valid-bugs.md |
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 6.5 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 8.1 HIGH.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.5 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.5 HIGH.
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md; distinct from the eval() finding (different file, different mechanism — shell interpolation vs eval) |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md as a standalone finding; distinct from the hardcoded SA creds finding |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Uncertain** — may overlap with prior VALID entries in valid-bugs.md that mention "eval" |
+  - | Q7 Reasonable triager? | **Conditional** — valid code defect, but impact requires EA SDK documentation to confirm trust boundary |
+  - **Verdict: HOLD** — Valid code defect but impact gated on whether EA SDK provides attacker-controllable data to these callback fields. Needs: (1) EA Scripting Host SDK documentation review, (2) confir
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md |
+
+- 4 lead(s) marked VALID at 2026-09-21 22:48:59 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | SIGNL4 staging OIDC + cross-env JWKS key reuse | **VALID** | 7.4 |
+  - | 2 | Hardcoded SA/Checkmk creds + command injection in EA scripts | **VALID** | 9.8 |
+
+- 8 lead(s) marked VALID at 2026-09-25 05:00:44 UTC
+[0m
+[0m$ [0mcat /home/runner/work/derdack-hunt/derdack-hunt/probe-results.md 2>&1 | head -200 | tail -120
+https://dev.derdack.com/.well-known/openid-configuration -> HTTP 300
+https://www.derdack.com/wp-json/wp/v2/posts/5945/revisions -> HTTP 401
+https://www.derdack.com/wp-json/wp/v2/posts/5945/autosaves -> HTTP 401
+https://www.derdack.com/wp-json/wp/v2/users/2 -> HTTP 404
+
+## 2026-09-04 06:15:30 UTC
+
+
+## 2026-09-04 11:01:40 UTC
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://dev.derdack.com/.ssh/id_rsa -> HTTP 403
+https://dev.derdack.com/.bash_history -> HTTP 403
+https://dev.derdack.com/.viminfo -> HTTP 403
+https://www.derdack.com/wp-json/wp/v2/media?per_page=100 -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/media?page=2 -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/media?status=any -> HTTP 400
+https://derdack.com/ -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/pages?status=publish&per_page=100 -> 200 len=?
+https://dev.derdack.com/wp-admin/ -> HTTP 404
+https://dev.derdack.com/phpinfo.php -> HTTP 404
+
+## 2026-09-04 14:55:22 UTC
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://dev.derdack.com/.ssh/ -> HTTP 403
+https://dev.derdack.com/.bash_history/ -> HTTP 404
+https://dev.derdack.com/.viminfo/ -> HTTP 404
+https://blog.derdack.com/ -> 200 len=?
+https://techblog.derdack.com/ -> 200 len=?
+https://www.derdack.com/ -> 200 len=?
+https://derdack.com/ -> 200 len=?
+https://dev.derdack.com/.ssh/id_rsa -> HTTP 403
+https://dev.derdack.com/.ssh/authorized_keys -> HTTP 403
+https://dev.derdack.com/.ssh/known_hosts -> HTTP 403
+https://dev.derdack.com/wp-json/ -> HTTP 404
+
+## 2026-09-04 18:00:33 UTC
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://dev.derdack.com/.ssh/ -> HTTP 403
+https://dev.derdack.com/.bash_history/ -> HTTP 404
+https://dev.derdack.com/.viminfo/ -> HTTP 404
+https://blog.derdack.com/ -> 200 len=?
+https://techblog.derdack.com/ -> 200 len=?
+https://www.derdack.com/ -> 200 len=?
+https://derdack.com/ -> 200 len=?
+https://www.derdack.com -> 200 len=?
+https://www.derdack.com/de/enterprise-alert-9-4-1-release/ -> 200 len=?
+https://www.derdack.com/de/wp-json/wp/v2/posts/11640/revisions -> HTTP 401
+https://www.derdack.com/de/wp-json/wp/v2/posts/11640/autosaves -> HTTP 401
+
+## 2026-09-04 20:19:36 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+https://www.derdack.com/de/ -> 200 len=?
+https://www.derdack.com/ea/xmlrpc.php -> HTTP 405
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://dev.derdack.com/.ssh/ -> HTTP 403
+https://dev.derdack.com/.bash_history/ -> HTTP 404
+https://dev.derdack.com/.viminfo/ -> HTTP 404
+https://www.derdack.com/de/enterprise-alert-9-4-1-release/ -> 200 len=?
+https://www.derdack.com/de/wp-json/wp/v2/posts/11640/revisions -> HTTP 401
+https://www.derdack.com/de/wp-json/wp/v2/posts/11640/autosaves -> HTTP 401
+https://www.derdack.com/de/wp-json/wp/v2/posts?status=draft -> HTTP 400
+https://dev.derdack.com%2f/ -> ERR <urlopen error [Errno -2] Name or service not know
+
+## 2026-09-04 22:25:29 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+https://www.derdack.com/de/ -> 200 len=?
+https://www.derdack.com/ea/xmlrpc.php -> HTTP 405
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://dev.derdack.com/.ssh/ -> HTTP 403
+https://dev.derdack.com/.bash_history/ -> HTTP 404
+https://dev.derdack.com/.viminfo/ -> HTTP 404
+https://www.derdack.com/de/wp-json/wp/v2/posts/11640/revisions -> HTTP 401
+https://www.derdack.com/ea/wp-json/wp/v2/posts?per_page=1 -> 200 len=?
+
+## 2026-09-05 00:27:55 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+https://www.derdack.com/ea/wp-json/wp/v2/posts?per_page=1 -> 200 len=?
+https://www.derdack.com/ea/wp-json/wp/v2/posts/{id -> HTTP 404
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://dev.derdack.com/.ssh/ -> HTTP 403
+https://dev.derdack.com/.bash_history/ -> HTTP 404
+https://dev.derdack.com/.viminfo/ -> HTTP 404
+
+## 2026-09-05 04:59:22 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-05 08:47:59 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-05 12:20:19 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+https://signl4.derdack.com/api/v1/health -> ERR <urlopen error timed out>
+https://signl4.derdack.com/.well-known/openid-configuration -> ERR <urlopen error timed out>
+https://dev.derdack.com/ -> HTTP 403
+https://dev.derdack.com/api/ -> HTTP 404
+https://signals.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://signl4.derdack.com/.well-known/jwks.json -> ERR <urlopen error timed out>
+https://signl4.derdack.com/oauth/token -> ERR <urlopen error timed out>
+
+## 2026-09-05 15:27:23 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-05 17:35:41 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-05 19:27:51 UTC
+https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+
+## 2026-09-05 21:49:24 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-05 23:22:23 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+
+## 2026-09-06 01:06:36 UTC
+https://blog.derdack.com -> 200 len=?
+https://www.derdack.com/wp-login.php -> 200 len=?
+[0m
+[0m$ [0mcat /home/runner/work/derdack-hunt/derdack-hunt/reports/hypotheses.md 2>&1 | head -140
+# Hypotheses (ranked)
+
+## RANKED HYPOTHESES 2026-09-02 21:30:24 UTC
+
+## RANKED HYPOTHESES 2026-09-02 23:34:05 UTC
+
+## RANKED HYPOTHESES 2026-09-03 01:27:36 UTC
+
+## RANKED HYPOTHESES 2026-09-03 06:47:03 UTC
+
+## RANKED HYPOTHESES 2026-09-03 11:44:06 UTC
+
+## RANKED HYPOTHESES 2026-09-03 15:38:51 UTC
+- [55] signl4.derdack.com: SIGNL4 API JWT alg confusion on token validation (from art/lead_nemotron3.txt)
+- [30] signl4.derdack.com: SIGNL4 API authentication bypass (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://dev.derdack.com/actuator && GET https://dev.derdack.com/swagger-ui.html && GET https://dev.derdack.com/api/docs && GET https://dev.derdack.co
+- NEXT(hypotheses-bigpickle.txt): PROBE: Passive HTTP probing of all 9 inventory hosts to confirm live status, identify technologies, and discover API endpoints. Start with signl4.derdack.com (h
+- LEARN: REJECTED none this cycle — all hypotheses target in-scope HIGH-VALUE classes with concrete verify steps
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: dev environments frequently expose debug interfaces; passive probe cost near-zero
+- LEARN: ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+- LEARN: REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+
+## RANKED HYPOTHESES 2026-09-03 19:05:04 UTC
+- [75] dev.derdack.com: dev.derdack.com openid-configuration path traversal via 300 Multiple Choices (from art/lead_nemotron3.txt)
+- [35] signl4.derdack.com: SIGNL4 OIDC/JWKS discovery and token endpoint enumeration (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: Passive HTTP fingerprinting of signl4.derdack.com and signals.derdack.com (nemotron3 covers dev.derdack.com). Exact requests:
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://dev.derdack.com/.ssh/id_rsa && GET https://dev.derdack.com/.bash_history && GET https://dev.derdack.com/.viminfo && GET https://dev.derdack.c
+- LEARN: ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+- LEARN: REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+- LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive 
+- LEARN: REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+- LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+
+## RANKED HYPOTHESES 2026-09-03 21:36:55 UTC
+- [80] dev.derdack.com: dev.derdack.com Apache mod_negotiation MultiViews path disclosure (from art/lead_nemotron3.txt)
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://www.derdack.com/wp-json/wp/v2/users/1 (check individual user endpoint for email/PII); GET https://www.derdack.com/wp-json/wp/v2/media (check 
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive 
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+- LEARN: REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+- LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+
+## RANKED HYPOTHESES 2026-09-03 23:32:47 UTC
+- [85] dev.derdack.com: dev.derdack.com Apache mod_negotiation MultiViews sensitive file path disclosure (from art/lead_nemotron3.txt)
+- [20] signals.derdack.com: SIGNL4 OIDC/JWKS discovery and token endpoint enumeration (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: Passive HTTP probing of all 9 inventory hosts to confirm live status, identify technologies, and discover API endpoints. Start with signl4.derdack.com (h
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://www.derdack.com/wp-json/wp/v2/users/1 && GET https://www.derdack.com/wp-json/wp/v2/media && GET https://dev.derdack.com/.well-known/openid-co
+- LEARN: ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+- LEARN: REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+- LEARN: ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+- LEARN: REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+- LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com: MultiViews path disclosure is a static dot-prefix basename echo — identical output for fabricated paths proves no real sen
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WP REST API correctly enforces auth on settings/users/me/oembed-proxy/drafts (401/400); user enumeration confirmed but low-valu
+- LEARN: REJECTED SSRF @ www.derdack.com: oEmbed proxy returns 401 for proxied requests — SSRF vector blocked.
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive 
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+- LEARN: REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+- LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+
+## RANKED HYPOTHESES 2026-09-04 01:28:34 UTC
+- [85] dev.derdack.com: dev.derdack.com Apache mod_negotiation MultiViews sensitive file path disclosure (from art/lead_nemotron3.txt)
+- [40] signl4.derdack.com: signl4.derdack.com alternate Host-header or legacy port access (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: GET http://13.94.244.66:8080/ -m5 && GET http://13.94.244.66:8443/ -m5 && curl -k -H "Host: signl4.derdack.com" https://13.94.244.66/ -m5 (all passive, 1
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://www.derdack.com/wp-json/wp/v2/users/1 && GET https://www.derdack.com/wp-json/wp/v2/media && GET https://dev.derdack.com/.well-known/openid-co
+- LEARN: REJECTED IDOR @ www.derdack.com revisions/autosaves: confidence 25 < 40; all prior protected WP endpoints returned 401; capability check appears intact.
+- LEARN: REJECTED IDOR @ www.derdack.com users/{id} PII: confidence 30 < 40; /users collection already exposed no email; single-user endpoint unlikely to differ.
+- LEARN: ACCEPTED OTHER @ signl4.derdack.com: 40 confidence warranting final probe — if alternate Host/port fails, permanently reject signl4 and pivot all remaining effo
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive 
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+- LEARN: REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+- LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+- LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com: MultiViews path disclosure is a static dot-prefix basename echo — identical output for fabricated paths proves no real sen
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WP REST API correctly enforces auth on settings/users/me/oembed-proxy/drafts (401/400); user enumeration confirmed but low-valu
+- LEARN: REJECTED SSRF @ www.derdack.com: oEmbed proxy returns 401 for proxied requests — SSRF vector blocked
+
+## RANKED HYPOTHESES 2026-09-04 06:15:30 UTC
+- LEARN: REJECTED OTHER @ signl4.derdack.com: alternate port/host probes all returned http_code=000; signl4 is permanently unreachable across 80, 443, 8080, 8443, and IP
+- LEARN: ACCEPTED AUTH @ www.derdack.com: Yoast SEO REST API (`/yoast/v1/`) route schema fully enumerated but all admin endpoints (file_size, statistics, workouts, semru
+- LEARN: ACCEPTED AUTH @ www.derdack.com: `/wp-json/wp/v2/users/1` confirmed returns only id, name, slug, link — no email/PII; user enumeration is low-value public-blog 
+- LEARN: ACCEPTED MISCONFIG @ www.derdack.com: `xmlrpc.php` returns 503 (blocked at LB level); attack vector neutralized.
+- LEARN: ACCEPTED AUTH @ www.derdack.com: CF7 endpoint `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated).
+- LEARN: REJECTED SSRF @ www.derdack.com: Yoast `file_size` endpoint returns 401 (auth-gated); no SSRF possible without authentication.
+
+## RANKED HYPOTHESES 2026-09-04 11:01:16 UTC
+- [85] dev.derdack.com: dev.derdack.com Apache mod_negotiation MultiViews sensitive file path disclosure (from art/lead_nemotron3.txt)
+- [35] www.derdack.com/wp-json/: WP Theme/plugin GraphQL/REST discovery via /wp-json/ routes (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: All passive attack vectors on www.derdack.com and dev.derdack.com have been probed and verified as properly gated. signl4 permanently unreachable (8 cycl
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://www.derdack.com/wp-json/wp/v2/media?per_page=100 && GET https://www.derdack.com/wp-json/wp/v2/media?page=2 && GET https://www.derdack.com/wp-
+- LEARN: REJECTED OTHER @ signl4.derdack.com: alternate port/host probes all returned http_code=000; signl4 permanently unreachable
+- LEARN: ACCEPTED AUTH @ www.derdack.com: Yoast SEO REST API routes all return 401; only `get_head?url=` is public
+- LEARN: ACCEPTED AUTH @ www.derdack.com: `/wp-json/wp/v2/users/1` returns only name/slug; no PII
+- LEARN: ACCEPTED MISCONFIG @ www.derdack.com: xmlrpc.php returns 503 (blocked at LB)
+- LEARN: ACCEPTED AUTH @ www.derdack.com: CF7 endpoint returns 403 (properly gated)
+- LEARN: REJECTED SSRF @ www.derdack.com: Yoast `file_size` returns 401 (auth-gated)
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive 
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+- LEARN: REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+- LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+- LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com: MultiViews path disclosure is a static dot-prefix basename echo — identical output for fabricated paths proves no real sen
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WP REST API correctly enforces auth on settings/users/me/oembed-proxy/drafts (401/400); user enumeration confirmed but low-valu
+- LEARN: REJECTED SSRF @ www.derdack.com: oEmbed proxy returns 401 for proxied requests — SSRF vector blocked
+- LEARN: REJECTED IDOR @ www.derdack.com revisions/autosaves: confidence 25 < 40; all prior protected WP endpoints returned 401; capability check appears intact
+- LEARN: REJECTED IDOR @ www.derdack.com users/{id} PII: confidence 30 < 40; /users collection already exposed no email; single-user endpoint unlikely to differ
+- LEARN: REJECTED OTHER @ signl4.derdack.com: alternate port/host probes all returned http_code=000; signl4 is permanently unreachable across 80, 443, 8080, 8443, and IP
+- LEARN: ACCEPTED AUTH @ www.derdack.com: Yoast SEO REST API (`/yoast/v1/`) route schema fully enumerated but all admin endpoints (file_size, statistics, workouts, semru
+- LEARN: ACCEPTED AUTH @ www.derdack.com: `/wp-json/wp/v2/users/1` confirmed returns only id, name, slug, link — no email/PII; user enumeration is low-value public-blog 
+- LEARN: ACCEPTED MISCONFIG @ www.derdack.com: `xmlrpc.php` returns 503 (blocked at LB level); attack vector neutralized
+- LEARN: ACCEPTED AUTH @ www.derdack.com: CF7 endpoint `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated)
+- LEARN: REJECTED SSRF @ www.derdack.com: Yoast `file_size` endpoint returns 401 (auth-gated); no SSRF possible without authentication
+
+## RANKED HYPOTHESES 2026-09-04 14:54:49 UTC
+- [85] dev.derdack.com: dev.derdack.com Apache mod_negotiation MultiViews sensitive file path disclosure (from art/lead_nemotron3.txt)
+- [35] dev.derdack.com/wp-json/: dev.derdack.com WordPress staging/debug exposure (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: HEAD https://dev.derdack.com/wp-json/ && HEAD https://dev.derdack.com/wp-login.php && HEAD https://dev.derdack.com/xmlrpc.php
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://dev.derdack.com/.ssh/id_rsa && GET https://dev.derdack.com/.ssh/authorized_keys && GET https://dev.derdack.com/.ssh/known_hosts (test if indi
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: MultiViews confirmed; WordPress installation status unknown — probe required.
+- LEARN: REJECTED OTHER @ signl4.derdack.com: permanently unreachable across 8+ probe cycles (all TCP timeout); all attack surface value = 0.
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive 
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+- LEARN: REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+- LEARN: REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+- LEARN: REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- LEARN: REJECTED MISCONFIG @ dev.derdack.com: MultiViews path disclosure is a static dot-prefix basename echo — identical output for fabricated paths proves no real sen
+- LEARN: ACCEPTED AUTH @ www.derdack.com: WP REST API correctly enforces auth on settings/users/me/oembed-proxy/drafts (401/400); user enumeration confirmed but low-valu
+- LEARN: REJECTED SSRF @ www.derdack.com: oEmbed proxy returns 401 for proxied requests — SSRF vector blocked
+- LEARN: REJECTED IDOR @ www.derdack.com revisions/autosaves: confidence 25 < 40; all prior protected WP endpoints returned 401; capability check appears intact
+- LEARN: REJECTED IDOR @ www.derdack.com users/{id} PII: confidence 30 < 40; /users collection already exposed no email; single-user endpoint unlikely to differ
+- LEARN: REJECTED OTHER @ signl4.derdack.com: alternate port/host probes all returned http_code=000; signl4 is permanently unreachable across 80, 443, 8080, 8443, and IP
+[0m
+Let’s look into hypotheses, leads, and analyst logs to see full picture.
+- **Mapped full estate**: Derdack/SIGNL4/Enterprise Alert scoped; confirmed 6 identity hosts share identical RS256 JWKS+client_id (issuer mismatch on account.signl4.com), API surface V1/V2/V3+webhooks (dual auth, spec-vs-impl noted), EA demo EAWebService with WSDL/internal hostname leak, WP auth-gated, dev/us MultiViews (dot-prefix echo). signl4.derdack.com unreachable; CT closed.
+- **Probed/triaged extensively**: ~hundreds of passive probes logged; hypotheses rejected where auth-gated or unreachable (signl4/ports) and MultiViews confirmed as path echo (no readable secrets). Many leads triaged over multiple cycles.
+- **Reporting state**: 3 reportable items prepared (cross-env token forgery with “enforcement unverified” caveat, EAWebService config-level exposure/internal hostname, credential-in-URL vendor template) + 1 LOW HUMAN_ONLY (vps.signl4.com dangling DNS). Blocked on AUTH_HELPED credentials for prepaid/mutating BOLA validation.

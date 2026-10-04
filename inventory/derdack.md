@@ -2016,3 +2016,7 @@ www.derdack.com
 - NEW EventConnectorServer.ashx?WSDL → 200, 240 B, sha256 eb3f77ccdd2b83b531f87225130a7237ff4b3a5fd98875177f707d2c9a1ab1c1; body is the v9.5.26147 "installed Event Handlers" table with a header row and zero
 - CHANGED api.signl4.com/api/v2/teams flapping is TEMPORAL, not per-request. 6 consecutive unauthenticated GETs, 1.2 s apart, returned 401/401/401/401/401/401, all with 0-byte body (sha256 e3b0c44298fc1c14…7852
 - CHANGED WWW-Authenticate on that401 is `Bearer` only. Discovery advertises dpop_signing_alg_values_supported (9 algs) but the API gateway demands no DPoP scheme on /api/v2/*, so token-binding enforcement is n
+
+## 2026-10-04 17:55:21 UTC
+- NEW api.signl4.com/api/docs/v2/swagger.json exposes undocumented prepaid money-flow write family: PUT /v2/prepaid/settings (no subscriptionId in path) + PUT /v2/prepaid/{subscriptionId}/prepaidSettings; s
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl returns 200 with internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname)

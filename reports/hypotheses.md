@@ -5034,3 +5034,22 @@
 - LEARN: ACCEPTED OTHER @ full estate: repeated probe cycles across identity/API/CT/WordPress/EA surfaces yield zero new paths, verbs, or differentials — passive surface
 - LEARN: REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is
 - LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier 
+
+## RANKED HYPOTHESES 2026-10-04 17:55:21 UTC
+- [70] api.signl4.com/api/v2/prepaid/settings: Mass assignment via missing subscriptionId in prepaid settings write endpoint (from art/lead_nemotron3.txt)
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://api.signl4.com/api/docs/v2/swagger.json (extract full requestBody schema for PUT /v2/prepaid/settings and PUT /v2/prepaid/{subscriptionId}/pr
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventPro
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host (72.167.227.27, secureserver.net) serves default vhost when reachable (cert CN=ser
+- LEARN: ACCEPTED IDOR @ connect.signl4.com/api/v1: V1 bulk endpoints accept `userId` query parameter; 403 response contains "in behave of the user" typo confirming code
+- LEARN: REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: Consistent 8/8 disclosure of Azure resource identifiers is real but non-secret/non-actionable; program rejec
+- LEARN: REJECTED MISCONFIG @ connect.signl4.com/mobileapi: Custom branded WAF error page is configuration artifact, not vulnerability
+- LEARN: REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth not exposed on public custom hostname
+- LEARN: ACCEPTED AUTH @ api.signl4.com/identity: Distinguishing prefix-scoped gateway deny from host-wide disable requires second network position or owner-supplied tok
+- LEARN: REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 stable across both hosts, persistently dead tier
+- LEARN: ACCEPTED OTHER @ full estate: Identity/API/CT surface stable zero drift; passive route maps exhausted
+- LEARN: REJECTED OTHER @ connect/api/demo GraphQL: 15/15 uniform bare 404 — no GraphQL surface
+- LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: App Proxy identifier disclosure bounded at 2/8 hosts
+- LEARN: ACCEPTED OTHER @ query-matched control design: +15/+16/+15 byte pattern tracking query-string length killed false positive on ?appproxy=debug
+- LEARN: ACCEPTED OTHER @ distribution-vs-snapshot: Auth-status "flapping" was temporal (one sample/cycle), not per-request — 6 consecutive GETs uniform 401
+- LEARN: ACCEPTED OTHER @ reading requestBody not just path list: Extracting schema from prepaid family converted vague BOLA note into testable hypotheses
+- LEARN: ACCEPTED OTHER @ additionalProperties:false is client-side fiction: Server binding behavior requires JSON-Patch probe, not schema inspection
