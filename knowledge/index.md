@@ -1057,3 +1057,7 @@
 - 2026-10-04 ACCEPTED OTHER @ full estate: identity/API/CT surface stable with zero drift; passive route maps exhausted.
 - 2026-10-04 REJECTED OTHER @ connect/api/demo × GraphQL family: 15/15 uniform bare 404 — GraphQL surface absent.
 - 2026-10-04 REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: App Proxy identifier disclosure bounded at 2/8 hosts.
+- 2026-10-04 REJECTED OTHER @ query-matched control design: +15/+16/+15 byte pattern tracking query-string length killed false positive on ?appproxy=debug; when testing query parameter, control must differ only in that parameter value or include unrelated key as second control.
+- 2026-10-04 ACCEPTED OTHER @ reading requestBody not just path list: extracting requestBody schema from prepaid family converted vague BOLA note into specific testable hypotheses.
+- 2026-10-04 ACCEPTED OTHER @ additionalProperties:false is client-side fiction: schema-enforced at caller SDK, not server; server binding behavior requires JSON-Patch probe to distinguish DTO-bound from entity-bound.
+- 2026-10-04 ACCEPTED OTHER @ milestone-style costs not liabilities: converting unconverted notes to executable verify_steps is cheapest work.

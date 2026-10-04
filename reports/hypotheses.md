@@ -5088,3 +5088,29 @@
 - LEARN: ACCEPTED OTHER @ distribution-vs-snapshot: Auth-status "flapping" was temporal (one sample/cycle), not per-request — 6 consecutive GETs uniform 401
 - LEARN: ACCEPTED OTHER @ reading requestBody not just path list: Extracting schema from prepaid family converted vague BOLA note into testable hypotheses
 - LEARN: ACCEPTED OTHER @ additionalProperties:false is client-side fiction: Server binding behavior requires JSON-Patch probe, not schema inspection
+
+## RANKED HYPOTHESES 2026-10-04 23:41:44 UTC
+- [70] api.signl4.com/api/v2/prepaid/settings: Mass assignment via missing subscriptionId in prepaid settings write endpoint (from art/lead_nemotron3.txt)
+- [55] connect.signl4.com/api/v2/prepaid/settings: Prepaid auto-top-up settings accept unbounded client-controlled integers over a JSON-Patch money-write route (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE: GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl with Accept: text/xml, no auth, no cookies. (single read-only confirmation o
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://api.signl4.com/api/docs/v2/swagger.json (extract full requestBody schema for PUT /v2/prepaid/settings and PUT /v2/prepaid/{subscriptionId}/pr
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: internal single-label SOAP address https://ereesus/EAWebService/EventProv
+- LEARN: REJECTED OTHER @ query-matched control design: +15/+16/+15 byte pattern tracking query-string length killed false positive on ?appproxy=debug; when testing quer
+- LEARN: ACCEPTED OTHER @ reading requestBody not just path list: extracting requestBody schema from prepaid family converted vague BOLA note into specific testable hypo
+- LEARN: ACCEPTED OTHER @ additionalProperties:false is client-side fiction: schema-enforced at caller SDK, not server; server binding behavior requires JSON-Patch probe
+- LEARN: ACCEPTED OTHER @ milestone-style costs not liabilities: converting unconverted notes to executable verify_steps is cheapest work.
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventPro
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host (72.167.227.27, secureserver.net) serves default vhost when reachable (cert CN=ser
+- LEARN: ACCEPTED IDOR @ connect.signl4.com/api/v1: V1 bulk endpoints accept `userId` query parameter; 403 response contains "in behave of the user" typo confirming code
+- LEARN: REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: Consistent 8/8 disclosure of Azure resource identifiers is real but non-secret/non-actionable; program rejec
+- LEARN: REJECTED MISCONFIG @ connect.signl4.com/mobileapi: Custom branded WAF error page is configuration artifact, not vulnerability
+- LEARN: REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth not exposed on public custom hostname
+- LEARN: ACCEPTED AUTH @ api.signl4.com/identity: Distinguishing prefix-scoped gateway deny from host-wide disable requires second network position or owner-supplied tok
+- LEARN: REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 stable across both hosts, persistently dead tier
+- LEARN: ACCEPTED OTHER @ full estate: Identity/API/CT surface stable zero drift; passive route maps exhausted
+- LEARN: REJECTED OTHER @ connect/api/demo GraphQL: 15/15 uniform bare 404 — no GraphQL surface
+- LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: App Proxy identifier disclosure bounded at 2/8 hosts
+- LEARN: ACCEPTED OTHER @ query-matched control design: +15/+16/+15 byte pattern tracking query-string length killed false positive on ?appproxy=debug
+- LEARN: ACCEPTED OTHER @ distribution-vs-snapshot: Auth-status "flapping" was temporal (one sample/cycle), not per-request — 6 consecutive GETs uniform 401
+- LEARN: ACCEPTED OTHER @ reading requestBody not just path list: Extracting schema from prepaid family converted vague BOLA note into testable hypotheses
+- LEARN: ACCEPTED OTHER @ additionalProperties:false is client-side fiction: Server binding behavior requires JSON-Patch probe, not schema inspection

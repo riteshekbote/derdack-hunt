@@ -49690,3 +49690,153 @@ Next steps:
 - If you want to proceed, please provide: (a) X-S4-Api-Key for test subscription, (b) second tenant key, (c) explicit written approval for prepaid writes. 
 
 I will remain read-only until these are supplied.
+===== ANALYST bigpickle 2026-10-04 23:41:44 UTC =====
+[0m
+> build · big-pickle
+[0m
+[DELTA] NO_DELTA (estate stable with zero drift at 2026-10-04 20:48 boundary; all surfaces passively mapped)
+
+[PRIO] api.signl4.com/api/v2/prepaid/settings,8.30,attack_surface=9,business_value=10,tech_exposure=8,gate_ease=5,cloud_surface=8,freshness=8
+[PRIO] api.signl4.com/api/v2/subscriptions/{subscriptionId}/prepaidTransactions,8.20,attack_surface=9,business_value=10,tech_exposure=8,gate_ease=5,cloud_surface=8,freshness=7
+[PRIO] demo.enterprisealert.com/EAWebService,7.15,attack_surface=7,business_value=7,tech_exposure=6,gate_ease=9,cloud_surface=9,freshness=5
+
+[HYP] Prepaid auto-top-up settings accept unbounded client-controlled integers over a JSON-Patch money-write route
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/prepaid/settings and /api/v2/prepaid/{subscriptionId}/prepaidSettings
+confidence: 55
+reasoning: Public spec (connect.signl4.com/api/docs/v2/swagger.json, 200) declares PUT /v2/prepaid/settings and PUT /v2/prepaid/{subscriptionId}/prepaidSettings with requestBody application/json-patch+json and application/json, $ref PrepaidSettingsInfo = {topUpAmount integer/int32, topUpEnabled boolean, topUpLimit integer/int32}, additionalProperties:false, and no minimum/maximum constraints on integer values; topUpAmount/topUpLimit govern auto-charges. PUT /v2/prepaid/settings has no subscriptionId in path while sibling routes require one (subscription resolution differs). JSON-Patch (op copy/move) differs from plain-DTO binding.
+evidence_needed: Authenticated test-subscription-only results showing (a) acceptance of negative/zero topUpAmount or topUpLimit < topUpAmount, (b) behavior of JSON-Patch replace vs plain JSON on same values, (c) behavior of JSON-Patch copy/move with out-of-schema from pointer (DTO escape), (d) which subscription is mutated by PUT /v2/prepaid/settings (no path id), (e) whether response echoes fields absent from PrepaidSettingsInfo.
+verify_steps: Use subscription-specific client credentials on a dedicated test subscription ONLY. (1) GET /api/v2/prepaid/settings (x-s4-api-key or Bearer) record body/fields. (2) PUT /api/v2/prepaid/settings application/json with {"topUpAmount":-1,"topUpEnabled":false,"topUpLimit":0} record status/body. (3) PUT application/json-patch+json with [{"op":"replace","path":"/topUpAmount","value":-1}] compare to (2). (4) PUT application/json-patch+json with [{"op":"copy","from":"/statusCode","path":"/topUpAmount"}] record acceptance/rejection. (5) PUT /api/v2/prepaid/{subscriptionId}/prepaidSettings for a different subscriptionId (not owned) and record 200 vs 403/404. Do NOT run 2-5 without written vendor go-ahead (billing mutation).
+impact: If unbounded/negative limits persist, authenticated actor could set topUpEnabled=true with topUpLimit=2147483647 to drive unbounded auto-charges or invert top-up (balance-integrity corruption). MEDIUM-HIGH conditional on proof.
+testability: AUTH_HELPED
+
+[HYP] Cross-tenant financial-transaction and actor-identity disclosure via client-supplied subscriptionId
+class: IDOR
+asset: api.signl4.com/api/v2/subscriptions/{subscriptionId}/prepaidTransactions
+confidence: 50
+reasoning: GET /v2/subscriptions/{subscriptionId}/prepaidTransactions keyed by client-supplied path parameter returns PrepaidTransactionInfo = {autoTopUpId, created, createdBy, amount, currency, modified, packageCode, status, statusCode, subscriptionId, transactionId} (billing history + actor identity). Handler-deferred auth pattern observed in API family means object-level authorization must be present server-side. No anonymous surface; exploit post-auth.
+evidence_needed: Two different tenant subscriptions. Successful cross-tenant read returning another tenant’s PrepaidTransactionInfo (or any record with foreign subscriptionId/createdBy). Must include control: read own subscription first to establish baseline (empty vs populated).
+verify_steps: With tenant-A credentials, GET /api/v2/subscriptions/{tenant-A-id}/prepaidTransactions (control). Then GET /api/v2/subscriptions/{tenant-B-id}/prepaidTransactions with tenant-A credentials. Record exact status codes and full response bodies (including whether requested subscriptionId echoed). Look for any record not owned by tenant-A.
+impact: Cross-tenant disclosure of financial history and employee/contact identity (createdBy) for another customer. HIGH if proven (API keys are per-subscription scoped).
+testability: AUTH_HELPED
+
+[HYP] Unauthenticated App-Proxy/SOAP metadata discloses the demo environment's internal deployment topology
+class: MISCONFIG
+asset: demo.enterprisealert.com/EAWebService
+confidence: 60
+reasoning: Anonymous GET to EventProviderAPI.asmx?wsdl returns internal single-label SOAP address https://ereesus/EAWebService/EventProviderAPI.asmx (non-public hostname). Headers disclose App ID f18ba879-3dea-4018-b9d1-e6dbdc9ce151, Connector Group 6b26e6a4-c5ad-4b27-b31c-e1777730c354, Subscription ff2a095d-01ff-4edb-99e6-38b97f49467c, Connector da867a92-3ba5-4e78-95f6-c97bac3c791f, region NEUR, service proxy-appproxy-NEUR-DUB01P-3 (live connector id = backend alive). Set-Cookie AzureAppProxyAnalyticCookie contains base64 claim-request naming custom claim and requested SAML name-claim URI. TargetNamespace http://derdack.com/WebInterface/EnterpriseAlert reveals internal namespace.
+evidence_needed: Already collected: status, Content-Type, Content-Length, sha256, exact soap:address, connector id, and cookie claim-request values. No further live evidence required.
+verify_steps: PASSIVE reproduction: GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl with Accept: text/xml, no auth, no cookies. Confirm response contains location="https://ereesus/EAWebService/EventProviderAPI.asmx" and x-ms-proxy-connector-id with non-null GUID. Do not probe beyond this single GET.
+impact: Reconnaissance input (internal hostname, Azure topology identifiers, region, connector GUID, App Proxy claim configuration). CWE-200 hygiene; LOW-MEDIUM. WSDL internal-hostname element is Derdack-specific.
+testability: PASSIVE
+
+[PARKED] Prepaid auto-top-up settings accept unbounded client-controlled integers over a JSON-Patch money-write route: confidence 55 < 60 threshold required before filing; requires AUTH_HELPED live tests without vendor go-ahead — not executable in passive scope.
+[PARKED] Cross-tenant financial-transaction and actor-identity disclosure via client-supplied subscriptionId: confidence 50 < 60; AUTH_HELPED with two tenant subscriptions, requires written authorization before cross-tenant testing.
+[PARKED] Unauthenticated App-Proxy/SOAP metadata discloses the demo environment's internal deployment topology: confidence 60 meets threshold but impact classified as config-level disclosure (CWE-200 hygiene) only; verify_steps are PASSIVE reproduction with exact GET and confirmation points. Consider filing as informational hygiene finding.
+
+[FINAL] 3. MISCONFIG @ demo.enterprisealert.com/EAWebService — confidence 60, PASSIVE. Fully evidenced internal topology/hostname leak via WSDL + App Proxy headers; config-level exposure only, zero credentials required.
+
+[NEXT] PROBE: GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl with Accept: text/xml, no auth, no cookies. (single read-only confirmation of internal soap:address and x-ms-proxy-connector-id)
+
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: internal single-label SOAP address https://ereesus/EAWebService/EventProviderAPI.asmx exposed via unauthenticated WSDL GET — config-level disclosure (CWE-200 hygiene); not directly exploitable from internet without additional path.
+[LEARN] REJECTED OTHER @ query-matched control design: +15/+16/+15 byte pattern tracking query-string length killed false positive on ?appproxy=debug; when testing query parameter, control must differ only in that parameter value or include unrelated key as second control.
+[LEARN] ACCEPTED OTHER @ reading requestBody not just path list: extracting requestBody schema from prepaid family converted vague BOLA note into specific testable hypotheses.
+[LEARN] ACCEPTED OTHER @ additionalProperties:false is client-side fiction: schema-enforced at caller SDK, not server; server binding behavior requires JSON-Patch probe to distinguish DTO-bound from entity-bound.
+[LEARN] ACCEPTED OTHER @ milestone-style costs not liabilities: converting unconverted notes to executable verify_steps is cheapest work.
+
+[RISK] derdack: 5 — 1 request total this cycle (GET), all unauthenticated, no cookies sent/stored, no Authorization headers, no redirect-following, ≥1.2s spacing (≥1 rps). Target: demo.enterprisealert.com. Data read: public anonymous metadata only (XML WSDL). No mutation, no form submission, no credential use, no customer/tenant data accessed/attempted, no scanning. Materially below established passive envelope.
+## Objective
+- Continue passive-first bug bounty hunt against Derdack GmbH / Derdack Group (SIGNL4 + Enterprise Alert) in-scope estate.
+- Validate the top AUTH/BOLA/MISCONFIG hypotheses while strictly adhering to program out-of-scope classes (DoS, brute-force/rate-limit/lockout, OPTIONS/TRACE, CSRF on logout/anon forms, credential-leakage tests, etc.).
+- Produce evidence-backed findings only; every claim must be traceable to read-only probes or verified artifacts.
+
+## Important Details
+- **Scope:** All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH, SIGNL4, and Enterprise Alert (per `scope.yml` + `inventory/derdack.md`).
+- **Identity estate (6 hosts):** `connect.signl4.com`, `devconnect.signl4.com`, `api.signl4.com`, `devapi.signl4.com`, `account.signl4.com`, `devaccount.signl4.com` all serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) and share `client_id = 692A0A56-892F-4AE2-8259-76DA398990B6`.  
+  - `account.signl4.com/identity` claims issuer `https://connect.signl4.com/identity` (cross-host issuer mismatch).  
+  - Plain PKCE allowed (`code_challenge_methods_supported: ["plain","S256"]`).  
+  - EA scopes present: `reseller_portal`, `public_api_ea_manage`, `public_api_ea_alerting`, `mobile_api`.  
+  - Custom claims: `subscription_id`, `branch_id`, `is_branch_manager`, `is_stakeholder`, `active`.  
+  - **Note:** OIDC discovery/JWKS parity does **not** prove enforced token acceptance across all 6 ingresses (introspection/revocation not fully exercised).
+- **SIGNL4 APIs:** V1/V2/V3 + `webhook`/`events` namespaces live across `connect.signl4.com`, `api.signl4.com`, `devapi.signl4.com`.  
+  - Handler-deferred auth common (unauth often returns `405` with `Allow:` rather than `401` on some routes; other routes are route-gated to `401`).  
+  - Dual API-key pipeline: `X-S4-Api-Key` header and `?x-s4-api-key=` query both accepted (query returns `403 "API Key is invalid"` vs `401` when absent).  
+  - OAuth Bearer accepted from the shared IdP.  
+  - V1 has `userId` query on bulk alert endpoints (`/alerts/acknowledgeAll`, `/alerts/closeAll`, `/alerts/paged`, `/alerts/report`); 403 contains typo `"in behave of the user"`.  
+  - Prepaid: `PUT /api/v2/prepaid/settings` has **no** `subscriptionId` in path (asymmetry vs `/api/v2/prepaid/{subscriptionId}/prepaidSettings`).
+- **Enterprise Alert (demo):** `demo.enterprisealert.com/EAWebService/` is live EA 9.5.26147 behind Azure AD App Proxy (root `/` was `404` before path-family probing).  
+  - WSDL `EventProviderAPI.asmx?wsdl` exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public).  
+  - `EventProviderAPI.aspx` has 10 active handlers; `EventConnectorServer.ashx` installed-handlers table is empty.  
+  - Anonymous config-level exposure only; all credential paths gate (`401`/`Error: -1`).
+- **Other estate notes:** `us.derdack.com` and `dev.derdack.com` show byte-identical Apache MultiViews `300` parked echo. `blog.derdack.com`/`techblog.derdack.com` HTTPS→HTTP downgrade exists but auth-cookie theft mechanism invalidated (`wordpress_test_cookie` secure + host-only). `vps.signl4.com` A→GoDaddy (72.167.227.27) is transient (200 nginx default ↔ 000 TCP timeout) — **HUMAN_ONLY** takeover gate. `docs.enterprisealert.com` CNAME to Azure SWA returns `404 WebContentNotFound`. `s4dev1–8.enterprisealert.com` mostly inert/App-Proxy. `signl4.derdack.com` permanently unreachable. `V4` API namespace absent; GraphQL absent on gateway/demo.
+- **Testing constraints:** passive-first, ≤1 rps, GET/HEAD/OPTIONS only for live probes; no mutating tests against live customer data; no auth-bypass/brute-force/rate-limit policy tests. `AUTH_HELPED` = needs credential (X-S4-Api-Key/team-secret/client_secret/test subscription). `HUMAN_ONLY` = requires DNS/hosting-account control.
+
+## Work State
+### Completed
+- **Estate mapping:** Full namespace map (V1/V2/V3/webhook/events) with staging parity; V4 absent, GraphQL absent.
+- **Identity:** 6-host RS256 key reuse + client reuse + issuer mismatch + plain PKCE + EA/custom claims verified; enforcement gap explicitly recorded.
+- **API surface:** Prepaid routes, V1 `userId` bulk endpoints, webhook oracle, API-key dual pipeline, handler-deferred vs route-gated behavior documented.
+- **EA:** Recovered live `EAWebService/` sub-app behind App Proxy (corrected "root-only = inert" error); WSDL internal hostname + App Proxy identifiers captured.
+- **Noise reduction:** Closed false positives (MultiViews artefact, Blazor assembly/boot-manifest, App Proxy header-only, fleet-wide App Proxy ID disclosure overreach, OAuth open-redirect negatives).
+- **OSINT:** Credential-in-URL vendor-template family catalogued; example-only leak oracle closed negative across corpora.
+
+### Active
+- **#1 – BUSLOGIC (AUTH_HELPED, conf 55):** `connect.signl4.com/api/v2/prepaid/settings` and `/api/v2/prepaid/{subscriptionId}/prepaidSettings`  
+  - Missing `subscriptionId` on `/v2/prepaid/settings` (subscription resolution asymmetry)  
+  - `topUpAmount/topUpLimit` integer bounds unverified; schema declares `additionalProperties:false` but server binding vs DTO unknown  
+  - Need JSON vs `application/json-patch+json` (replace/copy/move) comparison on dedicated test subscription
+- **#2 – IDOR (AUTH_HELPED, conf 50):** `api.signl4.com/api/v2/subscriptions/{subscriptionId}/prepaidTransactions`  
+  - Returns `amount`, `currency`, `transactionId`, `statusCode`, `packageCode`, `createdBy`, `subscriptionId` keyed by client-supplied path id  
+  - Need cross-tenant control (own vs foreign subscription) with valid credentials
+- **#3 – MISCONFIG (PASSIVE, conf 60):** `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl`  
+  - Internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` + App Proxy identifiers (`x-ms-proxy-*`, connector/app/group/subscription/region)  
+  - Already evidenced; single read-only confirmation recommended
+
+### Blocked
+- **Credentials required:** All #1–#2 require legitimate X-S4-Api-Key or test subscription credentials; cannot safely validate server-side authorization/money bounds without AUTH_HELPED testing and written go-ahead for billing mutation tests.
+- **Enforcement unverified:** Cross-host token acceptance not demonstrated (only discovery/JWKS read). `api.signl4.com/api/v2/teams` auth-status flaps across cycles (405↔401) needing controlled multi-sample session.
+- **Human-gated:** `vps.signl4.com` takeover is **HUMAN_ONLY** (DNS/hosting-account control); not researcher-exploitable from this seat.
+- **Transient:** `vps.signl4.com` HTTPS can flip 200↔000 (network/host-side) — treat as intermittent, don’t spam.
+
+## Next Move
+1. **PROBE (PASSIVE):** `GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` with header `Accept: text/xml`, no auth, no cookies, no redirect-following. Capture status, `Content-Type`, `Content-Length`, body sha256, and `x-ms-proxy-*` headers to confirm internal `soap:address = https://ereesus/EAWebService/EventProviderAPI.asmx`. 
+2. **HUMAN/RAG (AUTH_HELPED prerequisite):** Obtain a legitimate test X-S4-Api-Key (or dedicated test subscription) to validate prepaid schema: (a) `GET/PUT /api/v2/prepaid/settings` (no path id) vs `/api/v2/prepaid/{subscriptionId}/prepaidSettings`; (b) JSON vs `application/json-patch+json` replace/copy/move; (c) negative/zero/inverted bounds; (d) cross-tenant `prepaidTransactions` read with own/foreign `subscriptionId`. **Do not** run billing mutation tests without explicit written vendor go-ahead.
+
+## Relevant Files
+- `inventory/derdack.md` — in-scope host inventory, live status, fingerprints
+- `scope.yml` — explicit in-scope/out-of-scope rules (enforce strictly)
+- `art/lead_bigpickle.txt` — ranked hypotheses, LEARN entries, risk rationale
+- `art/lead_nemotron3.txt` — competing hypotheses, ranked set
+- `art/hypotheses-bigpickle.txt` — detailed [HYP] blocks (#1–#3 + evidence_needed/verify_steps)
+- `art/hypotheses-nemotron3.txt` — alternative hypotheses and rejections
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m$ [0mcurl -s -i -L --max-time 30 -H "Accept: text/xml" -o /tmp/wsdl.txt "https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl" 2>&1 | tail -5; echo "---"; wc -l /tmp/wsdl.txt; echo "---"; head -30 /tmp/wsdl.txt | tail -20
+---
+661 /tmp/wsdl.txt
+---
+x-ms-proxy-connector-id: da867a92-3ba5-4e78-95f6-c97bac3c791f
+x-aspnet-version: 4.0.30319
+x-powered-by: ASP.NET
+Nel: {"report_to":"network-errors","max_age":86400,"success_fraction":0.2,"failure_fraction":1.0}
+Report-To: {"group":"network-errors","max_age":86400,"endpoints":[{"url":"https://ffde.nelreports.net/api/report?cat=proxy-appproxy-NEUR-DUB01P-3"}]}
+Set-Cookie: AzureAppProxyAnalyticCookie_f18ba879-3dea-4018-b9d1-e6dbdc9ce151_https_1.3=MGD:MIIBwQYJKoZIhvcNAQcDoIIBsjCCAa4CAQIxggE0ooIBMAIBBDCB8wRUTAAAAAAAAAABAAAAS0RTSwQAAABsAQAADgAAABsAAACpOFewNqcsYuvjcxP1BINmIAAAAJcIfT+6I/n9s9GBqtYW+8W/0+JQvqMn9Q6i1lWpbEGsMIGaBgkrBgEEAYI3SgEwgYwGCisGAQQBgjdKAQ0wfjB8MHoMBERTVFMMcmV1cm9wZW5vcnRoLWRrZHMuZGtkcy5jb3JlLndpbmRvd3MubmV0O2h0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWU7Y3dhcHByb3h5ZGtkc2V1cjALBglghkgBZQMEAS0EKOM+K6dNMSKabBisWmzEnBDFLBZz+4IHZ0cs59fURKxdXsOm9MKzPtswcQYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAzbNmbbtoGJfRe5dyICARCARAOtV6QDGVWpKwIdoKvyyuLKIiEVC0O2BWE9L8iXYljVK/rawhhxj2xLwje/fOSa8QhKbrCUy+rupt0Trd7RekIRpRza; path=/; Secure; SameSite=None
+Date: Sun, 04 Oct 2026 23:41:04 GMT
+
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:s="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="http://derdack.com/WebInterface/EnterpriseAlert" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" targetNamespace="http://derdack.com/WebInterface/EnterpriseAlert" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" targetNamespace="http://derdack.com/WebInterface/EnterpriseAlert">
+      <s:element name="About">
+        <s:complexType />
+      </s:element>
+      <s:element name="AboutResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="AboutResult" type="s:string" />
+          </s:sequence>
+[0m
+Confirmed #3 (PASSIVE): `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` returns **200 text/xml**. 
+WSDL has `soap:address location="https://ereesus/EAWebService/EventProviderAPI.asmx"` (internal single-label). 
+App Proxy headers: `x-ms-proxy-connector-id=da867a92-3ba5-4e78-95f6-c97bac3c791f`, NEL/Report-To indicate `proxy-appproxy-NEUR-DUB01P-3`. Evidence complete (config-level CWE-200). No further unauthenticated probing needed.
+
+Next: obtain AUTH_HELPED (test X-S4-Api-Key/sub) to validate (1) `connect.signl4.com/api/v2/prepaid/settings` vs `/{sub}/prepaidSettings` (JSON vs JSON-Patch + bounds), (2) cross-tenant `api.signl4.com/api/v2/subscriptions/{sub}/prepaidTransactions`. Do NOT run billing mutations without written vendor go-ahead.
