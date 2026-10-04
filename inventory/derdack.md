@@ -1994,3 +1994,13 @@ www.derdack.com
 - NEW api.signl4.com/identity & account.signl4.com/identity OIDC discovery both expose `dpop_signing_alg_values_supported` with 9 algorithms (RS256/RS384/RS512/PS256/PS384/PS512/ES256/ES384/ES512) — mitigat
 - NEW vps.signl4.com currently returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net unchanged
 - NEW us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
+
+## 2026-10-04 07:51:03 UTC
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx WSDL exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (internal hostname leak) — confirmed live 200.
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping: 401 on unauth GET and 401 with invalid Bearer this cycle (was 405/405 in prior cycles) — route-gated this cycle, differs from V1/V2 handler-deferred p
+- CHANGED vps.signl4.com HTTPS returns TCP timeout (000) vs prior confirmed 200 nginx default page — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged.
+- NEW api.signl4.com/api/v2/teams now returns 405 Allow: GET,POST on both unauth GET and invalid Bearer — handler-deferred auth pattern re-confirmed, differs from KB's 401 report
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl GET returns 200 with internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname) — li
+- NEW api.signl4.com/identity & account.signl4.com/identity OIDC discovery both expose `dpop_signing_alg_values_supported` with 9 algorithms (RS256/RS384/RS512/PS256/PS384/PS512/ES256/ES384/ES512) — mitigat
+- NEW vps.signl4.com currently returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net unchanged
+- NEW us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
