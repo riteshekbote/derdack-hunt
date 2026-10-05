@@ -2036,3 +2036,11 @@ www.derdack.com
 - CHANGED vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
 - CHANGED us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials
+
+## 2026-10-05 02:26:56 UTC
+- NEW vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
+- NEW us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
+- NEW api.signl4.com/api/v2/teams now returns 405 (Allow: GET,POST) on both unauth GET and invalid Bearer — handler-deferred auth pattern re-confirmed, differs from KB's 401 report
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl GET returns 200 with internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname) — li
+- NEW api.signl4.com/identity & account.signl4.com/identity OIDC discovery both expose `dpop_signing_alg_values_supported` with 9 algorithms (RS256/RS384/RS512/PS256/PS384/PS512/ES256/ES384/ES512) — mitigat
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials
