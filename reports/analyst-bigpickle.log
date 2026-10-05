@@ -50348,3 +50348,572 @@ Cycle complete. Summary of what happened:
 **Corrections made:** dropped `signlReports` traversal to a fourth [FINAL] to honor the three-asset cap; parked OIDC token acceptance rather than closing it (static half done, resumes free with credentials); fixed stale dossier paths (`reports/`, `leads/` — not repo root).
 
 **Next:** test the DPoP challenge layer — `GET /identity/connect/userinfo` unauthenticated on connect/account/devconnect, recording `WWW-Authenticate` verbatim. I've been citing DPoP as a mitigating control on the key-reuse item for weeks having only read it in metadata; the KB already holds a plain-`Bearer` observation as an inert note. That's the control deciding whether the parked item is LOW or HIGH, and it's the cheapest remaining passive test in this lane.
+===== ANALYST bigpickle 2026-10-05 18:51:36 UTC =====
+[0m
+> build · big-pickle
+[0m
+I'll execute the 8-step analysis cycle, beginning with the queued [NEXT] PROBE against the DPoP challenge layer.
+[0m$ [0msleep 1.5; echo "=== PROBE 1: connect.signl4.com/identity/connect/userinfo (no token, no cookie) ==="; curl -s -o /tmp/opencode/ui_connect.txt -D /tmp/opencode/hd_connect.txt -w "http_code=%{http_code}\nsize=%{size_download}\ntime=%{time_total}\n" --max-time 20 "https://connect.signl4.com/identity/connect/userinfo"; sleep 1.5; echo "--- FULL RESPONSE HEADERS ---"; cat -A /tmp/opencode/hd_connect.txt | sed 's/\$$//' | tr -d '\r'
+=== PROBE 1: connect.signl4.com/identity/connect/userinfo (no token, no cookie) ===
+http_code=401
+size=0
+time=0.501928
+--- FULL RESPONSE HEADERS ---
+HTTP/2 401 ^M
+date: Mon, 05 Oct 2026 18:48:17 GMT^M
+content-length: 0^M
+cache-control: no-store, no-cache, max-age=0^M
+pragma: no-cache^M
+server: Microsoft-HTTPAPI/2.0^M
+request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd^M
+x-frame-options: DENY^M
+x-xss-protection: 0^M
+x-content-type-options: nosniff^M
+strict-transport-security: max-age=15552000^M
+referrer-policy: strict-origin-when-cross-origin^M
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://connect.signl4.com/api/v2/csp/report; report-to csp-endpoint^M
+reporting-endpoints: csp-endpoint="https://connect.signl4.com/api/v2/csp/report"^M
+www-authenticate: Bearer realm="IdentityServer",error="invalid_token"^M
+^M
+[0m
+## Objective
+- Continue the Derdack/SIGNL4 high-value bug-bounty hunt and produce the requested structured analysis blocks, with at most three final findings.
+- Convert passive evidence into concrete next actions without overstating unverified impact.
+
+## Important Details
+- Scope: Derdack-owned infrastructure and products, including SIGNL4 and Enterprise Alert; report channel `bugs.olivermaicher.eu`.
+- Current state: `phase: POC`, `target: api`.
+- Live verification must remain passive-first: only `GET`/`HEAD`/`OPTIONS`, ≤1 request/second, no credentials or mutations.
+- Excluded classes include brute force/rate-limit testing, OPTIONS-only findings, descriptive headers, scanner output, and unauthenticated access to customer data.
+- OIDC wording must remain: **configured trust symmetry with unverified enforcement**. Shared JWKS/discovery does not prove cross-host token acceptance.
+- Six ingresses—`connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`—serve byte-identical JWKS with `kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`.
+- RFC 7662 introspection and RFC 7009 revocation registration is proven at 6/6 ingresses: each `OPTIONS` target returned `405`, while fabricated controls returned `404`; token enforcement remains credential-gated.
+- `devconnect.signl4.com` and `devapi.signl4.com` serve the production `/identity/connect/` tenant prefix.
+- DPoP metadata advertises `RS256`, `RS384`, `RS512`, `PS256`, `PS384`, `PS512`, `ES256`, `ES384`, and `ES256`; challenge-layer enforcement is untested.
+- Demo finding: `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`.
+- Demo anonymous surface is limited to `/EAWebService/`, `EventProviderAPI.aspx`, `EventProviderAPI.asmx?wsdl`, `EventConnectorServer.ashx`, and `rest/events`; credentialed handlers remain gated.
+- Current three final candidates: OIDC introspection/revocation configuration parity; demo EAWebService internal-host disclosure; `connect.signl4.com/api/v2/subscriptions/{id}/userLicenses` tenant-binding BOLA.
+- Highest-ranked new lead: `api.signl4.com/api/v2/prepaid/settings`, confidence 70, possible mass assignment because the write route lacks a path-bound `subscriptionId`.
+
+## Work State
+### Completed
+- Closed OIDC introspection/revocation registration at 6/6; all target bodies were empty and controls returned bare `404`.
+- Confirmed six-host discovery/JWKS parity, shared `client_id 692A0A56-892F-4AE2-8259-76DA398990B6`, and staging password-grant enablement.
+- Confirmed dev API/connect ingresses use the production tenant route.
+- Rejected `/api/v4`; no route or Swagger document exists.
+- Corrected API auth “flapping” as temporal rather than per-request: six consecutive `/api/v2/teams` probes were uniformly `401`.
+- Enumerated V1/V2/V3 APIs, webhook/events routes, prepaid schemas, `userLicenses`, file-download, and impersonation surfaces.
+- Closed GraphQL negative across `connect`, `api`, and `demo`.
+- Confirmed demo EA version `9.5.26147`, WSDL, version disclosure, empty Connector SDK handler table, and credential gating.
+- Corrected EventProvider handler count to 10 real handlers; unknown handlers return a `200` help-page fallback.
+
+### Active
+- Test whether protected OIDC resources demand DPoP or issue only a `Bearer` challenge.
+- Convert the prepaid-settings schema note into a specific mass-assignment hypothesis.
+- Preserve the OIDC route-registration finding without calling it cross-host token acceptance.
+
+### Blocked
+- No legitimate `client_secret`, `X-S4-Api-Key`, vendor-issued foreign tenant token, or authorized test subscription.
+- Cross-host introspection/revocation enforcement cannot be tested from this seat.
+- BOLA, prepaid mass assignment, report traversal, and impersonation effects remain `AUTH_HELPED`.
+
+## Next Move
+1. Probe `GET https://connect.signl4.com/identity/connect/userinfo` with no token or cookie, then repeat on `account.signl4.com` and `devconnect.signl4.com` at ≥1.2-second intervals; record the complete `WWW-Authenticate` header verbatim.
+2. Extract the existing V2 Swagger `requestBody`, `$ref`, and field types for `PUT /v2/prepaid/settings` and `PUT /v2/prepaid/{subscriptionId}/prepaidSettings` before proposing authenticated test inputs.
+
+## Relevant Files
+- `scope.yml`: authoritative in-scope asset rules.
+- `inventory/derdack.md`: Derdack discovery inventory.
+- `art/lead_bigpickle.txt`: latest OIDC registration and DPoP lead source.
+- `art/lead_nemotron3.txt`: prepaid-settings mass-assignment lead source.
+- `hypotheses-bigpickle.txt`: bigpickle hypothesis and probe queue.
+- `hypotheses-nemotron3.txt`: nemotron3 hypothesis and schema-analysis queue.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+Probe 1 returned a critical negative: `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` — no DPoP scheme, no `dpop` auth-param, no nonce challenge. Completing the queued 3-request set on `account` and `devconnect` to confirm this is uniform.
+[0m$ [0mecho "=== PROBE 2: account.signl4.com/identity/connect/userinfo ==="; curl -s -o /tmp/opencode/ui_account.txt -D /tmp/opencode/hd_account.txt -w "http_code=%{http_code}  size=%{size_download}  time=%{time_total}\n" --max-time 20 "https://account.signl4.com/identity/connect/userinfo"; sleep 1.5; echo "=== PROBE 3: devconnect.signl4.com/identity/connect/userinfo ==="; curl -s -o /tmp/opencode/ui_devconnect.txt -D /tmp/opencode/hd_devconnect.txt -w "http_code=%{http_code}  size=%{size_download}  time=%{time_total}\n" --max-time 20 "https://devconnect.signl4.com/identity/connect/userinfo"; echo; echo "########## WWW-Authenticate / WWW-Authenticate-summary COMPARISON ##########"; for h in connect account devconnect; do printf '%-12s -> ' "$h"; grep -i '^www-authenticate:' /tmp/opencode/hd_$h.txt | tr -d '\r' || printf '(header absent)\n'; done; echo; echo "########## body byte counts (expect 0) ##########"; for h in connect account devconnect; do printf '%-12s ' "$h"; wc -c < /tmp/opencode/ui_$h.txt; done
+=== PROBE 2: account.signl4.com/identity/connect/userinfo ===
+http_code=401  size=0  time=0.465560
+=== PROBE 3: devconnect.signl4.com/identity/connect/userinfo ===
+http_code=401  size=0  time=0.490059
+
+########## WWW-Authenticate / WWW-Authenticate-summary COMPARISON ##########
+connect      -> www-authenticate: Bearer realm="IdentityServer",error="invalid_token"
+account      -> www-authenticate: Bearer realm="IdentityServer",error="invalid_token"
+devconnect   -> www-authenticate: Bearer realm="IdentityServer",error="invalid_token"
+
+########## body byte counts (expect 0) ##########
+connect      0
+account      0
+devconnect   0
+[0m
+Three-for-three uniform `Bearer realm="IdentityServer",error="invalid_token"`. Let me pull the exact DPoP metadata claims to pin the advertised-vs-enforced gap, and check the file conventions.
+[0m$ [0mls -la /home/runner/work/derdack-hunt/derdack-hunt 2>/dev/null | head -40; echo "---- art ----"; ls -la /home/runner/work/derdack-hunt/derdack-hunt/art 2>/dev/null | head -40
+total 1236
+drwxr-xr-x 12 runner runner   4096 Oct  5 18:48 .
+drwxr-xr-x  3 runner runner   4096 Oct  5 18:47 ..
+drwxr-xr-x  7 runner runner   4096 Oct  5 18:48 .git
+drwxr-xr-x  3 runner runner   4096 Oct  5 18:47 .github
+-rw-r--r--  1 runner runner   1831 Oct  5 18:47 README.md
+-rw-r--r--  1 runner runner  11230 Oct  5 18:49 analyst-out.txt
+-rw-r--r--  1 runner runner 571991 Oct  5 18:48 analyst-prompt.txt
+-rw-r--r--  1 runner runner 568112 Oct  5 18:48 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct  5 18:47 inventory
+drwxr-xr-x  2 runner runner   4096 Oct  5 18:47 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct  5 18:47 leads
+-rw-r--r--  1 runner runner  20378 Oct  5 18:47 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct  5 18:47 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct  5 18:47 reports
+drwxr-xr-x  2 runner runner   4096 Oct  5 18:47 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct  5 18:47 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct  5 18:47 scripts
+-rw-r--r--  1 runner runner     33 Oct  5 18:47 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct  5 18:47 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct  5 18:47 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct  5 18:47 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct  5 18:47 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct  5 18:47 state_nemotron3.json
+drwxr-xr-x  2 runner runner  12288 Oct  5 18:47 triage
+---- art ----
+[0m
+[0m$ [0mecho "=== discovery: DPoP-related fields (connect) ==="; curl -s --max-time 20 "https://connect.signl4.com/identity/connect/.well-known/openid-configuration" | tr ',' '\n' | grep -i -E 'dpop|token_endpoint_auth|signing_alg|mtls|resource_indicator' ; echo; echo "=== full key list (values redacted to shape) ==="; curl -s --max-time 20 "https://connect.signl4.com/identity/connect/.well-known/openid-configuration" | tr ',' '\n' | sed 's/^ *//' | cut -c1-90
+=== discovery: DPoP-related fields (connect) ===
+
+=== full key list (values redacted to shape) ===
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt; echo "=== state_bigpickle.json ==="; cat state_bigpickle.json; echo; echo "=== inventory/ ==="; ls -la inventory/; echo "=== leads/ ==="; ls -la leads/ | head -30; echo "=== knowledge/ ==="; ls knowledge/; echo "=== recon-notes/ ==="; ls recon-notes/; echo "=== reports/ ==="; ls reports/; echo "=== scripts/ ==="; ls scripts/; echo "=== triage (count) ==="; ls triage/ | wc -l
+=== state_bigpickle.json ===
+{"phase": "POC", "target": "api"}
+=== inventory/ ===
+total 292
+drwxr-xr-x  2 runner runner   4096 Oct  5 18:47 .
+drwxr-xr-x 12 runner runner   4096 Oct  5 18:48 ..
+-rw-r--r--  1 runner runner 289747 Oct  5 18:47 derdack.md
+=== leads/ ===
+total 3676
+drwxr-xr-x  2 runner runner    4096 Oct  5 18:47 .
+drwxr-xr-x 12 runner runner    4096 Oct  5 18:48 ..
+-rw-r--r--  1 runner runner 1213748 Oct  5 18:47 lead-bigpickle.md
+-rw-r--r--  1 runner runner   10353 Oct  5 18:47 lead-laguna.md
+-rw-r--r--  1 runner runner   10150 Oct  5 18:47 lead-ling3.md
+-rw-r--r--  1 runner runner   10504 Oct  5 18:47 lead-longcat.md
+-rw-r--r--  1 runner runner      18 Oct  5 18:47 lead-mimo.md
+-rw-r--r--  1 runner runner 2414934 Oct  5 18:47 lead-nemotron3.md
+-rw-r--r--  1 runner runner   79000 Oct  5 18:47 reposcan-derdack.md
+=== knowledge/ ===
+index.md
+=== recon-notes/ ===
+DEDICATED-DEEP.md
+=== reports/ ===
+analyst-bigpickle.log
+analyst-laguna.log
+analyst-ling3.log
+analyst-longcat.log
+analyst-nemotron3.log
+hypotheses-bigpickle.txt
+hypotheses-laguna.txt
+hypotheses-ling3.txt
+hypotheses-longcat.txt
+hypotheses-nemotron3.txt
+hypotheses.md
+valid-bugs.md
+=== scripts/ ===
+sync-issues.py
+=== triage (count) ===
+211
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt; echo "=== grep discovery/openid-config URLs in repo ==="; grep -rIoh -E 'https://[a-z0-9.-]*signl4\.com/identity/[^ "'"'"',)]*well-known[^ "'"'"',)]*' . 2>/dev/null | sort -u | head -20; echo "=== any openid-configuration refs ==="; grep -rIl 'openid-configuration' . 2>/dev/null | head -20
+=== grep discovery/openid-config URLs in repo ===
+https://account.signl4.com/identity/.well-known/jwks.json
+https://account.signl4.com/identity/.well-known/oauth-authorization-server
+https://account.signl4.com/identity/.well-known/openid-configuration
+https://account.signl4.com/identity/.well-known/openid-configuration/jwks
+https://account.signl4.com/identity/.well-known/openid-configuration/jwks`
+https://account.signl4.com/identity/.well-known/openid-configuration`
+https://account.signl4.com/identity/.well-known/openid-configuration`;
+https://api.signl4.com/identity/.well-known/jwks
+https://api.signl4.com/identity/.well-known/jwks.json
+https://api.signl4.com/identity/.well-known/oauth-authorization-server
+https://api.signl4.com/identity/.well-known/openid-configuration
+https://api.signl4.com/identity/.well-known/openid-configuration/jwks
+https://api.signl4.com/identity/.well-known/openid-configuration/jwks`
+https://api.signl4.com/identity/.well-known/openid-configuration;
+https://api.signl4.com/identity/.well-known/openid-configuration`
+https://connect.signl4.com/identity/.well-known/jwks
+https://connect.signl4.com/identity/.well-known/jwks.json
+https://connect.signl4.com/identity/.well-known/jwks.json;
+https://connect.signl4.com/identity/.well-known/jwks.json`
+https://connect.signl4.com/identity/.well-known/oauth-authorization-server
+=== any openid-configuration refs ===
+./leads/lead-bigpickle.md
+./leads/lead-nemotron3.md
+./analyst-out.txt
+./probe-results.md
+./reports/hypotheses.md
+./reports/analyst-nemotron3.log
+./reports/hypotheses-bigpickle.txt
+./reports/analyst-bigpickle.log
+./ctx.txt
+./knowledge/index.md
+./inventory/derdack.md
+./triage/run-2026-09-10-10-37.md
+./triage/run-2026-09-09-06-38.md
+./triage/run-2026-09-14-21-52.md
+./triage/run-2026-09-20-01-52.md
+./triage/run-2026-09-18-23-43.md
+./triage/run-2026-09-25-05-00.md
+./triage/run-2026-09-06-06-28.md
+./triage/run-2026-09-21-22-48.md
+./triage/run-2026-09-11-05-08.md
+[0m
+Discovery came back empty — my assumed path is wrong. Let me get the correct one and the real repo layout.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt; echo "########## reports/hypotheses-bigpickle.txt (tail 80) ##########"; tail -80 reports/hypotheses-bigpickle.txt; echo; echo "########## reports/analyst-bigpickle.log (tail 60) ##########"; tail -60 reports/analyst-bigpickle.log
+########## reports/hypotheses-bigpickle.txt (tail 80) ##########
+## 2026-10-05 09:38:50 UTC [target] (model bigpickle)
+[CHANGED] OIDC introspection/revocation family: route registration moved from 0/6 ingresses exercised to 4/4 noncanonical ingresses confirmed registered (introspect AND revocation, on account/devconnect/devapi, against a passing control). Token *enforcement* remains unmeasured — see [HYP] 1. Dossier wording stays as written.
+[PRIO] connect.signl4.com/identity/connect/{introspect,revocation},6.6,attack_surface=7,business_value=8,tech_exposure=8,gate_ease=6,cloud_surface=8,freshness=10
+[PRIO] connect.signl4.com/api/v2/subscriptions/{id}/userLicenses,6.5,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=4,cloud_surface=7,freshness=6
+[PRIO] connect.signl4.com/api/v2/teams/{teamId}/signlReports/{fileName},6.4,attack_surface=8,business_value=9,tech_exposure=6,gate_ease=4,cloud_surface=7,freshness=6
+[HYP] RFC 7662 introspection and RFC 7009 revocation are locally registered on ingresses that are not the canonical issuer, on the *production* `connect` tenant prefix — routing parity is now measured, so the only surviving uncertainty is whether a foreign-issuer token is honoured, which cannot be reached from this seat
+class: AUTH
+asset: connect.signl4.com/identity/connect/introspect and /identity/connect/revocation, cross-checked against account/devconnect/devapi
+confidence: 55
+reasoning: Executed the full differential queued on 2026-10-05 02:26. Results, all `OPTIONS`, all bodies zero-length (sha256 e3b0c44298fc1c14 = empty string): introspect — connect 405, account 405, devconnect 405, devapi 405. revocation — connect 405, account 405, devconnect 405, devapi 405. Control `/identity/connect/zz-nonexistent-ctrl` on connect returned a bare **404**. The control is the load-bearing result: it proves the router on these ingresses distinguishes an unregistered path from a registered one, so `405` is readable as "handler is registered here, `OPTIONS` not permitted" rather than "everything is routed". It is not. Eight of eight agree, none emit `Allow` or `WWW-Authenticate`, all are uniformly empty — one shared middleware behaviour, not per-host variance. Two facts beyond the original ask. First, devapi and devconnect serve the **production** `/identity/connect/` prefix, not `/identity/devconnect/` — the dev tier serves the prod tenant route, which tightens the configuration-parity observation from "identical documents" to "identical routing". Second, all four noncanonical hosts serve both handlers, so the "0 of 6" figure in my own 2026-10-03 note was measurement debt, not a finding.
+evidence_needed: Nothing further is reachable passively. The remaining question is whether a token minted on `connect.` is introspected as active on `account.`/`devconnect.`/`devapi.`. A registered handler can still validate `iss`/`aud` correctly and reject a foreign token, in which case registration parity is a hardening note and not a vulnerability. Separating the two requires presenting a real token to a foreign ingress, which needs a legitimate client secret, a vendor-issued token for the non-canonical tenant, or a second authorised network position. None are available from this seat and none may be synthesised.
+verify_steps: Not executable here. With AUTH_HELPED access: mint a token on `connect.signl4.com/identity/connect/token`, then `POST` it to `/identity/connect/introspect` on `account`, `devconnect`, and `devapi` with the correct client credentials for *that* host. `active:true` on a foreign ingress is confirmation; a `401`/`invalid_token` is closure and confirms per-host enforcement. Do not replay a token against a host where we hold no authorisation.
+impact: Unchanged from the original framing, but now narrower and better evidenced. If foreign tokens are honoured, the six-host key reuse collapses into a real trust boundary and any one compromised host key forges for all six — HIGH. If they are rejected, this is route and key-hygiene consolidation work — LOW, and correctly filed as an observation rather than a vulnerability.
+testability: PASSIVE_FOR_REGISTRATION / BLOCKED_FOR_ENFORCEMENT
+[PARKED] none this cycle.
+[FINAL] 1. AUTH @ connect/account/devconnect/devapi `/identity/connect/{introspect,revocation}` — confidence 55 (up from 45), registration PROVEN 4/4, enforcement UNTESTED. Passive portion exhausted; the residue needs credentials, not cleverness.
+[FINAL] 2. MISCONFIG @ demo.enterprisealert.com/EAWebService — confidence 60, PASSIVE. Unchanged and settled; internal `soap:address https://ereesus/...` plus App Proxy topology identifiers, zero credentials, CWE-200 hygiene, LOW-MEDIUM. Not re-probed.
+[FINAL] 3. IDOR @ connect.signl4.com/api/v2/subscriptions/{id}/userLicenses — confidence 45, AUTH_HELPED. Billing write surface, tenant binding by path segment alone.
+[NEXT] PROBE the two ingresses the differential never covered: `OPTIONS https://api.signl4.com/identity/connect/introspect`, `OPTIONS https://api.signl4.com/identity/connect/revocation`, `OPTIONS https://devaccount.signl4.com/identity/connect/introspect`, `OPTIONS https://devaccount.signl4.com/identity/connect/revocation`, control last with `OPTIONS https://api.signl4.com/identity/connect/zz-nonexistent-ctrl`. Status + `Allow` + `Content-Length`, 5 requests, ≥1.2 s apart, no token, no cookie, no redirect-following. This closes the family at 6/6 instead of 4/6 — I have asserted "all six ingresses" in every entry in this dossier while having measured four, and an incomplete differential cannot support a uniform claim.
+[LEARN] ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean `405`s against a passing control is a strong, reproducible result, and it is still not a vulnerability. I raised confidence 45->55 on the strength of route registration alone; I want to be explicit that this measures *routing*, not *token validation*. A handler mounted on four ingresses may validate `iss`/`aud` perfectly. The temptation at this point is to write "confirmed cross-host introspection" in the dossier, which the evidence does not support, and that is the exact error the 2026-09-26 closure of the OpenAPI disclosure class warned against — a real artefact, read correctly, that does not imply the impact half of the claim. "Documented configuration symmetry with unverified enforcement" remains the accurate sentence; I have simply upgraded the "documented configuration" half from documents-only to documents-plus-routing.
+[LEARN] ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: I specified hashing and lengthing the control body to distinguish registered from unregistered. In practice every body — target and control alike — was zero-length and hashed to the empty-string sha256, so the body discriminator was identical across both arms and carried zero signal. The discriminator that actually resolved the question was the status code alone, 405 vs 404. Building the right control is not the same as building the control you predicted would work; had I asserted "registered" from a bare 405 without the fabricated sibling, the inference would have been unfalsifiable and, given the KB's earlier `s4dev1..8` 2/8-vs-8/8 status-only error, wrong for a second time.
+[LEARN] ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on `/identity/connect/`, not `/identity/devconnect/`. Combined with byte-identical JWKS, that means a dev ingress is not a reduced or forked environment — it is the production tenant, reachable at a second hostname. This is a scoping fact for the whole program, not just OIDC: any conclusion drawn on `devapi` is a conclusion about `connect`, and dev-only findings should not be filed as dev-only.
+[LEARN] REJECTED OTHER @ filing the signlReports traversal as a fourth [FINAL]: the previous cycle emitted four [FINAL] entries against a three-asset cap. The traversal hypothesis is sound and remains at confidence 45, but it is indistinguishable in kind from the userLicenses BOLA — both AUTH_HELPED, both needing vendor-issued tenants — and keeping both in the final set inflates the queue without adding a distinct attack path. Held at [PRIO] and out of the finals rather than quietly dropped; it is not dead, it is queued behind a sibling of the same class and gate.
+[RISK] derdack: 3 — 9 requests this cycle, all `OPTIONS`, all zero-length, all bodyless, no `Authorization`, no `x-s4-api-key`, no cookie jar, no redirect-following, ≥1.2 s apart. Eight target routes and one fabricated control; no credential, no tenant data, no mutation, nothing attempted against a path we are not authorised to test. Same passive envelope as last cycle.
+[CHANGED] OIDC introspection/revocation family CLOSED at 6/6 registration parity. All six ingresses serve both handlers locally on the production `connect` tenant prefix, against passing controls on two hosts. Passive portion fully exhausted; the enforcement residue is credential-gated. Dossier sentence "documented configuration symmetry with unverified enforcement" is now fully supported and needs no softening — it is not upgraded to a vulnerability.
+[PRIO] connect.signl4.com/identity/connect/{introspect,revocation},6.6,attack_surface=7,business_value=8,tech_exposure=8,gate_ease=6,cloud_surface=8,freshness=10
+[PRIO] connect.signl4.com/api/v2/subscriptions/{id}/userLicenses,6.5,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=4,cloud_surface=7,freshness=6
+[PRIO] connect.signl4.com/api/v2/teams/{teamId}/signlReports/{fileName},6.4,attack_surface=8,business_value=9,tech_exposure=6,gate_ease=4,cloud_surface=7,freshness=6
+[HYP] The DPoP binding advertised in every host's OpenID configuration is documentation-only — the unauthenticated challenge layer returns a plain `Bearer` `WWW-Authenticate` with no `DPoP` scheme and no error detail demanding proof-of-possession, so the public client-binding mitigation the program relies on is not enforced at the point tokens are presented
+class: AUTH
+asset: connect.signl4.com/identity/connect/userinfo, cross-checked against account/devconnect/devapi
+confidence: 40
+reasoning: Every one of the six `/.well-known/openid-configuration` documents I have read advertises `dpop_signing_alg_values_supported` and lists DPoP among the supported token-endpoint authentication methods, and the metadata itself is what I have been citing as a mitigating control against the shared-RS256-key finding. I have never tested whether the deployment demands it. The natural way a DPoP mitigation fails to bind is mundane and common: the document lists the capability, the challenge layer keeps emitting the `Bearer` scheme it always emitted, and nothing forces a client to prove possession. The KB already carries an unverified fragment in exactly this shape — an observed `WWW-Authenticate: Bearer` on the identity routes — filed as a note rather than a hypothesis, which is the same reflex failure as the unenumerated `userLicenses` PUT. An untested advertised mitigation is a hypothesis, not a reassurance.
+evidence_needed: An unauthenticated `GET` to a protected identity resource. If the `401` challenge carries `WWW-Authenticate: Bearer` only, with no `DPoP` scheme, no `error="use_dpop_nonce"`, and no nonce anywhere in the response, the binding is not demanded at challenge time and the documented control is advisory. If the challenge offers `DPoP` — with or without a nonce — the control is real and this item closes as closed-and-working. Full enforcement still needs a captured DPoP-bound request replayed without its proof header, which is credential-gated; the challenge-layer read is the part available from this seat.
+verify_steps: (1) `GET https://connect.signl4.com/identity/connect/userinfo`, no token, no cookie — record the full `WWW-Authenticate` header verbatim, do not paraphrase the scheme list. (2) Same on `account` and `devconnect`. (3) If `Bearer`-only, the item is a documentation-versus-deployment mismatch worth reporting as LOW-MEDIUM on its own, and it also slightly weakens the mitigation I have been attaching to the six-host key-reuse observation. All read-only, no credentials.
+impact: If confirmed, the DPoP mitigation cannot be credited in the cross-host token-forgery risk assessment — an attacker holding the shared private key needs no proof-of-possession to present a minted token, which removes the one control standing between key reuse and a full forgery chain. LOW-MEDIUM standalone (metadata mismatch, no direct compromise), but it changes the severity maths on [FINAL] 1 in the vendor's favour-negative direction. If refuted, this closes and the mitigation stands.
+testability: PASSIVE
+[PARKED] OIDC cross-host token acceptance — parked at confidence 55, not closed. Registration measured 6/6; enforcement unmeasurable without a legitimate `client_secret` or a vendor-issued token for a non-canonical tenant. Parked rather than dropped because the next auth-capable session resumes it at zero setup cost, and the static half is already done.
+[FINAL] 1. AUTH @ connect/account/devconnect/devapi `/identity/connect/{introspect,revocation}` — confidence 55, registration PROVEN 6/6, enforcement UNTESTED, now PARKED pending AUTH_HELPED.
+[FINAL] 2. MISCONFIG @ demo.enterprisealert.com/EAWebService — confidence 60, PASSIVE. Settled; internal `soap:address https://ereesus/...` plus App Proxy topology identifiers, zero credentials, CWE-200, LOW-MEDIUM. Not re-probed.
+[FINAL] 3. IDOR @ connect.signl4.com/api/v2/subscriptions/{id}/userLicenses — confidence 45, AUTH_HELPED. Tenant binding by path segment alone on a paid-licence write.
+[NEXT] PROBE the DPoP challenge layer: `GET https://connect.signl4.com/identity/connect/userinfo` with no token and no cookie, recording the `WWW-Authenticate` header **verbatim** including the full scheme list; repeat on `account` and `devconnect`. 3 requests, ≥1.2 s apart, no credentials, no redirect-following. Rationale: the six-host key-reuse observation has been filed for weeks partly on the strength of a DPoP mitigation I have only ever read in metadata and never seen demanded. This is the cheapest remaining test of an advertised control anywhere in my lane, and it is the control that decides whether the parked token-forgery item is LOW or HIGH.
+[LEARN] ACCEPTED OTHER @ completing the differential was worth more than any result inside it: four of the six hosts already returned the answer I expected, so the obvious move was to stop and write up. That would have left every entry in this dossier asserting "all six ingresses serve byte-identical JWKS" while the introspection evidence sat at four hosts and two had never been touched — the same documents-plus-routing gap I criticised in the previous entry, just one layer down. `api` and `devaccount` both returned `405` on both handlers, and the control on `api` returned a bare `404`, so the pattern held 6/6 rather than 4/6 with two stragglers. A uniform claim needs a complete sample; a partial sample can only ever support a hedged one.
+[LEARN] ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well for this family is dry because every remaining question needs a token, and that is a real stopping point — but stopping at the first wall is how a hunt degenerates into re-reading closed findings. The correct response to a credential gate is to re-rank around it, not to keep re-probing the same routes at higher request counts. Rotating to the DPoP challenge is the same asset family at a different layer and needs no credential, which is what keeps this from being a stall.
+[LEARN] ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: I have cited `dpop_signing_alg_values_supported` as a mitigating control in the cross-host key-reuse reasoning without ever checking whether the deployment enforces it. The KB holds the matching observation — plain `Bearer` on the identity challenge routes — as an inert note. Metadata describes intent; the challenge layer describes behaviour. Where those two disagree, the disagreement is the finding, and holding an untested control as settled is how a risk assessment quietly overstates its own mitigations.
+[RISK] derdack: 3 — 5 requests this cycle, all `OPTIONS`, all zero-length, no `Authorization`, no `x-s4-api-key`, no cookie jar, no redirect-following, ≥1.2 s apart. Four target routes on the two uncovered ingresses plus one fabricated control. No credential, no tenant data, no mutation. Within the established passive envelope; 14 requests across the two cycles against this asset family.
+
+########## reports/analyst-bigpickle.log (tail 60) ##########
+content-length: 0
+code=404 size=0
+[0m
+6/6 registration confirmed, control on `api` also bare `404`. Closing the family and re-ranking.
+[0m$ [0mcat >> reports/hypotheses-bigpickle.txt <<'EOF'
+
+## 2026-10-05 10:44:38 UTC [api] (model bigpickle)
+[CHANGED] OIDC introspection/revocation family CLOSED at 6/6 registration parity. All six ingresses serve both handlers locally on the production `connect` tenant prefix, against passing controls on two hosts. Passive portion fully exhausted; the enforcement residue is credential-gated. Dossier sentence "documented configuration symmetry with unverified enforcement" is now fully supported and needs no softening — it is not upgraded to a vulnerability.
+[PRIO] connect.signl4.com/identity/connect/{introspect,revocation},6.6,attack_surface=7,business_value=8,tech_exposure=8,gate_ease=6,cloud_surface=8,freshness=10
+[PRIO] connect.signl4.com/api/v2/subscriptions/{id}/userLicenses,6.5,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=4,cloud_surface=7,freshness=6
+[PRIO] connect.signl4.com/api/v2/teams/{teamId}/signlReports/{fileName},6.4,attack_surface=8,business_value=9,tech_exposure=6,gate_ease=4,cloud_surface=7,freshness=6
+[HYP] The DPoP binding advertised in every host's OpenID configuration is documentation-only — the unauthenticated challenge layer returns a plain `Bearer` `WWW-Authenticate` with no `DPoP` scheme and no error detail demanding proof-of-possession, so the public client-binding mitigation the program relies on is not enforced at the point tokens are presented
+class: AUTH
+asset: connect.signl4.com/identity/connect/userinfo, cross-checked against account/devconnect/devapi
+confidence: 40
+reasoning: Every one of the six `/.well-known/openid-configuration` documents I have read advertises `dpop_signing_alg_values_supported` and lists DPoP among the supported token-endpoint authentication methods, and the metadata itself is what I have been citing as a mitigating control against the shared-RS256-key finding. I have never tested whether the deployment demands it. The natural way a DPoP mitigation fails to bind is mundane and common: the document lists the capability, the challenge layer keeps emitting the `Bearer` scheme it always emitted, and nothing forces a client to prove possession. The KB already carries an unverified fragment in exactly this shape — an observed `WWW-Authenticate: Bearer` on the identity routes — filed as a note rather than a hypothesis, which is the same reflex failure as the unenumerated `userLicenses` PUT. An untested advertised mitigation is a hypothesis, not a reassurance.
+evidence_needed: An unauthenticated `GET` to a protected identity resource. If the `401` challenge carries `WWW-Authenticate: Bearer` only, with no `DPoP` scheme, no `error="use_dpop_nonce"`, and no nonce anywhere in the response, the binding is not demanded at challenge time and the documented control is advisory. If the challenge offers `DPoP` — with or without a nonce — the control is real and this item closes as closed-and-working. Full enforcement still needs a captured DPoP-bound request replayed without its proof header, which is credential-gated; the challenge-layer read is the part available from this seat.
+verify_steps: (1) `GET https://connect.signl4.com/identity/connect/userinfo`, no token, no cookie — record the full `WWW-Authenticate` header verbatim, do not paraphrase the scheme list. (2) Same on `account` and `devconnect`. (3) If `Bearer`-only, the item is a documentation-versus-deployment mismatch worth reporting as LOW-MEDIUM on its own, and it also slightly weakens the mitigation I have been attaching to the six-host key-reuse observation. All read-only, no credentials.
+impact: If confirmed, the DPoP mitigation cannot be credited in the cross-host token-forgery risk assessment — an attacker holding the shared private key needs no proof-of-possession to present a minted token, which removes the one control standing between key reuse and a full forgery chain. LOW-MEDIUM standalone (metadata mismatch, no direct compromise), but it changes the severity maths on [FINAL] 1 in the vendor's favour-negative direction. If refuted, this closes and the mitigation stands.
+testability: PASSIVE
+[PARKED] OIDC cross-host token acceptance — parked at confidence 55, not closed. Registration measured 6/6; enforcement unmeasurable without a legitimate `client_secret` or a vendor-issued token for a non-canonical tenant. Parked rather than dropped because the next auth-capable session resumes it at zero setup cost, and the static half is already done.
+[FINAL] 1. AUTH @ connect/account/devconnect/devapi `/identity/connect/{introspect,revocation}` — confidence 55, registration PROVEN 6/6, enforcement UNTESTED, now PARKED pending AUTH_HELPED.
+[FINAL] 2. MISCONFIG @ demo.enterprisealert.com/EAWebService — confidence 60, PASSIVE. Settled; internal `soap:address https://ereesus/...` plus App Proxy topology identifiers, zero credentials, CWE-200, LOW-MEDIUM. Not re-probed.
+[FINAL] 3. IDOR @ connect.signl4.com/api/v2/subscriptions/{id}/userLicenses — confidence 45, AUTH_HELPED. Tenant binding by path segment alone on a paid-licence write.
+[NEXT] PROBE the DPoP challenge layer: `GET https://connect.signl4.com/identity/connect/userinfo` with no token and no cookie, recording the `WWW-Authenticate` header **verbatim** including the full scheme list; repeat on `account` and `devconnect`. 3 requests, ≥1.2 s apart, no credentials, no redirect-following. Rationale: the six-host key-reuse observation has been filed for weeks partly on the strength of a DPoP mitigation I have only ever read in metadata and never seen demanded. This is the cheapest remaining test of an advertised control anywhere in my lane, and it is the control that decides whether the parked token-forgery item is LOW or HIGH.
+[LEARN] ACCEPTED OTHER @ completing the differential was worth more than any result inside it: four of the six hosts already returned the answer I expected, so the obvious move was to stop and write up. That would have left every entry in this dossier asserting "all six ingresses serve byte-identical JWKS" while the introspection evidence sat at four hosts and two had never been touched — the same documents-plus-routing gap I criticised in the previous entry, just one layer down. `api` and `devaccount` both returned `405` on both handlers, and the control on `api` returned a bare `404`, so the pattern held 6/6 rather than 4/6 with two stragglers. A uniform claim needs a complete sample; a partial sample can only ever support a hedged one.
+[LEARN] ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well for this family is dry because every remaining question needs a token, and that is a real stopping point — but stopping at the first wall is how a hunt degenerates into re-reading closed findings. The correct response to a credential gate is to re-rank around it, not to keep re-probing the same routes at higher request counts. Rotating to the DPoP challenge is the same asset family at a different layer and needs no credential, which is what keeps this from being a stall.
+[LEARN] ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: I have cited `dpop_signing_alg_values_supported` as a mitigating control in the cross-host key-reuse reasoning without ever checking whether the deployment enforces it. The KB holds the matching observation — plain `Bearer` on the identity challenge routes — as an inert note. Metadata describes intent; the challenge layer describes behaviour. Where those two disagree, the disagreement is the finding, and holding an untested control as settled is how a risk assessment quietly overstates its own mitigations.
+[RISK] derdack: 3 — 5 requests this cycle, all `OPTIONS`, all zero-length, no `Authorization`, no `x-s4-api-key`, no cookie jar, no redirect-following, ≥1.2 s apart. Four target routes on the two uncovered ingresses plus one fabricated control. No credential, no tenant data, no mutation. Within the established passive envelope; 14 requests across the two cycles against this asset family.
+EOF
+echo ok; wc -l reports/hypotheses-bigpickle.txt
+ok
+90 reports/hypotheses-bigpickle.txt
+[0m
+Cycle complete. Summary of what happened:
+
+**Executed the queued probe (9 + 5 requests, all `OPTIONS`, zero-length, no creds):**
+
+| Host | introspect | revocation |
+|---|---|---|
+| connect | 405 | 405 |
+| account | 405 | 405 |
+| devconnect | 405 | 405 |
+| devapi | 405 | 405 |
+| api | 405 | 405 |
+| devaccount | 405 | 405 |
+
+**Control `/identity/connect/zz-nonexistent-ctrl` returned a bare `404` on both `connect` and `api`.** That control is what makes the result readable — it proves the router distinguishes unregistered from registered paths, so `405` means "handler mounted, `OPTIONS` not permitted," not "everything routes."
+
+**Three findings worth carrying:**
+
+1. **Registration parity is now 6/6, but this is not a vulnerability.** A mounted handler can still validate `iss`/`aud` correctly and reject a foreign token. I deliberately did *not* upgrade the dossier to "confirmed cross-host introspection" — "documented configuration symmetry with unverified enforcement" remains the accurate sentence. Confidence 45 → 55 on routing evidence alone.
+
+2. **Dev hosts serve the production tenant prefix.** `devconnect` and `devapi` answer on `/identity/connect/`, not `/identity/devconnect/`. Dev ingresses are not forked environments — any conclusion drawn on devapi is a conclusion about connect. Program-wide scoping fact.
+
+3. **The control I designed was half-inert.** I specified body hashing to discriminate registered vs. unregistered; every body, target and control alike, was zero-length and hashed to the empty-string sha256. The discriminator that actually worked was status alone (405 vs 404).
+
+**Corrections made:** dropped `signlReports` traversal to a fourth [FINAL] to honor the three-asset cap; parked OIDC token acceptance rather than closing it (static half done, resumes free with credentials); fixed stale dossier paths (`reports/`, `leads/` — not repo root).
+
+**Next:** test the DPoP challenge layer — `GET /identity/connect/userinfo` unauthenticated on connect/account/devconnect, recording `WWW-Authenticate` verbatim. I've been citing DPoP as a mitigating control on the key-reuse item for weeks having only read it in metadata; the KB already holds a plain-`Bearer` observation as an inert note. That's the control deciding whether the parked item is LOW or HIGH, and it's the cheapest remaining passive test in this lane.
+[0m
+Correct path is `/identity/.well-known/openid-configuration` (no `/connect/` segment). Let me pull the real DPoP claims and read my own conventions.
+[0m$ [0mecho "=== discovery DPoP/mTLS/resource fields (connect) ==="; curl -s --max-time 20 "https://connect.signl4.com/identity/.well-known/openid-configuration" > /tmp/opencode/disc.json; wc -c /tmp/opencode/disc.json; python3 -c "
+import json
+d=json.load(open('/tmp/opencode/disc.json'))
+print('--- keys mentioning dpop/mtls/resource ---')
+for k,v in sorted(d.items()):
+    if any(t in k.lower() for t in ('dpop','mtls','resource','pkce','signing','clientauth','client_auth','authmethod','tls')):
+        print(' ',k,'=',json.dumps(v))
+print('--- token_endpoint_auth_methods_supported ---')
+print(' ',d.get('token_endpoint_auth_methods_supported'))
+print('--- dpop_signing_alg_values_supported ---')
+print(' ',d.get('dpop_signing_alg_values_supported'))
+print('--- issuer ---')
+print(' ',d.get('issuer'))
+print('--- introspection/token/revocation/userinfo endpoints ---')
+for k in ('introspection_endpoint','revocation_endpoint','userinfo_endpoint','token_endpoint','token_endpoint_auth_signing_alg_values_supported'):
+    print(' ',k,'=',d.get(k))
+"
+=== discovery DPoP/mTLS/resource fields (connect) ===
+3457 /tmp/opencode/disc.json
+--- keys mentioning dpop/mtls/resource ---
+  backchannel_authentication_request_signing_alg_values_supported = ["RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512"]
+  dpop_signing_alg_values_supported = ["RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512"]
+  id_token_signing_alg_values_supported = ["RS256"]
+  introspection_signing_alg_values_supported = ["RS256"]
+  request_object_signing_alg_values_supported = ["RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512"]
+  userinfo_signing_alg_values_supported = ["RS256"]
+--- token_endpoint_auth_methods_supported ---
+  ['client_secret_basic', 'client_secret_post']
+--- dpop_signing_alg_values_supported ---
+  ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+--- issuer ---
+  https://connect.signl4.com/identity
+--- introspection/token/revocation/userinfo endpoints ---
+  introspection_endpoint = https://connect.signl4.com/identity/connect/introspect
+  revocation_endpoint = https://connect.signl4.com/identity/connect/revocation
+  userinfo_endpoint = https://connect.signl4.com/identity/connect/userinfo
+  token_endpoint = https://connect.signl4.com/identity/connect/token
+  token_endpoint_auth_signing_alg_values_supported = None
+[0m
+Result is in, and it forces a correction to my own prior claim. Let me verify across all six ingresses before I write the verdict — my hypothesis asserted the documents "list DPoP among the supported token-endpoint authentication methods," and on `connect` they plainly do **not**.
+[0m$ [0mcd /tmp/opencode; for h in account devconnect api devapi devaccount; do sleep 1.3; curl -s --max-time 20 "https://$h.signl4.com/identity/.well-known/openid-configuration" -o "disc_$h.json"; done; python3 -c "
+import json
+hosts={'connect':'disc.json'}
+for h in ['account','devconnect','api','devapi','devaccount']: hosts[h]='disc_%s.json'%h
+print('%-11s %-6s %-9s %-9s %-9s %-7s'%('host','dpopALG','teaMethods','introspect','userinfo','idtok'))
+print('-'*58)
+for h,f in hosts.items():
+    try: d=json.load(open(f))
+    except Exception as e:
+        print('%-11s PARSE FAIL'%h); continue
+    dpop=d.get('dpop_signing_alg_values_supported')
+    tea=d.get('token_endpoint_auth_methods_supported')
+    print('%-11s %-6s %-9s %-9s %-9s %-7s'%(h,
+      'YES' if dpop else 'no',
+      'NO-DPOP' if not any('dpop' in str(x).lower() for x in (tea or [])) else 'dpop',
+      str(d.get('introspection_signing_alg_values_supported')),
+      str(d.get('userinfo_signing_alg_values_supported')),
+      str(d.get('id_token_signing_alg_values_supported'))))
+print()
+d=json.load(open('disc.json'))
+print('connect token_endpoint_auth_methods_supported =',d.get('token_endpoint_auth_methods_supported'))
+print('connect dpop algs =',d.get('dpop_signing_alg_values_supported'))
+print('connect CIBA algs =',d.get('backchannel_authentication_request_signing_alg_values_supported'))
+print()
+print('dpop list == CIBA list ?', d.get('dpop_signing_alg_values_supported')==d.get('backchannel_authentication_request_signing_alg_values_supported'))
+"
+host        dpopALG teaMethods introspect userinfo  idtok  
+----------------------------------------------------------
+connect     YES    NO-DPOP   ['RS256'] ['RS256'] ['RS256']
+account     YES    NO-DPOP   ['RS256'] ['RS256'] ['RS256']
+devconnect  YES    NO-DPOP   ['RS256'] ['RS256'] ['RS256']
+api         YES    NO-DPOP   ['RS256'] ['RS256'] ['RS256']
+devapi      YES    NO-DPOP   ['RS256'] ['RS256'] ['RS256']
+devaccount  YES    NO-DPOP   ['RS256'] ['RS256'] ['RS256']
+
+connect token_endpoint_auth_methods_supported = ['client_secret_basic', 'client_secret_post']
+connect dpop algs = ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+connect CIBA algs = ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512', 'ES256', 'ES384', 'ES512']
+
+dpop list == CIBA list ? True
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt; echo "=== reposcan-raw ==="; ls -la reposcan-raw/; echo; echo "=== prepaid artifacts on disk ==="; find . -iname '*swagger*' -o -iname '*openapi*' 2>/dev/null | grep -v '.git/' | head -20
+=== reposcan-raw ===
+total 12
+drwxr-xr-x  2 runner runner 4096 Oct  5 18:47 .
+drwxr-xr-x 12 runner runner 4096 Oct  5 18:48 ..
+-rw-r--r--  1 runner runner   70 Oct  5 18:47 summary.txt
+
+=== prepaid artifacts on disk ===
+[0m
+Decisive, and it refutes my own prior claim. Let me confirm whether the prepaid Swagger spec is already on disk so the next action is concrete.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt; echo "=== prepaid settings occurrences (context) ==="; grep -rIn -E 'prepaid/settings|prepaidSettings|PrepaidSetting' --include=*.md --include=*.json --include=*.txt . 2>/dev/null | grep -v '^./.git/' | cut -c1-220 | head -25
+=== prepaid settings occurrences (context) ===
+./leads/lead-bigpickle.md:2019:asset: connect.signl4.com/api/prepaid/{subscriptionId}/prepaidSettings
+./leads/lead-bigpickle.md:2021:reasoning: OPTIONS confirms PUT-only registered route (Allow: PUT) on prod gateway; api/docs lists PUT /prepaid/{subscriptionId}/prepaidSettings; prepaid = reseller/credit billing; auth-def
+./leads/lead-bigpickle.md:2023:verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/prepaid/<uuid>/prepaidSettings → 405 Allow: PUT (done); (AUTH_HELPED) staging API key PUT cross-tenant id — HUMAN gate (wr
+./leads/lead-bigpickle.md:2044:[LEARN] ACCEPTED AUTH @ connect.signl4.com: new routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, handler-deferred auth) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + pu
+./leads/lead-bigpickle.md:2048:[LEARN] ACCEPTED AUTH @ connect.signl4.com: new routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, handler-deferred auth) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + pu
+./leads/lead-bigpickle.md:2054:[NEW] API surface: `PUT /api/prepaid/{subscriptionId}/prepaidSettings` registered (OPTIONS Allow: PUT) — billing route family absent from all prior /api/v2 route maps; `/api/v2/events/{te
+./leads/lead-bigpickle.md:2070:asset: connect.signl4.com/api/prepaid/{subscriptionId}/prepaidSettings
+./leads/lead-bigpickle.md:2072:reasoning: OPTIONS confirms PUT-only registered route on prod gateway; api/docs lists PUT /prepaid/{subscriptionId}/prepaidSettings; prepaid = reseller/credit billing; route returns 405/OPT
+./leads/lead-bigpickle.md:2074:verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/prepaid/<uuid>/prepaidSettings → 405 Allow: PUT [DONE]; (AUTH_HELPED) staging API key PUT against foreign subscriptionId —
+./leads/lead-bigpickle.md:2095:[LEARN] ACCEPTED AUTH @ connect.signl4.com: new registered routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, auth deferred to handler) + /api/v2/events/{teamSecret} (GET+POST, 40
+./leads/lead-bigpickle.md:2103:[NEW] PUT /api/prepaid/{id}/prepaidSettings — billing route, handler-deferred auth (405 OPTIONS before 401/403)
+./leads/lead-bigpickle.md:2122:asset: connect.signl4.com/api/prepaid/{subscriptionId}/prepaidSettings
+./leads/lead-bigpickle.md:2124:reasoning: OPTIONS confirms PUT-only registered route on prod gateway; api/docs lists PUT /prepaid/{subscriptionId}/prepaidSettings; prepaid = reseller/credit billing; route returns 405/OPT
+./leads/lead-bigpickle.md:2126:verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/prepaid/<uuid>/prepaidSettings → 405 Allow: PUT [DONE]; (AUTH_HELPED) staging API key PUT against foreign subscriptionId —
+./leads/lead-bigpickle.md:2165:asset: connect.signl4.com/api/v2/v3/prepaid/{subscriptionId}/prepaidSettings
+./leads/lead-bigpickle.md:2169:verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/prepaid/<uuid>/prepaidSettings -> 405 Allow: PUT [DONE]; (AUTH_HELPED) staging API key PUT foreign subscriptionId — HUMAN ga
+./leads/lead-bigpickle.md:2185:[PRIO] connect.signl4.com/api/prepaid/{subscriptionId}/prepaidSettings, 5.8, attack_surface:7, business_value:7, tech_exposure:6, gate_ease:4, cloud_surface:5, freshness:6
+./leads/lead-bigpickle.md:2198:asset: connect.signl4.com/api/v2/v3/prepaid/{subscriptionId}/prepaidSettings
+./leads/lead-bigpickle.md:2202:verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/prepaid/<uuid>/prepaidSettings -> 405 Allow: PUT [DONE]; (AUTH_HELPED) staging API key PUT foreign subscriptionId — HUMAN ga
+./leads/lead-bigpickle.md:2225:[PRIO] connect.signl4.com/api/prepaid/{subscriptionId}/prepaidSettings,5.8,attack_surface:7,business_value:7,tech_exposure:6,gate_ease:4,cloud_surface:5,freshness:6
+./leads/lead-bigpickle.md:2237:asset: connect.signl4.com/api/v2/v3/prepaid/{subscriptionId}/prepaidSettings
+./leads/lead-bigpickle.md:2241:verify_steps: (PASSIVE) OPTIONS https://connect.signl4.com/api/prepaid/<uuid>/prepaidSettings -> 405 Allow: PUT [DONE]; (AUTH_HELPED) staging API key PUT foreign subscriptionId — HUMAN ga
+./leads/lead-bigpickle.md:2286:asset: connect.signl4.com/api/v2/prepaid/{subscriptionId}/prepaidSettings (PUT)
+./leads/lead-bigpickle.md:2314:asset: connect.signl4.com/api/v3/prepaid/{subscriptionId}/prepaidSettings
+./leads/lead-bigpickle.md:2818:asset: connect.signl4.com/api/v3/prepaid/{subscriptionId}/prepaidSettings
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt; echo "=== api/docs references ==="; grep -rIoh -E 'https://[a-z0-9.-]*signl4\.com/api/docs[^ "'"'"')]*' . 2>/dev/null | sort -u | head -10; echo; echo "=== nemotron prepaid-settings mass-assignment entry ==="; grep -n -A14 'prepaid/settings' leads/lead-nemotron3.md 2>/dev/null | grep -i -E 'confidence|mass assign|class:|asset:|HYP' | cut -c1-260 | head -12
+=== api/docs references ===
+https://api.signl4.com/api/docs/index.html
+https://api.signl4.com/api/docs/v1/swagger.json`
+https://api.signl4.com/api/docs/v2/
+https://api.signl4.com/api/docs/v2/swagger.json
+https://api.signl4.com/api/docs/v2/swagger.json`
+https://api.signl4.com/api/docs/v4/swagger.json
+https://connect.signl4.com/api/docs
+https://connect.signl4.com/api/docs/
+https://connect.signl4.com/api/docs/$spec/swagger.json
+https://connect.signl4.com/api/docs/$v/swagger.json
+
+=== nemotron prepaid-settings mass-assignment entry ===
+6307:asset: connect.signl4.com/api/v1/prepaid/balance, /prepaid/transactions, /prepaid/settings
+6308-confidence: 45
+6319-[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account mint-mismatch
+6320-class: AUTH
+6321-asset: account.signl4.com/identity/connect/token + connect.signl4.com/api
+12918-[HYP] Mass assignment via missing subscriptionId in prepaid settings write endpoint
+12919-class: BUSLOGIC
+12920:asset: api.signl4.com/api/v2/prepaid/settings
+12921-confidence: 70
+12928-[HYP] Cross-tenant BOLA via subscriptionId manipulation in prepaid settings
+12929-class: IDOR
+12930-asset: connect.signl4.com/api/v2/prepaid/{subscriptionId}/prepaidSettings
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt; TS=$(date -u '+%Y-%m-%d %H:%M:%S'); cat >> reports/hypotheses-bigpickle.txt <<EOF
+
+## $TS UTC [identity] (model bigpickle)
+[CHANGED] DPoP challenge-layer probe COMPLETE — 3/3 identical \`WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"\`, no DPoP scheme, no nonce. Hypothesis meets its pre-registered *observation* criterion and is still REFUTED as a vulnerability. Two corrections recorded. (1) FACTUAL: every prior entry in this dossier, including the [HYP] I wrote last cycle, states the discovery documents "list DPoP among the supported token-endpoint authentication methods." That is FALSE on 6/6 ingresses — \`token_endpoint_auth_methods_supported\` is \`['client_secret_basic','client_secret_post']\` with no DPoP member. DPoP appears only in \`dpop_signing_alg_values_supported\`. The basis of the "advertised control" claim was wrong before the probe ran. (2) SCOPE: the 9 DPoP algs are byte-identical to \`backchannel_authentication_request_signing_alg_values_supported\` on the same document (verified equal, all 6 hosts), i.e. emitted from one shared asymmetric-alg template, while \`id_token\`/\`introspection\`/\`userinfo_signing_alg_values_supported\` are RS256-only. Minor: the 9th alg is ES512, not ES256 as previously transcribed.
+[PRIO] api.signl4.com/api/v2/prepaid/settings,6.9,attack_surface=6,business_value=9,tech_exposure=7,gate_ease=5,cloud_surface=6,freshness=9
+[PRIO] connect.signl4.com/identity/connect/{introspect,revocation},6.6,attack_surface=7,business_value=8,tech_exposure=8,gate_ease=6,cloud_surface=8,freshness=10
+[PRIO] connect.signl4.com/api/v2/subscriptions/{id}/userLicenses,6.5,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=4,cloud_surface=7,freshness=6
+[HYP] \`PUT /api/v2/prepaid/settings\` resolves the target subscription from a request-body field rather than the path, unlike its sibling \`PUT /prepaid/{subscriptionId}/prepaidSettings\` — so a body-supplied identifier may let one tenant write another tenant's billing configuration
+class: BUSLOGIC
+asset: api.signl4.com/api/v2/prepaid/settings (primary), connect.signl4.com/api/v2/prepaid/{subscriptionId}/prepaidSettings (control sibling)
+confidence: 70
+reasoning: Promoted to the top of my own queue because it is the highest-confidence unclosed item in the consolidated cross-agent set and its entire remaining test is static. The billing family exists in two documented shapes: a path-bound form where the subscription is a path segment, and a bare \`/prepaid/settings\` form where no path segment exists. A route with no subscription in its path must recover the tenant from somewhere — token claim, header, or body field — and a body field is the reading that creates a mass-assignment surface, because the server would then trust a client-controlled identifier over the authenticated principal. I have asserted this shape from route-name inference across several cycles without ever reading the spec, which is exactly the unenumerated-endpoint failure the KB warns about. The spec resolves it: \`requestBody\` schema, \`\$ref\` target, and field-level types are all static.
+evidence_needed: The V2 Swagger document itself. Specifically the \`requestBody\` schema and \`\$ref\`/\`definitions\` graph for both prepaid write routes, to establish (a) whether \`/prepaid/settings\` declares any subscription-identifying property, (b) that property's name and type, and (c) whether the path-bound sibling's identifier is marked readOnly or is a separate type. If the bare route's body carries no subscription identifier at all, the hypothesis is refuted statically and no credentialed test is needed.
+verify_steps: (1) \`GET https://api.signl4.com/api/docs/v2/swagger.json\`, no credentials. (2) Resolve \`https://connect.signl4.com/api/docs/\$v/swagger.json\` to the populated version template if the api host 404s. (3) Diff the \`requestBody\` of both prepaid routes against their shared \`\$ref\` definitions. Static only — no \`PUT\`, no mutation, no tenant identifier invented or replayed.
+impact: If a body-supplied subscription identifier outranks the authenticated principal, that is cross-tenant billing configuration write on a paid reseller/credit surface — HIGH business impact, business-logic class, and the first genuinely HIGH item in my queue. If the route derives the tenant from the token only, the mass-assignment reading is refuted and this closes at zero credential cost.
+testability: PASSIVE_STATIC
+[PARKED] OIDC cross-host token acceptance — parked at 55, unchanged, resumed only with AUTH_HELPED. DPoP is removed from its mitigation stack (see [LEARN]); this makes the parked item's severity rest on \`iss\`/\`aud\` enforcement alone.
+[PARKED] DPoP metadata-versus-challenge gap — REFUTED at 40 -> closed as NOT_A_BUG. Challenge advertises \`Bearer\` only, but DPoP is opt-in per client in IdentityServer and RFC 9449 keeps Bearer legitimate for non-DPoP-issued tokens, so \`Bearer\` challenges are the expected default for an OP that merely supports DPoP. Not reportable. Retained in the KB only as the negative control for the alg-template reading.
+[FINAL] 1. AUTH @ connect/account/devconnect/devapi \`/identity/connect/{introspect,revocation}\` — confidence 55, registration PROVEN 6/6, enforcement UNTESTED, PARKED pending AUTH_HELPED.
+[FINAL] 2. MISCONFIG @ demo.enterprisealert.com/EAWebService — confidence 60, PASSIVE. Settled; internal \`soap:address https://ereesus/...\`, CWE-200, LOW-MEDIUM. Not re-probed.
+[FINAL] 3. IDOR @ connect.signl4.com/api/v2/subscriptions/{id}/userLicenses — confidence 45, AUTH_HELPED. Tenant binding by path segment alone on a paid-licence write.
+[NEXT] READ the prepaid write schemas: \`GET https://api.signl4.com/api/docs/v2/swagger.json\` (fallback \`GET https://connect.signl4.com/api/docs/\$v/swagger.json\` to resolve the version template), then diff the \`requestBody\` and \`\$ref\`/definition graph of \`/prepaid/settings\` against \`/prepaid/{subscriptionId}/prepaidSettings\`, recording every subscription-identifying property, its name, type, and readOnly status. 2 requests, >=1.2 s apart, no credentials, no mutation, no invented identifiers. This is the only item in my queue whose remaining evidence is fully static, and it is the test that decides whether the top-ranked hypothesis in the whole set is real or a route-name artefact.
+[LEARN] ACCEPTED OTHER @ a pre-registered criterion can be satisfied by a result that refutes its own hypothesis, and meeting it is not the same as confirming it. My evidence_needed said a Bearer-only challenge means the control is "advisory" and worth reporting LOW-MEDIUM. The probe returned exactly that, and the honest outcome is still not-a-bug, because I had conflated two different claims: "the resource server does not advertise DPoP in its challenge" and "the resource server accepts a Bearer-scheme token without a DPoP proof." Only the first is reachable without a credential; the second is the one that would constitute a vulnerability, and it is credential-gated. I wrote a falsifiable-looking criterion that could only ever confirm the weaker claim, then read the weaker claim as the stronger one. This is the same observation-versus-impact gap I flagged in the introspection family two cycles ago, and I committed it again while believing I had learned it. Pre-registering an evidence threshold is only half the discipline; the other half is writing the criterion so that satisfying it genuinely moves the impact.
+[LEARN] ACCEPTED OTHER @ I cited a control as real for weeks on the strength of a metadata field I had never read in full. The correction is sharper than the verdict: \`dpop_signing_alg_values_supported\` exists, and \`token_endpoint_auth_methods_supported\` does not mention DPoP. So the premise of the hypothesis — "the document claims DPoP is required" — was never in the document at all. Worse, the DPoP alg list is byte-identical to the CIBA signing-alg list, and the three artifact-signing fields (\`id_token\`, \`introspection\`, \`userinfo\`) are RS256-only. That pattern says these lists are emitted from one global asymmetric-algorithm template, so their presence is a statement about the OP's algorithm inventory, not about any per-endpoint policy. Had I diffed the neighbouring alg fields when I first cited DPoP as a mitigation — which was weeks and many cycles earlier — the hypothesis would never have been written, and this entire cycle would have bought one Bearer header instead of the finding it was aimed at. Cheapest available check, deferred longest.
+[LEARN] ACCEPTED OTHER @ "Bearer-only, therefore not enforced" is the wrong inference from a correct observation, and the error is seductive precisely because RFC 9449 section 7.1 does say a DPoP-requiring server should challenge with \`DPoP\`. The gap is that DPoP binds per-token at issuance, not per-endpoint: a token the OP issued without a \`cnf\` claim is a Bearer token forever, and IdentityServer treats DPoP as an opt-in per-client requirement rather than a global one. So an OP can support DPoP, list its algorithms, and still correctly challenge every unauthenticated request with \`Bearer\`. The behaviour I recorded as suspicious is the documented default of the very control I was testing. What would actually demonstrate the bug is presenting a valid token under the \`Bearer\` scheme with no \`DPoP\` proof and observing acceptance — the mirror image of my probe, and not available here.
+[LEARN] ACCEPTED OTHER @ a free side-effect is only free if it changes the plan. Pulling the full discovery document to quote the challenge verbatim returned the token-endpoint auth-method list and the neighbouring signing-alg fields in the same response, and those fields were the real payload: they falsified my own premise. I budgeted this probe as a three-header check on one asset family and it resolved a claim I had been repeating across the dossier for weeks. Narrow, pre-scoped requests are good practice for the surface; the incidental full-document fetches are often where the corrections live, because they cost no additional request and carry the fields nobody thought to ask for.
+[RISK] derdack: 3 — 9 requests this cycle: 3 unauthenticated \`GET\` to \`/identity/connect/userinfo\` on connect/account/devconnect, plus 6 unauthenticated \`GET\` to \`/.well-known/openid-configuration\` across all six ingresses for the correction. No \`Authorization\`, no \`x-s4-api-key\`, no cookie jar, no redirect-following, >=1.2 s apart, all responses 401 or 200-with-public-metadata, zero bodies of 0 bytes on all 3 userinfo probes. No credential, no tenant data, no mutation, no invented identifier. Within the established passive envelope; 21 requests across three cycles against this asset family.
+EOF
+echo "appended"; tail -3 reports/hypotheses-bigpickle.txt | cut -c1-120; wc -l reports/hypotheses-bigpickle.txt
+appended
+[LEARN] ACCEPTED OTHER @ "Bearer-only, therefore not enforced" is the wrong inference from a correct observation, and th
+[LEARN] ACCEPTED OTHER @ a free side-effect is only free if it changes the plan. Pulling the full discovery document to 
+[RISK] derdack: 3 — 9 requests this cycle: 3 unauthenticated `GET` to `/identity/connect/userinfo` on connect/account/
+72 reports/hypotheses-bigpickle.txt
+[0m
+Cycle written to `reports/hypotheses-bigpickle.txt:46`.
+
+## STEP 1 — DELTA
+
+The queued DPoP challenge probe ran to completion: **3/3 identical challenges** on `connect`/`account`/`devconnect`, all `401`, all zero-byte bodies.
+
+```
+www-authenticate: Bearer realm="IdentityServer",error="invalid_token"
+```
+
+No `DPoP` scheme, no `error="use_dpop_nonce"`, no nonce anywhere. That **meets the hypothesis's pre-registered observation criterion — and still refutes the hypothesis as a bug.** Two corrections fell out of it:
+
+1. **Factual.** Every prior entry of this dossier, including the hypothesis I wrote last cycle, says the discovery documents "list DPoP among the supported token-endpoint authentication methods." **False on 6/6 ingresses.** `token_endpoint_auth_methods_supported` is `['client_secret_basic','client_secret_post']` — no DPoP member. DPoP appears only in `dpop_signing_alg_values_supported`.
+2. **Scope.** The 9 DPoP algs are byte-identical to `backchannel_authentication_request_signing_alg_values_supported` (verified equal, all 6 hosts), while `id_token`/`introspection`/`userinfo_signing_alg_values_supported` are RS256-only. That is one shared asymmetric-alg template, not a per-endpoint policy. Also: the 9th alg is **ES512**, not ES256 as I transcribed.
+
+## STEP 2 — PRIO
+
+```
+api.signl4.com/api/v2/prepaid/settings,6.9,attack_surface=6,business_value=9,tech_exposure=7,gate_ease=5,cloud_surface=6,freshness=9
+connect.signl4.com/identity/connect/{introspect,revocation},6.6,attack_surface=7,business_value=8,tech_exposure=8,gate_ease=6,cloud_surface=8,freshness=10
+connect.signl4.com/api/v2/subscriptions/{id}/userLicenses,6.5,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=4,cloud_surface=7,freshness=6
+```
+
+## STEP 3 — HYP
+
+`class: BUSLOGIC` · `asset: api.signl4.com/api/v2/prepaid/settings` (control sibling: `.../prepaid/{subscriptionId}/prepaidSettings`) · **confidence: 70**
+
+The bare `/prepaid/settings` route has no subscription in its path, so it must recover the tenant from the token, a header, or a body field. A body field is the reading that creates a mass-assignment surface: the server trusting a client-controlled identifier over the authenticated principal on a reseller/credit billing write.
+
+## STEP 4 — SELF-CRITIQUE
+
+My evidence criterion was unsound. It could only ever confirm *"the RS does not advertise DPoP in its challenge"*; the claim that would constitute a bug is *"the RS accepts a Bearer-scheme token with no DPoP proof."* Only the first is credential-free. Writing a falsifiable-looking threshold that resolves to the weaker claim, then reading the weaker claim as the stronger one, is the same observation-versus-impact gap I flagged in the introspection family two cycles ago — committed again while believing I had learned it.
+
+The deeper miss: the hypothesis's premise was never in the document. Had I diffed the neighbouring alg fields when I first cited DPoP as a mitigation — weeks earlier — this hypothesis would never have been written, and the cycle would have bought one Bearer header instead.
+
+## STEP 5 — NEXT
+
+`GET https://api.signl4.com/api/docs/v2/swagger.json` (fallback `GET https://connect.signl4.com/api/docs/$v/swagger.json`), then diff the `requestBody` and `$ref`/definition graph of `/prepaid/settings` against `/prepaid/{subscriptionId}/prepaidSettings` — every subscription-identifying property, name, type, `readOnly` status. **2 requests, ≥1.2 s apart, no credentials, no mutation, no invented identifiers.**
+
+## STEP 6 — LEARNING
+
+- **ACCEPTED** — DPoP binds per-token at issuance, not per-endpoint. RFC 9449 §7.1 does say a DPoP-requiring server should challenge with `DPoP`, which is what makes the wrong inference seductive. But a token issued without a `cnf` claim is a Bearer token forever, and IdentityServer treats DPoP as opt-in per client. The behaviour I recorded as suspicious is the documented default of the control I was testing.
+- **ACCEPTED** — "Bearer-only, therefore not enforced" is a wrong inference from a correct observation. The demonstration would be the mirror of my probe: a valid token under `Bearer` with no proof, accepted.
+- **ACCEPTED** — Narrow, pre-scoped requests are good for the surface; incidental full-document fetches are where corrections live. Budgeted as a three-header check, the response carried the fields that falsified my own premise, at zero additional request cost.
+
+## STEP 7 — RISK
+
+`derdack: 3` — 9 requests: 3 unauthenticated `GET` to `/identity/connect/userinfo`,6 unauthenticated `GET` to `/.well-known/openid-configuration`. No `Authorization`, no `x-s4-api-key`, no cookie jar, no redirect-following, ≥1.2 s apart, all `userinfo` bodies0 bytes. No credential, no tenant data, no mutation, no invented identifier. 21 requests across three cycles on this family.
+
+## STEP 8 — FINAL (cap 3)
+
+1. **AUTH** @ `connect/account/devconnect/devapi` `/identity/connect/{introspect,revocation}` — **55**, registration **PROVEN 6/6**, enforcement **UNTESTED**, PARKED pending AUTH_HELPED.
+2. **MISCONFIG** @ `demo.enterprisealert.com/EAWebService` — **60**, PASSIVE. Settled; internal `soap:address https://ereesus/...`, CWE-200, LOW-MEDIUM. Not re-probed.
+3. **IDOR** @ `connect.signl4.com/api/v2/subscriptions/{id}/userLicenses` — **45**, AUTH_HELPED.
+
+---
+
+**One flag worth your attention:** the DPoP item is now closed as `NOT_A_BUG`, not filed. Because I cited it as a mitigating control on the parked token-forgery item, that item's severity now rests entirely on `iss`/`aud` enforcement — which is the one thing still unmeasurable from this seat. Want me to run the STEP 5 Swagger read, or park the prepaid item until you have AUTH_HELPED credentials, given its whole impact claim is a credentialed write test?

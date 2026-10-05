@@ -2054,3 +2054,16 @@ www.derdack.com
 - NEW vps.signl4.com currently returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net unchanged
 - NEW us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials
+
+## 2026-10-05 18:51:36 UTC
+- CHANGED OIDC introspection/revocation family: route registration moved from 0/6 ingresses exercised to 4/4 noncanonical ingresses confirmed registered (introspect AND revocation, on account/devconnect/devapi,
+- CHANGED OIDC introspection/revocation family CLOSED at 6/6 registration parity. All six ingresses serve both handlers locally on the production `connect` tenant prefix, against passing controls on two hosts. 
+- CHANGED OIDC introspection/revocation family CLOSED at 6/6 registration parity. All six ingresses serve both handlers locally on the production `connect` tenant prefix, against passing controls on two hosts. 
+- CHANGED DPoP challenge-layer probe COMPLETE — 3/3 identical \`WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"\`, no DPoP scheme, no nonce. Hypothesis meets its pre-registered *observatio
+- NEW OIDC introspection/revocation endpoints now confirmed registered on all 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing parity complete, only token validation behavi
+- NEW api.signl4.com/api/v2/teams flipped back to 405 Allow:GET,POST on unauth GET + invalid Bearer (was 401 last cycle) — handler-deferred auth pattern re-confirmed
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+- NEW api.signl4.com/identity & account.signl4.com/identity OIDC discovery both expose `dpop_signing_alg_values_supported` with 9 algorithms (RS256/RS384/RS512/PS256/PS384/PS512/ES256/ES384/ES512) — mitigat
+- NEW vps.signl4.com currently returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net unchanged
+- NEW us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials

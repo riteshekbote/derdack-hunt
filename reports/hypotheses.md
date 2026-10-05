@@ -5166,3 +5166,47 @@
 - LEARN: ACCEPTED OTHER @ distribution-vs-snapshot: Auth-status "flapping" was temporal (one sample/cycle), not per-request — 6 consecutive GETs uniform 401
 - LEARN: ACCEPTED OTHER @ reading requestBody not just path list: Extracting schema from prepaid family converted vague BOLA note into testable hypotheses
 - LEARN: ACCEPTED OTHER @ additionalProperties:false is client-side fiction: Server binding behavior requires JSON-Patch probe, not schema inspection
+
+## RANKED HYPOTHESES 2026-10-05 18:51:36 UTC
+- [70] api.signl4.com/api/v2/prepaid/settings: Mass assignment via missing subscriptionId in prepaid settings write endpoint (from art/lead_nemotron3.txt)
+- [55] connect.signl4.com/identity/connect/introspect: RFC 7662 introspection and RFC 7009 revocation are locally registered on ingresses that are not the canonical issuer, on the *production* `connect` tenant prefix — routing parity is now measured, so the only surviving uncertainty is whether a foreign-issuer token is honoured, which cannot be reached from this seat (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE the two ingresses the differential never covered: `OPTIONS https://api.signl4.com/identity/connect/introspect`, `OPTIONS https://api.signl4.com/identity/c
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://api.signl4.com/api/docs/v2/swagger.json (extract full requestBody schema for PUT /v2/prepaid/settings and PUT /v2/prepaid/{subscriptionId}/pr
+- LEARN: ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean `405`s against a passing control is a strong, repro
+- LEARN: ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: I specified hashing and lengthing the control bod
+- LEARN: ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on `/identity/connect/`,
+- LEARN: REJECTED OTHER @ filing the signlReports traversal as a fourth [FINAL]: the previous cycle emitted four [FINAL] entries against a three-asset cap. The traversal
+- LEARN: ACCEPTED OTHER @ completing the differential was worth more than any result inside it: four of the six hosts already returned the answer I expected, so the obvi
+- LEARN: ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well for this family is dry because every remaining question nee
+- LEARN: ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: I have cited `dpop_signing_alg_values_supported` as a mitigating control in the cr
+- LEARN: ACCEPTED OTHER @ completing the differential was worth more than any result inside it: four of the six hosts already returned the answer I expected, so the obvi
+- LEARN: ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well for this family is dry because every remaining question nee
+- LEARN: ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: I have cited `dpop_signing_alg_values_supported` as a mitigating control in the cr
+- LEARN: ACCEPTED OTHER @ a pre-registered criterion can be satisfied by a result that refutes its own hypothesis, and meeting it is not the same as confirming it. My ev
+- LEARN: ACCEPTED OTHER @ I cited a control as real for weeks on the strength of a metadata field I had never read in full. The correction is sharper than the verdict: \
+- LEARN: ACCEPTED OTHER @ "Bearer-only, therefore not enforced" is the wrong inference from a correct observation, and the error is seductive precisely because RFC 9449 
+- LEARN: ACCEPTED OTHER @ a free side-effect is only free if it changes the plan. Pulling the full discovery document to quote the challenge verbatim returned the token-
+- LEARN: ACCEPTED OTHER @ "Bearer-only, therefore not enforced" is the wrong inference from a correct observation, and th
+- LEARN: ACCEPTED OTHER @ a free side-effect is only free if it changes the plan. Pulling the full discovery document to
+- LEARN: ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean `405`s against a passing control is a strong, repro
+- LEARN: ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: I specified hashing and lengthing the control bod
+- LEARN: ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on `/identity/connect/`,
+- LEARN: REJECTED OTHER @ filing the signlReports traversal as a fourth [FINAL]: the previous cycle emitted four [FINAL] entries against a three-asset cap. The traversal
+- LEARN: ACCEPTED OTHER @ completing the differential was worth more than any result inside it: four of the six hosts already returned the answer I expected, so the obvi
+- LEARN: ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well for this family is dry because every remaining question nee
+- LEARN: ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: I have cited `dpop_signing_alg_values_supported` as a mitigating control in the cr
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventPro
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host (72.167.227.27, secureserver.net) serves default vhost when reachable (cert CN=ser
+- LEARN: ACCEPTED IDOR @ connect.signl4.com/api/v1: V1 bulk endpoints accept `userId` query parameter; 403 response contains "in behave of the user" typo confirming code
+- LEARN: REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: Consistent 8/8 disclosure of Azure resource identifiers is real but non-secret/non-actionable; program rejec
+- LEARN: REJECTED MISCONFIG @ connect.signl4.com/mobileapi: Custom branded WAF error page is configuration artifact, not vulnerability
+- LEARN: REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth not exposed on public custom hostname
+- LEARN: ACCEPTED AUTH @ api.signl4.com/identity: Distinguishing prefix-scoped gateway deny from host-wide disable requires second network position or owner-supplied tok
+- LEARN: REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 stable across both hosts, persistently dead tier
+- LEARN: ACCEPTED OTHER @ full estate: Identity/API/CT surface stable zero drift; passive route maps exhausted
+- LEARN: REJECTED OTHER @ connect/api/demo GraphQL: 15/15 uniform bare 404 — no GraphQL surface
+- LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: App Proxy identifier disclosure bounded at 2/8 hosts
+- LEARN: ACCEPTED OTHER @ query-matched control design: +15/+16/+15 byte pattern tracking query-string length killed false positive on ?appproxy=debug
+- LEARN: ACCEPTED OTHER @ distribution-vs-snapshot: Auth-status "flapping" was temporal (one sample/cycle), not per-request — 6 consecutive GETs uniform 401
+- LEARN: ACCEPTED OTHER @ reading requestBody not just path list: Extracting schema from prepaid family converted vague BOLA note into testable hypotheses
+- LEARN: ACCEPTED OTHER @ additionalProperties:false is client-side fiction: Server binding behavior requires JSON-Patch probe, not schema inspection
