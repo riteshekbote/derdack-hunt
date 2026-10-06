@@ -2133,3 +2133,11 @@ www.derdack.com
 - CHANGED DPoP challenge-layer probe complete: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce
 - CHANGED Prepaid body-identifier hypothesis REFUTED at 70 -> CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show no tenant identifier in any write payload)
 - CHANGED V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions (131 write ops swept, zero accept tenant in body)
+
+## 2026-10-06 23:23:50 UTC
+- CHANGED api.signl4.com/api/v2/teams flipped back to 405 Allow:GET,POST on unauth GET + invalid Bearer — handler-deferred auth pattern re-confirmed (was 401 last cycle)
+- CHANGED OIDC introspection/revocation registration parity confirmed across all 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing layer complete
+- CHANGED DPoP challenge-layer probe complete: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce
+- CHANGED Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show no tenant identifier in any write payload)
+- CHANGED V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions (131 write ops swept, zero accept tenant in body)
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials across all scoped assets
