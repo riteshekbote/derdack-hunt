@@ -5243,3 +5243,38 @@
 - LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventPro
 - LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response prove
 - LEARN: ACCEPTED IDOR @ connect.signl4.com/api/v1: V1 bulk endpoints accept `userId` query parameter; 403 response contains "in behave of the user" typo confirming code
+
+## RANKED HYPOTHESES 2026-10-06 07:03:37 UTC
+- [85] connect.signl4.com/identity/connect/userinfo: DPoP enforcement gap at identity gateway (from art/lead_nemotron3.txt)
+- [40] connect.signl4.com/identity/connect/userinfo,: The DPoP binding advertised in every host's OpenID configuration is documentation-only — the unauthenticated challenge layer returns a plain `Bearer` `WWW-Authenticate` with no `DPoP` scheme and no error detail demanding proof-of-possession, so the public client-binding mitigation the program relies on is not enforced at the point tokens are presented (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): STOP PROBING — do not spend further unauthenticated requests on this asset; the passive well is dry and the top of the queue is now uniformly AUTH_HELPED. (a) R
+- NEXT(hypotheses-nemotron3.txt): HUMAN: Obtain legitimate X-S4-Api-Key or client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 via program contact to unblock AUTH_HELPED hypotheses 
+- LEARN: ACCEPTED OTHER @ I nearly recorded a false negative twice in one document, and both times the cause was a pre-registered expectation rather than a missing obser
+- LEARN: ACCEPTED OTHER @ "39 routes share this shape" is a count, not a vulnerability, and the temptation is to let the count do the arguing. Size is evidence of a patt
+- LEARN: ACCEPTED OTHER @ completing the differential was worth more than any result inside it: four of the six hosts already returned the answer I expected, so the obvi
+- LEARN: ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well for this family is dry because every remaining question nee
+- LEARN: ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: I have cited `dpop_signing_alg_values_supported` as a mitigating control in the cr
+- LEARN: ACCEPTED OTHER @ completing the differential was worth more than any result inside it: four of the six hosts already returned the answer I expected, so the obvi
+- LEARN: ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well for this family is dry because every remaining question nee
+- LEARN: ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: I have cited `dpop_signing_alg_values_supported` as a mitigating control in the cr
+- LEARN: REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-
+- LEARN: ACCEPTED OTHER @ connect.signl4.com/api/docs: swagger confirms SIGNL4 API V2 = 40+ endpoints (alerts CRUD, teams, webhooks, subscriptions, schedules, users, cat
+- LEARN: ACCEPTED OTHER @ a free side-effect is only free if it changes the plan. Pulling the full discovery document to quote the challenge verbatim returned the token-
+- LEARN: ACCEPTED OTHER @ "Bearer-only, therefore not enforced" is the wrong inference from a correct observation, and th
+- LEARN: ACCEPTED OTHER @ a free side-effect is only free if it changes the plan. Pulling the full discovery document to
+- LEARN: ACCEPTED OTHER @ I refuted my top-ranked hypothesis, so the interesting part is not that it was wrong but that it was wrong for a reason I had already discounte
+- LEARN: ACCEPTED OTHER @ the two things I got wrong this cycle share a root cause, and it is not carelessness: both were inferences from names and shapes that I decline
+- LEARN: ACCEPTED OTHER @ the generalisation is the actual deliverable. Refuting one prepaid route would have been worth one closed hypothesis; sweeping all 131 write op
+- LEARN: ACCEPTED OTHER @ I nearly recorded a false negative twice in one document, and both times the cause was a pre-registered expectation rather than a missing obser
+- LEARN: ACCEPTED OTHER @ "39 routes share this shape" is a count, not a vulnerability, and the temptation is to let the count do the arguing. Size is evidence of a patt
+- LEARN: ACCEPTED OTHER @ .github/workflows/triage.yml: I inherited a "[NEXT] report X" that read like a one-line to-do and discovered only on executing it that the chan
+- LEARN: REJECTED OTHER @ reports/valid-bugs.md as evidence of coverage: its "VALID" batches are model output produced when the LEADS section was empty (26 runs) and no 
+- LEARN: ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean `405`s against a passing control is a strong, repro
+- LEARN: ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: body discriminator was identical across both arms
+- LEARN: ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on `/identity/connect/`,
+- LEARN: ACCEPTED OTHER @ completing the differential was worth more than any result inside it: six hosts returned the answer, so the uniform claim holds 6/6 rather than
+- LEARN: ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well is dry because every remaining question needs a token
+- LEARN: ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: cited `dpop_signing_alg_values_supported` as mitigating control without checking e
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventPro
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response prove
+- LEARN: ACCEPTED IDOR @ connect.signl4.com/api/v1: V1 bulk endpoints accept `userId` query parameter; 403 response contains "in behave of the user" typo confirming code

@@ -2083,3 +2083,29 @@ www.derdack.com
 - CHANGED us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class
 - CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
 - CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
+
+## 2026-10-06 07:03:37 UTC
+- CHANGED Queue state after this cycle: PASSIVE well for the SIGNL4 public API is dry. [FINAL] 2 (EA WSDL) remains settled and needs nothing. [FINAL] 1 (introspection/revocation), [FINAL] 3 (userLicenses) and t
+- CHANGED Queue state after this cycle: PASSIVE well for the SIGNL4 public API is dry. [FINAL] 2 (EA WSDL) remains settled and needs nothing. [FINAL] 1 (introspection/revocation), [FINAL] 3 (userLicenses) and t
+- CHANGED OIDC introspection/revocation family CLOSED at 6/6 registration parity. All six ingresses serve both handlers locally on the production `connect` tenant prefix, against passing controls on two hosts. 
+- CHANGED DPoP challenge-layer probe COMPLETE — 3/3 identical \`WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"\`, no DPoP scheme, no nonce. Hypothesis meets its pre-registered *observatio
+- CHANGED Prepaid body-identifier hypothesis REFUTED at 70 -> CLOSED as NOT_A_BUG, statically, at zero credential cost. The pre-registered refutation criterion in [HYP] was explicit: "If the bare route's body c
+- CHANGED NEW PASSIVE OBSERVATION — the vendor documents query-string API key auth as a supported scheme. `components.securitySchemes` declares three schemes: `API_Key_Header` (`x-s4-api-key`, `in: header`), `A
+- CHANGED V1/V3 CONFIRMATION COMPLETE — the prepaid/tenant closure is now repo-wide, not version-scoped. All three specs are OpenAPI 3.0.4 using `components.schemas` (V1 146 schemas / 57 write ops, V2 475 / 131
+- CHANGED Queue state after this cycle: PASSIVE well for the SIGNL4 public API is dry. [FINAL] 2 (EA WSDL) remains settled and needs nothing. [FINAL] 1 (introspection/revocation), [FINAL] 3 (userLicenses) and t
+- NEW Triage outage, first recorded: 57 consecutive Triager runs have failed (2026-09-25 09:58 → 2026-10-06 06:24; 74/213 runs total), every one terminated by upstream `UnknownError`; the last run that prod
+- NEW triage.yml:45 collects `grep "\[UNVALIDATED\]" leads/lead-*.md`; that string occurs 0 times in any of the 6 lead files, so `new-leads.txt` has been empty on every run — 26 runs show the model reportin
+- NEW Both passive verifiers scope to `PROBE_ALLOW: derdack.com` (hunt.yml:13, triage.yml:12), so no `signl4.com`/`enterprisealert.com` lead URL is ever re-verified; every `probe-results.md` section since 2
+- CHANGED credential-in-URL item is report-complete: `API_Key_Query` declared in `components.securitySchemes` on V1+V2+V3 (global `security: [{}]` empty on all three), live-confirmed 2026-09-09 (`?x-s4-api-key=
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this i
+- CHANGED No new attack surface locally: `probe-results.md` tail, reposcan (TARGET_ORG unset) and the host map yielded nothing unexamined; queue unchanged — the missing piece was a verified route to a triager, 
+- NEW OIDC introspection/revocation registration parity confirmed across all 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing layer complete, only token validation behavior
+- NEW DPoP challenge-layer probe complete: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce — mitigating control advertis
+- NEW Prepaid body-identifier hypothesis REFUTED at 70 -> CLOSED as NOT_A_BUG, statically, at zero credential cost (V1/V2/V3 OpenAPI schemas show no tenant identifier in any write payload)
+- NEW V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions (131 write ops swept, zero accept tenant in body)
+- CHANGED api.signl4.com/api/v2/teams flipped back to 405 Allow:GET,POST on unauth GET + invalid Bearer (was 401 last cycle) — handler-deferred auth pattern re-confirmed, differs from KB's 401 report
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials across all scoped assets
+- CHANGED vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net unchanged
+- CHANGED us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class
+- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
