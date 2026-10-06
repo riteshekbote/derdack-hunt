@@ -2121,3 +2121,15 @@ www.derdack.com
 - CHANGED us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class
 - CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
 - CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
+
+## 2026-10-06 19:34:39 UTC
+- CHANGED vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
+- CHANGED us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
+- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials across all scoped assets
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
+- CHANGED api.signl4.com/api/v2/teams flipped back to 405 Allow:GET,POST on unauth GET + invalid Bearer — handler-deferred auth pattern re-confirmed
+- CHANGED OIDC introspection/revocation registration parity confirmed across all 6 identity hosts — routing layer complete
+- CHANGED DPoP challenge-layer probe complete: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce
+- CHANGED Prepaid body-identifier hypothesis REFUTED at 70 -> CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show no tenant identifier in any write payload)
+- CHANGED V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions (131 write ops swept, zero accept tenant in body)
