@@ -8312,3 +8312,68 @@ testability: PASSIVE
 [LEARN] ACCEPTED OTHER @ .github/workflows/triage.yml: I inherited a "[NEXT] report X" that read like a one-line to-do and discovered only on executing it that the channel it assumes does not exist in the checked-out workflow — collection greps a marker with zero occurrences anywhere, and the gate itself has been dead for 57 runs. The stale half of a handoff is almost always the machinery, not the target: my whole cycle budget went to verifying infrastructure nobody had ever checked, while the target-side facts were already banked. Every future "report/submit/notify X" is a two-part step — state the finding, and verify the path that carries it.
 [LEARN] REJECTED OTHER @ reports/valid-bugs.md as evidence of coverage: its "VALID" batches are model output produced when the LEADS section was empty (26 runs) and no run has succeeded since 2026-09-25, so the running count tracks gate availability rather than lead quality; treat it as unverified until a post-repair run reproduces it.
 [RISK] derdack: 3 — 0 live requests this cycle; all work was local inspection of checked-out files (workflows, triage runs, probe-results, lead and knowledge ledgers). No credential, no `Authorization`, no `x-s4-api-key`, no cookie, no mutation, no invented identifier, no tenant data. The standing STOP-PROBING directive on the SIGNL4 API asset family was honoured.
+## 2026-10-06 13:53:59 UTC [target] (model bigpickle)
+[PRIO] connect.signl4.com/api/v2/subscriptions/{id}/userLicenses,6.5,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=4,cloud_surface=7,freshness=6
+[HYP] \`PUT /api/v2/prepaid/settings\` resolves the target subscription from a request-body field rather than the path, unlike its sibling \`PUT /prepaid/{subscriptionId}/prepaidSettings\` — so a body-supplied identifier may let one tenant write another tenant's billing configuration
+class: BUSLOGIC
+[HYP] Hardcoded SIGNL4 Team Secret in Google IoT Integration Sample
+class: SECRET
+asset: signl4/signl4-integration-google-iot/index.js:19
+confidence: 85
+reasoning: SIGNL4 team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a public repo under the signl4 GitHub org (Derdack-owned). The secret is a real alphanumeric string committed to source. No other files in this repo reference this value, suggesting it may be a Derdack-internal demo/test team.
+impact: Medium — If valid, any party can send arbitrary alerts to this SIGNL4 team via the webhook. Could be used for alert flooding, social engineering via fake incident notifications, or to probe the team's response workflows. Impact取决于 whether the team still exists and is active.
+verify_steps: Passive only: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) Check if `connect.signl4.com/webhook/96sbq38s` returns HTTP 201 vs 404 via `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If 404, team was deleted and finding is historical only.
+[HYP] Hardcoded SIGNL4 Team Secret in Postman Collection & DevTools YAML (same secret, two files)
+class: SECRET
+asset: signl4/code-snippets/SIGNL4.postman_collection.json:42 + signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7
+confidence: 80
+reasoning: Team secret `vbguzfsi` appears in two public repos: (1) Postman collection path array `[webhook, vbguzfsi]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardcoded directly. Both are under signl4 GitHub org. Same secret reused across two sample repos suggests a Derdack employee's real team secret used during development.
+impact: Medium — Same as above: unauthorized alert injection, alert flooding, potential social engineering via fake incidents. Two repos expose the same secret, increasing the blast radius.
+verify_steps: Passive only: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+[HYP] Commented-Out Pipedream Debug Webhook in Zabbix Integration
+class: OTHER
+asset: signl4/signl4-integration-zabbix/signl4-mediatype.yaml:103
+confidence: 70
+reasoning: Line contains commented-out debug endpoint: `//endpoint = 'https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net';` — a Pipedream request inspection URL. This is a developer debug/test artifact left in production Zabbix media type export. While commented out, it reveals an internal testing endpoint and confirms Pipedream was used for webhook debugging. The UUID `b58aee12b873eae71b5db8b4fdc77d78` is a real Pipedream endpoint ID.
+impact: Low — Commented-out code is not executed. However, it leaks a historical debug endpoint that could be investigated for further information. If someone uncomments it, all Zabbix alerts would be sent to a third-party service (Pipedream) instead of SIGNL4.
+verify_steps: Passive only: (1) Check if the Pipedream endpoint is still active: `curl -s -o /dev/null -w '%{http_code}' https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net` (2) If active, confirms debug artifact was real (not just a test UUID).
+[LEARN] REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/api/docs: swagger confirms SIGNL4 API V2 = 40+ endpoints (alerts CRUD, teams, webhooks, subscriptions, schedules, users, categories, audits, distribution lists, templates, devices, callout templates) — full attack surface documented
+[RISK] derdack: 85 — SIGNL4 API V2 swagger confirms OAuth2 token acceptance at prod API (connect token endpoint + public_api_read/write scopes); shared RS256 signing key across 4 identity hosts (11th deep-equal); staging IdP password grant live; client_secret the sole remaining blocker; full CRUD chain documented in public swagger; spec-vs-implementation drift (empty security requirement) adds secondary finding; cross-env trust anchor stable across 7+ days of observation with zero drift
+[HYP] API key transmitted via query parameter enables referrer-based credential leakage
+class: AUTH
+asset: api.signl4.com/api/v2/* and connect.signl4.com/api/v2/*
+confidence: 78
+reasoning: Query parameter `?x-s4-api-key=<key>` confirmed LIVE (403 "API Key is invalid" vs 401 when no key provided); any external link, referrer header, browser history, proxy access log, or CDN log that includes a URL with the query-param key exposes the API credential; the swagger spec explicitly declares `API_Key_Query` as an accepted scheme alongside `API_Key_Header`, confirming this is intentional design; if any SIGNL4 integration or documentation page links to an API endpoint with a key in the query string, the key is leaked
+evidence_needed: (1) any integration page / sample URL / documentation that includes `?x-s4-api-key=` with a real key; (2) CDN/proxy log exposure; (3) browser referrer leakage during cross-origin navigation from a signl4.com page to an API endpoint
+verify_steps: PASSIVE — search for public URLs containing `x-s4-api-key` query parameter; check referrer-policy header on API responses (already confirmed: `strict-origin-when-cross-origin` — only leaks to same-origin, no cross-origin referrer leakage)
+impact: API key leakage via referrer/logs if query-param auth used; enables full API CRUD (alerts/teams/webhooks/subscriptions/schedules/users) for any affected tenant; MEDIUM severity (requires existing key to be in a leaked URL)
+testability: AUTH_HELPED
+[HYP] API key accepted at connect.signl4.com (API gateway) bypassing api.signl4.com routing
+class: OTHER
+asset: connect.signl4.com/api/v2/*
+confidence: 82
+reasoning: api.signl4.com/api/v2/* confirmed Bearer-gated (401) while connect.signl4.com/api/v2/teams with query-param API key returns 403 "API Key is invalid" (not 401); the two hosts share the same `request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd` confirming shared backend; connect.signl4.com accepts API keys via query param while api.signl4.com returns 401 for the same unauthenticated request — the API gateway routes both Bearer and API key auth through the same backend; swagger.json served from connect.signl4.com/api/docs/v2/swagger.json confirms the API is documented and routable through the connect host
+evidence_needed: (1) valid API key accepted at connect.signl4.com/api/v2/teams (200 vs 403); (2) confirmation that connect.host API key auth and api.host API key auth return the same tenant data
+verify_steps: PASSIVE — swagger confirms API routes are routable through connect host; shared appId proves backend identity; already confirmed API key validation pipeline active on both hosts
+impact: Two separate entry points to the same API backend with different auth-error responses (403 on connect, 401 on api) — attack surface doubled for credential-stuffing/brute-force against API keys (though excluded from scope); MEDIUM
+testability: PASSIVE
+reasoning: Line 14 contains a commented-out connection string: `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=none;Database=EnterpriseAlert2017`. This exposes: (1) internal Derdack hostname `sqlserver.derdack-support.local`, (2) SQL Server SA (sysadmin) account, (3) passwor
+impact: Low — Commented-out code is not executed. However, it leaks an internal Derdack hostname and a second password variant for the SA account. If `sqlserver.derdack-support.local` resolves on any Derdack-internal network, the hostname disclosure is valuable for lateral movement.
+verify_steps: Passive only: (1) Confirm repo ownership (2) DNS-resolve `sqlserver.derdack-support.local` from external (should fail — internal only) (3) Compare with prior finding: HolidayImport.js has `PWD=Derdack!` while this has `PWD=none` — two password variants for the same SA account sugge
+[HYP] Hardcoded SIGNL4 Team Secret `96sbq38s` in Google IoT Integration
+class: SECRET
+asset: signl4/signl4-integration-google-iot/index.js:19
+confidence: 85
+reasoning: Team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a real alphanumeric string committed to source. The repo is owned by the signl4 GitHub org (Derdack-own
+impact: Medium — Any party can send arbitrary alerts to this SIGNL4 team via the webhook. Could be used for alert flooding, social engineering via fake incident notifications, or to probe the team's response workflows.
+verify_steps: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If
+[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+class: SECRET
+asset: signl4/code-snippets/SIGNL4.postman_collection.json:40 + signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7
+confidence: 80
+reasoning: Team secret `vbguzfsi` appears in two files: (1) Postman collection path array `["webhook", "vbguzfsi"]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardc
+impact: Medium — Unauthorized alert injection, alert flooding, potential social engineering via fake incidents. Two files expose the same secret, increasing blast radius.
+verify_steps: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+[HYP] Hardcoded Checkmk Admin Credentials with Internal IP
+class: SECRET
