@@ -2067,3 +2067,19 @@ www.derdack.com
 - NEW vps.signl4.com currently returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net unchanged
 - NEW us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials
+
+## 2026-10-06 00:34:49 UTC
+- CHANGED OIDC introspection/revocation family CLOSED at 6/6 registration parity. All six ingresses serve both handlers locally on the production `connect` tenant prefix, against passing controls on two hosts. 
+- CHANGED DPoP challenge-layer probe COMPLETE — 3/3 identical \`WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"\`, no DPoP scheme, no nonce. Hypothesis meets its pre-registered *observatio
+- CHANGED Prepaid body-identifier hypothesis REFUTED at 70 -> CLOSED as NOT_A_BUG, statically, at zero credential cost. The pre-registered refutation criterion in [HYP] was explicit: "If the bare route's body c
+- CHANGED NEW PASSIVE OBSERVATION — the vendor documents query-string API key auth as a supported scheme. `components.securitySchemes` declares three schemes: `API_Key_Header` (`x-s4-api-key`, `in: header`), `A
+- CHANGED V1/V3 CONFIRMATION COMPLETE — the prepaid/tenant closure is now repo-wide, not version-scoped. All three specs are OpenAPI 3.0.4 using `components.schemas` (V1 146 schemas / 57 write ops, V2 475 / 131
+- CHANGED Queue state after this cycle: PASSIVE well for the SIGNL4 public API is dry. [FINAL] 2 (EA WSDL) remains settled and needs nothing. [FINAL] 1 (introspection/revocation), [FINAL] 3 (userLicenses) and t
+- NEW OIDC introspection/revocation registration parity now confirmed across all 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing layer complete, only token validation beha
+- NEW DPoP challenge-layer probe complete: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce — mitigating control advertis
+- NEW api.signl4.com/api/v2/teams flipped back to 405 Allow:GET,POST on unauth GET + invalid Bearer (was 401 last cycle) — handler-deferred auth pattern re-confirmed, differs from KB's 401 report
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials across all scoped assets
+- CHANGED vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net unchanged
+- CHANGED us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class
+- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain

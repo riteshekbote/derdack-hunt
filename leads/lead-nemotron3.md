@@ -13294,3 +13294,64 @@ testability: AUTH_HELPED
 [LEARN] ACCEPTED OTHER @ reading requestBody not just path list: Extracting schema from prepaid family converted vague BOLA note into testable hypotheses
 [LEARN] ACCEPTED OTHER @ additionalProperties:false is client-side fiction: Server binding behavior requires JSON-Patch probe, not schema inspection
 [RISK] derdack: 95 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed prepaid money-flow write family with missing subscriptionId path parameter (mass assignment surface) and internal hostname ereesus in EA WSDL. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover. New CRITICAL: demo.enterprisealert.com/EAWebService exposes full EA 9.5 web portal with credential-in-URL SOAP/REST API completely untested for auth bypass.
+## 2026-10-06 00:31:37 UTC [target] (model nemotron3)
+[NEW] OIDC introspection/revocation registration parity now confirmed across all 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing layer complete, only token validation behavior unverified
+[NEW] DPoP challenge-layer probe complete: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce — mitigating control advertised but not enforced at gateway
+[NEW] api.signl4.com/api/v2/teams flipped back to 405 Allow:GET,POST on unauth GET + invalid Bearer (was 401 last cycle) — handler-deferred auth pattern re-confirmed, differs from KB's 401 report
+[CHANGED] Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials across all scoped assets
+[CHANGED] vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net unchanged
+[CHANGED] us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class
+[CHANGED] demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname)
+[CHANGED] Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain PKCE
+[PRIO] connect.signl4.com/api/v2/prepaid/{subscriptionId}/prepaidSettings,7.70,attack_surface=8,business_value=9,tech_exposure=8,gate_ease=5,cloud_surface=7,freshness=8
+[PRIO] connect.signl4.com/api/v2/prepaid/settings,7.50,attack_surface=8,business_value=9,tech_exposure=8,gate_ease=5,cloud_surface=7,freshness=7
+[PRIO] connect.signl4.com/api/v1/alerts/acknowledgeAll,7.20,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=5,cloud_surface=7,freshness=8
+[PRIO] connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd,7.00,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=5,cloud_surface=7,freshness=7
+[PRIO] vps.signl4.com,8.00,attack_surface=8,business_value=7,tech_exposure=7,gate_ease=10,cloud_surface=9,freshness=8
+[HYP] Mass assignment via missing subscriptionId in prepaid settings write endpoint
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/prepaid/settings
+confidence: 70
+reasoning: Public OpenAPI documents PUT /v2/prepaid/settings accepting additionalProperties (no subscriptionId in path) while sibling endpoints require subscriptionId path parameter; handler-deferred auth (unauth GET→405, invalid Bearer→405) enables cross-env token acceptance; JSON-Patch write surface could bind to privileged DTO fields
+evidence_needed: Valid X-S4-Api-Key or Bearer token to test if PUT /v2/prepaid/settings modifies settings across tenants or binds to internal fields (e.g., autoTopUpAmount, threshold, paymentMethodId)
+verify_steps: 1) GET https://connect.signl4.com/api/docs/v2/swagger.json (confirm schema for PUT /v2/prepaid/settings requestBody) 2) Obtain valid X-S4-Api-Key via HUMAN channel 3) PUT https://connect.signl4.com/api/v2/prepaid/settings with valid token + JSON-Patch payload targeting autoTopUpAmount/threshold (observe 401/403/200/400)
+impact: Cross-tenant prepaid billing manipulation — unauthorized auto-top-up configuration changes, financial impact; severity HIGH
+testability: AUTH_HELPED
+[HYP] Cross-tenant BOLA via subscriptionId manipulation in prepaid settings
+class: IDOR
+asset: connect.signl4.com/api/v2/prepaid/{subscriptionId}/prepaidSettings
+confidence: 65
+reasoning: PUT /v2/prepaid/{subscriptionId}/prepaidSettings registered (OPTIONS Allow:PUT), handler-deferred auth (unauth GET→405, invalid Bearer→405); subscriptionId is path parameter with no ownership validation observed in V1/V2/V3 route families; shared RS256 key across 6 identity hosts enables cross-env token forgery if client_secret leaks
+evidence_needed: Valid Bearer token (X-S4-Api-Key or OAuth) to test subscriptionId enumeration/manipulation against other tenants' prepaid settings
+verify_steps: 1) GET https://connect.signl4.com/api/docs/v2/swagger.json (extract PUT /v2/prepaid/{subscriptionId}/prepaidSettings schema) 2) Obtain valid X-S4-Api-Key via HUMAN channel 3) PUT https://connect.signl4.com/api/v2/prepaid/{other_tenant_subId}/prepaidSettings with valid token + JSON body (observe 401/403/200/404)
+impact: Cross-tenant prepaid billing settings overwrite — unauthorized modification of auto-top-up thresholds, payment methods; severity HIGH
+testability: AUTH_HELPED
+[HYP] Cross-user IDOR via userId query parameter on V1 bulk alert endpoints
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll
+confidence: 60
+reasoning: V1 OpenAPI documents userId query parameter on /alerts/acknowledgeAll, /alerts/closeAll, /alerts/paged, /alerts/report; 403 response contains "in behave of the user" typo confirming coded impersonation feature; handler-deferred auth (unauth GET→405, invalid Bearer→405) enables cross-env token acceptance; no ownership validation observed on userId
+evidence_needed: Valid Bearer token to test userId manipulation across users within same tenant
+verify_steps: 1) GET https://connect.signl4.com/api/docs/v1/swagger.json (confirm userId parameter schema) 2) Obtain valid X-S4-Api-Key via HUMAN channel 3) POST https://connect.signl4.com/api/v1/alerts/acknowledgeAll?userId={other_user} with valid token + alert IDs (observe 401/403/200)
+impact: Cross-user alert lifecycle manipulation within tenant — unauthorized acknowledge/close of alerts; severity MEDIUM-HIGH
+testability: AUTH_HELPED
+[PARKED] Mass assignment via missing subscriptionId in prepaid settings write endpoint: AUTH_HELPED — requires valid X-S4-Api-Key/Bearer token; no passive-only path to credential acquisition; leak-oracle negative across 7+ corpora
+[PARKED] Cross-tenant BOLA via subscriptionId manipulation in prepaid settings: AUTH_HELPED — same credential blocker; handler-deferred auth confirmed but token acquisition gated
+[PARKED] Cross-user IDOR via userId query parameter on V1 bulk alert endpoints: AUTH_HELPED — same credential blocker; handler-deferred auth confirmed but token acquisition gated
+[FINAL] 1) Internal hostname leak via EA WSDL (MISCONFIG, 95) — PASSIVE confirmed live, CWE-200 hygiene
+[FINAL] 2) Cross-env token forgery via 6-host shared RS256 IdP family (AUTH, 90) — AUTH_HELPED, strongest theoretical finding
+[FINAL] 3) Subdomain takeover via dangling A-record on vps.signl4.com (MISCONFIG, 80) — PASSIVE confirmed, exploitability HUMAN_ONLY
+[FINAL] 4) Prepaid money-flow mass assignment / BOLA surface (BUSLOGIC/IDOR, 70) — AUTH_HELPED, documented in public OpenAPI
+[FINAL] 5) V1 userId bulk alert IDOR (IDOR, 60) — AUTH_HELPED, handler-deferred auth confirmed
+[NEXT] PROBE: GET https://connect.signl4.com/api/docs/v2/swagger.json (extract full requestBody schema for PUT /v2/prepaid/settings and PUT /v2/prepaid/{subscriptionId}/prepaidSettings — validate additionalProperties, field types, required fields)
+[LEARN] ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean `405`s against a passing control is a strong, reproducible result, and it is still not a vulnerability
+[LEARN] ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: body discriminator was identical across both arms (empty-string sha256); the discriminator that actually resolved the question was the status code alone, 405 vs 404
+[LEARN] ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on `/identity/connect/`, not `/identity/devconnect/` — it is the production tenant, reachable at a second hostname
+[LEARN] REJECTED OTHER @ filing the signlReports traversal as a fourth [FINAL]: indistinguishable in kind from the userLicenses BOLA — both AUTH_HELPED, both needing vendor-issued tenants
+[LEARN] ACCEPTED OTHER @ completing the differential was worth more than any result inside it: six hosts returned the answer, so the uniform claim holds 6/6 rather than 4/6 with two stragglers
+[LEARN] ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well is dry because every remaining question needs a token
+[LEARN] ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: cited `dpop_signing_alg_values_supported` as mitigating control without checking enforcement
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` exposed via unauthenticated WSDL GET — config-level disclosure (CWE-200 hygiene)
+[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+[LEARN] ACCEPTED IDOR @ connect.signl4.com/api/v1: V1 bulk endpoints accept `userId` query parameter; 403 response contains "in behave of the user" typo confirming coded impersonation feature
+[RISK] derdack: 95 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed introspection/revocation routing parity across all 6 ingresses and DPoP advertised but not enforced at gateway. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover. New CRITICAL: demo.enterprisealert.com/EAWebService exposes full EA 9.5 web portal with credential-in-URL SOAP/REST API completely untested for auth bypass.

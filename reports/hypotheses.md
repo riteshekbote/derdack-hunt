@@ -5210,3 +5210,36 @@
 - LEARN: ACCEPTED OTHER @ distribution-vs-snapshot: Auth-status "flapping" was temporal (one sample/cycle), not per-request — 6 consecutive GETs uniform 401
 - LEARN: ACCEPTED OTHER @ reading requestBody not just path list: Extracting schema from prepaid family converted vague BOLA note into testable hypotheses
 - LEARN: ACCEPTED OTHER @ additionalProperties:false is client-side fiction: Server binding behavior requires JSON-Patch probe, not schema inspection
+
+## RANKED HYPOTHESES 2026-10-06 00:34:49 UTC
+- [70] connect.signl4.com/api/v2/prepaid/settings: Mass assignment via missing subscriptionId in prepaid settings write endpoint (from art/lead_nemotron3.txt)
+- [40] connect.signl4.com/identity/connect/userinfo,: The DPoP binding advertised in every host's OpenID configuration is documentation-only — the unauthenticated challenge layer returns a plain `Bearer` `WWW-Authenticate` with no `DPoP` scheme and no error detail demanding proof-of-possession, so the public client-binding mitigation the program relies on is not enforced at the point tokens are presented (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): PROBE the DPoP challenge layer: `GET https://connect.signl4.com/identity/connect/userinfo` with no token and no cookie, recording the `WWW-Authenticate` header 
+- NEXT(hypotheses-nemotron3.txt): PROBE: GET https://connect.signl4.com/api/docs/v2/swagger.json (extract full requestBody schema for PUT /v2/prepaid/settings and PUT /v2/prepaid/{subscriptionId
+- LEARN: ACCEPTED OTHER @ completing the differential was worth more than any result inside it: four of the six hosts already returned the answer I expected, so the obvi
+- LEARN: ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well for this family is dry because every remaining question nee
+- LEARN: ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: I have cited `dpop_signing_alg_values_supported` as a mitigating control in the cr
+- LEARN: ACCEPTED OTHER @ completing the differential was worth more than any result inside it: four of the six hosts already returned the answer I expected, so the obvi
+- LEARN: ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well for this family is dry because every remaining question nee
+- LEARN: ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: I have cited `dpop_signing_alg_values_supported` as a mitigating control in the cr
+- LEARN: ACCEPTED OTHER @ a pre-registered criterion can be satisfied by a result that refutes its own hypothesis, and meeting it is not the same as confirming it. My ev
+- LEARN: ACCEPTED OTHER @ I cited a control as real for weeks on the strength of a metadata field I had never read in full. The correction is sharper than the verdict: \
+- LEARN: ACCEPTED OTHER @ "Bearer-only, therefore not enforced" is the wrong inference from a correct observation, and the error is seductive precisely because RFC 9449 
+- LEARN: ACCEPTED OTHER @ a free side-effect is only free if it changes the plan. Pulling the full discovery document to quote the challenge verbatim returned the token-
+- LEARN: ACCEPTED OTHER @ "Bearer-only, therefore not enforced" is the wrong inference from a correct observation, and th
+- LEARN: ACCEPTED OTHER @ a free side-effect is only free if it changes the plan. Pulling the full discovery document to
+- LEARN: ACCEPTED OTHER @ I refuted my top-ranked hypothesis, so the interesting part is not that it was wrong but that it was wrong for a reason I had already discounte
+- LEARN: ACCEPTED OTHER @ the two things I got wrong this cycle share a root cause, and it is not carelessness: both were inferences from names and shapes that I decline
+- LEARN: ACCEPTED OTHER @ the generalisation is the actual deliverable. Refuting one prepaid route would have been worth one closed hypothesis; sweeping all 131 write op
+- LEARN: ACCEPTED OTHER @ I nearly recorded a false negative twice in one document, and both times the cause was a pre-registered expectation rather than a missing obser
+- LEARN: ACCEPTED OTHER @ "39 routes share this shape" is a count, not a vulnerability, and the temptation is to let the count do the arguing. Size is evidence of a patt
+- LEARN: ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean `405`s against a passing control is a strong, repro
+- LEARN: ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: body discriminator was identical across both arms
+- LEARN: ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on `/identity/connect/`,
+- LEARN: REJECTED OTHER @ filing the signlReports traversal as a fourth [FINAL]: indistinguishable in kind from the userLicenses BOLA — both AUTH_HELPED, both needing ve
+- LEARN: ACCEPTED OTHER @ completing the differential was worth more than any result inside it: six hosts returned the answer, so the uniform claim holds 6/6 rather than
+- LEARN: ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well is dry because every remaining question needs a token
+- LEARN: ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: cited `dpop_signing_alg_values_supported` as mitigating control without checking e
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventPro
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response prove
+- LEARN: ACCEPTED IDOR @ connect.signl4.com/api/v1: V1 bulk endpoints accept `userId` query parameter; 403 response contains "in behave of the user" typo confirming code
