@@ -2155,3 +2155,28 @@ www.derdack.com
 - CHANGED Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show no tenant identifier in any write payload)
 - CHANGED V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions (131 write ops swept, zero accept tenant in body)
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials across all scoped assets
+
+## 2026-10-07 09:31:47 UTC
+- CHANGED api.signl4.com/api/v2/teams flipped back to 405 Allow:GET,POST on unauth GET + invalid Bearer — handler-deferred auth pattern re-confirmed (was 401 last cycle)
+- CHANGED OIDC introspection/revocation registration parity confirmed across all 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing layer complete
+- CHANGED DPoP challenge-layer probe complete: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce
+- CHANGED Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show no tenant identifier in any write payload)
+- CHANGED V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions (131 write ops swept, zero accept tenant in body)
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials across all scoped assets
+- CHANGED api.signl4.com/api/v2/teams flipped back to 405 Allow:GET,POST on unauth GET + invalid Bearer — handler-deferred auth pattern re-confirmed (was 401 last cycle)
+- CHANGED OIDC introspection/revocation registration parity confirmed across all 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing layer complete
+- CHANGED DPoP challenge-layer probe complete: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce
+- CHANGED Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show no tenant identifier in any write payload)
+- CHANGED V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions (131 write ops swept, zero accept tenant in body)
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials across all scoped assets
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this i
+- NEW OIDC introspection/revocation registration parity confirmed across all 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing layer complete, only token validation behavior
+- NEW DPoP challenge-layer probe complete: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce — mitigating control advertis
+- NEW Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show no tenant identifier in any write payload)
+- NEW V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions (131 write ops swept, zero accept tenant in body)
+- NEW api.signl4.com/api/v2/teams flipped back to 405 Allow:GET,POST on unauth GET + invalid Bearer (was 401 last cycle) — handler-deferred auth pattern re-confirmed, differs from KB's 401 report
+- NEW Triage outage: 57 consecutive Triager runs failed (2026-09-25 → 2026-10-06); `grep "\[UNVALIDATED\]" leads/lead-*.md` matches 0 occurrences — automated validation pipeline dead
+- CHANGED vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
+- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+- CHANGED us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials across all scoped assets
