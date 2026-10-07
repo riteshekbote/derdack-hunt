@@ -9444,3 +9444,10 @@ testability: AUTH_HELPED
 [RISK] derdack: 95 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed introspection/revocation routing parity across all 6 ingresses and DPoP advertised but not enforced at gateway. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover. New CRITICAL: demo.enterprisealert.com/EAWebService exposes full EA 9.5 web portal with credential-in-URL SOAP/REST API completely untested for auth bypass.
 [CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
 [HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+## 2026-10-07 21:37:33 UTC [target] (model bigpickle)
+[PRIO]
+[HYP]
+[PARKED]/[FINAL]
+[NEXT]
+[LEARN]
+[RISK]

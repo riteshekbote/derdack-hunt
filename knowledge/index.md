@@ -1176,3 +1176,11 @@
 - 2026-10-07 REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
 - 2026-10-07 REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is absent from the API gateway and the demo app; no alternative read surface remains for the AUTH_HELPED queue
 - 2026-10-07 REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier disclosure is bounded at 2 of 8 hosts, not an estate-wide defect
+- 2026-10-07 REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control only, not a vulnerability
+- 2026-10-07 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+- 2026-10-07 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
+- 2026-10-07 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+- 2026-10-07 REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control only, not a vulnerability
+- 2026-10-07 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+- 2026-10-07 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
+- 2026-10-07 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted

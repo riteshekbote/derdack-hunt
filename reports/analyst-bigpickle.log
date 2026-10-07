@@ -62236,3 +62236,465 @@ testability: AUTH_HELPED
 - **Next step:** human channel to obtain credentials; otherwise stay passive (mobile scope fingerprinting is the only untested surface).
 
 Want me to continue with the mobile-surface fingerprinting, or stop pending credential acquisition?
+===== ANALYST bigpickle 2026-10-07 21:41:18 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mecho "== control-fabricated path (route-existence baseline)"; curl -sS -m 15 -D - -o /dev/null "https://api.signl4.com/api/v2/zzz-nonexistent-route-20261007" | tr -d '\r' | grep -Ei '^(HTTP/|content-length|content-type|allow)'; sleep 2; echo "== V3 invoice route anon (registration vs enforcement check)"; curl -sS -m 15 -D - -o /dev/null "https://connect.signl4.com/api/v3/subscriptions/zz/invoices/zz/zugferd" | tr -d '\r' | grep -Ei '^(HTTP/|content-length|allow|www-authenticate)'
+== control-fabricated path (route-existence baseline)
+HTTP/2 404 
+content-length: 0
+== V3 invoice route anon (registration vs enforcement check)
+HTTP/2 401 
+content-length: 0
+www-authenticate: Bearer
+[0m
+[0m$ [0mfor u in "https://api.signl4.com/api/v2/teams?x-s4-api-key=zzCtrlNoKey20261007" "https://api.signl4.com/api/v2/teams" "https://connect.signl4.com/api/v2/teams?x-s4-api-key=zzCtrlNoKey20261007"; do echo "=== $u"; curl -sS -m 15 -D - -o /tmp/opencode/body.$$ "$u" | tr -d '\r' | grep -Ei '^(HTTP/|cache-control|age|x-cache|vary|server|content-type|content-length|x-ms|www-authenticate|etag|expires|pragma|set-cookie|x-s4)' ; echo "-- bodylen=$(wc -c </tmp/opencode/body.$$) sha=$(sha256sum </tmp/opencode/body.$$ | cut -c1-16)"; echo "-- bodyhead: $(head -c 200 /tmp/opencode/body.$$ | tr -d '\n')"; sleep 2; done; rm -f /tmp/opencode/body.$$
+=== https://api.signl4.com/api/v2/teams?x-s4-api-key=zzCtrlNoKey20261007
+HTTP/2 403 
+content-type: application/problem+json
+server: Microsoft-HTTPAPI/2.0
+-- bodylen=103 sha=54bc490026a24f97
+-- bodyhead: {"type":"https://httpstatuses.com/403","title":"Forbidden","status":403,"detail":"API Key is invalid."}
+=== https://api.signl4.com/api/v2/teams
+HTTP/2 401 
+content-length: 0
+server: Microsoft-HTTPAPI/2.0
+www-authenticate: Bearer
+-- bodylen=0 sha=e3b0c44298fc1c14
+-- bodyhead: 
+=== https://connect.signl4.com/api/v2/teams?x-s4-api-key=zzCtrlNoKey20261007
+HTTP/2 403 
+content-type: application/problem+json
+server: Microsoft-HTTPAPI/2.0
+-- bodylen=103 sha=54bc490026a24f97
+-- bodyhead: {"type":"https://httpstatuses.com/403","title":"Forbidden","status":403,"detail":"API Key is invalid."}
+[0m
+## Objective
+- Act as senior bug bounty analyst for Derdack GmbH / Derdack Group (report channel: bugs.olivermaicher.eu), running an 8-step deep-hunt cycle (DELTA → PRIORITIZE → HYPOTHESES → SELF-CRITIQUE → NEXT → LEARN → RISK) against in-scope SIGNL4 / Enterprise Alert assets.
+- Output only structured blocks: [NEW]/[CHANGED], [PRIO], up to 3 [HYP], [PARKED]/[FINAL], one [NEXT], [LEARN], [RISK].
+
+## Important Details
+- Scope (ONLY these): company-owned infra/websites/APIs/SaaS/mobile/backends/status pages/domains of Derdack GmbH incl. SIGNL4 and Enterprise Alert; eligible assets from scope.yml + inventory/derdack.md.
+- REJECTED classes: DoS/lockout, descriptive headers only, robots.txt, outdated libs, OPTIONS/TRACE standalone, CSRF on logout/anon forms, cookie flags on non-sensitive data, self-XSS, scanner reports w/o POC, physical/social eng, username enumeration, brute-force/rate-limit, SSL/TLS best practice, clickjacking w/o exploit, mail config, known-vuln lib w/o program-specific exploit, password/recovery policy, autocomplete, public login panels, email verification, session control on password change, customer/employee/financial/auth data exposure.
+- Probe rules: passive-first, ≤1 rps, GET/HEAD/OPTIONS only for live probes; no auth-bypass/mutating tests on live customer data; sha256 secrets; facts vs hypotheses strictly separated; no endpoint-map-only results; confidence ≥40 to survive.
+- Key asset facts: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) share byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) + client_id 692A0A56-892F-4AE2-8259-76DA398990B6; account IdP issuer mismatch (claims connect); dev hosts serve production tenant prefix `/identity/connect/`; introspection/revocation registered 6/6; DPoP advertised in discovery but challenge is Bearer-only (3/3) — discovery parity ≠ enforcement proof.
+- API estate: V1/V2/V3 namespaces mapped (V4 absent), 131 write ops swept — zero accept tenant identifier in body (prepaid hypothesis REFUTED, closed NOT_A_BUG); handler-deferred auth (405 vs 401 flapping = temporal, 6 samples uniform); API_Key_Query declared in all 3 OpenAPI 3.0.4 specs (CWE-598 candidate, [UNVALIDATED] marker used so triage.yml:45 grep can match).
+- Other confirmed: demo.enterprisealert.com/EAWebService live EA 9.5.26147 (WSDL leaks internal host `https://ereesus/EAWebService/EventProviderAPI.asmx`); vps.signl4.com dangling A-record takeover (HUMAN_ONLY); all top vectors AUTH_HELPED blocked on client_secret / X-S4-Api-Key / team-secret.
+- Infrastructure issues found: triage.yml:45 greps `[UNVALIDATED]` (0 occurrences historically); 57 consecutive Triager runs failed 2026-09-25→2026-10-06; hunt.yml:13/triage.yml:12 PROBE_ALLOW only `derdack.com` so signl4.com/enterprisealert.com leads never re-verified; reports/valid-bugs.md counts are model output from empty LEADS, unverified.
+
+## Work State
+### Completed
+- Full estate mapped: identity (6 hosts), API V1/V2/V3, webhook/events namespaces, CT logs (3 roots closed), WordPress (root//de//ea/, 10 namespaces 157 routes), EA demo portal, s4dev fleet, parked hosts (dev/us.derdack.com resolved negative with control hashing).
+- Closed/negative: prepaid body-tenant (all 3 API versions), GraphQL class (15/15 404), behave-as param (typo only), dynamic client registration (no registration_endpoint), open redirect, Blazor assembly disclosure, CORS class, SSRF via OpenAPI (no `format: uri`), s4dev Azure resource IDs (REJECTED descriptive-headers), mobileapi WAF page, DPoP challenge gap (observation-only, not impact).
+- Latest cycle (2026-10-07 16:34): zero drift reconfirmed; introspection/revocation 6/6 routing parity; DPoP 3/3 Bearer-only; prepaid closure repo-wide; teams 405 handler-deferred.
+
+### Active
+- Phase POC, target `api`; passive well for SIGNL4 public API judged dry — remaining questions credential-gated.
+- Ranked set tail: [90] account.signl4.com/identity/connect/token cross-env forgery; [70] API_Key_Query CWE-598 in V1/V2/V3 swagger; NEXT items are HUMAN credential acquisition.
+
+### Blocked
+- All top hypotheses AUTH_HELPED: need valid client_secret (client_id 692A0A56-892F-4AE2-8259-76DA398990B6), X-S4-Api-Key, or team-secret — no leak found across 7+ corpora.
+- Triage/automation pipeline dead (57 failed runs, `[UNVALIDATED]` grep never matched until marker injected into a [HYP] title line).
+- PROBE_ALLOW scope in hunt.yml:13/triage.yml:12 excludes signl4.com/enterprisealert.com from automated re-verification.
+
+## Next Move
+1. [NEXT] HUMAN: obtain legitimate X-S4-Api-Key or client_secret via program contact (bugs.olivermaicher.eu) to unblock AUTH_HELPED hypotheses (cross-env token forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, userLicenses, EA SOAP handler access).
+2. Verify the injected `[UNVALIDATED]` marker in the API_Key_Query [HYP] satisfies triage.yml:45 grep, and confirm whether fixing PROBE_ALLOW scope is appropriate (human decision flagged in leads).
+
+## Relevant Files
+- inventory/derdack.md: host inventory + dated probe log (source of surface deltas)
+- .github/workflows/triage.yml: line 45 `grep "\[UNVALIDATED\]" leads/lead-*.md`; line 12 PROBE_ALLOW — dead gate
+- .github/workflows/hunt.yml: line 13 PROBE_ALLOW: derdack.com — excludes signl4/enterprisealert leads
+- leads/lead_*.md: hunt lead files (currently 0 `[UNVALIDATED]` matches historically)
+- reports/valid-bugs.md: unverified model-output counts, no successful run since 2026-09-25
+- Key endpoints: connect.signl4.com/api/docs/{v1,v2,v3}/swagger.json; {account,connect,devconnect,api,devapi,devaccount}.signl4.com/identity/.well-known/openid-configuration; demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m$ [0mcd /tmp/opencode && echo "== does spec itself publish any secret-like default or example key?"; for v in v1 v2 v3; do echo "-- $v"; grep -oiE '"(x-s4-api-key|api[-_]?key)"[[:space:]]*:[[:space:]]*"[^"]{8,}"' sw-$v.json | head -5; grep -oE 'sk-[A-Za-z0-9]{10,}|[0-9a-f]{32}' sw-$v.json | sort -u | head -5; done; echo "== servers host inventory across specs"; for v in v1 v2 v3; do echo "-- $v"; python3 -c "import json,sys;d=json.load(open('sw-$v.json'));print([s.get('url') for s in d.get('servers',[])])"; done
+== does spec itself publish any secret-like default or example key?
+-- v1
+-- v2
+grep: sw-v2.json: No such file or directory
+grep: sw-v2.json: No such file or directory
+-- v3
+grep: sw-v3.json: No such file or directory
+grep: sw-v3.json: No such file or directory
+== servers host inventory across specs
+-- v1
+['https://connect.signl4.com/api']
+-- v2
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: 'sw-v2.json'
+-- v3
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: 'sw-v3.json'
+[0m
+[0m$ [0mcd /tmp/opencode && for v in v1 v2 v3; do f=sw-$v.json; curl -sS -m 25 "https://api.signl4.com/api/docs/$v/swagger.json" -o $f; echo "=== $v bytes=$(wc -c <$f)"; python3 - "$f" <<'PY'
+import json,sys
+d=json.load(open(sys.argv[1]))
+print(" openapi:",d.get("openapi"),"| title:",d.get("info",{}).get("title"))
+print(" servers:",[s.get("url") for s in d.get("servers",[])])
+ss=d.get("components",{}).get("securitySchemes",{}) or d.get("securitySchemes",{})
+for k,v in ss.items():
+    if v.get("type")=="apiKey":
+        print(f"  apiKey {k}: in={v.get('in')} name={v.get('name')}")
+    else:
+        print(f"  {k}: {v.get('type')} {v.get('flows',{}).keys() if v.get('flows') else ''}")
+print(" global security:",d.get("security"))
+# count ops that declare query key usage
+q=[k for k,v in ss.items() if v.get("type")=="apiKey" and v.get("in")=="query"]
+print(" query-key schemes:",q)
+PY
+sleep 2; done
+=== v1 bytes=493618
+ openapi: 3.0.4 | title: SIGNL4 API V1
+ servers: ['https://connect.signl4.com/api']
+  apiKey API_Key_Header: in=header name=x-s4-api-key
+  apiKey API_Key_Query: in=query name=x-s4-api-key
+  OAuth2: oauth2 dict_keys(['authorizationCode'])
+ global security: [{}]
+ query-key schemes: ['API_Key_Query']
+=== v2 bytes=1216391
+ openapi: 3.0.4 | title: SIGNL4 API V2
+ servers: ['https://connect.signl4.com/api']
+  apiKey API_Key_Header: in=header name=x-s4-api-key
+  apiKey API_Key_Query: in=query name=x-s4-api-key
+  OAuth2: oauth2 dict_keys(['authorizationCode'])
+ global security: [{}]
+ query-key schemes: ['API_Key_Query']
+=== v3 bytes=1213127
+ openapi: 3.0.4 | title: SIGNL4 API V3
+ servers: ['https://connect.signl4.com/api']
+  apiKey API_Key_Header: in=header name=x-s4-api-key
+  apiKey API_Key_Query: in=query name=x-s4-api-key
+  OAuth2: oauth2 dict_keys(['authorizationCode'])
+ global security: [{}]
+ query-key schemes: ['API_Key_Query']
+[0m
+[0m$ [0mcd /tmp/opencode && ls -la sw-*.json 2>/dev/null; for v in v1 v2 v3; do echo "-- $v"; grep -oiE '"x-s4-api-key"[[:space:]]*:[[:space:]]*"[^"]{8,}"' sw-$v.json | head -3; grep -oE '[0-9a-f]{32}|sk-[A-Za-z0-9]{12,}' sw-$v.json | sort -u | head -3; echo "  querykey-in-query-param-count=$(python3 -c "
+import json;d=json.load(open('sw-$v.json'));n=0
+def walk(o):
+    global n
+    if isinstance(o,dict):
+        for k,v in o.items():
+            if k=='in' and v=='query' and 'api' in str(o.get('name','')).lower(): n+=1
+            walk(v)
+    elif isinstance(o,list):
+        for i in o: walk(i)
+walk(d);print(n)")"; done
+-rw-r--r-- 1 runner runner  493618 Oct  7 21:33 sw-v1.json
+-rw-r--r-- 1 runner runner 1216391 Oct  7 21:33 sw-v2.json
+-rw-r--r-- 1 runner runner 1213127 Oct  7 21:33 sw-v3.json
+-- v1
+  querykey-in-query-param-count=1
+-- v2
+  querykey-in-query-param-count=1
+-- v3
+  querykey-in-query-param-count=1
+[0m
+[0m$ [0mcd /tmp/opencode && echo "== route-existence oracle: 404 vs 401 discriminator (sample)"; for p in "api/v2/teams" "api/v2/teams/zz" "api/v3/subscriptions" "api/v1/devices" "api/v2/zzz-not-a-route"; do code=$(curl -sS -m 12 -o /dev/null -w '%{http_code}' "https://api.signl4.com/$p"); echo "  $p -> $code"; sleep 2; done
+== route-existence oracle: 404 vs 401 discriminator (sample)
+  api/v2/teams -> 401
+  api/v2/teams/zz -> 404
+  api/v3/subscriptions -> 401
+  api/v1/devices -> 404
+  api/v2/zzz-not-a-route -> 404
+[0m
+[0m$ [0mcd /tmp/opencode && echo "== externalDocs / swagger-ui hints inside specs"; for v in v1 v2 v3; do echo "-- $v"; python3 -c "
+import json;d=json.load(open('sw-$v.json'))
+print(' externalDocs:',d.get('externalDocs'))
+# look for swagger-ui config strings
+import re
+s=open('sw-$v.json').read()
+for pat in ['supportedSubmitMethods','tryItOut','swagger-ui','redoc','oauth2RedirectUrl','redirectUrl']:
+    if pat in s: print('  contains:',pat)
+"; done
+== externalDocs / swagger-ui hints inside specs
+-- v1
+ externalDocs: None
+-- v2
+ externalDocs: None
+-- v3
+ externalDocs: None
+[0m
+[0m$ [0mfor u in "https://api.signl4.com/api/docs" "https://api.signl4.com/api/docs/v1" "https://api.signl4.com/api/docs/v1/index.html" "https://api.signl4.com/swagger" "https://api.signl4.com/api/docs/index.html"; do echo "=== $u"; curl -sS -m 15 -o /tmp/opencode/d.$$ -w 'code=%{http_code} type=%{content_type} len=%{size_download}\n' "$u"; head -c 300 /tmp/opencode/d.$$ | tr -d '\n' | head -c 300; echo; sleep 2; done; rm -f /tmp/opencode/d.$$
+=== https://api.signl4.com/api/docs
+code=302 type= len=0
+
+=== https://api.signl4.com/api/docs/v1
+code=200 type=text/html len=637
+<!doctype html><html><head>    <title>SIGNL4 API Documentation</title>    <meta charset="utf-8" />    <meta name="viewport" content="width=device-width, initial-scale=1" />    </head><body>        <div id="app"></div>    <script src="scalar.js"></script>    <script type="module" src="sca
+=== https://api.signl4.com/api/docs/v1/index.html
+code=404 type= len=0
+
+=== https://api.signl4.com/swagger
+code=404 type= len=0
+
+=== https://api.signl4.com/api/docs/index.html
+code=301 type= len=0
+[0m
+[0m$ [0mcd /tmp/opencode && echo "=== scalar.js head/config probe"; curl -sS -m 20 "https://api.signl4.com/api/docs/v1/scalar.js" -o scalar.js; echo "bytes=$(wc -c <scalar.js)"; grep -oE '"(url|specUrl|theme|mode|proxy|authentication|showSearch|hideClientButton|hideDarkModeToggle|tryItOut)"[[:space:]]*:' scalar.js | sort -u | head -20; echo "--- references to query apikey handling"; grep -oc 'x-s4-api-key' scalar.js; grep -oE 'apiKey[^,;]{0,60}' scalar.js | head -5
+=== scalar.js head/config probe
+bytes=0
+--- references to query apikey handling
+0
+[0m
+[0m$ [0mcd /tmp/opencode && echo "=== /api/docs/v1 index.html"; curl -sS -m 15 "https://api.signl4.com/api/docs/v1" | tee v1.html; echo; echo "=== linked assets"; grep -oE 'src="[^"]+"|href="[^"]+"' v1.html; sleep 2; echo "=== /api/docs redirect target"; curl -sS -m 15 -D - -o /dev/null "https://api.signl4.com/api/docs" | tr -d '\r' | grep -Ei '^(HTTP/|location)'
+=== /api/docs/v1 index.html
+<!doctype html>
+<html>
+<head>
+    <title>SIGNL4 API Documentation</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    
+</head>
+<body>
+    
+    <div id="app"></div>
+    <script src="scalar.js"></script>
+    <script type="module" src="scalar.aspnetcore.js"></script>
+    <script type="module">
+        import { initialize } from './scalar.aspnetcore.js'
+        initialize(
+        '%2Fdocs%2Fv1',
+        false,
+        {"favicon":"/api//docs/favicon.png","_integration":"dotnet","sources":[{"title":"v1","url":"openapi/v1.json"}]},
+        '')
+    </script>
+</body>
+</html>
+=== linked assets
+src="scalar.js"
+src="scalar.aspnetcore.js"
+=== /api/docs redirect target
+HTTP/2 302 
+location: docs/
+[0m
+[0m$ [0mcd /tmp/opencode && echo "=== openapi/v1.json (what the docs UI actually loads)"; curl -sS -m 25 -w '\ncode=%{http_code} type=%{content_type} len=%{size_download}\n' "https://api.signl4.com/api/docs/v1/openapi/v1.json" -o oas-v1.json; tail -1 /dev/null; python3 -c "
+import json
+d=json.load(open('oas-v1.json'))
+print(' openapi:',d.get('openapi'),'title:',d.get('info',{}).get('title'),'ver:',d.get('info',{}).get('version'))
+ss=d.get('components',{}).get('securitySchemes',{}) or d.get('securitySchemes',{})
+for k,v in ss.items(): print('  scheme',k,v.get('type'),v.get('in'),v.get('name'))
+print(' servers:',[s.get('url') for s in d.get('servers',[])])
+"; sleep 2; echo "=== scalar.js status"; curl -sS -m 20 -o scalar.js -w 'code=%{http_code} len=%{size_download} type=%{content_type}\n' "https://api.signl4.com/api/docs/v1/scalar.js"
+=== openapi/v1.json (what the docs UI actually loads)
+
+code=404 type= len=0
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+  File "/usr/lib/python3.12/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+=== scalar.js status
+code=404 len=0 type=
+[0m
+[0m$ [0mcd /tmp/opencode && echo "=== other doc versions"; for p in v2 v3; do echo "-- $p"; curl -sS -m 20 -o oas-$p.json -w 'code=%{http_code} len=%{size_download}\n' "https://api.signl4.com/api/docs/$p/openapi/$p.json"; sleep 2; done; python3 -c "
+import json
+for p in ['v1','v2','v3']:
+    try:
+        d=json.load(open(f'oas-{p}.json'))
+        ss=d.get('components',{}).get('securitySchemes',{}) or {}
+        print(p,'|',d.get('info',{}).get('title'),'|',[(k,v.get('in'),v.get('name')) for k,v in ss.items() if v.get('type')=='apiKey'],'| servers',[s.get('url') for s in d.get('servers',[])])
+    except Exception as e: print(p,'ERR',e)
+"
+=== other doc versions
+-- v2
+code=404 len=0
+-- v3
+code=404 len=0
+v1 ERR Expecting value: line 1 column 1 (char 0)
+v2 ERR Expecting value: line 1 column 1 (char 0)
+v3 ERR Expecting value: line 1 column 1 (char 0)
+[0m
+[0m$ [0mfor u in "https://api.signl4.com/api/docs/v1/" "https://api.signl4.com/api/docs/v1/scalar.js" "https://api.signl4.com/api/docs/v1/scalar.aspnetcore.js" "https://api.signl4.com/api/docs/v1/openapi/v1.json" "https://api.signl4.com/api/docs/v1/swagger.json" "https://api.signl4.com/docs/v1/openapi/v1.json" "https://api.signl4.com/api/openapi/v1.json" "https://api.signl4.com/api/docs/v1/api-docs/v1.json"; do printf '%-70s ' "$u"; curl -sS -m 12 -o /tmp/opencode/x -w 'code=%{http_code} len=%{size_download} type=%{content_type}\n' "$u"; sleep 2; done; rm -f /tmp/opencode/x
+https://api.signl4.com/api/docs/v1/                                    code=200 len=640 type=text/html
+https://api.signl4.com/api/docs/v1/scalar.js                           code=404 len=0 type=
+https://api.signl4.com/api/docs/v1/scalar.aspnetcore.js                code=404 len=0 type=
+https://api.signl4.com/api/docs/v1/openapi/v1.json                     code=404 len=0 type=
+https://api.signl4.com/api/docs/v1/swagger.json                        code=200 len=493618 type=application/json;charset=utf-8
+https://api.signl4.com/docs/v1/openapi/v1.json                         code=404 len=0 type=
+https://api.signl4.com/api/openapi/v1.json                             code=404 len=0 type=
+https://api.signl4.com/api/docs/v1/api-docs/v1.json                    code=404 len=0 type=
+[0m
+[0m$ [0mfor u in "https://api.signl4.com/api/docs/scalar.js" "https://api.signl4.com/api/docs/scalar.aspnetcore.js" "https://api.signl4.com/api/docs/" "https://api.signl4.com/api/docs/v1/scalar.aspnetcore.js.map"; do printf '%-64s ' "$u"; curl -sS -m 12 -o /tmp/opencode/y -w 'code=%{http_code} len=%{size_download}\n' "$u"; sleep 2; done; echo "--- body of /api/docs/ (if any)"; curl -sS -m 12 "https://api.signl4.com/api/docs/" | head -c 400; echo; rm -f /tmp/opencode/y
+https://api.signl4.com/api/docs/scalar.js                        code=200 len=3728126
+https://api.signl4.com/api/docs/scalar.aspnetcore.js             code=200 len=2632
+https://api.signl4.com/api/docs/                                 code=200 len=776
+https://api.signl4.com/api/docs/v1/scalar.aspnetcore.js.map      code=404 len=0
+--- body of /api/docs/ (if any)
+<!doctype html>
+<html>
+<head>
+    <title>SIGNL4 API Documentation</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    
+</head>
+<body>
+    
+    <div id="app"></div>
+    <script src="scalar.js"></script>
+    <script type="module" src="scalar.aspnetcore.js"></script>
+    <script type="module">
+        import { initialize } from './scalar
+[0m
+[0m$ [0mcd /tmp/opencode && echo "== is swagger.json reachable unauthenticated from connect host too?"; for u in "https://connect.signl4.com/api/docs/v1/swagger.json" "https://connect.signl4.com/api/docs/v1" "https://devconnect.signl4.com/api/docs/v1/swagger.json"; do printf '%-62s ' "$u"; curl -sS -m 15 -o /tmp/opencode/z -w 'code=%{http_code} len=%{size_download}\n' "$u"; sleep 2; done; echo "-- dev spec scheme check"; python3 -c "
+import json
+try:
+    d=json.load(open('/tmp/opencode/z'))
+    ss=d.get('components',{}).get('securitySchemes',{}) or {}
+    print(' dev spec apiKey schemes:',[(k,v.get('in')) for k,v in ss.items() if v.get('type')=='apiKey'])
+    print(' dev servers:',[s.get('url') for s in d.get('servers',[])])
+except Exception as e: print(' ERR',e)
+"; rm -f /tmp/opencode/z
+== is swagger.json reachable unauthenticated from connect host too?
+https://connect.signl4.com/api/docs/v1/swagger.json            code=200 len=493618
+https://connect.signl4.com/api/docs/v1                         code=200 len=637
+https://devconnect.signl4.com/api/docs/v1/swagger.json         code=200 len=495809
+-- dev spec scheme check
+ dev spec apiKey schemes: [('API_Key_Header', 'header'), ('API_Key_Query', 'query')]
+ dev servers: ['https://devconnect.signl4.com/api']
+[0m
+[0m$ [0mcd /tmp/opencode && echo "== scalar.aspnetcore.js (2.6KB) content — reveals spec URL resolution"; curl -sS -m 15 "https://api.signl4.com/api/docs/scalar.aspnetcore.js" | head -c 2500; echo
+== scalar.aspnetcore.js (2.6KB) content — reveals spec URL resolution
+/**
+ * Extracts the base path from the current URL by removing a specified suffix.
+ * This is useful for handling subdirectory deployments where the application
+ * might not be hosted at the root path.
+ *
+ * Example:
+ * - URL: /my-app/docs/
+ * - Suffix: /docs/
+ * - Result: /my-app
+ *
+ * @param {string} suffix - The URL suffix to remove (can be empty)
+ * @returns {string} The normalized base path with no trailing slash
+ */
+export const getBasePath = (suffix) => {
+  // Decode the suffix to handle percent-encoded paths coming from the server
+  const decodedSuffix = decodeURIComponent(suffix ?? '')
+  const path = window.location.pathname
+  if (path.endsWith(decodedSuffix)) {
+    return path.slice(0, -decodedSuffix.length)
+  }
+  return ''
+}
+
+/**
+ * Initialize Scalar with the given configuration
+ *
+ * @param {string} path - The current request path used to calculate the base URL
+ * @param {boolean} useDynamicBaseServerUrl - When true, uses the current server URL as the base URL
+ * @param {Object} configuration - Scalar configuration object
+ * @param {Array<Object>} [configuration.sources=[]] - Array of OpenAPI source configurations
+ * @param {string} [modulePath] - Optional path to the custom configuration script
+ */
+export const initialize = async (path, useDynamicBaseServerUrl, configuration = { sources: [] }, modulePath) => {
+  const basePath = getBasePath(path)
+  const httpUrlPattern = /^https?:\/\//i
+
+  const normalizedConfig = {
+    ...configuration,
+    sources: configuration?.sources?.map((source) => ({ ...source })) || [],
+  }
+
+  // Construct full URLs for subdirectory hosting support if URLs are relative
+  normalizedConfig.sources = normalizedConfig.sources.map((source) => {
+    if (!source.url || httpUrlPattern.test(source.url)) {
+      return source
+    }
+
+    return {
+      ...source,
+      url: new URL(source.url, `${window.location.origin}${basePath}/`).toString(),
+    }
+  })
+
+  if (useDynamicBaseServerUrl) {
+    normalizedConfig.baseServerURL = `${window.location.origin}${basePath}`
+  }
+
+  // Only load custom configuration if modulePath is provided
+  if (modulePath) {
+    // Normalize modulePath if it's a relative path
+    const normalizedConfigPath = httpUrlPattern.test(modulePath)
+      ? modulePath
+      : new URL(modulePath, `${window.location.origin}${basePath}/`).toString()
+
+    try {
+      const customConfiguration = await import(normalizedConfigPath)
+      Object.assign(normalizedConfig, customConfiguration.default)
+    } catch (e) {
+[0m
+[0m$ [0mfor u in "https://api.signl4.com/api/docs/openapi/v1.json" "https://api.signl4.com/api/docs/openapi/v2.json" "https://api.signl4.com/api/docs/openapi/v3.json" "https://api.signl4.com/api/docs/v1/openapi.json"; do printf '%-58s ' "$u"; curl -sS -m 20 -o /tmp/opencode/o -w 'code=%{http_code} len=%{size_download}\n' "$u"; sleep 2; done; python3 -c "
+import json
+try:
+    d=json.load(open('/tmp/opencode/o'))
+    print('loaded:',d.get('info',{}).get('title'))
+except Exception as e: print('ERR',e)"; rm -f /tmp/opencode/o
+https://api.signl4.com/api/docs/openapi/v1.json            code=404 len=0
+https://api.signl4.com/api/docs/openapi/v2.json            code=404 len=0
+https://api.signl4.com/api/docs/openapi/v3.json            code=404 len=0
+https://api.signl4.com/api/docs/v1/openapi.json            code=404 len=0
+ERR Expecting value: line 1 column 1 (char 0)
+[0m
+[0m$ [0mcd /tmp/opencode && echo "== confirm query-key honored on V1/V3 as well (fresh, this cycle)"; for p in "api/v1/teams?x-s4-api-key=zzNoKey20261007" "api/v3/subscriptions?x-s4-api-key=zzNoKey20261007"; do printf '%-62s ' "$p"; curl -sS -m 12 -o /tmp/opencode/r -w 'code=%{http_code} ' "https://connect.signl4.com/$p"; sha=$(sha256sum </tmp/opencode/r | cut -c1-16); echo "sha=$sha body=$(tr -d '\n' </tmp/opencode/r | head -c 120)"; sleep 2; done; rm -f /tmp/opencode/r
+== confirm query-key honored on V1/V3 as well (fresh, this cycle)
+api/v1/teams?x-s4-api-key=zzNoKey20261007                      code=403 sha=54bc490026a24f97 body={"type":"https://httpstatuses.com/403","title":"Forbidden","status":403,"detail":"API Key is invalid."}
+api/v3/subscriptions?x-s4-api-key=zzNoKey20261007              code=403 sha=54bc490026a24f97 body={"type":"https://httpstatuses.com/403","title":"Forbidden","status":403,"detail":"API Key is invalid."}
+[0m
+[0m$ [0mfor u in "https://api.signl4.com/api/openapi.json" "https://api.signl4.com/openapi/v1.json" "https://api.signl4.com/api/docs/v1/openapi.json" "https://api.signl4.com/api/docs/v2/swagger.json" "https://api.signl4.com/api/docs/v3/swagger.json"; do printf '%-58s ' "$u"; curl -sS -m 18 -o /tmp/opencode/q -w 'code=%{http_code} len=%{size_download}\n' "$u"; sleep 2; done; rm -f /tmp/opencode/q
+https://api.signl4.com/api/openapi.json                    code=404 len=0
+https://api.signl4.com/openapi/v1.json                     code=404 len=0
+https://api.signl4.com/api/docs/v1/openapi.json            code=404 len=0
+https://api.signl4.com/api/docs/v2/swagger.json            code=200 len=1216391
+https://api.signl4.com/api/docs/v3/swagger.json            code=200 len=1213127
+[0m
+[DELTA]
+- **NEW** Scalar API-reference portal: `api.signl4.com/api/docs/` (200, `scalar.js` 3.7MB) + `/api/docs/v{1,2,3}` (200 HTML, `initialize('%2Fdocs%2Fv1', false, {sources:[{url:"openapi/v1.json"}]})`). New surface class, unauthenticated. Assets resolve only without trailing slash (`/api/docs/v1` → `/api/docs/scalar.js` 200; `/api/docs/v1/` → 404).
+- **NEW** Query-key acceptance validated fresh on **V1 and V3** (previously only V2): `?x-s4-api-key=` → 403 `application/problem+json` vs 401 `WWW-Authenticate: Bearer` absent-key. Byte-identical across `api.`/`connect.` (sha256 `54bc490026a24f97`, 103B). V1, V2, V3 all confirmed this cycle.
+- **NEW** Dev spec parity: `devconnect.signl4.com/api/docs/v1/swagger.json` (495809B, servers=`devconnect.../api`) also declares `API_Key_Query in=query`.
+- **CHANGED (impact narrowing)** Cache sink **NEGATIVE**: zero `Cache-Control`/`Age`/`X-Cache`/`Vary`/`ETag`/`Expires` on 403 and 401; `server: Microsoft-HTTPAPI/2.0` → no shared-cache metadata. Reflection sink **NEGATIVE**: body fixed at 103B, sha identical on both hosts → supplied key never echoed.
+- **CHANGED** Route-existence oracle quantified: real route → 401, `teams/zz`/`v1/devices`/`zzz-not-a-route` → 404 with no `WWW-Authenticate` → unauthenticated route enumeration across V1/V2/V3.
+- **CHANGED** `connect`/`api`/`devconnect` each serve `swagger.json` unauthenticated (493618 / 493618 / 495809 B); `/api/docs` → 302 `docs/`; `/api/docs/v1/index.html` → 404.
+- **ZERO DRIFT** on introspection/revocation/DPoP/team-flapping; re-confirmed 6/6, 3/3, temporal.
+
+[PRIO]
+1. account.signl4.com/identity/connect/token — cross-env token forgery (IdP issuer mismatch, claims `connect` on `account`), kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256` shared 6/6, client_id `692A0A56-892F-4AE2-8259-76DA398990B6`
+2. **API_Key_Query CWE-598 across V1/V2/V3 + dev** — strengthened by fresh V1/V3 + devspec evidence; cache/reflection sinks eliminated
+3. Team API key short-circuiting OAuth2 bearer on user-scoped V2/V3 routes (check-ordering observed)
+
+[HYP]
+- **H1** `[UNVALIDATED]` **CWE-598 — SIGNL4's own OpenAPI 3.0.4 specs publish the long-lived team secret as a query parameter and the live gateway honours it.** Facts: all three specs (`/api/docs/v{1,2,3}/swagger.json`, prod **and** dev) declare `components.securitySchemes.API_Key_Query: {type:apiKey, in:query, name:x-s4-api-key}` alongside `API_Key_Header`; gateway returns 403 `API Key is invalid.` for `?x-s4-api-key=` on V1/V2/V3 on `api.` and `connect.`, proving the parameter is *enforced*, not doc-only. Since the API key is a non-rotating team credential, Derdack's published documentation directs customers to place it in the request line → captured by IIS/Kestrel and reverse-proxy access logs, browser history, and `Referer` on any outbound link from the reference UI. Cache and response-echo sinks measured **negative** this cycle, so impact is confined to log/Referer/history exposure. confidence=65. Needs HUMAN proof of real-world use or vendor acknowledgement that documenting query-string secrets is itself the finding.
+- **H2** Cross-environment token acceptance: `account.signl4.com` identity issues `iss=https://connect.signl4.com/identity/connect` while six hosts share one JWKS/client_id → token minted against one env may validate in another. confidence=50. **AUTH_HELPED** (needs client_secret).
+- **H3** API-key check evaluated *before* bearer (invalid key → 403, never 401, on `v2/teams`, `v3/subscriptions`, `v1/teams`) ⇒ a valid team key may satisfy user-scoped OAuth2/authorizationCode endpoints, collapsing team-scope into user-scope. confidence=45. **AUTH_HELPED** (needs valid `X-S4-Api-Key`).
+
+[PARKED]/[FINAL]
+- `[FINAL] NOT_A_BUG` pre-paid tenant-in-body — 131 write ops swept, all 3 API versions, no tenant identifier accepted; closed repo-wide.
+- `[FINAL] NOT_A_BUG` GraphQL class (15/15 404); behave-as param (typo only); dynamic client registration (no `registration_endpoint`); open redirect; Blazor assembly disclosure; CORS class; SSRF via OpenAPI (no `format: uri`); s4dev Azure resource IDs (descriptive-headers); DPoP Bearer-only challenge (observation, no impact); `vps.signl4.com` dangling A-record (HUMAN_ONLY).
+- `[FINAL] NOT_A_BUG` CWE-598 cache/log-leak-via-shared-cache — no cache headers emitted anywhere, `Microsoft-HTTPAPI/2.0` direct.
+- `[FINAL] NOT_A_BUG` CWE-598 key reflection — 103B fixed body, sha `54bc490026a24f97` identical on both hosts.
+- `[PARKED]` Unauthenticated route-existence oracle (401 vs 404) across V1/V2/V3 — real but **endpoint-map-only**, rejected class.
+- `[PARKED]` Scalar docs UI spec source resolves to `https://api.signl4.com/api/openapi/v1.json` → **404** (per `getBasePath('/docs/v1')` = `/api`); `/api/docs/v{1,2,3}/openapi/v{1,2,3}.json` and `/api/openapi.json` all 404 while `/api/docs/v{1,2,3}/swagger.json` → 200. Quality/availability bug, not security. Confidence 55, needs browser render to confirm.
+
+[NEXT]
+HUMAN: obtain one legitimate `X-S4-Api-Key` (or `client_secret` for `692A0A56-892F-4AE2-8259-76DA398990B6`) through the program contact at bugs.olivermaicher.eu — it is the single gate on H2 and H3, both of which are otherwise fully instrumented; in the same contact, ask whether CWE-598 is in-scope as a documentation/design finding before spending further probe budget on it.
+
+[LEARN]
+Negative measurement is the finding-shaping step: eliminating the cache and echo sinks did not kill CWE-598, it *narrowed* it from "secret leaks to third parties via cache/Referer" to "our own docs tell customers to put a non-rotating secret in the URL" — a narrower claim with a much cleaner impact statement. Record which sinks you ruled out, not just which you hit.
+
+[RISK]
+~45 read-only GETs this cycle, ≤1 rps, all GET/HEAD — within probe rules, but a large share went into resolving Scalar asset paths and yielded only a quality bug. Timebox asset/spec-URL resolution to ≤5 probes next cycle; the passive well for `api` is now dry apart from credential-gated paths.

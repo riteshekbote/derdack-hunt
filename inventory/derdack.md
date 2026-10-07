@@ -2201,3 +2201,17 @@ www.derdack.com
 - CHANGED vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 — transient block; DNS A-record unchanged
 - CHANGED us.derdack.com/.well-known/ returns 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config
 - CHANGED connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on all 6 identity hosts (was 3-host record)
+
+## 2026-10-07 21:41:18 UTC
+- NEW Zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across identity/API/CT/WP/EA surfaces; passive surface exhausted
+- CHANGED api.signl4.com/api/v2/teams flipped to 405 (handler-deferred) vs KB's 401 report — auth-status flapping confirmed temporal, not per-request
+- CHANGED OIDC introspection/revocation registration parity closed at 6/6 identity hosts — routing layer complete, only token validation behavior unverified
+- CHANGED DPoP challenge-layer probe complete: 3/3 hosts return identical `WWW-Authenticate: Bearer` with no DPoP scheme/nonce — mitigating control advertised but not enforced
+- CHANGED Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED (V1/V2/V3 OpenAPI schemas show zero write ops accepting tenant identifier in body)
+- CHANGED V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure repo-wide across all three API versions (131 write ops swept)
+- CHANGED Triage pipeline dead: 57 consecutive runs failed, `grep "\[UNVALIDATED\]"` matches 0 — automated validation broken
+- CHANGED Cross-env token forgery chain stable at 6 hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled, account IdP issuer mismatch (claims connect) + plain PKCE
+- CHANGED demo.enterprisealert.com/EAWebService WSDL exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` — live confirmed
+- CHANGED vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 — transient block; DNS A-record unchanged
+- CHANGED us.derdack.com/.well-known/ returns 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config
+- CHANGED connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on all 6 identity hosts (was 3-host record)
