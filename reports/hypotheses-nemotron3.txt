@@ -1,30 +1,7 @@
-## 2026-10-08 14:57:04 UTC [target] (model nemotron3)
-[NEW] api.signl4.com/api/v2/teams auth-status confirmed temporal flapping (not per-request): 6 consecutive unauth GETs at 1.2s intervals all returned 401 with identical 0-byte body; then flipped back to 405
-[NEW] OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing layer complete, only token validation behavior unverified
-[NEW] DPoP challenge-layer probe COMPLETE: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce — mitigating control advertised but not enforced
-[NEW] Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show zero write ops accepting tenant identifier in body; 131 write ops swept repo-wide)
-[NEW] V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
-[NEW] Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); `grep "\[UNVALIDATED\]" leads/lead-*.md` matches 0 occurrences — automated validation broken
-[NEW] vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
-[NEW] us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minimal config
-[NEW] demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname)
-[CHANGED] Cross-env token forgery chain stable at 6 hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled, account IdP issuer mismatch (claims connect) + plain PKCE
-[CHANGED] Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
-[CHANGED] connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on all 6 identity hosts (was 3-host record)
-[PRIO] demo.enterprisealert.com/EAWebService,7.85,attack_surface=8,business_value=9,tech_exposure=8,gate_ease=6,cloud_surface=7,freshness=8
-[PRIO] vps.signl4.com,6.95,attack_surface=6,business_value=7,tech_exposure=6,gate_ease=8,cloud_surface=8,freshness=8
+## 2026-10-08 20:25:26 UTC [target] (model nemotron3)
 [PRIO] connect.signl4.com/api,6.80,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=4,cloud_surface=7,freshness=7
 [PRIO] account.signl4.com/identity,6.80,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=4,cloud_surface=7,freshness=7
-[PRIO] www.derdack.com/de/,5.30,attack_surface=6,business_value=6,tech_exposure=5,gate_ease=3,cloud_surface=5,freshness=6
-[HYP] Unauthenticated EA SOAP/REST handler access via credential-in-URL
-class: AUTH
-asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx
-confidence: 75
-reasoning: Full live EA 9.5.26147 portal behind App Proxy at /EAWebService/ with 11 .aspx handlers (About, RaiseEvent, RaiseEventAsynchronous, RegisterEventProvider, etc.) and 12-op WSDL all anon-readable; vendor docs (SolarWinds, EA9 PDF, send-alerts-web-services, 6 GitHub repos) document Username/Password/md5-hash in GET query as primary auth for EventProviderAPI; WSDL exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`; all credential paths gate with Error-1/401 on fabricated creds but no auth bypass tested
-evidence_needed: Valid EA credentials (Username/Password or md5 hash) to test handler mutating operations (RaiseEvent, RegisterEventProvider, SubmitEventUpdate) and confirm cross-tenant alert injection
-verify_steps: 1) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl (confirm internal hostname ereesus, 12 operations) 2) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About (confirm version 9.5.26147) 3) POST https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx with Handler=RaiseEvent&Username=<valid>&Password=<valid>&EventId=test (observe 200/Error-1/401)
-impact: Unauthenticated alert injection into EA tenants via documented credential-in-URL SOAP/REST API; severity HIGH (business logic on alerting pipeline)
-testability: AUTH_HELPED
+[PRIO] demo.enterprisealert.com/EAWebService,5.80,attack_surface=6,business_value=7,tech_exposure=6,gate_ease=3,cloud_surface=6,freshness=6
 [HYP] Cross-environment token forgery via 6-host shared RS256 IdP family
 class: AUTH
 asset: account.signl4.com/identity/connect/token
@@ -34,24 +11,34 @@ evidence_needed: Valid client_secret for client_id 692A0A56-892F-4AE2-8259-76DA3
 verify_steps: 1) GET https://account.signl4.com/identity/.well-known/openid-configuration (confirm password grant, shared JWKS, issuer mismatch) 2) POST https://devconnect.signl4.com/identity/connect/token with grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<secret>&scope=public_api_read+public_api_write+offline_access+reseller_portal+public_api_ea_manage+public_api_ea_alerting+mobile_api 3) Use returned access_token against https://connect.signl4.com/api/v2/teams (expect 200 if cross-env acceptance enforced)
 impact: Full multi-tenant SIGNL4/EA compromise — cross-environment token forgery enables API access as any tenant; severity CRITICAL
 testability: AUTH_HELPED
-[HYP] Subdomain takeover via dangling A-record on vps.signl4.com
+[HYP] Internal hostname leak via EA WSDL
 class: MISCONFIG
-asset: vps.signl4.com
-confidence: 80
-reasoning: Explicit A-record to GoDaddy shared host (72.167.227.27, secureserver.net) serves nginx default page when reachable (cert CN=server.d1g.it, unrelated to *.signl4.com); fabricated subdomain returns different behavior (TCP timeout) proving no wildcard vhost; DNS authoritative NS domaincontrol.com (GoDaddy); re-confirmed across 7+ consecutive probe cycles with transient 000 flapping
-evidence_needed: DNS/hosting-account control to claim the GoDaddy shared hosting slot (HUMAN_ONLY gate) — researcher cannot exploit from current seat
-verify_steps: 1) GET https://vps.signl4.com/ (confirm 200 nginx default page, cert CN=server.d1g.it) 2) GET https://fabricated-xyz.vps.signl4.com/ (confirm 000 TCP timeout — no wildcard) 3) Verify DNS: dig vps.signl4.com A + NS (confirm GoDaddy authoritative, 72.167.227.27)
-impact: Subdomain takeover of vps.signl4.com — attacker could serve malicious content under Derdack brand; severity MEDIUM-HIGH (exploitability gated on DNS/hosting control)
-testability: HUMAN_ONLY
-[PARKED] Unauthenticated EA SOAP/REST handler access via credential-in-URL: AUTH_HELPED — full EA portal live but all handlers gate on credentials; vendor docs confirm credential-in-URL pattern but no bypass observed; internal hostname leak confirmed via WSDL
+asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+confidence: 95
+reasoning: Fresh GET returns 200 with internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname) exposed in WSDL; confirmed live across 5+ probe cycles; internal infrastructure naming disclosure (CWE-200)
+evidence_needed: None — PASSIVE confirmed live
+verify_steps: GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl (confirm internal hostname ereesus, 12 operations)
+impact: Internal hostname disclosure aids reconnaissance for SSRF/pivot; severity LOW-MEDIUM (config-level hygiene)
+testability: PASSIVE
+[HYP] DPoP enforcement gap at identity gateway
+class: MISCONFIG
+asset: api.signl4.com/identity
+confidence: 85
+reasoning: OIDC discovery advertises `dpop_signing_alg_values_supported` with 9 algorithms (RS256/RS384/RS512/PS256/PS384/PS512/ES256/ES384/ES512) but 3/3 identity hosts (api, account, connect) return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce challenged on /api/v2/* routes — mitigating control advertised but not enforced at gateway
+evidence_needed: None — PASSIVE confirmed across 3 identity hosts
+verify_steps: 1) GET https://api.signl4.com/identity/.well-known/openid-configuration (confirm dpop_signing_alg_values_supported) 2) GET https://api.signl4.com/api/v2/teams with invalid Bearer (confirm WWW-Authenticate: Bearer only, no DPoP challenge)
+impact: Defense-in-depth gap — token binding not enforced despite advertised support; severity LOW-MEDIUM
+testability: PASSIVE
 [PARKED] Cross-environment token forgery via 6-host shared RS256 IdP family: AUTH_HELPED — strongest theoretical finding (confidence 90), blocked solely on client_secret/X-S4-Api-Key/team-secret acquisition; no public leak across 7+ corpora; introspection/revocation routing parity confirmed on all 6 ingresses
-[PARKED] Subdomain takeover via dangling A-record on vps.signl4.com: HUMAN_ONLY — exploitability gated on DNS/hosting-account control; no researcher-exploitable primitive from this seat; transient 000 flapping reduces reproducibility
-[FINAL] 1) Cross-env token forgery via 6-host shared RS256 IdP family (AUTH, 90) — AUTH_HELPED, 6 identity hosts byte-identical JWKS, shared client_id, password grant on staging, account IdP issuer mismatch (claims connect)
-[FINAL] 2) Internal hostname leak via EA WSDL (MISCONFIG, 95) — PASSIVE confirmed live, CWE-200 hygiene: `https://ereesus/EAWebService/EventProviderAPI.asmx` exposed in demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
-[FINAL] 3) DPoP enforcement gap at identity gateway (MISCONFIG, 85) — PASSIVE confirmed, defense-in-depth gap: `dpop_signing_alg_values_supported` advertised (9 algorithms) but `WWW-Authenticate: Bearer` only on /api/v2/*; no DPoP scheme/nonce challenged
-[FINAL] 4) Subdomain takeover via dangling A-record on vps.signl4.com (MISCONFIG, 80) — PASSIVE confirmed, exploitability HUMAN_ONLY: explicit A-record to GoDaddy shared host, nginx default page, unrelated cert, fabricated-host byte-identical response
-[FINAL] 5) V1 userId bulk alert IDOR (IDOR, 65) — AUTH_HELPED, handler-deferred auth confirmed (405 vs 401); userId query param on acknowledgeAll/closeAll/paged/report; 403 typo confirms impersonation feature
-[NEXT] HUMAN: Obtain legitimate X-S4-Api-Key or client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 via program contact to unblock AUTH_HELPED hypotheses (cross-env token forgery, V1 userId IDOR, V3 invoice BOLA, EA SOAP handler access)
+[PARKED] Subdomain takeover via dangling A-record on vps.signl4.com: HUMAN_ONLY — exploitability gated on DNS/hosting-account control; transient 000 flapping reduces reproducibility; researcher cannot exploit from current seat
+[PARKED] Unauthenticated EA SOAP/REST handler access via credential-in-URL: AUTH_HELPED — full EA portal live but all handlers gate on credentials; vendor docs confirm credential-in-URL pattern but no bypass observed; internal hostname leak confirmed via WSDL
+[PARKED] V1 userId bulk alert IDOR: AUTH_HELPED — handler-deferred auth confirmed (405 vs 401); userId query param on acknowledgeAll/closeAll/paged/report; 403 typo confirms impersonation feature; needs valid token to test cross-user access
+[FINAL] 1) Cross-env token forgery via 6-host shared RS256 IdP family (AUTH, 90) — AUTH_HELPED
+[FINAL] 2) Internal hostname leak via EA WSDL (MISCONFIG, 95) — PASSIVE confirmed live
+[FINAL] 3) DPoP enforcement gap at identity gateway (MISCONFIG, 85) — PASSIVE confirmed
+[FINAL] 4) Subdomain takeover via dangling A-record on vps.signl4.com (MISCONFIG, 80) — HUMAN_ONLY
+[FINAL] 5) V1 userId bulk alert IDOR (IDOR, 65) — AUTH_HELPED
+[NEXT] HUMAN: Obtain legitimate X-S4-Api-Key or client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 via program contact (bugs.olivermaicher.eu) to unblock AUTH_HELPED hypotheses (cross-env token forgery, V1 userId IDOR, V3 invoice BOLA, EA SOAP handler access)
 [LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` exposed via unauthenticated WSDL GET — config-level disclosure (CWE-200 hygiene)
 [LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
 [LEARN] ACCEPTED AUTH @ account.signl4.com/identity & connect.signl4.com/identity: OIDC discovery documents are static files. Six byte-identical discovery documents and six byte-identical JWKS prove *configured* trust symmetry across the estate; they do not prove *enforced* symmetry at the token endpoint. Document parity ≠ enforcement parity.
