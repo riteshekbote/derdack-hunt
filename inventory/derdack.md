@@ -2215,3 +2215,14 @@ www.derdack.com
 - CHANGED vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 — transient block; DNS A-record unchanged
 - CHANGED us.derdack.com/.well-known/ returns 300 with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config
 - CHANGED connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on all 6 identity hosts (was 3-host record)
+
+## 2026-10-08 01:34:37 UTC
+- NEW api.signl4.com/api/v2/teams auth-status flipping confirmed temporal (not per-request): 6 consecutive unauth GETs at 1.2s intervals all returned 401 with identical 0-byte body; then flipped back to 405
+- NEW OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing layer complete, only token validation behavior unverifi
+- NEW DPoP challenge-layer probe COMPLETE: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce — mitigating control advertis
+- NEW Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show zero write ops accepting tenant identifier in body; 131 write ops swept repo-wide)
+- NEW V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
+- NEW Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); `grep "\[UNVALIDATED\]" leads/lead-*.md` matches 0 occurrences — automated validation broken
+- NEW vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
+- NEW us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com (/.ssh/, /.bash_history/, /.viminfo/) — second host confirming estate-wide parked-minima
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWeb[0m
