@@ -63809,3 +63809,1441 @@ leads/lead-nemotron3.md
 `two-factor/user-info` was already executed (401 `rest_forbidden`, recorded as LEARN). And `probe-results.md` shows **8 consecutive empty sections** (2026-10-06 19:34 → 2026-10-08 01:34) — direct evidence the `PROBE_ALLOW` scope bug I just fixed was silencing all verification.
 
 Checking whether the Enterprise Alert apex was ever inventoried:
+===== ANALYST bigpickle 2026-10-08 15:13:05 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && git log --oneline -5 2>/dev/null | head -20
+total 1352
+drwxr-xr-x 12 runner runner   4096 Oct  8 14:52 .
+drwxr-xr-x  3 runner runner   4096 Oct  8 14:52 ..
+drwxr-xr-x  7 runner runner   4096 Oct  8 14:52 .git
+drwxr-xr-x  3 runner runner   4096 Oct  8 14:52 .github
+-rw-r--r--  1 runner runner   1831 Oct  8 14:52 README.md
+-rw-r--r--  1 runner runner     32 Oct  8 14:52 analyst-out.txt
+-rw-r--r--  1 runner runner 633741 Oct  8 14:52 analyst-prompt.txt
+-rw-r--r--  1 runner runner 629862 Oct  8 14:52 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct  8 14:52 inventory
+drwxr-xr-x  2 runner runner   4096 Oct  8 14:52 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct  8 14:52 leads
+-rw-r--r--  1 runner runner  20726 Oct  8 14:52 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct  8 14:52 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct  8 14:52 reports
+drwxr-xr-x  2 runner runner   4096 Oct  8 14:52 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct  8 14:52 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct  8 14:52 scripts
+-rw-r--r--  1 runner runner     33 Oct  8 14:52 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct  8 14:52 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct  8 14:52 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct  8 14:52 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct  8 14:52 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct  8 14:52 state_nemotron3.json
+drwxr-xr-x  2 runner runner  12288 Oct  8 14:52 triage
+05214d8 triage 2026-10-08-14-52
+[0m
+[0m✱ [0mGlob "leads/*.md"[90m 7 matches[0m
+## Objective
+- Act as senior bug bounty analyst for Derdack GmbH program (report channel: bugs.olivermaicher.eu), running an 8-step hypothesis cycle (DELTA→PRIORITIZE→HYPOTHESES→SELF-CRITIQUE→NEXT→LEARNING→RISK) against in-scope SIGNL4/Enterprise Alert/derdack.com assets.
+- Deep-hunt high-value classes (auth/IDOR/SSRF/OAuth/takeover/mass-assignment), passive-first, ≤1 rps, GET/HEAD/OPTIONS only; emit structured [PRIO]/[HYP]/[PARKED]/[FINAL]/[NEXT]/[LEARN]/[RISK] blocks.
+
+## Important Details
+- State: `{"phase": "POC", "target": "api"}` — target is `api.signl4.com`; report phase was previously declared but state still says POC.
+- OUT OF SCOPE (REJECTED): brute-force/rate-limit/lockout, OPTIONS/TRACE standalone, descriptive headers only, TLS best practice, clickjacking w/o exploit, known-vuln libs w/o program-specific exploit, username enumeration, etc.
+- Key finding family: cross-env token forgery chain spans 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) sharing byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, x5t `ke5PPOlOtRevZrJU90l-yw4x7ic`) + client_id `692A0A56-892F-4AE2-8259-76DA398990B6`; AUTH_HELPED, blocked on client_secret.
+- Corrected wording: "documented configuration symmetry with unverified enforcement" (static discovery/JWKS parity ≠ token-endpoint behavior parity); introspection/revocation routing parity now confirmed 6/6.
+- Critical lessons recorded: root-only status ≠ full-host status; status code without body-hash/control is not evidence; control must vary only the tested variable; registration ≠ enforcement; a disproven hypothesis must be struck from ranked set.
+- Key closures: V4 namespace absent; GraphQL 15/15 404; prepaid body-tenant hypothesis REFUTED (131 write ops across V1/V2/V3 OpenAPI, zero tenant-in-body); DPoP Bearer-only challenge = documented IdentityServer default, not a bug; no credential leak across 7+ corpora; SAML/X-Forwarded-Host classes closed negative.
+- Blockers: triage pipeline dead (57 consecutive Triager failures since 2026-09-25; `grep "\[UNVALIDATED\]" leads/lead-*.md` = 0 matches); PROBE_ALLOW scope only `derdack.com` in hunt.yml:13/triage.yml:12 so signl4.com/enterprisealert.com leads never re-verified.
+- Latest [CHANGED]: an inline `[UNVALIDATED]` marker was added inside a [HYP] title line to make triage.yml:45 grep match — flagged for human correction.
+- Scope constraint: 3-asset cap on [FINAL] entries (a 4th, signlReports traversal, held at [PRIO]).
+
+## Work State
+### Completed
+- Full estate mapped: 6 identity hosts, V1/V2/V3/webhook/events namespaces (V4 absent), EA demo portal (`demo.enterprisealert.com/EAWebService/`, EA 9.5.26147, exactly 5 anon-readable paths), CT coverage closed across 3 roots.
+- [FINAL] set (5 listed, cap is 3): 1) EA WSDL internal hostname leak `https://ereesus/EAWebService/EventProviderAPI.asmx` (MISCONFIG 95); 2) cross-env token forgery 6-host key family (AUTH 90, AUTH_HELPED); 3) `vps.signl4.com` dangling A-record subdomain takeover (MISCONFIG 80, HUMAN_ONLY); 4) DPoP enforcement gap (MISCONFIG 85 — later undercut by 2026-10-05/06 learning that DPoP binds per-token, probe was not-a-bug); 5) V1 userId bulk-alert IDOR (IDOR 65, AUTH_HELPED).
+- Closed negatives: blog/techblog HTTPS→HTTP session theft (secure+host-only cookies); docs.enterprisealert.com takeover; app|m|apps.signl4.com NXDOMAIN (mobile scope "unfingerprinted, not closed"); CORS class; SSRF-via-spec class (zero `format: uri` params).
+- Two passive-verifier cycles (2026-10-07/08) recorded zero drift across identity/API/CT/WP/EA.
+
+### Active
+- Last cycle output tail: [CHANGED] `[UNVALIDATED]` marker note; repeated [HYP] title for "SIGNL4 public API declares its API key as a URL query parameter… (CWE-598)".
+- Standing [NEXT]: `HUMAN: Obtain legitimate X-S4-Api-Key or client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 via program contact` to unblock all AUTH_HELPED hypotheses.
+
+### Blocked
+- All top hypotheses AUTH_HELPED — need client_secret / X-S4-Api-Key / team-secret; no public leak found across 7+ corpora.
+- Triage automation dead (grep pattern never matches; PROBE_ALLOW excludes signl4.com).
+- "Mobile applications" scope item unresolved — needs app-store package / gateway client registration / CSP trust list discovery, not hostname guessing.
+
+## Next Move
+1. Emit the 8-step block for this cycle with fresh DELTA (likely NO_DELTA given 2026-10-07/08 zero-drift entries) — avoid re-probing the six OIDC ingresses or re-reading the EA WSDL (both explicitly recorded as closed/reflex failures).
+2. Prioritize unconverted gaps: V1/V3 static sweeps already done — next viable passive work is limited; alternatively advance the HUMAN action (credential acquisition via program contact) and/or correct the `[UNVALIDATED]` marker convention with a human.
+
+## Relevant Files
+- `.github/workflows/triage.yml:45`: collects `grep "\[UNVALIDATED\]" leads/lead-*.md` — matches 0 occurrences, gate dead for 57 runs.
+- `.github/workflows/hunt.yml:13` and `triage.yml:12`: `PROBE_ALLOW: derdack.com` — excludes signl4.com/enterprisealert.com from automated re-verification.
+- `reports/valid-bugs.md`: "VALID" batches are model output from empty-LEADS runs; treat as unverified until post-repair run reproduces.
+- `inventory/derdack.md`: host inventory + dated PASSIVE RECON log.
+- `leads/lead-*.md`: lead files consumed by triage grep.
+- Key probe targets (read-only): `https://connect.signl4.com/api/docs/v{1,2,3}/swagger.json`, `https://api.signl4.com/identity/.well-known/openid-configuration`, `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl`, `https://vps.signl4.com/`.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m
+[0m$ [0mcat state_bigpickle.json; echo ---; ls -la knowledge inventory reports triage | head -60; echo ---; grep -c "UNVALIDATED" leads/*.md
+{"phase": "POC", "target": "api"}---
+inventory:
+total 328
+drwxr-xr-x  2 runner runner   4096 Oct  8 14:52 .
+drwxr-xr-x 12 runner runner   4096 Oct  8 14:52 ..
+-rw-r--r--  1 runner runner 324362 Oct  8 14:52 derdack.md
+
+knowledge:
+total 292
+drwxr-xr-x  2 runner runner   4096 Oct  8 14:52 .
+drwxr-xr-x 12 runner runner   4096 Oct  8 14:52 ..
+-rw-r--r--  1 runner runner 290142 Oct  8 14:52 index.md
+
+reports:
+total 10560
+drwxr-xr-x  2 runner runner    4096 Oct  8 14:52 .
+drwxr-xr-x 12 runner runner    4096 Oct  8 14:52 ..
+-rw-r--r--  1 runner runner 5850218 Oct  8 14:52 analyst-bigpickle.log
+-rw-r--r--  1 runner runner   46655 Oct  8 14:52 analyst-laguna.log
+-rw-r--r--  1 runner runner   46440 Oct  8 14:52 analyst-ling3.log
+-rw-r--r--  1 runner runner   46652 Oct  8 14:52 analyst-longcat.log
+-rw-r--r--  1 runner runner 3877090 Oct  8 14:52 analyst-nemotron3.log
+-rw-r--r--  1 runner runner     517 Oct  8 14:52 hypotheses-bigpickle.txt
+-rw-r--r--  1 runner runner      51 Oct  8 14:52 hypotheses-laguna.txt
+-rw-r--r--  1 runner runner      50 Oct  8 14:52 hypotheses-ling3.txt
+-rw-r--r--  1 runner runner      52 Oct  8 14:52 hypotheses-longcat.txt
+-rw-r--r--  1 runner runner   46014 Oct  8 14:52 hypotheses-nemotron3.txt
+-rw-r--r--  1 runner runner  848107 Oct  8 14:52 hypotheses.md
+-rw-r--r--  1 runner runner    5996 Oct  8 14:52 valid-bugs.md
+
+triage:
+total 1008
+drwxr-xr-x  2 runner runner 12288 Oct  8 14:52 .
+drwxr-xr-x 12 runner runner  4096 Oct  8 14:52 ..
+-rw-r--r--  1 runner runner     0 Oct  8 14:52 .gitkeep
+-rw-r--r--  1 runner runner   160 Oct  8 14:52 run-2026-09-02-21-25.md
+-rw-r--r--  1 runner runner   518 Oct  8 14:52 run-2026-09-02-23-31.md
+-rw-r--r--  1 runner runner   209 Oct  8 14:52 run-2026-09-03-01-23.md
+-rw-r--r--  1 runner runner   224 Oct  8 14:52 run-2026-09-03-06-25.md
+-rw-r--r--  1 runner runner   172 Oct  8 14:52 run-2026-09-03-11-39.md
+-rw-r--r--  1 runner runner   188 Oct  8 14:52 run-2026-09-03-15-10.md
+-rw-r--r--  1 runner runner   191 Oct  8 14:52 run-2026-09-03-18-39.md
+-rw-r--r--  1 runner runner   212 Oct  8 14:52 run-2026-09-03-21-19.md
+-rw-r--r--  1 runner runner  4972 Oct  8 14:52 run-2026-09-03-23-20.md
+-rw-r--r--  1 runner runner   245 Oct  8 14:52 run-2026-09-04-01-02.md
+-rw-r--r--  1 runner runner   194 Oct  8 14:52 run-2026-09-04-05-54.md
+-rw-r--r--  1 runner runner   146 Oct  8 14:52 run-2026-09-04-10-01.md
+-rw-r--r--  1 runner runner   163 Oct  8 14:52 run-2026-09-04-14-22.md
+-rw-r--r--  1 runner runner  7173 Oct  8 14:52 run-2026-09-04-17-46.md
+-rw-r--r--  1 runner runner   151 Oct  8 14:52 run-2026-09-04-19-58.md
+-rw-r--r--  1 runner runner   213 Oct  8 14:52 run-2026-09-04-21-58.md
+-rw-r--r--  1 runner runner   182 Oct  8 14:52 run-2026-09-04-23-38.md
+-rw-r--r--  1 runner runner   194 Oct  8 14:52 run-2026-09-05-01-22.md
+-rw-r--r--  1 runner runner   178 Oct  8 14:52 run-2026-09-05-06-16.md
+-rw-r--r--  1 runner runner   218 Oct  8 14:52 run-2026-09-05-10-37.md
+-rw-r--r--  1 runner runner   397 Oct  8 14:52 run-2026-09-05-13-31.md
+-rw-r--r--  1 runner runner   143 Oct  8 14:52 run-2026-09-05-16-13.md
+-rw-r--r--  1 runner runner   192 Oct  8 14:52 run-2026-09-05-18-18.md
+-rw-r--r--  1 runner runner   224 Oct  8 14:52 run-2026-09-05-20-26.md
+-rw-r--r--  1 runner runner   403 Oct  8 14:52 run-2026-09-05-22-13.md
+-rw-r--r--  1 runner runner   186 Oct  8 14:52 run-2026-09-05-23-54.md
+---
+leads/lead-bigpickle.md:10
+leads/lead-laguna.md:0
+leads/lead-ling3.md:0
+leads/lead-longcat.md:0
+leads/lead-mimo.md:0
+leads/lead-nemotron3.md:7
+leads/reposcan-derdack.md:0
+[0m
+[0m→ [0mRead leads/lead-bigpickle.md
+[0m
+[0m$ [0mwc -l leads/lead-bigpickle.md knowledge/index.md; echo ---; grep -n "^## " leads/lead-bigpickle.md | tail -25; echo ---; tail -c 3000 leads/lead-bigpickle.md
+9465 leads/lead-bigpickle.md
+   1206 knowledge/index.md
+  10671 total
+---
+7381:## 2026-10-03 07:07:27 UTC [target] (model bigpickle)
+7439:## 2026-10-03 12:44:49 UTC [target] (model bigpickle)
+7517:## 2026-10-03 16:45:37 UTC [target] (model bigpickle)
+7583:## 2026-10-03 19:44:57 UTC [target] (model bigpickle)
+7667:## 2026-10-03 22:41:15 UTC [target] (model bigpickle)
+7707:## 2026-10-04 02:00:54 UTC [target] (model bigpickle)
+7708:## 2026-10-04 07:50:54 UTC [target] (model bigpickle)
+7749:## 2026-10-04 13:41:07 UTC [target] (model bigpickle)
+7805:## 2026-10-04 17:55:11 UTC [target] (model bigpickle)
+7806:## 2026-10-04 20:48:21 UTC [target] (model bigpickle)
+7860:## 2026-10-04 23:41:34 UTC [target] (model bigpickle)
+7902:## 2026-10-05 02:26:47 UTC [target] (model bigpickle)
+7943:## 2026-10-05 09:38:50 UTC [target] (model bigpickle)
+7989:## 2026-10-05 18:51:24 UTC [target] (model bigpickle)
+8084:## 2026-10-06 00:34:35 UTC [target] (model bigpickle)
+8167:## 2026-10-06 07:03:26 UTC [target] (model bigpickle)
+8315:## 2026-10-06 13:53:59 UTC [target] (model bigpickle)
+8380:## 2026-10-06 19:34:28 UTC [target] (model bigpickle)
+8420:## 2026-10-06 23:23:40 UTC [target] (model bigpickle)
+8573:## 2026-10-07 02:28:16 UTC [target] (model bigpickle)
+8943:## 2026-10-07 09:31:36 UTC [target] (model bigpickle)
+9346:## 2026-10-07 16:33:39 UTC [target] (model bigpickle)
+9447:## 2026-10-07 21:37:33 UTC [target] (model bigpickle)
+9454:## 2026-10-08 01:34:27 UTC [target] (model bigpickle)
+9462:## 2026-10-08 07:47:34 UTC [target] (model bigpickle)
+---
+tion is a hypothesis, not a reassurance: cited `dpop_signing_alg_values_supported` as mitigating control without checking enforcement
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` exposed via unauthenticated WSDL GET — config-level disclosure (CWE-200 hygiene)
+[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+[LEARN] ACCEPTED IDOR @ connect.signl4.com/api/v1: V1 bulk endpoints accept `userId` query parameter; 403 response contains "in behave of the user" typo confirming coded impersonation feature
+[RISK] derdack: 95 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed introspection/revocation routing parity across all 6 ingresses and DPoP advertised but not enforced at gateway. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover. New CRITICAL: demo.enterprisealert.com/EAWebService exposes full EA 9.5 web portal with credential-in-URL SOAP/REST API completely untested for auth bypass.
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+## 2026-10-07 21:37:33 UTC [target] (model bigpickle)
+[PRIO]
+[HYP]
+[PARKED]/[FINAL]
+[NEXT]
+[LEARN]
+[RISK]
+## 2026-10-08 01:34:27 UTC [target] (model bigpickle)
+[PRIO]
+[HYP]
+[PARKED]
+[FINAL]
+[NEXT]
+[LEARN]
+[RISK]
+## 2026-10-08 07:47:34 UTC [target] (model bigpickle)
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match 
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential 
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[0m
+[0m$ [0mtail -c 6000 knowledge/index.md; echo "=== TRIAGE TAIL ==="; ls triage | tail -8; for f in $(ls triage | tail -3); do echo "--- $f"; cat triage/$f; done
+but not enforced at gateway — mitigating control only, not a vulnerability
+- 2026-10-07 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+- 2026-10-07 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
+- 2026-10-07 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+- 2026-10-07 REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control only, not a vulnerability
+- 2026-10-07 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+- 2026-10-07 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
+- 2026-10-07 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+- 2026-10-08 ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` exposed via unauthenticated WSDL GET — config-level disclosure (CWE-200 hygiene)
+- 2026-10-08 ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+- 2026-10-08 ACCEPTED IDOR @ connect.signl4.com/api/v1: V1 bulk endpoints accept `userId` query parameter; 403 response contains "in behave of the user" typo confirming coded impersonation feature
+- 2026-10-08 ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean `405`s against a passing control is a strong, reproducible result, and it is still not a vulnerability
+- 2026-10-08 ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: body discriminator was identical across both arms (empty-string sha256); the discriminator that actually resolved the question was the status code alone, 405 vs 404
+- 2026-10-08 ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on `/identity/connect/`, not `/identity/devconnect/` — it is the production tenant, reachable at a second hostname
+- 2026-10-08 ACCEPTED OTHER @ completing the differential was worth more than any result inside it: six hosts returned the answer, so the uniform claim holds 6/6 rather than 4/6 with two stragglers
+- 2026-10-08 ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well is dry because every remaining question needs a token
+- 2026-10-08 ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: cited `dpop_signing_alg_values_supported` as mitigating control without checking enforcement
+- 2026-10-08 REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
+- 2026-10-08 REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are non-secret and non-actionable, and the program rejects descriptive-headers-only classes
+- 2026-10-08 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+- 2026-10-08 REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there despite the host being App-Proxy fronted
+- 2026-10-08 REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+- 2026-10-08 REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is absent from the API gateway and the demo app; no alternative read surface remains for the AUTH_HELPED queue
+- 2026-10-08 REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier disclosure is bounded at 2 of 8 hosts, not an estate-wide defect
+- 2026-10-08 REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control only, not a vulnerability
+- 2026-10-08 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+- 2026-10-08 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
+- 2026-10-08 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+=== TRIAGE TAIL ===
+run-2026-10-06-23-04.md
+run-2026-10-07-02-23.md
+run-2026-10-07-09-10.md
+run-2026-10-07-16-28.md
+run-2026-10-07-21-31.md
+run-2026-10-08-01-14.md
+run-2026-10-08-07-25.md
+run-2026-10-08-14-52.md
+--- run-2026-10-08-01-14.md
+
+===== TRIAGE 2026-10-08 01:14:47 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+  "data": {
+    "message": "Unexpected server error. Check server logs for details.",
+    "ref": "err_c84c3309"
+  }
+}
+--- run-2026-10-08-07-25.md
+
+===== TRIAGE 2026-10-08 07:25:42 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+  "data": {
+    "message": "Unexpected server error. Check server logs for details.",
+    "ref": "err_b9b93031"
+  }
+}
+--- run-2026-10-08-14-52.md
+
+===== TRIAGE 2026-10-08 14:52:06 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+  "data": {
+    "message": "Unexpected server error. Check server logs for details.",
+    "ref": "err_cb81c764"
+  }
+}
+[0m
+[0m$ [0msed -n '9346,9455p' leads/lead-bigpickle.md
+## 2026-10-07 16:33:39 UTC [target] (model bigpickle)
+reasoning: V1/V2/V3 OpenAPI 3.0.4 all define `API_Key_Query` with name `x-s4-api-key` in query and `global security: [{}]`. Live test 2026-10-06: `connect.signl4.com/api/v2/teams?x-s4-api-key=test` returns HTTP 403 "API Key is invalid" while same request without param returns 401; `api.signl4.com/api/v2/teams` returns 401 without param. Header scheme `X-S4-Api-Key` exists; documenting query-param API key increases exposure to logs/referrers.
+evidence_needed: Confirm no production samples use query param (docs/integrations). Document conditional severity (depends on log retention/referrer policy observed).
+verify_steps: PASSIVE — specs already retrieved (v1/v2/v3). Optional: GET `https://api.signl4.com/api/docs/v1/swagger.json` and confirm `components.securitySchemes.API_Key_Query.in=='query'` (done). Live verification already done via controlled test with dummy key (403 vs 401). 
+impact: LOW-MEDIUM — Credential leakage via URL (logs/referrers/CDN/browser history); conditional on retention. No direct exploit demonstrated; no key sent. 
+testability: PASSIVE
+[PARKED] Body-supplied actor fields (userId/uid) on write routes (e.g. POST /v3/signls/{signlId}/acknowledge requires userId in body; POST /v2/alerts/{alertId}/acknowledge requires uid) — needs AUTH_HELPED test against live token to determine if server uses body field to impersonate vs derives from token.
+[FINAL] MISCONFIG @ api.signl4.com API_Key_Query (CWE-598) — confidence 70, PASSIVE, repo-wide V1/V2/V3, live validated (403 vs 401). Report-ready with conditional severity.
+[NEXT] STOP PROBING unauthenticated surface. Obtain valid X-S4-Api-Key or OAuth token via program channel to test: (1) one single-route impersonation test on `/api/v3/signls/{signlId}/acknowledge` or `/api/v2/alerts/{alertId}/acknowledge` with foreign body userId vs token principal (read audit identity), (2) `connect.signl4.com/api/v2/subscriptions/{id}/userLicenses` cross-tenant, (3) introspection enforcement across identity hosts (6/6 registration known). Do not send real keys in URLs.
+[LEARN] Reading full OpenAPI 3.0.4 specs (v1/v2/v3) once revealed API_Key_Query declared across all versions and body schemas (no prepaid tenant field) — static sweep beats narrow greps.
+[RISK] derdack: 3 — 0 live mutating requests; only safe GETs of public specs and controlled param test with dummy key. No credentials, no tenant data exposed.
+[PRIO] api.signl4.com/api/docs/v1|v2|v3/swagger.json#API_Key_Query,7.0,attack_surface=5,business_value=7,tech_exposure=8,gate_ease=10,cloud_surface=5,freshness=10
+[HYP] API_Key_Query declared in all three public Swagger specs (V1/V2/V3) and live-validated on connect.signl4.com: CWE-598 query-string credential leakage (logged in URLs/Referer/proxies/CDN)
+class: MISCONFIG
+asset: api.signl4.com/api/docs/v1|v2|v3/swagger.json (components.securitySchemes.API_Key_Query); connect.signl4.com/api/v2/teams?x-s4-api-key=test
+confidence: 70
+reasoning: V1/V2/V3 OpenAPI 3.0.4 all define `API_Key_Query` with name `x-s4-api-key` in query and `global security: [{}]`. Live test 2026-10-06: `connect.signl4.com/api/v2/teams?x-s4-api-key=test` returns HTTP 403 "API Key is invalid" while same request without param returns 401; `api.signl4.com/api/v2/teams` returns 401 without param. Header scheme `X-S4-Api-Key` exists; documenting query-param API key increases exposure to logs/referrers.
+evidence_needed: Confirm no production samples use query param (docs/integrations). Document conditional severity (depends on log retention/referrer policy observed).
+verify_steps: PASSIVE — specs already retrieved (v1/v2/v3). Optional: GET `https://api.signl4.com/api/docs/v1/swagger.json` and confirm `components.securitySchemes.API_Key_Query.in=='query'` (done). Live verification already done via controlled test with dummy key (403 vs 401). 
+impact: LOW-MEDIUM — Credential leakage via URL (logs/referrers/CDN/browser history); conditional on retention. No direct exploit demonstrated; no key sent. 
+testability: PASSIVE
+[PARKED] Body-supplied actor fields (userId/uid) on write routes (e.g. POST /v3/signls/{signlId}/acknowledge requires userId in body; POST /v2/alerts/{alertId}/acknowledge requires uid) — needs AUTH_HELPED test against live token to determine if server uses body field to impersonate vs derives from token.
+[FINAL] MISCONFIG @ api.signl4.com API_Key_Query (CWE-598) — confidence 70, PASSIVE, repo-wide V1/V2/V3, live validated (403 vs 401). Report-ready with conditional severity.
+[NEXT] STOP PROBING unauthenticated surface. Obtain valid X-S4-Api-Key or OAuth token via program channel to test: (1) one single-route impersonation test on `/api/v3/signls/{signlId}/acknowledge` or `/api/v2/alerts/{alertId}/acknowledge` with foreign body userId vs token principal (read audit identity), (2) `connect.signl4.com/api/v2/subscriptions/{id}/userLicenses` cross-tenant, (3) introspection enforcement across identity hosts (6/6 registration known). Do not send real keys in URLs.
+[LEARN] Reading full OpenAPI 3.0.4 specs (v1/v2/v3) once revealed API_Key_Query declared across all versions and body schemas (no prepaid tenant field) — static sweep beats narrow greps.
+[RISK] derdack: 3 — 0 live mutating requests; only safe GETs of public specs and controlled param test with dummy key. No credentials, no tenant data exposed.
+[PRIO] api.signl4.com/api/docs/v1|v2|v3/swagger.json#API_Key_Query,7.0,attack_surface=5,business_value=7,tech_exposure=8,gate_ease=10,cloud_surface=5,freshness=10
+[HYP] API_Key_Query declared in all three public Swagger specs (V1/V2/V3) and live-validated on connect.signl4.com: CWE-598 query-string credential leakage (logged in URLs/Referer/proxies/CDN)
+class: MISCONFIG
+asset: api.signl4.com/api/docs/v1|v2|v3/swagger.json (components.securitySchemes.API_Key_Query); connect.signl4.com/api/v2/teams?x-s4-api-key=test
+confidence: 70
+reasoning: V1/V2/V3 OpenAPI 3.0.4 all define `API_Key_Query` with name `x-s4-api-key` in query and `global security: [{}]`. Live test 2026-10-06: `connect.signl4.com/api/v2/teams?x-s4-api-key=test` returns HTTP 403 "API Key is invalid" while same request without param returns 401; `api.signl4.com/api/v2/teams` returns 401 without param. Header scheme `X-S4-Api-Key` exists; documenting query-param API key increases exposure to logs/referrers.
+evidence_needed: Confirm no production samples use query param (docs/integrations). Document conditional severity (depends on log retention/referrer policy observed).
+verify_steps: PASSIVE — specs already retrieved (v1/v2/v3). Optional: GET `https://api.signl4.com/api/docs/v1/swagger.json` and confirm `components.securitySchemes.API_Key_Query.in=='query'` (done). Live verification already done via controlled test with dummy key (403 vs 401). 
+impact: LOW-MEDIUM — Credential leakage via URL (logs/referrers/CDN/browser history); conditional on retention. No direct exploit demonstrated; no key sent. 
+testability: PASSIVE
+[PARKED] Body-supplied actor fields (userId/uid) on write routes (e.g. POST /v3/signls/{signlId}/acknowledge requires userId in body; POST /v2/alerts/{alertId}/acknowledge requires uid) — needs AUTH_HELPED test against live token to determine if server uses body field to impersonate vs derives from token.
+[FINAL] MISCONFIG @ api.signl4.com API_Key_Query (CWE-598) — confidence 70, PASSIVE, repo-wide V1/V2/V3, live validated (403 vs 401). Report-ready with conditional severity.
+[NEXT] STOP PROBING unauthenticated surface. Obtain valid X-S4-Api-Key or OAuth token via program channel to test: (1) one single-route impersonation test on `/api/v3/signls/{signlId}/acknowledge` or `/api/v2/alerts/{alertId}/acknowledge` with foreign body userId vs token principal (read audit identity), (2) `connect.signl4.com/api/v2/subscriptions/{id}/userLicenses` cross-tenant, (3) introspection enforcement across identity hosts (6/6 registration known). Do not send real keys in URLs.
+[LEARN] Reading full OpenAPI 3.0.4 specs (v1/v2/v3) once revealed API_Key_Query declared across all versions and body schemas (no prepaid tenant field) — static sweep beats narrow greps.
+[RISK] derdack: 3 — 0 live mutating requests; only safe GETs of public specs and controlled param test with dummy key. No credentials, no tenant data exposed.
+[CHANGED] api.signl4.com/api/v2/teams flipped back to 405 Allow:GET,POST on unauth GET + invalid Bearer — handler-deferred auth pattern re-confirmed (was 401 last cycle)
+[CHANGED] OIDC introspection/revocation registration parity confirmed across all 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing layer complete
+[CHANGED] DPoP challenge-layer probe complete: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce
+[CHANGED] Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show no tenant identifier in any write payload)
+[CHANGED] V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions (131 write ops swept, zero accept tenant in body)
+[CHANGED] Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-04 boundary — no new paths, verbs, or differentials across all scoped assets
+[PRIO] account.signl4.com/identity/connect/token,9.25,attack_surface=10,business_value=10,tech_exposure=9,gate_ease=8,cloud_surface=9,freshness=10
+[PRIO] demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx,8.75,attack_surface=9,business_value=9,tech_exposure=8,gate_ease=10,cloud_surface=8,freshness=9
+[PRIO] connect.signl4.com/api/v1/alerts/acknowledgeAll,8.00,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=5,cloud_surface=8,freshness=9
+[PRIO] vps.signl4.com,7.50,attack_surface=8,business_value=7,tech_exposure=7,gate_ease=10,cloud_surface=9,freshness=8
+[PRIO] api.signl4.com/identity/connect/userinfo,7.25,attack_surface=7,business_value=9,tech_exposure=8,gate_ease=10,cloud_surface=8,freshness=9
+[PRIO] connect.signl4.com/api/v3/subscriptions/{sub}/invoices/{inv}/zugferd,7.00,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=5,cloud_surface=7,freshness=7
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family
+class: AUTH
+asset: account.signl4.com/identity/connect/token
+confidence: 90
+reasoning: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) serve byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), share client_id 692A0A56-892F-4AE2-8259-76DA398990B6, password/device_code/CIBA/token-exchange grants enabled on staging, account IdP mints tokens with issuer=connect — full cross-env token acceptance chain configured; introspection/revocation routing parity confirmed on all 6 ingresses
+evidence_needed: Valid client_secret for client_id 692A0A56 (or leaked X-S4-Api-Key/team-secret) to forge token on devconnect and present to connect/api/account APIs
+verify_steps: 1) GET https://account.signl4.com/identity/.well-known/openid-configuration (confirm password grant, shared JWKS, issuer mismatch) 2) POST https://devconnect.signl4.com/identity/connect/token with grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<secret>&scope=public_api_read+public_api_write+offline_access+reseller_portal+public_api_ea_manage+public_api_ea_alerting+mobile_api 3) Use returned access_token against https://connect.signl4.com/api/v2/teams (expect 200 if cross-env acceptance enforced)
+impact: Full multi-tenant SIGNL4/EA compromise — cross-environment token forgery enables API access as any tenant; severity CRITICAL
+testability: AUTH_HELPED
+[HYP] Unauthenticated EA SOAP/REST handler access via credential-in-URL
+class: AUTH
+asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx
+confidence: 75
+reasoning: Full live EA 9.5.26147 portal behind App Proxy at /EAWebService/ with 11 .aspx handlers (About, RaiseEvent, RaiseEventAsynchronous, RegisterEventProvider, etc.) and 12-op WSDL all anon-readable; vendor docs (SolarWinds, EA9 PDF, send-alerts-web-services, 6 GitHub repos) document Username/Password/md5-hash in GET query as primary auth for EventProviderAPI; WSDL exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`; all credential paths gate with Error-1/401 on fabricated creds but no auth bypass tested
+evidence_needed: Valid EA credentials (Username/Password or md5 hash) to test handler mutating operations (RaiseEvent, RegisterEventProvider, SubmitEventUpdate) and confirm cross-tenant alert injection
+verify_steps: 1) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl (confirm internal hostname ereesus, 12 operations) 2) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About (confirm version 9.5.26147) 3) POST https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx with Handler=RaiseEvent&Username=<valid>&Password=<valid>&EventId=test (observe 200/Error-1/401)
+impact: Unauthenticated alert injection into EA tenants via documented credential-in-URL SOAP/REST API; severity HIGH (business logic on alerting pipeline)
+testability: AUTH_HELPED
+[HYP] Cross-user IDOR via userId query parameter on V1 bulk alert endpoints
+class: IDOR
+asset: connect.signl4.com/api/v1/alerts/acknowledgeAll
+confidence: 65
+reasoning: V1 OpenAPI documents userId query parameter on /alerts/acknowledgeAll, /alerts/closeAll, /alerts/paged, /alerts/report; 403 response contains "in behave of the user" typo confirming coded impersonation feature; handler-deferred auth (unauth GET→405, invalid Bearer→405) enables cross-env token acceptance; no ownership validation observed on userId
+evidence_needed: Valid Bearer token (X-S4-Api-Key or OAuth) to test userId manipulation across users within same tenant
+verify_steps: 1) GET https://connect.signl4.com/api/docs/v1/swagger.json (confirm userId parameter schema on acknowledgeAll/closeAll/paged/report) 2) Obtain valid X-S4-Api-Key via HUMAN channel 3) POST https://connect.signl4.com/api/v1/alerts/acknowledgeAll?userId={other_user} with valid token + alert IDs (observe 401/403/200)
+impact: Cross-user alert lifecycle manipulation within tenant — unauthorized acknowledge/close of alerts; severity MEDIUM-HIGH
+testability: AUTH_HELPED
+[PARKED] Cross-env token forgery via 6-host shared RS256 IdP family: AUTH_HELPED — strongest theoretical finding, blocked solely on client_secret/X-S4-Api-Key/team-secret acquisition; no public leak across 7+ corpora
+[PARKED] Unauthenticated EA SOAP/REST handler access via credential-in-URL: AUTH_HELPED — full EA portal live but all handlers gate on credentials; vendor docs confirm credential-in-URL pattern but no bypass observed
+[PARKED] Cross-user IDOR via userId query parameter on V1 bulk alert endpoints: AUTH_HELPED — same credential blocker; handler-deferred auth confirmed but token acquisition gated
+[FINAL] 1) Internal hostname leak via EA WSDL (MISCONFIG, 95) — PASSIVE confirmed live, CWE-200 hygiene
+[FINAL] 2) Cross-env token forgery via 6-host shared RS256 IdP family (AUTH, 90) — AUTH_HELPED, strongest theoretical finding
+[FINAL] 3) Subdomain takeover via dangling A-record on vps.signl4.com (MISCONFIG, 80) — PASSIVE confirmed, exploitability HUMAN_ONLY
+[FINAL] 4) DPoP enforcement gap at identity gateway (MISCONFIG, 85) — PASSIVE confirmed, defense-in-depth gap
+[FINAL] 5) V1 userId bulk alert IDOR (IDOR, 65) — AUTH_HELPED, handler-deferred auth confirmed
+[NEXT] HUMAN: Obtain legitimate X-S4-Api-Key or client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 via program contact to unblock AUTH_HELPED hypotheses (cross-env token forgery, V1 userId IDOR, V3 invoice BOLA, EA SOAP handler access)
+[LEARN] ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean `405`s against a passing control is a strong, reproducible result, and it is still not a vulnerability
+[LEARN] ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: body discriminator was identical across both arms (empty-string sha256); the discriminator that actually resolved the question was the status code alone, 405 vs 404
+[LEARN] ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on `/identity/connect/`, not `/identity/devconnect/` — it is the production tenant, reachable at a second hostname
+[LEARN] ACCEPTED OTHER @ completing the differential was worth more than any result inside it: six hosts returned the answer, so the uniform claim holds 6/6 rather than 4/6 with two stragglers
+[LEARN] ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well is dry because every remaining question needs a token
+[LEARN] ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: cited `dpop_signing_alg_values_supported` as mitigating control without checking enforcement
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` exposed via unauthenticated WSDL GET — config-level disclosure (CWE-200 hygiene)
+[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+[LEARN] ACCEPTED IDOR @ connect.signl4.com/api/v1: V1 bulk endpoints accept `userId` query parameter; 403 response contains "in behave of the user" typo confirming coded impersonation feature
+[RISK] derdack: 95 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed introspection/revocation routing parity across all 6 ingresses and DPoP advertised but not enforced at gateway. New CRITICAL: vps.signl4.com dangling A-record enables immediate subdomain takeover. New CRITICAL: demo.enterprisealert.com/EAWebService exposes full EA 9.5 web portal with credential-in-URL SOAP/REST API completely untested for auth bypass.
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+## 2026-10-07 21:37:33 UTC [target] (model bigpickle)
+[PRIO]
+[HYP]
+[PARKED]/[FINAL]
+[NEXT]
+[LEARN]
+[RISK]
+## 2026-10-08 01:34:27 UTC [target] (model bigpickle)
+[PRIO]
+[0m
+[0m$ [0mcat scope.yml; echo "=== state files ==="; for f in state_*.json; do echo -n "$f: "; cat $f; echo; done; echo "=== hypotheses-bigpickle ==="; cat reports/hypotheses-bigpickle.txt
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+  passive_first: false          # deep-hunt agent: active probes allowed when scoped
+  max_requests_per_second: 1    # never hammer live infra
+  no_doom: true                 # no DoS/DDoS, no account-lockout attacks
+  account_creation: restricted  # only on test/sandbox assets, never live customer data
+  no_data_modification: true    # no writes/deletes on live customer data
+  no_pre_disclosure: true       # never disclose before program response
+  poc_required: true            # scanner output alone is REJECTED
+  redact_secrets_in_commits: true
+
+models:
+  - { id: opencode/big-pickle, name: bigpickle }
+  - { id: opencode/nemotron-3-ultra-free, name: nemotron3 }
+  - { id: opencode/longcat-2.0-free, name: longcat }
+  - { id: opencode/ling-3.0-flash-free, name: ling3 }
+  - { id: opencode/laguna-s-2.1-free, name: laguna }
+=== state files ===
+state_bigpickle.json: {"phase": "POC", "target": "api"}
+state_laguna.json: {"phase": "POC", "target": "api"}
+state_ling3.json: {"phase": "POC", "target": "api"}
+state_longcat.json: {"phase": "POC", "target": "api"}
+state_mimo.json: {"phase": "POC", "target": "api"}
+state_nemotron3.json: {"phase": "POC", "target": "api"}
+=== hypotheses-bigpickle ===
+## 2026-10-08 07:47:34 UTC [target] (model bigpickle)
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match 
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential 
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[0m
+[0m$ [0mgrep -n "UNVALIDATED" -r .github/workflows/ | head -20; echo ===; sed -n '1,80p' .github/workflows/triage.yml
+.github/workflows/triage.yml:42:      - name: Collect UNVALIDATED leads
+.github/workflows/triage.yml:45:          grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25 > new-leads.txt
+===
+name: Triager (Derdack GmbH / Derdack Group)
+
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PROBE_ALLOW: "derdack.com"
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: triage-derdack
+      cancel-in-progress: true
+    env:
+      MODEL_ID: opencode/mimo-v2.5-free
+      OPENCODE_REASONING: xhigh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install OpenCode
+        run: |
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          if command -v opencode >/dev/null 2>&1; then opencode --version; exit 0; fi
+          npm install -g opencode-ai 2>/dev/null || npm install -g --prefix "$HOME/.npm-global" opencode-ai 2>/dev/null || true
+          if ! command -v opencode >/dev/null 2>&1; then
+            for i in 1 2 3; do
+              curl -fsSL https://opencode.ai/install | bash && break
+              echo "opencode.ai installer attempt $i failed, retrying in 15s..."; sleep 15
+            done
+          fi
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          opencode --version
+
+      - name: Collect UNVALIDATED leads
+        run: |
+          mkdir -p triage reports
+          grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25 > new-leads.txt
+          echo "unvalidated leads: $(wc -l < new-leads.txt)"
+
+      - name: Passive live probe of endpoint leads (rate-limited)
+        run: |
+          : > probe-results.txt
+          grep -oE 'https?://[a-zA-Z0-9._/-]+' new-leads.txt | sort -u | head -20 | while read -r url; do
+            host=$(echo "$url" | sed -E 's|https?://([^/]+).*|\1|')
+            if echo "$host" | grep -qiE '(derdack.com)'; then
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -A 'Mozilla/5.0 (passive research probe)' -H 'Range: bytes=0-1' "$url" 2>/dev/null || echo TIMEOUT)
+              echo "$code $url" >> probe-results.txt
+              sleep 1
+            fi
+          done
+          cat probe-results.txt
+
+      - name: Validate with second model (7-Question Gate)
+        run: |
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          cat > triage-prompt.txt << 'PROMPT_START'
+          You are a strict triager for the Derdack GmbH / Derdack Group program (bugs.olivermaicher.eu). A hunt bot produced leads below. Validate each against the 7-Question Gate. Answer all 7 per lead, verdict VALID / INVALID / HOLD with one-line reason. For VALID: state minimal read-only proof steps, impact, CVSS 3.1, reporting channel.
+          Out-of-scope reminders: no DoS/account-lockout, no exposure of customer/employee/financial/auth data during testing, no social engineering, no vendor/employee-targeted attacks. Passive-first proof.
+          Q1 In program scope (asset from scope.yml/inventory/derdack.md)?
+          Q2 Attacker reachable (public/unauth/low-priv)?
+          Q3 Real security impact?
+          Q4 Provable non-invasively?
+          Q5 Genuinely novel/unreported?
+          Q6 Not on always-rejected list?
+          Q7 Would a reasonable triager accept it?
+          PROBE RESULTS (passive per url):
+          PROMPT_START
+          cat probe-results.txt >> triage-prompt.txt
+          echo "" >> triage-prompt.txt
+          echo "LEADS:" >> triage-prompt.txt
+          cat new-leads.txt >> triage-prompt.txt
+          timeout -k 15 15m opencode run --model "$MODEL_ID" < triage-prompt.txt > triage-output.txt 2>&1 || true
+[0m
+[0m$ [0mgrep -n "POC\|report\|phase" README.md | head -30; echo ===; ls scripts; echo ===; head -50 reports/valid-bugs.md
+13:  running count in `reports/valid-bugs.md`.
+20:> IMPORTANT: the pipeline produces CANDIDATE leads. A reportable, validated finding requires
+31:| `reports/valid-bugs.md` | Validated findings + running count |
+===
+sync-issues.py
+===
+# Validated findings (running count 0)
+
+- 2 lead(s) marked VALID at 2026-09-03 23:20:09 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 3 lead(s) marked VALID at 2026-09-04 17:46:22 UTC
+  - | Q7 Reasonable triager? | **Yes** | Information disclosure of sensitive file paths on a live dev host is a valid finding |
+  - **Verdict: VALID**
+  - | dev.derdack.com MultiViews path disclosure | **VALID** | 5.3 | Report to bugs.olivermaicher.eu |
+
+- 1 lead(s) marked VALID at 2026-09-05 13:31:45 UTC
+  - Please paste the lead(s) you want me to triage, and I'll run each through the 7-Question Gate with verdict, reasoning, and (if VALID) proof steps, impact, CVSS 3.1, and reporting channel.
+
+- 2 lead(s) marked VALID at 2026-09-06 06:28:40 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 2 lead(s) marked VALID at 2026-09-08 10:34:26 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+
+- 4 lead(s) marked VALID at 2026-09-09 06:38:04 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+  - | 1 | Cross-Env JWKS Key + Client/Scope Reuse | **VALID** | 7.4 |
+  - | 6 | Staging IdP Directly Reachable | **VALID** | 6.5 |
+
+- 4 lead(s) marked VALID at 2026-09-10 10:37:58 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | Q7 Reasonable triager? | Yes — hardcoded real secrets in public code is a standard valid finding |
+  - **Verdict: VALID**
+
+- 14 lead(s) marked VALID at 2026-09-11 05:08:59 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: HOLD** — valid code defect, but impact gated on EA Scripting Host deployment and attacker ability to control event parameters; needs confirmatory evidence of production deployment
+  - **Verdict: HOLD** — valid code defect, but impact requires confirmation that parameters originate from external/user input in production
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | Cross-env JWKS key reuse (4 hosts) | **VALID** | 7.4 | HIGH |
+  - | 2 | Hardcoded SQL Server SA creds | **VALID** | 8.1 | HIGH |
+  - | 5 | Hardcoded Checkmk creds + internal IP | **VALID** | 7.5 | MEDIUM |
+  - | 6 | SIGNL4 secret logged at INFO (ioBroker) | **VALID** | 5.3 | MEDIUM |
+  - | 7 | Team secrets in public repos | **VALID** | 5.3 | MEDIUM |
+  - | 8 | PII in public CSV export | **VALID** | 5.3 | MEDIUM |
+[0m
+[0m$ [0mgrep -n "mobile\|unfingerprinted\|app-store\|package" knowledge/index.md | tail -20; echo "=== OPEN NEXT ==="; grep -n "^\- 2026-10-0[78]" knowledge/index.md | tail -30
+724:- 2026-09-22 ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
+749:- 2026-09-23 ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
+788:- 2026-09-24 ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
+821:- 2026-09-25 ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
+835:- 2026-09-26 ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
+843:- 2026-09-26 REJECTED OTHER @ app|m|apps.signl4.com: all three NXDOMAIN, and `curl` never established a connection (code=000). The [NEXT] client/mobile scan target does not exist under those names — the SIGNL4 mobile app is not published on an `app.`/`m.`/`apps.` subdomain. The "mobile applications" scope item remains **unfingerprinted by hostname, not closed**: resolving it needs a different discovery source (app-store package / API gateway app registration / CSP allowlist), not more guessing at names.
+852:- 2026-09-26 REJECTED OTHER @ app|m|apps.signl4.com: all three NXDOMAIN and no connection was ever established (curl code=000). The [NEXT] client/mobile scan target does not exist under those names, so the "mobile applications" scope item is still **unfingerprinted rather than closed** — resolving it needs a different discovery source (app-store package, API-gateway client registration, or the CSP/portal trust lists now proven productive), not more hostname guessing.
+855:- 2026-09-27 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers.
+871:- 2026-09-28 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+895:- 2026-09-29 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+911:- 2026-09-30 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+933:- 2026-10-01 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+949:- 2026-10-02 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+965:- 2026-10-03 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+1009:- 2026-10-04 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+1035:- 2026-10-04 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: Custom branded WAF error page is configuration artifact, not vulnerability
+1053:- 2026-10-04 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: custom branded WAF error page is configuration artifact, not vulnerability.
+1071:- 2026-10-05 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: Custom branded WAF error page is configuration artifact, not vulnerability
+1174:- 2026-10-07 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+1198:- 2026-10-08 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+=== OPEN NEXT ===
+1177:- 2026-10-07 REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is absent from the API gateway and the demo app; no alternative read surface remains for the AUTH_HELPED queue
+1178:- 2026-10-07 REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier disclosure is bounded at 2 of 8 hosts, not an estate-wide defect
+1179:- 2026-10-07 REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control only, not a vulnerability
+1180:- 2026-10-07 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+1181:- 2026-10-07 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
+1182:- 2026-10-07 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+1183:- 2026-10-07 REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control only, not a vulnerability
+1184:- 2026-10-07 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+1185:- 2026-10-07 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
+1186:- 2026-10-07 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+1187:- 2026-10-08 ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` exposed via unauthenticated WSDL GET — config-level disclosure (CWE-200 hygiene)
+1188:- 2026-10-08 ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+1189:- 2026-10-08 ACCEPTED IDOR @ connect.signl4.com/api/v1: V1 bulk endpoints accept `userId` query parameter; 403 response contains "in behave of the user" typo confirming coded impersonation feature
+1190:- 2026-10-08 ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean `405`s against a passing control is a strong, reproducible result, and it is still not a vulnerability
+1191:- 2026-10-08 ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: body discriminator was identical across both arms (empty-string sha256); the discriminator that actually resolved the question was the status code alone, 405 vs 404
+1192:- 2026-10-08 ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on `/identity/connect/`, not `/identity/devconnect/` — it is the production tenant, reachable at a second hostname
+1193:- 2026-10-08 ACCEPTED OTHER @ completing the differential was worth more than any result inside it: six hosts returned the answer, so the uniform claim holds 6/6 rather than 4/6 with two stragglers
+1194:- 2026-10-08 ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well is dry because every remaining question needs a token
+1195:- 2026-10-08 ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: cited `dpop_signing_alg_values_supported` as mitigating control without checking enforcement
+1196:- 2026-10-08 REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
+1197:- 2026-10-08 REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are non-secret and non-actionable, and the program rejects descriptive-headers-only classes
+1198:- 2026-10-08 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+1199:- 2026-10-08 REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there despite the host being App-Proxy fronted
+1200:- 2026-10-08 REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+1201:- 2026-10-08 REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is absent from the API gateway and the demo app; no alternative read surface remains for the AUTH_HELPED queue
+1202:- 2026-10-08 REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier disclosure is bounded at 2 of 8 hosts, not an estate-wide defect
+1203:- 2026-10-08 REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control only, not a vulnerability
+1204:- 2026-10-08 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+1205:- 2026-10-08 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
+1206:- 2026-10-08 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+[0m
+[0m$ [0mgrep -n "HUMAN\|credential acquisition\|program contact" knowledge/index.md | tail -15; echo ===; tail -40 probe-results.md
+604:- 2026-09-17 REJECTED OTHER @ EA-scope/RAG + credential-hunt corpora: no leaked client_secret/API-key/webhook-secret found across 4+ corpora — passive credential acquisition permanently closed this cycle
+803:- 2026-09-24 ACCEPTED MISCONFIG @ vps.signl4.com: dangling A-record + mismatched cert + default-page reflection = stale Derdack-controlled DNS on GoDaddy shared host; exposure MISCONFIG LOW-Medium, takeover exploitability gated on DNS/hosting-account control (HUMAN) — nemotron3's 95 overstates claimability.
+806:- 2026-09-24 REJECTED OTHER @ vps.signl4.com (nemotron3 [95]): explicit A-record to GoDaddy shared pool = stale DNS config; no claimable takeover primitive exists from researcher seat (no unclaimed endpoint attachable); exploitability gated on DNS/hosting-account control (HUMAN) — 95 ranking overstates, correct exposure = MISCONFIG LOW-Medium.
+809:- 2026-09-24 REJECTED OTHER @ vps.signl4.com (nemotron3 [95]): explicit A-record to GoDaddy shared pool = stale DNS config; no claimable takeover primitive from researcher seat; exploitability gated on DNS/hosting-account control (HUMAN); 95 overstates, correct exposure = MISCONFIG LOW-Medium.
+928:- 2026-10-01 ACCEPTED MISCONFIG @ vps.signl4.com: explicit A-record to GoDaddy shared host serves nginx default page (cert CN=server.d1g.it, unrelated) with fabricated-host returning TCP timeout — dangling DNS binding; exploitability gated on DNS/hosting-account control (HUMAN_ONLY), not researcher-exploitable from this seat.
+1025:- 2026-10-04 ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host (72.167.227.27, secureserver.net) serves default vhost when reachable (cert CN=server.d1g.it, unrelated to *.signl4.com); fabricated subdomain returns different behavior. Dangling DNS binding with takeover potential gated on DNS/hosting-account control (HUMAN_ONLY); transient 000 vs 200 reduces reproducibility.
+1068:- 2026-10-05 ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host (72.167.227.27, secureserver.net) serves default vhost when reachable (cert CN=server.d1g.it, unrelated to *.signl4.com); fabricated subdomain returns different behavior. Dangling DNS binding with takeover potential gated on DNS/hosting-account control (HUMAN_ONLY)
+1121:- 2026-10-06 ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+1140:- 2026-10-07 ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+1149:- 2026-10-07 ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+1161:- 2026-10-07 ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+1170:- 2026-10-07 ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+1188:- 2026-10-08 ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+===
+
+
+## 2026-10-05 09:39:02 UTC
+
+
+## 2026-10-05 18:51:36 UTC
+
+
+## 2026-10-06 00:34:49 UTC
+
+
+## 2026-10-06 07:03:37 UTC
+
+
+## 2026-10-06 13:54:11 UTC
+
+
+## 2026-10-06 19:34:39 UTC
+
+
+## 2026-10-06 23:23:50 UTC
+
+
+## 2026-10-07 02:28:26 UTC
+
+
+## 2026-10-07 09:31:47 UTC
+
+
+## 2026-10-07 16:34:03 UTC
+
+
+## 2026-10-07 21:41:18 UTC
+
+
+## 2026-10-08 01:34:37 UTC
+
+
+## 2026-10-08 07:47:43 UTC
+[0m
+[0m◈ [0mExa Web Search "SIGNL4 mobile app Apple App Store Google Play Derdack"
+[0m
+[0m$ [0mcurl -s -o /tmp/opencode/spec_v3.json -w '%{http_code} %{size_download}\n' --max-time 15 'https://api.signl4.com/api/docs/v3/swagger.json'; sleep 1; curl -s -o /tmp/opencode/spec_v1.json -w '%{http_code} %{size_download}\n' --max-time 15 'https://api.signl4.com/api/docs/v1/swagger.json'
+200 1213127
+200 493618
+[0m
+[0m$ [0mgrep -n "signlReports\|signlreports" knowledge/index.md | tail -10; echo "=== leads ==="; grep -n "signlReports" leads/*.md | tail -10; echo "=== mobile/mobileapi ==="; grep -n "mobileapi\|mobile_api\|push.*endpoint\|apns\|firebase" knowledge/index.md | tail -15
+315:- 2026-09-11 ACCEPTED OTHER @ connect.signl4.com/api/docs/v3/swagger.json: full V3 schema dumped (200+ paths) — file-download family (/teams/{teamId}/signlReports/{fileName}, dutyReports/{fileName}, /signls/{signlId}/attachments/{attachmentId}), tenant image GETs, AI forwardPlanning/{teamId}, holidays copyFrom/{sourceTeamId} all anon→401; global security still `[{}]` empty (spec under-declares); BOLA inventory materially expanded, all AUTH_HELPED.
+1085:- 2026-10-05 REJECTED OTHER @ filing the signlReports traversal as a fourth [FINAL]: the previous cycle emitted four [FINAL] entries against a three-asset cap. The traversal hypothesis is sound and remains at confidence 45, but it is indistinguishable in kind from the userLicenses BOLA — both AUTH_HELPED, both needing vendor-issued tenants — and keeping both in the final set inflates the queue without adding a distinct attack path. Held at [PRIO] and out of the finals rather than quietly dropped; it is not dead, it is queued behind a sibling of the same class and gate.
+1116:- 2026-10-06 REJECTED OTHER @ filing the signlReports traversal as a fourth [FINAL]: indistinguishable in kind from the userLicenses BOLA — both AUTH_HELPED, both needing vendor-issued tenants
+=== leads ===
+leads/lead-nemotron3.md:10134:[PARKED] BOLA on connect.signl4.com/api/v3 file-download family (signlReports/dutyReports/attachments): AUTH_HELPED — requires valid Bearer token; handler-deferred auth on V3 invoice endpoint is route-gated (401), not flapping like V1/V2 teams; file-download family unproven
+leads/lead-nemotron3.md:10194:[PARKED] BOLA on connect.signl4.com/api/v3 file-download family (signlReports/dutyReports/attachments): AUTH_HELPED — requires valid Bearer token; handler-deferred auth on V3 invoice endpoint is route-gated (401), not flapping like V1/V2 teams; file-download family unproven
+leads/lead-nemotron3.md:10254:[PARKED] BOLA on connect.signl4.com/api/v3 file-download family (signlReports/dutyReports/attachments): AUTH_HELPED — requires valid Bearer token; handler-deferred auth on V3 invoice endpoint is route-gated (401), not flapping like V1/V2 teams; file-download family unproven
+leads/lead-nemotron3.md:10317:[PARKED] BOLA on connect.signl4.com/api/v3 file-download family (signlReports/dutyReports/attachments): AUTH_HELPED — requires valid Bearer token; handler-deferred auth on V3 invoice endpoint is route-gated (401), not flapping like V1/V2 teams; file-download family unproven
+leads/lead-nemotron3.md:10380:[PARKED] BOLA on connect.signl4.com/api/v3 file-download family (signlReports/dutyReports/attachments): AUTH_HELPED — requires valid Bearer token; handler-deferred auth on V3 invoice endpoint is route-gated (401), not flapping like V1/V2 teams; file-download family unproven
+leads/lead-nemotron3.md:10443:[PARKED] BOLA on connect.signl4.com/api/v3 file-download family (signlReports/dutyReports/attachments): AUTH_HELPED — requires valid Bearer token; handler-deferred auth on V3 invoice endpoint is route-gated (401), not flapping like V1/V2 teams; file-download family unproven
+leads/lead-nemotron3.md:10507:[PARKED] BOLA on connect.signl4.com/api/v3 file-download family (signlReports/dutyReports/attachments): AUTH_HELPED — requires valid Bearer token; handler-deferred auth on V3 invoice endpoint is route-gated (401), not flapping like V1/V2 teams; file-download family unproven
+leads/lead-nemotron3.md:10562:[PARKED] BOLA on connect.signl4.com/api/v3 file-download family (signlReports/dutyReports/attachments): AUTH_HELPED — requires valid Bearer token; handler-deferred auth on V3 invoice endpoint is route-gated (401), not flapping like V1/V2 teams; file-download family unproven
+leads/lead-nemotron3.md:13277:[LEARN] REJECTED OTHER @ filing the signlReports traversal as a fourth [FINAL]: the previous cycle emitted four [FINAL] entries against a three-asset cap. The traversal hypothesis is sound and remains at confidence 45, but it is indistinguishable in kind from the userLicenses BOLA — both AUTH_HELPED, both needing vendor-issued tenants — and keeping both in the final set inflates the queue without adding a distinct attack path.
+leads/lead-nemotron3.md:13350:[LEARN] REJECTED OTHER @ filing the signlReports traversal as a fourth [FINAL]: indistinguishable in kind from the userLicenses BOLA — both AUTH_HELPED, both needing vendor-issued tenants
+=== mobile/mobileapi ===
+821:- 2026-09-25 ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
+835:- 2026-09-26 ACCEPTED AUTH @ account.signl4.com/identity: 6th identity host with shared RS256 key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256); OIDC discovery live; 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api); custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed; issuer mismatch (claims connect.signl4.com/identity)
+855:- 2026-09-27 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers.
+871:- 2026-09-28 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+895:- 2026-09-29 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+911:- 2026-09-30 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+933:- 2026-10-01 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+949:- 2026-10-02 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+965:- 2026-10-03 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+1009:- 2026-10-04 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+1035:- 2026-10-04 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: Custom branded WAF error page is configuration artifact, not vulnerability
+1053:- 2026-10-04 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: custom branded WAF error page is configuration artifact, not vulnerability.
+1071:- 2026-10-05 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: Custom branded WAF error page is configuration artifact, not vulnerability
+1174:- 2026-10-07 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+1198:- 2026-10-08 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+[0m
+[0m$ [0mls reposcan-raw/; echo ===; grep -rn "UNVALIDATED" leads/ | head; echo "=== what grep would collect ==="; grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25
+summary.txt
+===
+leads/lead-bigpickle.md:8287:[NEW] triage.yml:45 collects `grep "\[UNVALIDATED\]" leads/lead-*.md`; that string occurs 0 times in any of the 6 lead files, so `new-leads.txt` has been empty on every run — 26 runs show the model reporting "The `LEADS:` section is empty" and improvising by reading lead files itself (run-2026-09-25-05-00 is the documented case). The automated path behind any "[NEXT] report X" does not exist as written.
+leads/lead-bigpickle.md:8290:[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
+leads/lead-bigpickle.md:8295:[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+leads/lead-bigpickle.md:9344:[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
+leads/lead-bigpickle.md:9345:[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+leads/lead-bigpickle.md:9445:[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
+leads/lead-bigpickle.md:9446:[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+leads/lead-bigpickle.md:9463:[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match 
+leads/lead-bigpickle.md:9464:[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential 
+leads/lead-bigpickle.md:9465:[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+=== what grep would collect ===
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match 
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential 
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+[0m
+[0m$ [0mgrep -n "assetlinks\|apple-app-site\|app-links\|AASA" knowledge/index.md leads/*.md | head -10; echo "=== prior spec hashes ==="; grep -rn "swagger.json" probe-results.md | head -10; sha256sum /tmp/opencode/spec_v1.json /tmp/opencode/spec_v3.json
+=== prior spec hashes ===
+975f235c6b7a4b3b4052d320484c916003f8ea71c31399003e76a9d78f14b7d1  /tmp/opencode/spec_v1.json
+cdf40809d41029aee890ad10ada21ede0e8630b246a04d0acdf5e5d2fb5dd6f6  /tmp/opencode/spec_v3.json
+[0m
+[0m$ [0mgrep -c "com.derdack.signl4\|1100283480" knowledge/index.md leads/*.md 2>/dev/null; echo "=== inventory mobile mentions ==="; grep -n "mobile applications\|unfingerprinted" inventory/derdack.md | head
+knowledge/index.md:0
+leads/lead-bigpickle.md:0
+leads/lead-laguna.md:0
+leads/lead-ling3.md:0
+leads/lead-longcat.md:0
+leads/lead-mimo.md:0
+leads/lead-nemotron3.md:0
+leads/reposcan-derdack.md:0
+=== inventory mobile mentions ===
+[0m
+[0m$ [0mfor h in www.signl4.com signl4.com www.derdack.com derdack.com connect.signl4.com account.signl4.com; do
+  for p in "/.well-known/assetlinks.json" "/.well-known/apple-app-site-association"; do
+    code=$(curl -s -o "/tmp/opencode/al_$(echo $h$p | tr '/.' '__')" -w '%{http_code}' --max-time 10 -A 'Mozilla/5.0 (passive research probe)' "https://$h$p")
+    echo "$code https://$h$p"
+    sleep 1
+  done
+done
+404 https://www.signl4.com/.well-known/assetlinks.json
+404 https://www.signl4.com/.well-known/apple-app-site-association
+301 https://signl4.com/.well-known/assetlinks.json
+301 https://signl4.com/.well-known/apple-app-site-association
+404 https://www.derdack.com/.well-known/assetlinks.json
+404 https://www.derdack.com/.well-known/apple-app-site-association
+302 https://derdack.com/.well-known/assetlinks.json
+302 https://derdack.com/.well-known/apple-app-site-association
+200 https://connect.signl4.com/.well-known/assetlinks.json
+200 https://connect.signl4.com/.well-known/apple-app-site-association
+200 https://account.signl4.com/.well-known/assetlinks.json
+200 https://account.signl4.com/.well-known/apple-app-site-association
+[0m
+[0m$ [0mecho "=== connect assetlinks ==="; cat "/tmp/opencode/al_connect_signl4_com__well-known_assetlinks_json"; echo; echo "=== connect AASA ==="; cat "/tmp/opencode/al_connect_signl4_com__well-known_apple-app-site-association"; echo; echo "=== account assetlinks ==="; cat "/tmp/opencode/al_account_signl4_com__well-known_assetlinks_json"; echo; echo "=== account AASA ==="; cat "/tmp/opencode/al_account_signl4_com__well-known_apple-app-site-association"
+=== connect assetlinks ===
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.derdack.signl4",
+      "sha256_cert_fingerprints": [
+        "5C:65:17:CE:9F:F2:FA:EE:33:F7:35:D6:D2:D3:09:CB:61:D8:04:33:DD:1C:66:48:8F:BD:48:FA:C0:59:54:CE",
+        "63:B9:87:8B:74:C2:F1:B2:86:B8:A1:3E:F3:83:1C:A9:88:02:F0:69:D3:08:19:A0:9C:97:AF:B5:8E:74:45:92",
+        "B5:6D:56:46:44:50:2A:72:29:42:08:B6:AC:7E:71:42:F9:3F:41:73:B3:DE:E0:63:19:0A:38:93:A7:FF:50:49"
+      ]
+    }
+  }
+]
+=== connect AASA ===
+{
+    "applinks": {
+        "apps": [],
+        "details": [
+            {
+                "appID": "F2UW9VUYTE.com.derdack.projectx",
+                "paths": [
+                    "NOT /manage/Signls/NewSignl",
+                    "/manage/Signls",
+                    "/manage/account/signup"
+                ]
+            }
+        ]
+    }
+}
+=== account assetlinks ===
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.derdack.signl4",
+      "sha256_cert_fingerprints": [
+        "5C:65:17:CE:9F:F2:FA:EE:33:F7:35:D6:D2:D3:09:CB:61:D8:04:33:DD:1C:66:48:8F:BD:48:FA:C0:59:54:CE",
+        "63:B9:87:8B:74:C2:F1:B2:86:B8:A1:3E:F3:83:1C:A9:88:02:F0:69:D3:08:19:A0:9C:97:AF:B5:8E:74:45:92",
+        "B5:6D:56:46:44:50:2A:72:29:42:08:B6:AC:7E:71:42:F9:3F:41:73:B3:DE:E0:63:19:0A:38:93:A7:FF:50:49"
+      ]
+    }
+  }
+]
+=== account AASA ===
+{
+    "applinks": {
+        "apps": [],
+        "details": [
+            {
+                "appID": "F2UW9VUYTE.com.derdack.projectx",
+                "paths": [
+                    "NOT /manage/Signls/NewSignl",
+                    "/manage/Signls",
+                    "/manage/account/signup"
+                ]
+            }
+        ]
+    }
+}
+[0m
+New delta this cycle: the "mobile applications" scope item just got fingerprinted. Running control tests before drawing conclusions.
+[0m$ [0m# Control: is assetlinks/AASA a real static file or a catch-all?
+for u in "https://connect.signl4.com/.well-known/assetlinks.json" "https://connect.signl4.com/.well-known/definitely-not-real-xyz.json" "https://account.signl4.com/.well-known/apple-app-site-association" "https://account.signl4.com/.well-known/definitely-not-real-xyz"; do
+  out=$(curl -s --max-time 10 -w '\n%{http_code} %{content_type} %{size_download}' -A 'Mozilla/5.0 (passive research probe)' "$u")
+  echo "$u => $(echo "$out" | tail -1) sha=$(echo "$out" | head -n -1 | sha256sum | cut -c1-16)"
+  sleep 1
+done
+https://connect.signl4.com/.well-known/assetlinks.json => 200 application/json 566 sha=de0b7e5fe9d0fad6
+https://connect.signl4.com/.well-known/definitely-not-real-xyz.json => 404  0 sha=01ba4719c80b6fe9
+https://account.signl4.com/.well-known/apple-app-site-association => 200  359 sha=3550c004ba3b86a8
+https://account.signl4.com/.well-known/definitely-not-real-xyz => 404  0 sha=01ba4719c80b6fe9
+[0m
+[0m$ [0m# Remaining identity/EA hosts: do they serve assetlinks/AASA too?
+for h in api.signl4.com devconnect.signl4.com devapi.signl4.com devaccount.signl4.com labconnect.signl4.com labaccount.signl4.com demo.enterprisealert.com; do
+  for p in "/.well-known/assetlinks.json" "/.well-known/apple-app-site-association"; do
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -A 'Mozilla/5.0 (passive research probe)' "https://$h$p")
+    echo "$code https://$h$p"
+    sleep 1
+  done
+done
+200 https://api.signl4.com/.well-known/assetlinks.json
+200 https://api.signl4.com/.well-known/apple-app-site-association
+200 https://devconnect.signl4.com/.well-known/assetlinks.json
+200 https://devconnect.signl4.com/.well-known/apple-app-site-association
+200 https://devapi.signl4.com/.well-known/assetlinks.json
+200 https://devapi.signl4.com/.well-known/apple-app-site-association
+200 https://devaccount.signl4.com/.well-known/assetlinks.json
+200 https://devaccount.signl4.com/.well-known/apple-app-site-association
+200 https://labconnect.signl4.com/.well-known/assetlinks.json
+200 https://labconnect.signl4.com/.well-known/apple-app-site-association
+200 https://labaccount.signl4.com/.well-known/assetlinks.json
+200 https://labaccount.signl4.com/.well-known/apple-app-site-association
+404 https://demo.enterprisealert.com/.well-known/assetlinks.json
+404 https://demo.enterprisealert.com/.well-known/apple-app-site-association
+[0m
+[0m$ [0m# Body-equality across dev vs prod identity hosts (control: same file?)
+curl -s --max-time 10 -A 'Mozilla/5.0 (passive research probe)' "https://devconnect.signl4.com/.well-known/assetlinks.json" | sha256sum
+curl -s --max-time 10 -A 'Mozilla/5.0 (passive research probe)' "https://connect.signl4.com/.well-known/assetlinks.json" | sha256sum
+sleep 1
+# AASA-declared app-link routes: are they live?
+for u in "https://connect.signl4.com/manage/account/signup" "https://connect.signl4.com/manage/Signls"; do
+  echo "$u => $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 10 -A 'Mozilla/5.0 (passive research probe)' "$u")"
+  sleep 1
+done
+8c940db8c49e0217141e7ad3971d2f2291577cf8f3549563c2a328fbcedc31bb  -
+8c940db8c49e0217141e7ad3971d2f2291577cf8f3549563c2a328fbcedc31bb  -
+https://connect.signl4.com/manage/account/signup => 302 https://connect.signl4.com/identity/account/signup?returnUrl=%2Fidentity%2Fconnect%2Fauthorize%2Fcallback%3Fclient_id%3D692A0A56-892F-4AE2-8259-76DA398990B6%26response_type%3Dcode%26scope%3Daccount_portal%2520public_api_read%2520public_api_write%2520public_api_prov%2520offline_access%26redirect_uri%3Dhttps%253A%252F%252Faccount.signl4.com%252Fmanage%252Fsignin-oidc%26nonce%3DvOTmksUdQcNL%252FoLaY3CY6Q%253D%253D%26response_mode%3Dform_post%26code_challenge%3DlRXz5KvtGv-SlION-qgOAzAU2cpiXHgZ-NJrcnvaiYE%26code_challenge_method%3DS256
+https://connect.signl4.com/manage/Signls => 302 https://connect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=EDfJO-2wGXs6ug98TJbJvhRqOgkCKaZ8cOGpZOYFmS0&code_challenge_method=S256&response_mode=form_post&nonce=639270685535987344.YTU1MTVmYWItNDZkZC00ODc4LTliYTItN2Y5Y2UxZmQyNzIwMzM1NjVkNTQtMDVhYS00MTI3LTkzMzctZTAxNDdkYTQyY2Rl&state=CfDJ8P0bhSkvNP5HkPto7qc9KqP8x0LXtlMMMNd1-bCF_ifwuIZ-eq8LMvQWnIe4Utc4OmUe4_vPYiu5x1yJ7SgyTuL6i0NvMUe199P4WMmTUwcMfNG5KLF1vUct8n2uok5HPvrTeEr6IeKc9W6yxIu5iDEfTHlKoz0RMCRT4vowWpGTzLWHXpZzH20_7-9FY5SzgNlnOMJ2uhcwRuQAi0PINyEXE1ImM5_5uCdg_NFa2YxUxc9im_w7hZ-otrXbUC5xDl9R6yM-Vx7xKlNRUo7R79SHAv2WKZqQLygkjqoCtoudzotULu_Z2kq60e03uGPSfNN84UZwLF3nptO2tE-D3qe3lOb_WD0Qs1jZS7q01RG7fp2BaIIOKtnJLsCb_FSL_fGvGa39JafAXpZahGFWlOc&x-client-SKU=ID_NET10_0&x-client-ver=8.19.2.0
+[0m
+[0m$ [0mgrep -c "public_api_prov" knowledge/index.md leads/lead-bigpickle.md; echo "=== signing cert fingerprints previously seen? ==="; grep -c "5C:65:17:CE\|projectx\|assetlinks" knowledge/index.md leads/*.md reports/hypotheses-nemotron3.txt 2>/dev/null; echo "=== F2UW9VUYTE ==="; grep -rn "F2UW9VUYTE" . --include=*.md 2>/dev/null | head -3
+knowledge/index.md:0
+leads/lead-bigpickle.md:2
+=== signing cert fingerprints previously seen? ===
+knowledge/index.md:0
+leads/lead-bigpickle.md:0
+leads/lead-laguna.md:0
+leads/lead-ling3.md:0
+leads/lead-longcat.md:0
+leads/lead-mimo.md:0
+leads/lead-nemotron3.md:0
+leads/reposcan-derdack.md:0
+reports/hypotheses-nemotron3.txt:0
+=== F2UW9VUYTE ===
+[0m
+[0m$ [0mgrep -n "public_api_prov\|scope=" inventory/derdack.md | head -20; echo "=== scopes inventory ==="; grep -rn "account_portal" knowledge/index.md | head -5
+=== scopes inventory ===
+86:- 2026-09-05 ACCEPTED AUTH @ devaccount.signl4.com: staging account portal live → devconnect authorize w/ SAME client_id 692A0A56- + scopes (account_portal, public_api_read/write/prov, offline_access), PKCE S256+nonce+form_post, env-scoped redirect_uri — client/scope reuse spans OIDC and Account estate
+[0m
+[0m$ [0mgrep -n "public_api_prov" leads/lead-bigpickle.md | head; echo ===; grep -rn "5C:65:17\|sha256_cert" leads/ reports/ 2>/dev/null | head -5
+1500:verify_steps: POST https://devconnect.signl4.com/identity/connect/token grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<secret>&scope=openid profile account_portal public_api_read public_api_write public_api_prov offline_access&username=X&password=Y (expect 200 with token); decode token verify kid=91EE4F3CE94EB51[0m
+1522:verify_steps: POST https://devconnect.signl4.com/identity/connect/token grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<secret>&scope=openid profile account_portal public_api_read public_api_write public_api_prov offline_access&username=X&password=Y (expect 200 with token); decode token verify kid=91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256; GET https://api.signl4.com/api/v2/teams Authorization: Bearer <token> (expect 200)
+===
+reports/analyst-bigpickle.log:6504:      "sha256_cert_fingerprints": [
+reports/analyst-bigpickle.log:6505:        "5C:65:17:CE:9F:F2:FA:EE:33:F7:35:D6:D2:D3:09:CB:61:D8:04:33:DD:1C:66:48:8F:BD:48:FA:C0:59:54:CE",
+[0m
+[0m$ [0mgrep -n "labconnect\|labaccount" knowledge/index.md | tail -8; echo "=== lab OIDC now ==="; for u in "https://labconnect.signl4.com/identity/.well-known/openid-configuration" "https://labaccount.signl4.com/identity/.well-known/openid-configuration" "https://labconnect.signl4.com/" "https://labaccount.signl4.com/"; do echo "$u => $(curl -s -o /tmp/opencode/lab.out -w '%{http_code} %{size_download}' --max-time 12 -A 'Mozilla/5.0 (passive research probe)' "$u")"; sleep 1; done; echo "--- body head:"; head -c 300 /tmp/opencode/lab.out
+952:- 2026-10-02 REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+968:- 2026-10-03 REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+1012:- 2026-10-04 REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+1038:- 2026-10-04 REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 stable across both hosts, persistently dead tier
+1056:- 2026-10-04 REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 stable across hosts/paths/hours — persistently dead tier, re-checking has negative expected value.
+1074:- 2026-10-05 REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 stable across both hosts, persistently dead tier
+1176:- 2026-10-07 REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+1200:- 2026-10-08 REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+=== lab OIDC now ===
+https://labconnect.signl4.com/identity/.well-known/openid-configuration => 200 3493
+https://labaccount.signl4.com/identity/.well-known/openid-configuration => 200 3493
+https://labconnect.signl4.com/ => 301 0
+https://labaccount.signl4.com/ => 301 0
+--- body head:
+[0m
+Significant delta: the lab tier that was rejected as "persistently dead (502)" for days now answers with live OIDC discovery. Verifying properly.
+[0m$ [0mcurl -s --max-time 12 -A 'Mozilla/5.0 (passive research probe)' "https://labconnect.signl4.com/identity/.well-known/openid-configuration" > /tmp/opencode/lab_oidc.json
+sleep 1
+curl -s --max-time 12 -A 'Mozilla/5.0 (passive research probe)' "https://labaccount.signl4.com/identity/.well-known/openid-configuration" > /tmp/opencode/labacct_oidc.json
+sleep 1
+curl -s --max-time 12 -A 'Mozilla/5.0 (passive research probe)' "https://connect.signl4.com/identity/.well-known/openid-configuration" > /tmp/opencode/prod_oidc.json
+echo "hashes:"; sha256sum /tmp/opencode/lab_oidc.json /tmp/opencode/labacct_oidc.json /tmp/opencode/prod_oidc.json
+echo "--- lab issuer/token/grant:"; python3 -c "
+import json
+for f in ['lab_oidc.json','labacct_oidc.json','prod_oidc.json']:
+    d=json.load(open('/tmp/opencode/'+f))
+    print(f, '| issuer:', d.get('issuer'), '| token:', d.get('token_endpoint','')[:60])
+    print('   grants:', sorted(d.get('grant_types_supported',[])))
+    print('   jwks:', d.get('jwks_uri','')[:80])
+"
+hashes:
+a246115df562901e8e400c67e9383d2c145806bb292e796b91e1c7b2b947c4af  /tmp/opencode/lab_oidc.json
+27ac51229cd5189a2e476fb16342603637346c32b575da84970cb805b4b126d8  /tmp/opencode/labacct_oidc.json
+3be4ab63ef83e28ac6c1be764f2ba969406d3fec5bc93451bab24cbdf2f8ebdb  /tmp/opencode/prod_oidc.json
+--- lab issuer/token/grant:
+lab_oidc.json | issuer: https://labconnect.signl4.com/identity | token: https://labconnect.signl4.com/identity/connect/token
+   grants: ['authorization_code', 'client_credentials', 'implicit', 'password', 'refresh_token', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:ietf:params:oauth:grant-type:token-exchange', 'urn:openid:params:grant-type:ciba']
+   jwks: https://labconnect.signl4.com/identity/.well-known/openid-configuration/jwks
+labacct_oidc.json | issuer: https://labconnect.signl4.com/identity | token: https://labaccount.signl4.com/identity/connect/token
+   grants: ['authorization_code', 'client_credentials', 'implicit', 'password', 'refresh_token', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:ietf:params:oauth:grant-type:token-exchange', 'urn:openid:params:grant-type:ciba']
+   jwks: https://labaccount.signl4.com/identity/.well-known/openid-configuration/jwks
+prod_oidc.json | issuer: https://connect.signl4.com/identity | token: https://connect.signl4.com/identity/connect/token
+   grants: ['authorization_code', 'client_credentials', 'implicit', 'password', 'refresh_token', 'urn:ietf:params:oauth:grant-type:device_code', 'urn:ietf:params:oauth:grant-type:token-exchange', 'urn:openid:params:grant-type:ciba']
+   jwks: https://connect.signl4.com/identity/.well-known/openid-configuration/jwks
+[0m
+[0m$ [0mcurl -s --max-time 12 -A 'Mozilla/5.0 (passive research probe)' "https://labconnect.signl4.com/identity/.well-known/openid-configuration/jwks" > /tmp/opencode/lab_jwks.json; sleep 1
+curl -s --max-time 12 -A 'Mozilla/5.0 (passive research probe)' "https://labaccount.signl4.com/identity/.well-known/openid-configuration/jwks" > /tmp/opencode/labacct_jwks.json; sleep 1
+curl -s --max-time 12 -A 'Mozilla/5.0 (passive research probe)' "https://connect.signl4.com/identity/.well-known/openid-configuration/jwks" > /tmp/opencode/prod_jwks.json
+python3 -c "
+import json,hashlib
+for f in ['lab_jwks.json','labacct_jwks.json','prod_jwks.json']:
+    d=json.load(open('/tmp/opencode/'+f))
+    for k in d.get('keys',[]):
+        print(f, '| kid:', k.get('kid'), '| alg:', k.get('alg'), '| x5t:', k.get('x5t'), '| n_sha:', hashlib.sha256((k.get('n') or '').encode()).hexdigest()[:16])
+"
+echo "=== metadata diff lab vs prod ==="
+python3 -c "
+import json
+a=json.load(open('/tmp/opencode/lab_oidc.json')); b=json.load(open('/tmp/opencode/prod_oidc.json'))
+sa,sb=set(a),set(b)
+print('only lab:', sorted(sa-sb)); print('only prod:', sorted(sb-sa))
+for k in sorted(sa&sb):
+    if a[k]!=b[k] and k not in ('issuer','token_endpoint','jwks_uri','authorization_endpoint','userinfo_endpoint','introspection_endpoint','revocation_endpoint','device_authorization_endpoint','end_session_endpoint','ciba_endpoint'):
+        print('DIFF',k,'|lab:',str(a[k])[:100],'|prod:',str(b[k])[:100])
+    elif k in ('issuer','token_endpoint','introspection_endpoint','revocation_endpoint'):
+        print('HOST-SCOPED',k,'|',str(a[k])[:70])
+"
+lab_jwks.json | kid: 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 | alg: RS256 | x5t: ke5PPOlOtRevZrJU90l-yw4x7ic | n_sha: 138f432ba8c1bbaf
+labacct_jwks.json | kid: 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 | alg: RS256 | x5t: ke5PPOlOtRevZrJU90l-yw4x7ic | n_sha: 138f432ba8c1bbaf
+prod_jwks.json | kid: 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 | alg: RS256 | x5t: ke5PPOlOtRevZrJU90l-yw4x7ic | n_sha: 138f432ba8c1bbaf
+=== metadata diff lab vs prod ===
+only lab: []
+only prod: []
+DIFF backchannel_authentication_endpoint |lab: https://labconnect.signl4.com/identity/connect/ciba |prod: https://connect.signl4.com/identity/connect/ciba
+DIFF check_session_iframe |lab: https://labconnect.signl4.com/identity/connect/checksession |prod: https://connect.signl4.com/identity/connect/checksession
+HOST-SCOPED introspection_endpoint | https://labconnect.signl4.com/identity/connect/introspect
+HOST-SCOPED issuer | https://labconnect.signl4.com/identity
+DIFF pushed_authorization_request_endpoint |lab: https://labconnect.signl4.com/identity/connect/par |prod: https://connect.signl4.com/identity/connect/par
+HOST-SCOPED revocation_endpoint | https://labconnect.signl4.com/identity/connect/revocation
+HOST-SCOPED token_endpoint | https://labconnect.signl4.com/identity/connect/token
+[0m
+Lab tier revival confirmed — now checking endpoint aliveness and the parity claim (was 6/6, potentially 8/8).
+[0m$ [0mfor u in "https://labconnect.signl4.com/identity/connect/token" "https://labconnect.signl4.com/identity/connect/introspect" "https://labconnect.signl4.com/identity/connect/revocation" "https://labaccount.signl4.com/identity/connect/token" "https://labconnect.signl4.com/" ; do
+  echo "$u => $(curl -s -o /dev/null -w '%{http_code} allow=%{header_json}' --max-time 12 -A 'Mozilla/5.0 (passive research probe)' -X GET "$u" 2>/dev/null | head -c 0)$(curl -s -D- -o /dev/null --max-time 12 -A 'Mozilla/5.0 (passive research probe)' "$u" | head -1 | tr -d '\r') | $(curl -s -D- -o /dev/null --max-time 12 -A 'Mozilla/5.0 (passive research probe)' "$u" | grep -i '^location\|^allow' | tr -d '\r' | head -2)"
+  sleep 1
+done
+https://labconnect.signl4.com/identity/connect/token => HTTP/2 400  | 
+https://labconnect.signl4.com/identity/connect/introspect => HTTP/2 405  | 
+https://labconnect.signl4.com/identity/connect/revocation => HTTP/2 405  | 
+https://labaccount.signl4.com/identity/connect/token => HTTP/2 400  | 
+https://labconnect.signl4.com/ => HTTP/2 301  | location: https://labaccount.signl4.com/manage
+[0m
+[0m$ [0mfor u in "https://connect.signl4.com/identity/connect/token" "https://devconnect.signl4.com/identity/connect/token" "https://connect.signl4.com/identity/connect/introspect"; do
+  echo "$u => $(curl -s -D- -o /dev/null --max-time 12 -A 'Mozilla/5.0 (passive research probe)' "$u" | head -1 | tr -d '\r')"
+  sleep 1
+done
+echo "=== scopes + claims diff ==="
+python3 -c "
+import json
+a=json.load(open('/tmp/opencode/lab_oidc.json')); b=json.load(open('/tmp/opencode/prod_oidc.json'))
+print('scopes equal:', a.get('scopes_supported')==b.get('scopes_supported'))
+print('lab scopes:', a.get('scopes_supported'))
+print('claims equal:', a.get('claims_supported')==b.get('claims_supported'))
+print('dpop equal:', a.get('dpop_signing_alg_values_supported')==b.get('dpop_signing_alg_values_supported'))
+"
+https://connect.signl4.com/identity/connect/token => HTTP/2 400 
+https://devconnect.signl4.com/identity/connect/token => HTTP/2 400 
+https://connect.signl4.com/identity/connect/introspect => HTTP/2 405 
+=== scopes + claims diff ===
+scopes equal: True
+lab scopes: ['openid', 'email', 'profile', 'public_api_read', 'public_api_write', 'public_api_prov', 'mobile_api', 'account_portal', 'reseller_portal', 'public_api_ea_manage', 'public_api_ea_alerting', 'offline_access']
+claims equal: True
+dpop equal: True
+[0m
+[0m$ [0m# Registration check: is client 692A0A56 registered on the lab tier? (dummy secret, single request)
+curl -s -D- --max-time 12 -A 'Mozilla/5.0 (passive research probe)' \
+  -d 'grant_type=client_credentials&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=dummy-invalid-000&scope=openid' \
+  "https://labconnect.signl4.com/identity/connect/token" | head -20
+sleep 1
+# Control: unregistered client on same endpoint
+curl -s -D- --max-time 12 -A 'Mozilla/5.0 (passive research probe)' \
+  -d 'grant_type=client_credentials&client_id=00000000-0000-0000-0000-000000000000&client_secret=dummy-invalid-000&scope=openid' \
+  "https://labconnect.signl4.com/identity/connect/token" | head -20
+HTTP/2 400 
+date: Thu, 08 Oct 2026 15:05:25 GMT
+content-type: application/json; charset=UTF-8
+cache-control: no-store, no-cache, max-age=0
+pragma: no-cache
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:7622f37d-92c1-4e1e-a924-8da7556e3fc9
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://labconnect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+reporting-endpoints: csp-endpoint="https://labconnect.signl4.com/api/v2/csp/report"
+
+{"error":"invalid_client"}HTTP/2 400 
+date: Thu, 08 Oct 2026 15:05:26 GMT
+content-type: application/json; charset=UTF-8
+cache-control: no-store, no-cache, max-age=0
+pragma: no-cache
+server: Microsoft-HTTPAPI/2.0
+request-context: appId=cid-v1:7622f37d-92c1-4e1e-a924-8da7556e3fc9
+x-frame-options: DENY
+x-xss-protection: 0
+x-content-type-options: nosniff
+strict-transport-security: max-age=15552000
+referrer-policy: strict-origin-when-cross-origin
+content-security-policy-report-only: default-src 'self'; frame-src 'self' https://www.googletagmanager.com https://*.google.com https://www.google.com https://www.gstatic.com https://js.recurly.com https://api.recurly.com https://api.eu.recurly.com https://www.youtube.com https://www.youtube-nocookie.com; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com blob: https://www.gstatic.com https://code.jquery.com https://public.profitwell.com https://js.recurly.com https://www.redditstatic.com https://*.zdassets.com https://*.zendesk.com https://*.smooch.io https://*.sentry.io https://*.twilio.com wss://*.zendesk.com wss://api.smooch.io wss://voice-js.roaming.twilio.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob: https://www.gstatic.com https://ipapi.co https://www2.profitwell.com https://api.recurly.com https://api.eu.recurly.com https://connect.signl4.com https://devconnect.signl4.com https://labconnect.signl4.com https://s4dev1.enterprisealert.com https://s4dev2.enterprisealert.com https://s4dev3.enterprisealert.com https://s4dev4.enterprisealert.com https://s4dev5.enterprisealert.com https://s4dev6.enterprisealert.com https://s4dev7.enterprisealert.com https://s4dev8.enterprisealert.com https://*.zdassets.com https://*.zendesk.com; img-src 'self' data: https://ct.capterra.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://www.googletagmanager.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://www.google.com https://google.com https://www.google.de https://cdn-images.mailchimp.com https://js.recurly.com https://assets.recurly.com https://static.zdassets.com https://media.smooch.io https://*.zendesk.com https://*.zdusercontent.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.recurly.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https://static.zdassets.com; form-action 'self' https://account.signl4.com https://devaccount.signl4.com https://labaccount.signl4.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; report-uri https://labconnect.signl4.com/api/v2/csp/report; report-to csp-endpoint
+reporting-endpoints: csp-endpoint="https://labconnect.signl4.com/api/v2/csp/report"
+
+{"error":"invalid_client"}
+[0m
+[0m$ [0m# Authorize-endpoint discriminator: known client+redirect vs fabricated client (same redirect)
+B="https://labconnect.signl4.com/identity/connect/authorize"
+R="https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fsignin-oidc"
+for cid in "692A0A56-892F-4AE2-8259-76DA398990B6" "00000000-0000-0000-0000-000000000000"; do
+  echo "--- client_id=$cid"
+  curl -s -D- -o /tmp/opencode/auth_body --max-time 12 -A 'Mozilla/5.0 (passive research probe)' \
+    "$B?client_id=$cid&response_type=code&scope=openid&redirect_uri=$R&state=probe123&code_challenge_method=S256&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM" \
+    | grep -i '^HTTP\|^location' | tr -d '\r'
+  echo "body: $(head -c 200 /tmp/opencode/auth_body | tr -d '\n')"
+  sleep 1
+done
+--- client_id=692A0A56-892F-4AE2-8259-76DA398990B6
+HTTP/2 302 
+location: https://labconnect.signl4.com/identity/Account/Login?ReturnUrl=%2Fidentity%2Fconnect%2Fauthorize%2Fcallback%3Fclient_id%3D692A0A56-892F-4AE2-8259-76DA398990B6%26response_type%3Dcode%26scope%3Dopenid%26redirect_uri%3Dhttps%253A%252F%252Faccount.signl4.com%252Fmanage%252Fsignin-oidc%26state%3Dprobe123%26code_challenge_method%3DS256%26code_challenge%3DE9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+body: 
+--- client_id=00000000-0000-0000-0000-000000000000
+HTTP/2 302 
+location: https://labconnect.signl4.com/identity/home/error?errorId=CfDJ8J06NjA6HLtPpkHRp95bNnGuJC11SSWN5rcDs_xG4wY7vBvwwBpDygbjoSRUFNyhVtSDeGoczoW2ANOE2yd7sb_54mO3q2uEQakr3HIyN7KFSH13ry0z_40npxV7APsi25T9p-DHBqNAjEBaWDc6-3aN1Gjkpm-uqV_i7m41NIIYwg8sHaLRCXiu53cwybAesTpYrnE88Ee5cHLJCN-2ppEqT4eS0QY9CdxnrJE3ae4tSLJTymaPRJqDbDcDm4k-F9tpJVXak2jsh32lqOIWQ_bzPiaYjLVmfDg3nL7Au1zO3eFcmxaW0OsiFXBFTCKAvlcgq1mj5l7f-t5MZ2HdsxAEB5VLW86VHksFD3zGSQREBANqnfOtAglgw29wmrjzwu5kZuLReTjQmacSFFO2oGYvyXCf7_wRA3RNB1Agc6iInofWSxOJbNI5hRJ9Bond3NJVNxeknOifdz1gvLXswDA3csuC7FWeQuT4LkegInS1h0iPGbu7vjOcjyDwpdlLjw
+body:
+[0m
+[0m$ [0mB="https://labconnect.signl4.com/identity/connect/authorize"
+# Control arm: same client, wrong redirect_uri — is redirect_uri actually validated?
+curl -s -D- -o /dev/null --max-time 12 -A 'Mozilla/5.0 (passive research probe)' \
+  "$B?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&response_type=code&scope=openid&redirect_uri=https%3A%2F%2Fevil.example.com%2Fcb&state=probe123&code_challenge_method=S256&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM" \
+  | grep -i '^HTTP\|^location' | tr -d '\r' | cut -c1-220
+sleep 1
+# assetlinks byte-equality on lab tier
+curl -s --max-time 12 "https://labconnect.signl4.com/.well-known/assetlinks.json" | sha256sum
+HTTP/2 302 
+location: https://labconnect.signl4.com/identity/home/error?errorId=CfDJ8J06NjA6HLtPpkHRp95bNnEf4ZK-kDvF9pT3wRl4AlrWrzSi64kqtB_7vUALtLSA-RF5MXodnVq1MKHjsw009bG3gjFhusHOMYgxnXpecUJWDCu7tvXq6TjH6eS6XAnSqs6xTWTrnvcJ2yj8GK_M
+8c940db8c49e0217141e7ad3971d2f2291577cf8f3549563c2a328fbcedc31bb  -
+[0m
+[0m$ [0mgrep -n "labconnect\|labaccount" leads/lead-nemotron3.md | tail -5; echo "=== when did lab first 502 ==="; grep -n "labconnect" leads/lead-bigpickle.md | head -5
+13925:[LEARN] REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+13995:[LEARN] REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+14129:[LEARN] REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+14149:[LEARN] REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+14227:[LEARN] REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+=== when did lab first 502 ===
+467:asset: devconnect.signl4.com / devaccount.signl4.com / labconnect.signl4.com
+471:verify_steps: GET https://devaccount.signl4.com/ ; GET https://devconnect.signl4.com/identity/.well-known/openid-configuration ; GET https://labconnect.signl4.com/identity/.well-known/openid-configuration ; GET https://labaccount.signl4.com/ ; compare issuer/endpoints vs prod connect.signl4.com; diff server headers
+499:[NEW] labconnect/labaccount.signl4.com → uniform 502 Microsoft-Azure-Application-Gateway/v2 on all paths — backend unmapped, estate inert
+503:[PRIO] labconnect.signl4.com,5.20,inert-502
+528:[LEARN] ACCEPTED MISCONFIG @ labconnect/labaccount.signl4.com: Azure AppGW/v2 502 on all probed paths (root, /identity/, /connect/authorize) — unmapped backend, estate inert
+[0m
+[0m$ [0mgrep -n "975f235c\|cdf40809\|swagger.json.*sha\|spec.*hash" inventory/derdack.md knowledge/index.md | tail -5; echo "=== lab root301 + login reachability ==="; curl -s -D- -o /dev/null --max-time 10 "https://labconnect.signl4.com/identity/Account/Login" | head -1; sleep 1; curl -s -D- -o /dev/null --max-time 10 "https://labaccount.signl4.com/manage" | head -3 | tr -d '\r'
+knowledge/index.md:543:- 2026-09-16 ACCEPTED AUTH @ api.signl4.com: swagger.json confirms OAuth2 security scheme (authorizationCode flow) targeting connect.signl4.com/identity/connect endpoints with public_api_read+write+offline_access scopes — API accepts Bearer tokens from same shared-signing-key IdP; full cross-env token forgery chain confirmed
+knowledge/index.md:590:- 2026-09-17 ACCEPTED AUTH @ api.signl4.com: swagger.json confirms OAuth2 security scheme (authorizationCode flow) targeting connect.signl4.com/identity/connect endpoints with public_api_read+write+offline_access scopes — API accepts Bearer tokens from same shared-signing-key IdP; full cross-env token forgery chain confirmed
+knowledge/index.md:845:- 2026-09-26 REJECTED OTHER @ connect.signl4.com/api/docs/{v1,v2,v3}/swagger.json, SSRF class: parsed all three anon-readable specs (493618 / 1216391 / 1213127 B). Zero parameters carry `format: uri`; every `url|uri|endpoint|callback|image|att|file|path`-shaped name resolves to a plain `string` ID/path segment (`attachmentId`, `fileName`, `webhookId`, `templateId`, `patternId`, `eventSourceId`, `sourceTeamId`). There is **no caller-supplied server-fetch parameter** on V1/V2/V3, so the metadata-SSRF class has no entry point on the public spec surface.
+knowledge/index.md:983:- 2026-10-03 ACCEPTED OTHER @ `us.derdack.com`: root-only probing was the right call to *re-test*, and re-testing cost11 GETs to definitively close a host that 20+ cycles had left ambiguously "parked-minimal." Applying my own recorded lesson twice in a row (first it found `demo.enterprisealert.com`, now it closed `us.derdack.com` cleanly) is worth more than a speculative new hypothesis. Establishing a fabricated-echo baseline **first** is what made the negative result trustworthy — without the control hash, eleven404s would have been unfalsifiable.
+knowledge/index.md:1083:- 2026-10-05 ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: I specified hashing and lengthing the control body to distinguish registered from unregistered. In practice every body — target and control alike — was zero-length and hashed to the empty-string sha256, so the body discriminator was identical across both arms and carried zero signal. The discriminator that actually resolved the question was the status code alone, 405 vs 404. Building the right control is not the same as building the control you predicted would work; had I asserted "registered" from a bare 405 without the fabricated sibling, the inference would have been unfalsifiable and, given the KB's earlier `s4dev1..8` 2/8-vs-8/8 status-only error, wrong for a second time.
+=== lab root301 + login reachability ===
+HTTP/2 200 
+HTTP/2 302 
+date: Thu, 08 Oct 2026 15:06:56 GMT
+content-length: 0
+[0m
+[0m$ [0mfor h in api.signl4.com devapi.signl4.com devaccount.signl4.com labaccount.signl4.com labconnect.signl4.com; do
+  echo -n "assetlinks $h: "; curl -s --max-time 10 -A 'Mozilla/5.0 (passive research probe)' "https://$h/.well-known/assetlinks.json" | sha256sum | cut -c1-16
+  sleep 1
+done
+echo -n "AASA labconnect: "; curl -s --max-time 10 "https://labconnect.signl4.com/.well-known/apple-app-site-association" | sha256sum | cut -c1-16
+sleep 1
+echo -n "AASA connect: "; curl -s --max-time 10 "https://connect.signl4.com/.well-known/apple-app-site-association" | sha256sum | cut -c1-16
+assetlinks api.signl4.com: 8c940db8c49e0217
+assetlinks devapi.signl4.com: 8c940db8c49e0217
+assetlinks devaccount.signl4.com: 8c940db8c49e0217
+assetlinks labaccount.signl4.com: 8c940db8c49e0217
+assetlinks labconnect.signl4.com: 8c940db8c49e0217
+AASA labconnect: 1eae8c95ea7d23f6
+AASA connect: 1eae8c95ea7d23f6
+[0m
+[0m$ [0mfor u in "https://labconnect.signl4.com/api/v2/teams" "https://labaccount.signl4.com/api/v2/teams" "https://labconnect.signl4.com/api/docs/v3/swagger.json"; do
+  echo "$u => $(curl -s -o /dev/null -w '%{http_code} %{size_download}' --max-time 10 -A 'Mozilla/5.0 (passive research probe)' "$u")"
+  sleep 1
+done
+# Where does labaccount/manage land?
+curl -s -D- -o /dev/null --max-time 10 "https://labaccount.signl4.com/manage" | grep -i '^HTTP\|^location' | tr -d '\r'
+https://labconnect.signl4.com/api/v2/teams => 401 0
+https://labaccount.signl4.com/api/v2/teams => 401 0
+https://labconnect.signl4.com/api/docs/v3/swagger.json => 200 1213145
+HTTP/2 302 
+location: https://labconnect.signl4.com/identity/connect/authorize?client_id=692A0A56-892F-4AE2-8259-76DA398990B6&redirect_uri=https%3A%2F%2Flabaccount.signl4.com%2Fmanage%2Fsignin-oidc&response_type=code&scope=openid%20profile%20account_portal%20public_api_read%20public_api_write%20public_api_prov%20offline_access&code_challenge=t-CgZ0pZatRsR98REdnymIzymK0goLy-v_LRivWxDQs&code_challenge_method=S256&response_mode=form_post&nonce=639270689014491389.MDE3MjlhZjMtYTAxZC00MTcwLWE5ZDQtNzhmN2I0NDVkYTBiMDQ3OGU0ODQtYWJhNy00NjEyLTgxNWEtYmY3YTE2OTkyMzc0&state=CfDJ8J06NjA6HLtPpkHRp95bNnF1iCOVZJZ0U6YCQIkp98IuI2MT8eOMY0o-iznl31x3lKUUWwejQyA_BQ263vFE5Ow14RxyUlMsT0hBVUytOOna5KPUeM9r1xZLB5bw09jZIZ-3zY2eElhCRvo2CqrD6ensig4C5CHX9ic06ZPcU8XNq0TKHmTWQxto1m-GELWpTdSTGSIJAmptf4fLwCCKCIudoadg-n3_MimJ-Q10nRxmQ2TbfaWAAF8m370iCOGQJS4BWwLQXXD3g9j5qg7bOLum7QtTDpfqRwTQWQm0ADMUS_id5-cp_tk_JKBx3lG-k5nJXu5cvv9SFfB-jVVO04KfLHac8i-N8H2LfldN0Uem6H0RMoleROgSqJVt5OWExXTUMpMLJd27ziPlQv_RLNU&x-client-SKU=ID_NET10_0&x-client-ver=8.19.2.0
+[0m
+[0m$ [0mcurl -s --max-time 15 -A 'Mozilla/5.0 (passive research probe)' "https://labconnect.signl4.com/api/docs/v3/swagger.json" > /tmp/opencode/lab_spec_v3.json
+python3 - <<'EOF'
+import json,hashlib
+a=open('/tmp/opencode/spec_v3.json','rb').read(); b=open('/tmp/opencode/lab_spec_v3.json','rb').read()
+print('prod',len(a),hashlib.sha256(a).hexdigest()[:16])
+print('lab ',len(b),hashlib.sha256(b).hexdigest()[:16])
+if a!=b:
+    ja,jb=json.loads(a),json.loads(b)
+    # find differing top-level and servers
+    print('servers prod:', ja.get('servers'))
+    print('servers lab :', jb.get('servers'))
+    pa,pb=set(ja.get('paths',{})),set(jb.get('paths',{}))
+    print('paths only prod:',sorted(pa-pb)[:10],'only lab:',sorted(pb-pa)[:10])
+EOF
+prod 1213127 cdf40809d41029ae
+lab  1213145 c0d7934746356926
+servers prod: [{'url': 'https://connect.signl4.com/api'}]
+servers lab : [{'url': 'https://labconnect.signl4.com/api'}]
+paths only prod: [] only lab: []
+[0m
+[0m$ [0mls .github/workflows/; echo ===; grep -n "knowledge/index\|lead-\|analyst" .github/workflows/*.yml | head -30
+hunt.yml
+reposcan.yml
+sync-issues.yml
+triage.yml
+===
+.github/workflows/hunt.yml:16:  analyst:
+.github/workflows/hunt.yml:57:          [ -f knowledge/index.md ] || echo "# Knowledge Base (seed)" > knowledge/index.md
+.github/workflows/hunt.yml:61:            cat knowledge/index.md
+.github/workflows/hunt.yml:65:            tail -60 leads/lead-${MODEL_NAME}.md 2>/dev/null || echo none
+.github/workflows/hunt.yml:74:          cat ctx.txt > analyst-prompt.txt
+.github/workflows/hunt.yml:75:          cat >> analyst-prompt.txt << 'PROMPT_EOF'
+.github/workflows/hunt.yml:107:          timeout -k 15 20m opencode run --model "$MODEL_ID" < analyst-prompt.txt > analyst-out.txt 2>&1 || true
+.github/workflows/hunt.yml:108:          cp analyst-out.txt analyst-${MODEL_NAME}.out
+.github/workflows/hunt.yml:109:          grep -E '^\[(NEW|CHANGED|PRIO|HYP|PARKED|FINAL|NEXT|LEARN|RISK)\]|^class:|^confidence:|^asset:|^impact:|^testability:|^verify_steps:|^reasoning:|^evidence_needed:' analyst-out.txt > lead.txt || true
+.github/workflows/hunt.yml:114:          echo "lead bytes: $(wc -c < lead.txt) | raw bytes: $(wc -c < analyst-out.txt)"
+.github/workflows/hunt.yml:119:          name: analyst-${{ matrix.model.name }}
+.github/workflows/hunt.yml:122:            analyst-${{ matrix.model.name }}.out
+.github/workflows/hunt.yml:129:    needs: analyst
+.github/workflows/hunt.yml:150:            cat "$f" >> leads/lead-$(basename "$f" | sed -E 's/lead_([a-z0-9]+)\.txt/\1/').md
+.github/workflows/hunt.yml:178:          kpath='knowledge/index.md'; os.makedirs('knowledge',exist_ok=True)
+.github/workflows/hunt.yml:196:          for f in glob.glob('art/analyst-*.out'):
+.github/workflows/hunt.yml:197:              model=re.search(r'art/analyst-([a-z0-9]+)\.out$',f)
+.github/workflows/hunt.yml:199:                  with open(f'reports/analyst-{model.group(1)}.log','a') as lg:
+.github/workflows/hunt.yml:212:          for f in glob.glob('art/lead_*.txt')+glob.glob('lead_*.txt')+glob.glob('analyst-*.out'):
+.github/workflows/reposcan.yml:76:          You are a source-code audit analyst for Derdack GmbH / Derdack Group (bugs.olivermaicher.eu). The candidate public repos below are the org's own code. Hunt for secrets, hardcoded credentials, insecure patterns (hardcoded API keys/SEK/cloud creds, SSRF-prone URL builders, JWT weak validation, IDOR-prone endpoints, debug backdoors) that map to IN-SCOPE assets.
+.github/workflows/sync-issues.yml:37:          LEAD_GLOB: "leads/lead-*.md"
+.github/workflows/triage.yml:45:          grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25 > new-leads.txt
+.github/workflows/triage.yml:112:          kpath='knowledge/index.md'; os.makedirs('knowledge',exist_ok=True)
+.github/workflows/triage.yml:124:          print(f'appended {len(learnings)} learnings to knowledge/index.md')
+[0m
+[0m$ [0m# server header comparison: old 502 was Azure AppGW; what serves lab now?
+for u in "https://labconnect.signl4.com/identity/.well-known/openid-configuration" "https://connect.signl4.com/identity/.well-known/openid-configuration"; do
+  echo "--- $u"; curl -s -D- -o /dev/null --max-time 10 "$u" | grep -i '^server\|^x-powered' | tr -d '\r'; sleep 1
+done
+# was the 502 recorded as AppGW on lab? confirm in inventory
+grep -n "labconnect" inventory/derdack.md | head -10
+--- https://labconnect.signl4.com/identity/.well-known/openid-configuration
+server: Microsoft-HTTPAPI/2.0
+--- https://connect.signl4.com/identity/.well-known/openid-configuration
+server: Microsoft-HTTPAPI/2.0
+130:- NEW labconnect/labaccount.signl4.com → uniform 502 Microsoft-Azure-Application-Gateway/v2 on all paths — backend unmapped, estate inert
+131:- NEW SIGNL4 dev/lab staging estate discovered: `devconnect.signl4.com`, `devaccount.signl4.com` (co-resolve 108.143.123.104), `labconnect.signl4.com`, `labaccount.signl4.com` (13.93.49.201) — distinct from
+143:- NEW labconnect/labaccount.signl4.com → uniform 502 Azure AppGW/v2 (backend unmapped, estate inert)
+144:- NEW SIGNL4 staging estate discovered: `devconnect.signl4.com`, `devaccount.signl4.com` (108.143.123.104), `labconnect.signl4.com`, `labaccount.signl4.com` (13.93.49.201) — distinct from prod `connect.sign
+148:- NEW `labconnect/labaccount.signl4.com` → uniform 502 Microsoft-Azure-Application-Gateway/v2 on all paths (root, `/identity/`, `/connect/authorize`) — backend unmapped, estate inert
+160:- NEW labconnect/labaccount.signl4.com → uniform 502 Azure AppGW/v2 (backend unmapped, estate inert)
+1713:- CHANGED `labconnect.signl4.com` + `labaccount.signl4.com` remain App Gateway v2 **502** at `01:01:50–53Z` on both `/` and `/identity/.well-known/openid-configuration`. No drift.
+1723:- NEW labconnect/labaccount.signl4.com remain App Gateway v2 502 stable — persistently dead tier
+1731:- NEW labconnect/labaccount.signl4.com remain App Gateway v2 502 stable — persistently dead tier
+1742:- CHANGED labconnect/labaccount.signl4.com remain App Gateway v2 502 stable — persistently dead tier
+[0m
+[0m$ [0msed -n '40,175p' .github/workflows/hunt.yml
+run: |
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          if command -v opencode >/dev/null 2>&1; then opencode --version; exit 0; fi
+          npm install -g opencode-ai 2>/dev/null || npm install -g --prefix "$HOME/.npm-global" opencode-ai 2>/dev/null || true
+          if ! command -v opencode >/dev/null 2>&1; then
+            for i in 1 2 3; do
+              curl -fsSL https://opencode.ai/install | bash && break
+              echo "opencode.ai installer attempt $i failed, retrying in 15s..."
+              sleep 15
+            done
+          fi
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          opencode --version
+
+      - name: Prepare context (RAG + state + inventory + last cycle)
+        run: |
+          mkdir -p knowledge inventory leads reports
+          [ -f knowledge/index.md ] || echo "# Knowledge Base (seed)" > knowledge/index.md
+          [ -f state_${MODEL_NAME}.json ] || echo '{"phase":"RECON","target":"api"}' > state_${MODEL_NAME}.json
+          {
+            echo "=== KNOWLEDGE BASE ==="
+            cat knowledge/index.md
+            echo "=== MY STATE ==="
+            cat state_${MODEL_NAME}.json
+            echo "=== MY LAST LEADS (tail) ==="
+            tail -60 leads/lead-${MODEL_NAME}.md 2>/dev/null || echo none
+            echo "=== AGGREGATED HYPOTHESES (tail) ==="
+            tail -40 reports/hypotheses.md 2>/dev/null || echo none
+            echo "=== INVENTORY derdack ==="
+            cat inventory/derdack.md 2>/dev/null || echo none
+          } > ctx.txt
+
+      - name: Analyst run (deep-hunt methodology)
+        run: |
+          cat ctx.txt > analyst-prompt.txt
+          cat >> analyst-prompt.txt << 'PROMPT_EOF'
+          You are a senior bug bounty hunter ANALYST for the Derdack GmbH / Derdack Group program (report channel: bugs.olivermaicher.eu).
+          Eligible in-scope assets (ONLY these, from scope.yml + inventory/derdack.md): All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert
+          Deep-hunt directives:
+          - Prioritize HIGH-VALUE classes: broken auth/session, IDOR/BOLA, SSRF-to-cloud-metadata (169.254.169.254), mass assignment, JWT alg/key confusion, OAuth redirect_uri/state flaws, business logic on money/auth flows, file upload, GraphQL introspection+mutations, subdomain takeover.
+          - CHAIN aggressively: open redirect -> OAuth code theft -> ATO; IDOR -> cross-tenant PII dump; SSRF -> metadata -> keys; XSS -> session theft -> ATO.
+          - Request-level reasoning: exact METHOD path params headers body, expected vs actual status. No filler.
+          - Breadth over the full inventory for anomalies (odd status codes, id/uid/email/user_id params, versioned /api/v1|v2|beta|internal, debug/test flags, swagger/openapi/json), then depth on top-3 anomalies.
+          - If a hypothesis needs live confirmation you cannot do passively, emit [NEXT] PROBE with the EXACT read-only request.
+          OUT OF SCOPE (REJECTED classes): network DoS, account-lockout DoS, descriptive errors/headers only, robots.txt / known public files, outdated library versions, OPTIONS/TRACE, CSRF on logout or anonymous forms, cookie flags on non-sensitive data, self-XSS, scanner reports without POC, physical access, social engineering of employees/vendors, username enumeration on login/forgot-password, brute-force/rate-limit/lockout policy, SSL/TLS best practice, SSL attacks, clickjacking without demonstrated exploit, mail config (SPF/DKIM/DMARC), known-vulnerable library without program-specific exploit, password/account-recovery policy, autocomplete in fields, public login panels, lack of email verification, session control during email/password change, and any exposure of customer/employee/financial/authentication data during testing (program note). Focus on real logic flaws in scoped assets.
+          Your job is NOT to invent vulnerabilities. Run the 8 steps and output ONLY structured blocks.
+
+          STEP 1 — DELTA: compare inventory+knowledge+last leads against current surface. [NEW]/[CHANGED] one line each, or NO_DELTA.
+          STEP 2 — PRIORITIZE: score top new (or existing) assets 0-10 on attack_surface, business_value, tech_exposure (GraphQL/OAuth/JWT/upload/admin/uncommon), gate_ease (10=no auth), cloud_surface, freshness. priority=0.25a+0.25b+0.15t+0.15g+0.10c+0.10f. Emit [PRIO] asset,score,axis.
+          STEP 3 — HYPOTHESES: top 3 assets, max 1 hypothesis each. Strict schema, one field per line under [HYP] title line:
+          [HYP] <title>
+          class: <IDOR|SSRF|AUTH|XSS|BUSLOGIC|MISCONFIG|OATH|OTHER>
+          asset: <host/endpoint>
+          confidence: <0-100>
+          reasoning: <facts only>
+          evidence_needed: <what proves it>
+          verify_steps: <passive-first concrete HTTP requests>
+          impact: <what attacker gets + severity>
+          testability: <PASSIVE|AUTH_HELPED|HUMAN_ONLY>
+          Never put fields inline in the [HYP] title.
+          STEP 4 — SELF-CRITIQUE: drop confidence<40 or REJECTED-class or no-verify-steps. [PARKED] <title>: <why>. [FINAL] survivors ranked.
+          STEP 5 — NEXT ACTION: exactly one [NEXT] <PROBE|SCAN|RAG|HUMAN>: <one concrete action, exact endpoint if PROBE>.
+          STEP 6 — LEARNING: [LEARN] REJECTED/ACCEPTED <class> @ <asset>: <reason>.
+          STEP 7 — RISK: [RISK] <program>: <0-100> reason.
+          RULES: facts vs hypotheses strictly separated; no endpoint-map-only; no REJECTED class; sha256 any secret; all claims trace to context or your own read-only probes; passive-first, <=1 rps, GET/HEAD/OPTIONS only for live probes; no auth-bypass or mutating tests against live customer data; any scanner output requires manual validation.
+          PROMPT_EOF
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          timeout -k 15 20m opencode run --model "$MODEL_ID" < analyst-prompt.txt > analyst-out.txt 2>&1 || true
+          cp analyst-out.txt analyst-${MODEL_NAME}.out
+          grep -E '^\[(NEW|CHANGED|PRIO|HYP|PARKED|FINAL|NEXT|LEARN|RISK)\]|^class:|^confidence:|^asset:|^impact:|^testability:|^verify_steps:|^reasoning:|^evidence_needed:' analyst-out.txt > lead.txt || true
+          {
+            echo "## $(date -u +'%Y-%m-%d %H:%M:%S UTC') [target] (model ${MODEL_NAME})"
+            cat lead.txt
+          } > lead_${MODEL_NAME}.txt
+          echo "lead bytes: $(wc -c < lead.txt) | raw bytes: $(wc -c < analyst-out.txt)"
+
+      - name: Upload model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: analyst-${{ matrix.model.name }}
+          path: |
+            lead_${{ matrix.model.name }}.txt
+            analyst-${{ matrix.model.name }}.out
+            ctx.txt
+          if-no-files-found: warn
+
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: analyst
+    if: always()
+    concurrency:
+      group: hunt-derdack-aggregate
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          path: art
+          merge-multiple: true
+
+      - name: Merge + rank + inventory + knowledge update
+        run: |
+          mkdir -p leads reports knowledge inventory
+          for f in art/lead_*.txt; do
+            [ -f "$f" ] || continue
+            cat "$f" >> leads/lead-$(basename "$f" | sed -E 's/lead_([a-z0-9]+)\.txt/\1/').md
+          done
+          python3 << 'PY_EOF'
+          import re, glob, json, os, datetime
+          stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+          all_h=[]
+          for f in glob.glob('art/lead_*.txt'):
+              base=os.path.basename(f); model=re.sub(r'^lead_([a-z0-9]+)\.txt$',r'\1',base)
+              open(f'reports/hypotheses-{model}.txt','w').write(open(f).read())
+              text=open(f).read()
+              m=re.search(r'^\[HYP\] (.*)$',text,re.M)
+              if not m: continue
+              c=re.search(r'^confidence:\s*(\d+)',text,re.M)
+              a=re.search(r'^asset:\s*(\S+)',text,re.M)
+              all_h.append((int(c.group(1)) if c else 0, a.group(1) if a else '?', m.group(1).strip(), f))
+          all_h.sort(reverse=True)
+          with open('reports/hypotheses.md','a') as out:
+              out.write(f"\n## RANKED HYPOTHESES {stamp}\n")
+              seen=set()
+              for conf,asset,title,f in all_h[:8]:
+                  key=title.lower()[:60]
+                  if key in seen: continue
+                  seen.add(key); out.write(f"- [{conf}] {asset}: {title} (from {f})\n")
+              for f in glob.glob('reports/hypotheses-*.txt'):
+                  n=re.search(r'^\[NEXT\] (.*)$',open(f).read(),re.M)
+                  if n: out.write(f"- NEXT({os.path.basename(f)}): {n.group(1).strip()[:160]}\n")
+[0m
+Two new differentials worth testing before writing the cycle: cross-host `redirect_uri` registration between prod and lab tiers.
+[0m$ [0mCK="client_id=692A0A56-892F-4AE2-8259-76DA398990B6"
+CH="code_challenge_method=S256&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+LABR="https%3A%2F%2Flabaccount.signl4.com%2Fmanage%2Fsignin-oidc"
+PRODR="https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fsignin-oidc"
+for host in connect.signl4.com devconnect.signl4.com account.signl4.com labconnect.signl4.com; do
+  for r in "$LABR" "$PRODR"; do
+    loc=$(curl -s -D- -o /dev/null --max-time 10 -A 'Mozilla/5.0 (passive research probe)' \
+      "https://$host/identity/connect/authorize?$CK&response_type=code&scope=openid&redirect_uri=$r&state=p1&$CH" \
+      | grep -i '^location' | tr -d '\r')
+    if echo "$loc" | grep -qi 'home/error'; then v="REJECTED"; else v="ACCEPTED->$(echo "$loc" | grep -o 'Login\|error' | head -1)"; fi
+    echo "$host | redirect=$(echo $r | sed 's/.*\(labaccount\|account\).*/\1/') => $v"
+    sleep 1
+  done
+done
+connect.signl4.com | redirect=account => REJECTED
+connect.signl4.com | redirect=account => ACCEPTED->Login
+devconnect.signl4.com | redirect=account => REJECTED
+devconnect.signl4.com | redirect=account => ACCEPTED->Login
+account.signl4.com | redirect=account => REJECTED
+account.signl4.com | redirect=account => ACCEPTED->Login
+labconnect.signl4.com | redirect=account => ACCEPTED->Login
+labconnect.signl4.com | redirect=account => ACCEPTED->Login
+[0m
+The sed labels in that run were ambiguous (greedy match). Re-running with explicit labels before drawing any conclusion:
+[0m$ [0mCK="client_id=692A0A56-892F-4AE2-8259-76DA398990B6"
+CH="code_challenge_method=S256&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+declare -A R=( [labaccount]="https%3A%2F%2Flabaccount.signl4.com%2Fmanage%2Fsignin-oidc" [account]="https%3A%2F%2Faccount.signl4.com%2Fmanage%2Fsignin-oidc" )
+for host in connect.signl4.com labconnect.signl4.com; do
+  for name in labaccount account; do
+    loc=$(curl -s -D- -o /dev/null --max-time 10 -A 'Mozilla/5.0 (passive research probe)' \
+      "https://$host/identity/connect/authorize?$CK&response_type=code&scope=openid&redirect_uri=${R[$name]}&state=p2&$CH" \
+      | grep -i '^location' | tr -d '\r')
+    if echo "$loc" | grep -qi 'home/error'; then v="REJECTED"; elif echo "$loc" | grep -qi 'Login'; then v="ACCEPTED"; else v="OTHER:${loc:0:80}"; fi
+    echo "$host + redirect=$name => $v"
+    sleep 1
+  done
+done
+connect.signl4.com + redirect=labaccount => REJECTED
+connect.signl4.com + redirect=account => ACCEPTED
+labconnect.signl4.com + redirect=labaccount => ACCEPTED
+labconnect.signl4.com + redirect=account => ACCEPTED
+[0m
