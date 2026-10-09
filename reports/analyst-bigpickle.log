@@ -67114,3 +67114,144 @@ I have enough to give you a clean status rather than keep generating churn. Here
 - No `client_secret` / `X-S4-Api-Key` leaked in the signl4/Derdack repos I cloned — so the cross-env token-forgery and IDOR leads remain AUTH_HELPED.
 
 Before I spend more effort, one clarification: do you want me to (a) draft the submission report consolidating the verified public-repo secret/credential findings, (b) keep probing for new network findings, or (c) you'll provide a test `client_secret`/API key to unblock the credential-gated chain? I recommend (a) — it's the only evidence-backed, non-credential-gated deliverable.
+===== ANALYST bigpickle 2026-10-09 13:49:44 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m% [0mWebFetch https://raw.githubusercontent.com/signl4/signl4-integration-google-iot/master/index.js
+[0m% [0mWebFetch https://api.github.com/repos/signl4/signl4-integration-google-iot/contents/
+[0m% [0mWebFetch https://api.github.com/repos/signl4/code-snippets/contents/
+## Objective
+- Hunt vulnerabilities on Derdack GmbH / Derdack Group (SIGNL4 + Enterprise Alert) in-scope assets; report via bugs.olivermaicher.eu. Currently in POC phase on `api.signl4.com`.
+- Produce only structured STEP 1–8 blocks: DELTA / PRIO / HYP / critique / NEXT / LEARN / RISK.
+
+## Important Details
+- Scope: all Derdack/SIGNL4/Enterprise Alert owned infrastructure, domains, APIs, SaaS, mobile apps. Only these.
+- REJECTED classes: DoS/lockout, descriptive headers only, OPTIONS/TRACE, robots.txt, library versions, CSRF-on-logout, cookie flags on non-sensitive, self-XSS, scanner reports w/o POC, username enumeration, brute-force/rate-limit, TLS best practice, clickjacking w/o exploit, mail config, password/account-recovery policy, autocomplete, public login panels, email-verification, session during pw change.
+- Live probes: read-only, ≤1 rps, GET/HEAD/OPTIONS only; no auth-bypass or mutating tests against live customer data; brute-force explicitly out of scope → webhook-secret guessing NOT allowed.
+- Key shared identifiers: RS256 JWKS kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256` (byte-identical across 6 identity hosts: connect/devconnect/api/devapi/account/devaccount); client_id `692A0A56-892F-4AE2-8259-76DA398990B6`; service tags appId `cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd` (api/connect), `cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7` (devapi), `fe51434f` (fix).
+- handler-deferred auth pattern: unauth GET returns 405 (not 401) on V1/V2; flapping with 401 is TEMPORAL (deployment-slot), not per-request.
+- `X-S4-Api-Key` header is canonical auth; `API_Key_Query` (`?x-s4-api-key=`) live (403 "API Key is invalid" vs 401 absent) — swagger-only, no real-world usage found.
+- Control-first discipline mandated: hash a fabricated-echo baseline before interpreting any 403/404/300/504; MultiViews `300` is generic Apache noise on every parked Derdack host.
+
+## Work State
+### Completed
+- Identity estate mapped: 6 IdPs share prod signing key; account IdP issuer mismatch (claims connect); plain PKCE allowed; password/device_code/CIBA/token-exchange grants enabled. Cross-env token forgery chain complete but AUTH_HELPED (needs client_secret).
+- `demo.enterprisealert.com/EAWebService` — full live EA 9.5.26147 portal; WSDL leaks internal hostname `https://ereesus/EAWebService/EventProviderAPI.asmx`; 10 aspx handlers enumerated, all credential-gated (Error -1).
+- `vps.signl4.com` — dangling A-record → GoDaddy shared host default page, unrelated cert CN=server.d1g.it → subdomain-takeover candidate (HUMAN_ONLY).
+- API route maps fully enumerated: V1/V2/V3 all Bearer-gated; V4 namespace absent; webhook oracle 404 vs 201 (`{"code":3004,"details":"No matching event source found."}`); mobileapi blanket 403 (79KB branded page on 6 hosts); DPoP advertised but not enforced.
+- WP surface (www.derdack.com, /de/, /ea/) auth gates intact; XML-RPC exposed but mutating methods 403; oEmbed SSRF blocked; HTTPS→HTTP downgrade session-theft invalidated (secure+host-only cookies).
+- OpenAPI static sweep (V1/V2/V3, 131 write ops): zero accept tenant-id in body → BOLA via payload refuted; prepaid body-identifier hypothesis CLOSED NOT_A_BUG.
+- CT coverage closed across derdack.com/enterprisealert.com/signl4.com; estate zero drift.
+- [FINAL] set: (1) EA WSDL internal-hostname leak MISCONFIG 95; (2) cross-env token forgery AUTH 90 AUTH_HELPED; (3) vps.signl4.com takeover MISCONFIG 80 HUMAN_ONLY; (4) DPoP enforcement gap MISCONFIG 85; (5) V1 userId bulk-alert IDOR 65 AUTH_HELPED.
+
+### Active
+- Two new [HYP] (confidence 85, 80): hardcoded SIGNL4 team secrets in public signl4 GitHub repos — `96sbq38s` in `signl4/signl4-integration-google-iot/index.js:19`; `vbguzfsi` in `signl4/code-snippets/SIGNL4.postman_collection.json:42` + `signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7`.
+- Verify whether secrets are live via webhook 404-vs-201 oracle (read-only POST body `{"Title":"test"}`).
+
+### Blocked
+- All high-value vectors AUTH_HELPED: blocked on acquiring a valid `X-S4-Api-Key`, `client_secret` for client_id 692A0A56, or team-secret.
+- Triage pipeline dead: 57 consecutive Triager runs failed (2026-09-25→10-06, upstream UnknownError); `grep "\[UNVALIDATED\]" leads/lead-*.md` matches 0 → `new-leads.txt` always empty.
+- Passive verifiers scope to `PROBE_ALLOW: derdack.com` only → no signl4.com/enterprisealert.com lead ever re-verified.
+- `labconnect`/`labaccount.signl4.com` persistently 502 (dead tier); `signl4.derdack.com` permanently unreachable.
+
+## Next Move
+1. [NEXT] PROBE: `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` — 201 = live secret, 404 = dead/rotated; repeat for `/webhook/vbguzfsi`.
+2. If 201: confirm repo ownership (github.com/signl4/...) and grade blast radius (alert injection/flooding, secret reuse across 2 repos).
+
+## Relevant Files
+- `inventory/derdack.md`: discovery seed + full host inventory and per-cycle probe deltas.
+- `scope.yml`: in-scope asset definitions and REJECTED classes.
+- `leads/lead-*.md`: 6 lead files; do NOT contain `[UNVALIDATED]` marker (triage grep target).
+- `.github/workflows/triage.yml` line 45: `grep "\[UNVALIDATED\]"` collector (dead — 0 matches).
+- `.github/workflows/hunt.yml` line 13 / `triage.yml` line 12: `PROBE_ALLOW: derdack.com` scoping.
+- `probe-results.md`: per-cycle probe outputs (scoped to derdack.com only).
+- `reports/valid-bugs.md`: "VALID" batches from 26 empty-LEADS runs; treat as unverified.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m% [0mWebFetch https://raw.githubusercontent.com/signl4/code-snippets/main/SIGNL4.postman_collection.json
+[0m✗ [0mWebFetch https://raw.githubusercontent.com/signl4/code-snippets/main/signl4-alert.sh failed
+[91m[1mError: [0mStatusCode: non 2xx status code (404 GET https://raw.githubusercontent.com/signl4/code-snippets/main/signl4-alert.sh)
+[0m% [0mWebFetch https://raw.githubusercontent.com/signl4/signl4-integration-google-iot/master/README.md
+[0m→ [0mRead .
+I confirmed both leaks. Let me check the workspace conventions before recording findings.
+[0m→ [0mRead scope.yml
+[0m✱ [0mGlob "**/*.md"[90m 100 matches[0m
+[0m✱ [0mGrep "96sbq38s|vbguzfsi|google-iot"[90m in . · 100 matches[0m
+[0m→ [0mRead reports/valid-bugs.md
+[0m
+[0m$ [0mls -la /home/runner/work/derdack-hunt/derdack-hunt/leads/ /home/runner/work/derdack-hunt/derdack-hunt/reports/ /home/runner/work/derdack-hunt/derdack-hunt/inventory/ /home/runner/work/derdack-hunt/derdack-hunt/recon-notes/ /home/runner/work/derdack-hunt/derdack-hunt/reposcan-raw/ /home/runner/work/derdack-hunt/derdack-hunt/knowledge/ 2>&1
+/home/runner/work/derdack-hunt/derdack-hunt/inventory/:
+total 340
+drwxr-xr-x  2 runner runner   4096 Oct  9 13:43 .
+drwxr-xr-x 12 runner runner   4096 Oct  9 13:43 ..
+-rw-r--r--  1 runner runner 339901 Oct  9 13:43 derdack.md
+
+/home/runner/work/derdack-hunt/derdack-hunt/knowledge/:
+total 300
+drwxr-xr-x  2 runner runner   4096 Oct  9 13:43 .
+drwxr-xr-x 12 runner runner   4096 Oct  9 13:43 ..
+-rw-r--r--  1 runner runner 295998 Oct  9 13:43 index.md
+
+/home/runner/work/derdack-hunt/derdack-hunt/leads/:
+total 4284
+drwxr-xr-x  2 runner runner    4096 Oct  9 13:43 .
+drwxr-xr-x 12 runner runner    4096 Oct  9 13:43 ..
+-rw-r--r--  1 runner runner 1567862 Oct  9 13:43 lead-bigpickle.md
+-rw-r--r--  1 runner runner   11169 Oct  9 13:43 lead-laguna.md
+-rw-r--r--  1 runner runner   10950 Oct  9 13:43 lead-ling3.md
+-rw-r--r--  1 runner runner   11336 Oct  9 13:43 lead-longcat.md
+-rw-r--r--  1 runner runner      18 Oct  9 13:43 lead-mimo.md
+-rw-r--r--  1 runner runner 2684913 Oct  9 13:43 lead-nemotron3.md
+-rw-r--r--  1 runner runner   80696 Oct  9 13:43 reposcan-derdack.md
+
+/home/runner/work/derdack-hunt/derdack-hunt/recon-notes/:
+total 12
+drwxr-xr-x  2 runner runner 4096 Oct  9 13:43 .
+drwxr-xr-x 12 runner runner 4096 Oct  9 13:43 ..
+-rw-r--r--  1 runner runner  817 Oct  9 13:43 DEDICATED-DEEP.md
+
+/home/runner/work/derdack-hunt/derdack-hunt/reports/:
+total 10968
+drwxr-xr-x  2 runner runner    4096 Oct  9 13:43 .
+drwxr-xr-x 12 runner runner    4096 Oct  9 13:43 ..
+-rw-r--r--  1 runner runner 6166698 Oct  9 13:43 analyst-bigpickle.log
+-rw-r--r--  1 runner runner   47523 Oct  9 13:43 analyst-laguna.log
+-rw-r--r--  1 runner runner   47304 Oct  9 13:43 analyst-ling3.log
+-rw-r--r--  1 runner runner   47524 Oct  9 13:43 analyst-longcat.log
+-rw-r--r--  1 runner runner 3961226 Oct  9 13:43 analyst-nemotron3.log
+-rw-r--r--  1 runner runner    2281 Oct  9 13:43 hypotheses-bigpickle.txt
+-rw-r--r--  1 runner runner      51 Oct  9 13:43 hypotheses-laguna.txt
+-rw-r--r--  1 runner runner      50 Oct  9 13:43 hypotheses-ling3.txt
+-rw-r--r--  1 runner runner      52 Oct  9 13:43 hypotheses-longcat.txt
+-rw-r--r--  1 runner runner   40362 Oct  9 13:43 hypotheses-nemotron3.txt
+-rw-r--r--  1 runner runner  876216 Oct  9 13:43 hypotheses.md
+-rw-r--r--  1 runner runner    5996 Oct  9 13:43 valid-bugs.md
+
+/home/runner/work/derdack-hunt/derdack-hunt/reposcan-raw/:
+total 12
+drwxr-xr-x  2 runner runner 4096 Oct  9 13:43 .
+drwxr-xr-x 12 runner runner 4096 Oct  9 13:43 ..
+-rw-r--r--  1 runner runner   70 Oct  9 13:43 summary.txt
+[0m
+[0m✱ [0mGrep "96sbq38s|vbguzfsi|team secret|team-secret"[90m in knowledge/index.md · 21 matches[0m
+[0m✱ [0mGrep "96sbq38s|vbguzfsi|201|webhook"[90m in inventory/derdack.md · 58 matches[0m
+[0m→ [0mRead recon-notes/DEDICATED-DEEP.md
+I continued with the passive verification. Here's the state and a blocker that needs your call.
+
+## Confirmed (passive, read-only)
+- **`96sbq38s`** — `signl4/signl4-integration-google-iot/index.js:19` really contains `request.post('https://connect.signl4.com/webhook/96sbq38s', ...)`. The repo's own README says *"Please replace `<team-code>` by your SIGNL4 team code"* → the committed value is an unsanitized live team code, not a placeholder.
+- **`vbguzfsi`** — `signl4/code-snippets/SIGNL4.postman_collection.json`: `raw` was sanitized to `--team-secret--`, but the structured `path` array still holds `"vbguzfsi"`. Classic partial-redaction commit error. (Your DevTools-YAML reference is plausible; I verified the Postman pair.)
+
+## Two important corrections
+1. **KB is factually wrong.** `knowledge/index.md:318` says *"REJECTED ... only placeholder secrets; zero real team secret ... in vendor's official sample corpus."* That sweep only checked `raw` and missed the `path` array — the leak is real. This REJECTED entry should be corrected.
+2. **This is already reported.** `reports/valid-bugs.md:56` and `:107` list *"SIGNL4 team secrets in public repos (Google IoT, Postman, DevTools) — VALID, 5.3, Reported (2026-09-13)."* Re-finding it now = **ALREADY REPORTED / duplicate**.
+
+## Blocker (why I stopped)
+The only liveness oracle is `POST /webhook/{teamSecret}` (201 = live vs 404 = dead). That **delivers a real alert to a possibly-live team** → violates `scope.yml` `no_data_modification: true`, `no_doom: true`, and the program's out-of-scope *"exposure of customer data during testing."* There is no non-delivering alternative (GET returns byte-identical "GET not supported" for valid and invalid secrets). So I did **not** fire it.
+
+## How do you want to proceed?
+- **(a)** Just correct the false REJECTED entry in `knowledge/index.md` and record these secrets as confirmed-present / already-reported?
+- **(b)** Do you have human/vendor authorization for a single controlled liveness test (ideally against a test team), which I can't do safely myself?
+- **(c)** Close as duplicate and move on to a different surface?
+
+I recommend (a) + (c); liveness adds little to an already-accepted 5.3 duplicate.
