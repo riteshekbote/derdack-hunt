@@ -67255,3 +67255,601 @@ The only liveness oracle is `POST /webhook/{teamSecret}` (201 = live vs 404 = de
 - **(c)** Close as duplicate and move on to a different surface?
 
 I recommend (a) + (c); liveness adds little to an already-accepted 5.3 duplicate.
+===== ANALYST bigpickle 2026-10-09 19:11:42 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la; echo "---"; ls -la leads 2>/dev/null; echo "---"; ls -la .github/workflows 2>/dev/null
+total 1416
+drwxr-xr-x 12 runner runner   4096 Oct  9 19:09 .
+drwxr-xr-x  3 runner runner   4096 Oct  9 19:09 ..
+drwxr-xr-x  7 runner runner   4096 Oct  9 19:09 .git
+drwxr-xr-x  3 runner runner   4096 Oct  9 19:09 .github
+-rw-r--r--  1 runner runner   1831 Oct  9 19:09 README.md
+-rw-r--r--  1 runner runner     32 Oct  9 19:09 analyst-out.txt
+-rw-r--r--  1 runner runner 663763 Oct  9 19:09 analyst-prompt.txt
+-rw-r--r--  1 runner runner 659884 Oct  9 19:09 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 inventory
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 leads
+-rw-r--r--  1 runner runner  20871 Oct  9 19:09 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 reports
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct  9 19:09 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 scripts
+-rw-r--r--  1 runner runner     33 Oct  9 19:09 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct  9 19:09 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct  9 19:09 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct  9 19:09 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct  9 19:09 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct  9 19:09 state_nemotron3.json
+drwxr-xr-x  2 runner runner  12288 Oct  9 19:09 triage
+---
+total 4324
+drwxr-xr-x  2 runner runner    4096 Oct  9 19:09 .
+drwxr-xr-x 12 runner runner    4096 Oct  9 19:09 ..
+-rw-r--r--  1 runner runner 1567916 Oct  9 19:09 lead-bigpickle.md
+-rw-r--r--  1 runner runner   11220 Oct  9 19:09 lead-laguna.md
+-rw-r--r--  1 runner runner   11000 Oct  9 19:09 lead-ling3.md
+-rw-r--r--  1 runner runner   11388 Oct  9 19:09 lead-longcat.md
+-rw-r--r--  1 runner runner      18 Oct  9 19:09 lead-mimo.md
+-rw-r--r--  1 runner runner 2724738 Oct  9 19:09 lead-nemotron3.md
+-rw-r--r--  1 runner runner   80802 Oct  9 19:09 reposcan-derdack.md
+---
+total 44
+drwxr-xr-x 2 runner runner  4096 Oct  9 19:09 .
+drwxr-xr-x 3 runner runner  4096 Oct  9 19:09 ..
+-rw-r--r-- 1 runner runner 14361 Oct  9 19:09 hunt.yml
+-rw-r--r-- 1 runner runner  5395 Oct  9 19:09 reposcan.yml
+-rw-r--r-- 1 runner runner  1040 Oct  9 19:09 sync-issues.yml
+-rw-r--r-- 1 runner runner  6518 Oct  9 19:09 triage.yml
+[0m
+[0m% [0mWebFetch https://raw.githubusercontent.com/signl4/signl4-integration-google-iot/master/index.js
+[0m% [0mWebFetch https://raw.githubusercontent.com/signl4/code-snippets/main/SIGNL4.postman_collection.json
+[0m% [0mWebFetch https://raw.githubusercontent.com/signl4/docs/main/integrations/devtools/SIGNL4_Alerting.yaml
+## Objective
+- Continue the bug-bounty hunt on Derdack GmbH / Derdack Group (SIGNL4 + Enterprise Alert) via report channel bugs.olivermaicher.eu, running the 8-step analyst loop and emitting only structured blocks ([NEW]/[CHANGED], [PRIO], [HYP], [PARKED]/[FINAL], [NEXT], [LEARN], [RISK]).
+- Target phase = POC, target = `api`; current focus is validating newly-found hardcoded SIGNL4 team-secret candidates in public GitHub repos.
+
+## Important Details
+- In-scope: all Derdack-owned infra incl. SIGNL4 and Enterprise Alert (`*.signl4.com`, `*.derdack.com`, `*.enterprisealert.com`).
+- REJECTED classes (do not file): network/account-lockout DoS, descriptive errors/headers only, robots.txt, outdated libs, OPTIONS/TRACE standalone, CSRF on logout/anon forms, cookie flags on non-sensitive data, self-XSS, scanner reports w/o POC, username enumeration on login/forgot-password, brute-force/rate-limit/lockout policy, TLS best practice, clickjacking w/o exploit, SPF/DKIM/DMARC, known-vuln lib w/o program-specific exploit, password/recovery policy, autocomplete, public login panels, missing email verification, session control during email/password change, any live customer/employee/financial/auth data exposure.
+- Probes: passive-first, ≤1 rps, GET/HEAD/OPTIONS only for live; no auth-bypass or mutating tests against live customer data; sha256 any secret; scanner output needs manual validation.
+- Frozen deliverable set (POC→REPORT was committed 2026-09-24): [FINAL] 1) Internal hostname leak via EA WSDL `https://ereesus/EAWebService/EventProviderAPI.asmx` (MISCONFIG, PASSIVE-confirmed, CWE-200); 2) Cross-env token forgery via 6-host shared RS256 IdP family (AUTH, AUTH_HELPED); 3) Subdomain takeover via dangling A-record `vps.signl4.com` (MISCONFIG, HUMAN_ONLY); + DPoP enforcement gap (defense-in-depth gap, not a vuln); + credential-in-URL vendor-template family.
+- Key confirmed facts: 6 identity hosts (`connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`) share byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) + client_id `692A0A56-892F-4AE2-8259-76DA398990B6`; `account` IdP issuer-mismatch (claims `connect`); plain PKCE allowed; password grant enabled on staging but secret-gated (`invalid_client`).
+- `demo.enterprisealert.com/EAWebService/` = full live EA 9.5.26147 behind Azure App Proxy; all handler/credential paths gate (Error-1/401), exposure config-level only; `EventConnectorServer.ashx` handler table empty.
+- `vps.signl4.com`: GoDaddy NS (`domaincontrol.com`) → 72.167.227.27 (`secureserver.net`), nginx default page, cert CN=`server.d1g.it`; probe result flaps 200/000 across cycles.
+- Known dead/inert: `signl4.derdack.com` (permanent TCP timeout), `labconnect`/`labaccount` (stable 502 AppGW), `signal`s NXDOMAIN, GraphQL class absent (15/15 404), V4 API namespace absent, `dev`/`us.derdack.com` MultiViews 300 = static parked echo.
+- Infra caveat: triage pipeline dead — 57 consecutive Triager runs failed (2026-09-25→2026-10-06); `triage.yml:45` greps `[UNVALIDATED]` which matches 0 in lead files; both verifiers scope to `PROBE_ALLOW: derdack.com` so signl4/EA leads are never re-verified.
+
+## Work State
+### Completed
+- Full estate mapping done for identity/API (V1/V2/V3/webhook/events namespaces), CT sweeps for all three roots (closed, zero drift), DNS/host fingerprinting, GitHub org sweep 12/12.
+- Deliverable set frozen at 3 reportable findings + LOW dossier item; zero drift reconfirmed many cycles.
+- OIDC introspection/revocation registration parity CLOSED at 6/6 hosts; DPoP challenge-layer probe complete (advertised but not enforced at gateway).
+- Prepaid body-identifier hypothesis REFUTED/CLOSED as NOT_A_BUG (131 write ops swept across V1/V2/V3, zero accept tenant id in body).
+- New this cycle: two hardcoded SIGNL4 team-secret candidates found in public `signl4` GitHub org repos — `96sbq38s` (signl4-integration-google-iot/index.js:19) and `vbguzfsi` (code-snippets/SIGNL4.postman_collection.json:42 + docs/integrations/devtools/SIGNL4_Alerting.yaml:7), both conf 80-85, class SECRET, impact Medium (webhook alert injection/flooding if live).
+
+### Active
+- Hypothesis validation of the two hardcoded team secrets above — pending liveness check of `connect.signl4.com/webhook/{secret}` (oracle 404 vs 201).
+- POC phase; target `api`; all high-value vectors remain AUTH_HELPED behind credential acquisition.
+
+### Blocked
+- Nearly all [PARKED]/AUTH_HELPED chains (cross-env forgery, V1 userId batch-alert IDOR, V2 changePassword, V3 invoice/BOLA, EA SOAP handler access, webhook enumeration) blocked solely on client_secret / `X-S4-Api-Key` / team-secret acquisition.
+- Public credential leak oracle negative across 7+ corpora (indexed web, grep.app 429, GitHub code search auth-gated, vendor samples placeholder-only) — no customer-deployed key recovered.
+- `vps.signl4.com` takeover exploitability gated on DNS/hosting-account control (HUMAN_ONLY); live probe flapping 200/000.
+
+## Next Move
+1. Verify the two hardcoded team secrets read-only against the webhook oracle: `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s` and `.../vbguzfsi` (404=dead/historical, 201=live → rotate); confirm repo ownership at `github.com/signl4/signl4-integration-google-iot` and `signl4/code-snippets`.
+2. [NEXT] HUMAN: obtain a legitimate `X-S4-Api-Key` / `client_secret` for client_id `692A0A56-892F-4AE2-8259-76DA398990B6` via program contact to unblock the AUTH_HELPED queue.
+
+## Relevant Files
+- `leads/lead-*.md`: 6 lead files; `triage.yml:45` greps `[UNVALIDATED]` (0 matches — pipeline dead).
+- `triage.yml:12` / `hunt.yml:13`: `PROBE_ALLOW: derdack.com` scoping (blocks signl4/EA re-verification).
+- `probe-results.md`: per-run probe output (signl4/EA URLs never re-verified).
+- `reports/valid-bugs.md`: "VALID" batches are model output from empty-LEADS runs (26 runs, none successful since 2026-09-25) — treat as unverified.
+- `inventory/derdack.md`: full estate inventory + timestamped PASSIVE RECON log.
+- `scope.yml`: eligible in-scope asset definitions.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m
+[0m$ [0mecho "=== analyst-out.txt ==="; cat analyst-out.txt; echo; echo "=== state_bigpickle.json ==="; cat state_bigpickle.json; echo; echo "=== knowledge ==="; ls -la knowledge; echo "=== scripts ==="; ls -la scripts; echo "=== recon-notes ==="; ls -la recon-notes; echo "=== reports ==="; ls -la reports; echo "=== triage (head) ==="; ls triage | head; echo "=== reposcan-raw ==="; ls -la reposcan-raw
+=== analyst-out.txt ===
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la; echo "---"; ls -la leads 2>/dev/null; echo "---"; ls -la .github/workflows 2>/dev/null
+total 1416
+drwxr-xr-x 12 runner runner   4096 Oct  9 19:09 .
+drwxr-xr-x  3 runner runner   4096 Oct  9 19:09 ..
+drwxr-xr-x  7 runner runner   4096 Oct  9 19:09 .git
+drwxr-xr-x  3 runner runner   4096 Oct  9 19:09 .github
+-rw-r--r--  1 runner runner   1831 Oct  9 19:09 README.md
+-rw-r--r--  1 runner runner     32 Oct  9 19:09 analyst-out.txt
+-rw-r--r--  1 runner runner 663763 Oct  9 19:09 analyst-prompt.txt
+-rw-r--r--  1 runner runner 659884 Oct  9 19:09 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 inventory
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 leads
+-rw-r--r--  1 runner runner  20871 Oct  9 19:09 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 reports
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct  9 19:09 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 scripts
+-rw-r--r--  1 runner runner     33 Oct  9 19:09 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct  9 19:09 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct  9 19:09 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct  9 19:09 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct  9 19:09 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct  9 19:09 state_nemotron3.json
+drwxr-xr-x  2 runner runner  12288 Oct  9 19:09 triage
+---
+total 4324
+drwxr-xr-x  2 runner runner    4096 Oct  9 19:09 .
+drwxr-xr-x 12 runner runner    4096 Oct  9 19:09 ..
+-rw-r--r--  1 runner runner 1567916 Oct  9 19:09 lead-bigpickle.md
+-rw-r--r--  1 runner runner   11220 Oct  9 19:09 lead-laguna.md
+-rw-r--r--  1 runner runner   11000 Oct  9 19:09 lead-ling3.md
+-rw-r--r--  1 runner runner   11388 Oct  9 19:09 lead-longcat.md
+-rw-r--r--  1 runner runner      18 Oct  9 19:09 lead-mimo.md
+-rw-r--r--  1 runner runner 2724738 Oct  9 19:09 lead-nemotron3.md
+-rw-r--r--  1 runner runner   80802 Oct  9 19:09 reposcan-derdack.md
+---
+total 44
+drwxr-xr-x 2 runner runner  4096 Oct  9 19:09 .
+drwxr-xr-x 3 runner runner  4096 Oct  9 19:09 ..
+-rw-r--r-- 1 runner runner 14361 Oct  9 19:09 hunt.yml
+-rw-r--r-- 1 runner runner  5395 Oct  9 19:09 reposcan.yml
+-rw-r--r-- 1 runner runner  1040 Oct  9 19:09 sync-issues.yml
+-rw-r--r-- 1 runner runner  6518 Oct  9 19:09 triage.yml
+[0m
+[0m% [0mWebFetch https://raw.githubusercontent.com/signl4/signl4-integration-google-iot/master/index.js
+[0m% [0mWebFetch https://raw.githubusercontent.com/signl4/code-snippets/main/SIGNL4.postman_collection.json
+[0m% [0mWebFetch https://raw.githubusercontent.com/signl4/docs/main/integrations/devtools/SIGNL4_Alerting.yaml
+## Objective
+- Continue the bug-bounty hunt on Derdack GmbH / Derdack Group (SIGNL4 + Enterprise Alert) via report channel bugs.olivermaicher.eu, running the 8-step analyst loop and emitting only structured blocks ([NEW]/[CHANGED], [PRIO], [HYP], [PARKED]/[FINAL], [NEXT], [LEARN], [RISK]).
+- Target phase = POC, target = `api`; current focus is validating newly-found hardcoded SIGNL4 team-secret candidates in public GitHub repos.
+
+## Important Details
+- In-scope: all Derdack-owned infra incl. SIGNL4 and Enterprise Alert (`*.signl4.com`, `*.derdack.com`, `*.enterprisealert.com`).
+- REJECTED classes (do not file): network/account-lockout DoS, descriptive errors/headers only, robots.txt, outdated libs, OPTIONS/TRACE standalone, CSRF on logout/anon forms, cookie flags on non-sensitive data, self-XSS, scanner reports w/o POC, username enumeration on login/forgot-password, brute-force/rate-limit/lockout policy, TLS best practice, clickjacking w/o exploit, SPF/DKIM/DMARC, known-vuln lib w/o program-specific exploit, password/recovery policy, autocomplete, public login panels, missing email verification, session control during email/password change, any live customer/employee/financial/auth data exposure.
+- Probes: passive-first, ≤1 rps, GET/HEAD/OPTIONS only for live; no auth-bypass or mutating tests against live customer data; sha256 any secret; scanner output needs manual validation.
+- Frozen deliverable set (POC→REPORT was committed 2026-09-24): [FINAL] 1) Internal hostname leak via EA WSDL `https://ereesus/EAWebService/EventProviderAPI.asmx` (MISCONFIG, PASSIVE-confirmed, CWE-200); 2) Cross-env token forgery via 6-host shared RS256 IdP family (AUTH, AUTH_HELPED); 3) Subdomain takeover via dangling A-record `vps.signl4.com` (MISCONFIG, HUMAN_ONLY); + DPoP enforcement gap (defense-in-depth gap, not a vuln); + credential-in-URL vendor-template family.
+- Key confirmed facts: 6 identity hosts (`connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`) share byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) + client_id `692A0A56-892F-4AE2-8259-76DA398990B6`; `account` IdP issuer-mismatch (claims `connect`); plain PKCE allowed; password grant enabled on staging but secret-gated (`invalid_client`).
+- `demo.enterprisealert.com/EAWebService/` = full live EA 9.5.26147 behind Azure App Proxy; all handler/credential paths gate (Error-1/401), exposure config-level only; `EventConnectorServer.ashx` handler table empty.
+- `vps.signl4.com`: GoDaddy NS (`domaincontrol.com`) → 72.167.227.27 (`secureserver.net`), nginx default page, cert CN=`server.d1g.it`; probe result flaps 200/000 across cycles.
+- Known dead/inert: `signl4.derdack.com` (permanent TCP timeout), `labconnect`/`labaccount` (stable 502 AppGW), `signal`s NXDOMAIN, GraphQL class absent (15/15 404), V4 API namespace absent, `dev`/`us.derdack.com` MultiViews 300 = static parked echo.
+- Infra caveat: triage pipeline dead — 57 consecutive Triager runs failed (2026-09-25→2026-10-06); `triage.yml:45` greps `[UNVALIDATED]` which matches 0 in lead files; both verifiers scope to `PROBE_ALLOW: derdack.com` so signl4/EA leads are never re-verified.
+
+## Work State
+### Completed
+- Full estate mapping done for identity/API (V1/V2/V3/webhook/events namespaces), CT sweeps for all three roots (closed, zero drift), DNS/host fingerprinting, GitHub org sweep 12/12.
+- Deliverable set frozen at 3 reportable findings + LOW dossier item; zero drift reconfirmed many cycles.
+- OIDC introspection/revocation registration parity CLOSED at 6/6 hosts; DPoP challenge-layer probe complete (advertised but not enforced at gateway).
+- Prepaid body-identifier hypothesis REFUTED/CLOSED as NOT_A_BUG (131 write ops swept across V1/V2/V3, zero accept tenant id in body).
+- New this cycle: two hardcoded SIGNL4 team-secret candidates found in public `signl4` GitHub org repos — `96sbq38s` (signl4-integration-google-iot/index.js:19) and `vbguzfsi` (code-snippets/SIGNL4.postman_collection.json:42 + docs/integrations/devtools/SIGNL4_Alerting.yaml:7), both conf 80-85, class SECRET, impact Medium (webhook alert injection/flooding if live).
+
+### Active
+- Hypothesis validation of the two hardcoded team secrets above — pending liveness check of `connect.signl4.com/webhook/{secret}` (oracle 404 vs 201).
+- POC phase; target `api`; all high-value vectors remain AUTH_HELPED behind credential acquisition.
+
+### Blocked
+- Nearly all [PARKED]/AUTH_HELPED chains (cross-env forgery, V1 userId batch-alert IDOR, V2 changePassword, V3 invoice/BOLA, EA SOAP handler access, webhook enumeration) blocked solely on client_secret / `X-S4-Api-Key` / team-secret acquisition.
+- Public credential leak oracle negative across 7+ corpora (indexed web, grep.app 429, GitHub code search auth-gated, vendor samples placeholder-only) — no customer-deployed key recovered.
+- `vps.signl4.com` takeover exploitability gated on DNS/hosting-account control (HUMAN_ONLY); live probe flapping 200/000.
+
+## Next Move
+1. Verify the two hardcoded team secrets read-only against the webhook oracle: `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s` and `.../vbguzfsi` (404=dead/historical, 201=live → rotate); confirm repo ownership at `github.com/signl4/signl4-integration-google-iot` and `signl4/code-snippets`.
+2. [NEXT] HUMAN: obtain a legitimate `X-S4-Api-Key` / `client_secret` for client_id `692A0A56-892F-4AE2-8259-76DA398990B6` via program contact to unblock the AUTH_HELPED queue.
+
+## Relevant Files
+- `leads/lead-*.md`: 6 lead files; `triage.yml:45` greps `[UNVALIDATED]` (0 matches — pipeline dead).
+- `triage.yml:12` / `hunt.yml:13`: `PROBE_ALLOW: derdack.com` scoping (blocks signl4/EA re-verification).
+- `probe-results.md`: per-run probe output (signl4/EA URLs never re-verified).
+- `reports/valid-bugs.md`: "VALID" batches are model output from empty-LEADS runs (26 runs, none successful since 2026-09-25) — treat as unverified.
+- `inventory/derdack.md`: full estate inventory + timestamped PASSIVE RECON log.
+- `scope.yml`: eligible in-scope asset definitions.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+
+=== state_bigpickle.json ===
+{"phase": "POC", "target": "api"}
+=== knowledge ===
+total 300
+drwxr-xr-x  2 runner runner   4096 Oct  9 19:09 .
+drwxr-xr-x 12 runner runner   4096 Oct  9 19:09 ..
+-rw-r--r--  1 runner runner 295998 Oct  9 19:09 index.md
+=== scripts ===
+total 28
+drwxr-xr-x  2 runner runner  4096 Oct  9 19:09 .
+drwxr-xr-x 12 runner runner  4096 Oct  9 19:09 ..
+-rw-r--r--  1 runner runner 16987 Oct  9 19:09 sync-issues.py
+=== recon-notes ===
+total 12
+drwxr-xr-x  2 runner runner 4096 Oct  9 19:09 .
+drwxr-xr-x 12 runner runner 4096 Oct  9 19:09 ..
+-rw-r--r--  1 runner runner  817 Oct  9 19:09 DEDICATED-DEEP.md
+=== reports ===
+total 11032
+drwxr-xr-x  2 runner runner    4096 Oct  9 19:09 .
+drwxr-xr-x 12 runner runner    4096 Oct  9 19:09 ..
+-rw-r--r--  1 runner runner 6178852 Oct  9 19:09 analyst-bigpickle.log
+-rw-r--r--  1 runner runner   47740 Oct  9 19:09 analyst-laguna.log
+-rw-r--r--  1 runner runner   47520 Oct  9 19:09 analyst-ling3.log
+-rw-r--r--  1 runner runner   47742 Oct  9 19:09 analyst-longcat.log
+-rw-r--r--  1 runner runner 4001821 Oct  9 19:09 analyst-nemotron3.log
+-rw-r--r--  1 runner runner      54 Oct  9 19:09 hypotheses-bigpickle.txt
+-rw-r--r--  1 runner runner      51 Oct  9 19:09 hypotheses-laguna.txt
+-rw-r--r--  1 runner runner      50 Oct  9 19:09 hypotheses-ling3.txt
+-rw-r--r--  1 runner runner      52 Oct  9 19:09 hypotheses-longcat.txt
+-rw-r--r--  1 runner runner   39825 Oct  9 19:09 hypotheses-nemotron3.txt
+-rw-r--r--  1 runner runner  886776 Oct  9 19:09 hypotheses.md
+-rw-r--r--  1 runner runner    5996 Oct  9 19:09 valid-bugs.md
+=== triage (head) ===
+run-2026-09-02-21-25.md
+run-2026-09-02-23-31.md
+run-2026-09-03-01-23.md
+run-2026-09-03-06-25.md
+run-2026-09-03-11-39.md
+run-2026-09-03-15-10.md
+run-2026-09-03-18-39.md
+run-2026-09-03-21-19.md
+run-2026-09-03-23-20.md
+run-2026-09-04-01-02.md
+=== reposcan-raw ===
+total 12
+drwxr-xr-x  2 runner runner 4096 Oct  9 19:09 .
+drwxr-xr-x 12 runner runner 4096 Oct  9 19:09 ..
+-rw-r--r--  1 runner runner   70 Oct  9 19:09 summary.txt
+[0m
+[0m→ [0mRead scope.yml
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt; echo "=== grep 96sbq38s ==="; grep -rn "96sbq38s" --include="*.md" --include="*.txt" --include="*.json" . | head -40; echo; echo "=== grep vbguzfsi ==="; grep -rn "vbguzfsi" --include="*.md" --include="*.txt" --include="*.json" . | head -40; echo; echo "=== grep hardcoded team secret in knowledge/bigpickle ==="; grep -rn "team-secret\|team secret\|hardcoded" knowledge/index.md | head -20
+=== grep 96sbq38s ===
+./leads/reposcan-derdack.md:22:reasoning: SIGNL4 team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a public repo under the signl4 GitHub org (Derdack-owned). The secret is a real alphanumeric string committed to source. No other files in this repo reference this value, suggesting it may be a Derdack-internal demo/test team.
+./leads/reposcan-derdack.md:24:verify_steps: Passive only: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) Check if `connect.signl4.com/webhook/96sbq38s` returns HTTP 201 vs 404 via `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If 404, team was deleted and finding is historical only.
+./leads/reposcan-derdack.md:240:[HYP] Hardcoded SIGNL4 Team Secret `96sbq38s` in Google IoT Integration
+./leads/reposcan-derdack.md:244:reasoning: Team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a real alphanumeric string committed to source. The repo is owned by the signl4 GitHub org (Derdack-owned).
+./leads/reposcan-derdack.md:246:verify_steps: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If 404, team was deleted and finding is historical only.
+./leads/reposcan-derdack.md:486:reasoning: Team secret 96sbq38s is hardcoded directly in the webhook URL https://connect.signl4.com/webhook/96sbq38s — not a placeholder (no <team-secret> or YOUR_SECRET marker). Same secret also appears in signl4-integration-losant/signl4-alert-v100.node:148 as a stringTeamSecret payload. Both repos are under signl4 GitHub org (Derdack-owned). The secret is a real alphanumeric string committed to source.
+./leads/reposcan-derdack.md:488:verify_steps: (1) Confirm repo ownership: github.com/signl4/signl4-integration-google-iot (2) POST test payload: curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}' (3) If 201, secret is live — rotate immediately. If 404, team was deleted.
+./leads/reposcan-derdack.md:576:reasoning: request.post('https://connect.signl4.com/webhook/96sbq38s', ...). Team secret "96sbq38s" appears in 2 files (index.js and signl4-alert-v100.node:148). Not a placeholder — real webhook secret committed to public repo.
+./leads/reposcan-derdack.md:578:verify_steps: 1) POST a test payload to https://connect.signl4.com/webhook/96sbq38s and check if alert is received. 2) Verify team still exists in SIGNL4.
+./leads/lead-bigpickle.md:8221:reasoning: SIGNL4 team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a public repo under the signl4 GitHub org (Derdack-owned). The secret is a real alphanumeric string committed to source. No other files in this repo reference this value, suggesting it may be a Derdack-internal demo/test team.
+./leads/lead-bigpickle.md:8223:verify_steps: Passive only: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) Check if `connect.signl4.com/webhook/96sbq38s` returns HTTP 201 vs 404 via `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If 404, team was deleted and finding is historical only.
+./leads/lead-bigpickle.md:8323:reasoning: SIGNL4 team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a public repo under the signl4 GitHub org (Derdack-owned). The secret is a real alphanumeric string committed to source. No other files in this repo reference this value, suggesting it may be a Derdack-internal demo/test team.
+./leads/lead-bigpickle.md:8325:verify_steps: Passive only: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) Check if `connect.signl4.com/webhook/96sbq38s` returns HTTP 201 vs 404 via `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If 404, team was deleted and finding is historical only.
+./leads/lead-bigpickle.md:8364:[HYP] Hardcoded SIGNL4 Team Secret `96sbq38s` in Google IoT Integration
+./leads/lead-bigpickle.md:8368:reasoning: Team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a real alphanumeric string committed to source. The repo is owned by the signl4 GitHub org (Derdack-own
+./leads/lead-bigpickle.md:8370:verify_steps: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If
+./leads/lead-bigpickle.md:8395:[HYP] Hardcoded SIGNL4 Team Secret `96sbq38s` in Google IoT Integration
+./leads/lead-bigpickle.md:8399:reasoning: Team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a real alphanumeric string committed to source. The repo is owned by the signl4 GitHub org (Derdack-own
+./leads/lead-bigpickle.md:8401:verify_steps: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If
+./leads/lead-bigpickle.md:8425:[HYP] Hardcoded SIGNL4 Team Secret `96sbq38s` in Google IoT Integration
+./leads/lead-bigpickle.md:8429:reasoning: Team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a real alphanumeric string committed to source. The repo is owned by the signl4 GitHub org (Derdack-own
+./leads/lead-bigpickle.md:8431:verify_steps: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If
+./leads/lead-bigpickle.md:8455:[HYP] Hardcoded SIGNL4 Team Secret `96sbq38s` in Google IoT Integration
+./leads/lead-bigpickle.md:8459:reasoning: Team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a real alphanumeric string committed to source. The repo is owned by the signl4 GitHub org (Derdack-own
+./leads/lead-bigpickle.md:8461:verify_steps: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If
+./leads/lead-bigpickle.md:8503:[HYP] Hardcoded SIGNL4 Team Secret `96sbq38s` in Google IoT Integration
+./leads/lead-bigpickle.md:8507:reasoning: Team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a real alphanumeric string committed to source. The repo is owned by the signl4 GitHub org (Derdack-own
+./leads/lead-bigpickle.md:8509:verify_steps: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If
+./leads/lead-bigpickle.md:8584:[HYP] Hardcoded SIGNL4 Team Secret `96sbq38s` in Google IoT Integration
+./leads/lead-bigpickle.md:8588:reasoning: Team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a real alphanumeric string committed to source. The repo is owned by the signl4 GitHub org (Derdack-own
+./leads/lead-bigpickle.md:8590:verify_steps: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If
+./leads/lead-bigpickle.md:8737:[HYP] Hardcoded SIGNL4 Team Secret `96sbq38s` in Google IoT Integration
+./leads/lead-bigpickle.md:8741:reasoning: Team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a real alphanumeric string committed to source. The repo is owned by the signl4 GitHub org (Derdack-own
+./leads/lead-bigpickle.md:8743:verify_steps: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If
+./leads/lead-bigpickle.md:8767:[HYP] Hardcoded SIGNL4 Team Secret `96sbq38s` in Google IoT Integration
+./leads/lead-bigpickle.md:8771:reasoning: Team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a real alphanumeric string committed to source. The repo is owned by the signl4 GitHub org (Derdack-own
+./leads/lead-bigpickle.md:8773:verify_steps: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If
+./leads/lead-bigpickle.md:8815:[HYP] Hardcoded SIGNL4 Team Secret `96sbq38s` in Google IoT Integration
+./leads/lead-bigpickle.md:8819:reasoning: Team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a real alphanumeric string committed to source. The repo is owned by the signl4 GitHub org (Derdack-own
+./leads/lead-bigpickle.md:8821:verify_steps: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If
+
+=== grep vbguzfsi ===
+./leads/reposcan-derdack.md:29:reasoning: Team secret `vbguzfsi` appears in two public repos: (1) Postman collection path array `[webhook, vbguzfsi]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardcoded directly. Both are under signl4 GitHub org. Same secret reused across two sample repos suggests a Derdack employee's real team secret used during development.
+./leads/reposcan-derdack.md:31:verify_steps: Passive only: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+./leads/reposcan-derdack.md:247:[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+./leads/reposcan-derdack.md:251:reasoning: Team secret `vbguzfsi` appears in two files: (1) Postman collection path array `["webhook", "vbguzfsi"]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardcoded directly. Same secret reused across two files suggests a Derdack employee's real team secret used during development.
+./leads/reposcan-derdack.md:253:verify_steps: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+./leads/reposcan-derdack.md:493:reasoning: Team secret vbguzfsi appears in two public repos: (1) Postman collection path array ["webhook","vbguzfsi"] while the raw field shows "--team-secret--" placeholder — path array was not sanitized before commit; (2) DevTools YAML url hardcoded as https://connect.signl4.com/webhook/vbguzfsi. Same secret reused across two files suggests a Derdack employee's real team secret used during development.
+./leads/reposcan-derdack.md:495:verify_steps: (1) Confirm repo ownership (2) POST test: curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}' (3) If 201, rotate immediately.
+./leads/lead-bigpickle.md:8228:reasoning: Team secret `vbguzfsi` appears in two public repos: (1) Postman collection path array `[webhook, vbguzfsi]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardcoded directly. Both are under signl4 GitHub org. Same secret reused across two sample repos suggests a Derdack employee's real team secret used during development.
+./leads/lead-bigpickle.md:8230:verify_steps: Passive only: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+./leads/lead-bigpickle.md:8330:reasoning: Team secret `vbguzfsi` appears in two public repos: (1) Postman collection path array `[webhook, vbguzfsi]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardcoded directly. Both are under signl4 GitHub org. Same secret reused across two sample repos suggests a Derdack employee's real team secret used during development.
+./leads/lead-bigpickle.md:8332:verify_steps: Passive only: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+./leads/lead-bigpickle.md:8371:[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+./leads/lead-bigpickle.md:8375:reasoning: Team secret `vbguzfsi` appears in two files: (1) Postman collection path array `["webhook", "vbguzfsi"]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardc
+./leads/lead-bigpickle.md:8377:verify_steps: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+./leads/lead-bigpickle.md:8402:[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+./leads/lead-bigpickle.md:8406:reasoning: Team secret `vbguzfsi` appears in two files: (1) Postman collection path array `["webhook", "vbguzfsi"]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardc
+./leads/lead-bigpickle.md:8408:verify_steps: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+./leads/lead-bigpickle.md:8432:[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+./leads/lead-bigpickle.md:8436:reasoning: Team secret `vbguzfsi` appears in two files: (1) Postman collection path array `["webhook", "vbguzfsi"]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardc
+./leads/lead-bigpickle.md:8438:verify_steps: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+./leads/lead-bigpickle.md:8462:[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+./leads/lead-bigpickle.md:8466:reasoning: Team secret `vbguzfsi` appears in two files: (1) Postman collection path array `["webhook", "vbguzfsi"]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardc
+./leads/lead-bigpickle.md:8468:verify_steps: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+./leads/lead-bigpickle.md:8510:[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+./leads/lead-bigpickle.md:8514:reasoning: Team secret `vbguzfsi` appears in two files: (1) Postman collection path array `["webhook", "vbguzfsi"]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardc
+./leads/lead-bigpickle.md:8516:verify_steps: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+./leads/lead-bigpickle.md:8591:[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+./leads/lead-bigpickle.md:8595:reasoning: Team secret `vbguzfsi` appears in two files: (1) Postman collection path array `["webhook", "vbguzfsi"]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardc
+./leads/lead-bigpickle.md:8597:verify_steps: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+./leads/lead-bigpickle.md:8744:[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+./leads/lead-bigpickle.md:8748:reasoning: Team secret `vbguzfsi` appears in two files: (1) Postman collection path array `["webhook", "vbguzfsi"]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardc
+./leads/lead-bigpickle.md:8750:verify_steps: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+./leads/lead-bigpickle.md:8774:[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+./leads/lead-bigpickle.md:8778:reasoning: Team secret `vbguzfsi` appears in two files: (1) Postman collection path array `["webhook", "vbguzfsi"]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardc
+./leads/lead-bigpickle.md:8780:verify_steps: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+./leads/lead-bigpickle.md:8822:[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+./leads/lead-bigpickle.md:8826:reasoning: Team secret `vbguzfsi` appears in two files: (1) Postman collection path array `["webhook", "vbguzfsi"]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardc
+./leads/lead-bigpickle.md:8828:verify_steps: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+./leads/lead-bigpickle.md:8991:[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+./leads/lead-bigpickle.md:8995:reasoning: Team secret `vbguzfsi` appears in two files: (1) Postman collection path array `["webhook", "vbguzfsi"]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardc
+
+=== grep hardcoded team secret in knowledge/bigpickle ===
+195:- 2026-09-09 ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated).
+201:- 2026-09-10 ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated).
+233:- 2026-09-10 ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: swagger confirms no security scheme, team secret in path, 404 vs 201 oracle — team-secret enumeration vector confirmed
+235:- 2026-09-10 ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: Webhook team-secret enumeration oracle confirmed — POST /{teamSecret} no security scheme, 404 vs 201 oracle, status-keyword query config, 15+ integrations use URL-embedded static team secret
+247:- 2026-09-11 ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: Webhook team-secret enumeration oracle confirmed — POST /{teamSecret} no security scheme, 404 vs 201 oracle, status-keyword query config, 15+ integrations use URL-embedded static team secret
+286:- 2026-09-11 ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated).
+292:- 2026-09-11 ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated).
+308:- 2026-09-11 ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: Webhook team-secret enumeration oracle confirmed — POST /{teamSecret} no security scheme, 404 vs 201 oracle, status-keyword query config, 15+ integrations use URL-embedded static team secret. (previously accepted 2026-09-10, re-confirmed this cycle)
+317:- 2026-09-11 ACCEPTED AUTH @ connect/devconnect /webhook: teamSecret is operator-chosen per-endpoint identifier (docs `teamssecret`, n8n `helloworld`, vendor samples `team-secret`) — not fixed high-entropy by design.
+318:- 2026-09-11 REJECTED OTHER @ github.com/signl4/code-snippets + Postman collection: only placeholder secrets; zero real team secret/API key in vendor's official sample corpus — credential-leak hypothesis unsupported across 4 corpora (indexed web, grep.app, GitHub, vendor samples).
+320:- 2026-09-11 ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: Webhook team-secret enumeration oracle confirmed — POST /{teamSecret} no security scheme, 404 vs 201 oracle, status-keyword query config, 15+ integrations use URL-embedded static team secret (live probe: invalid secret → 404)
+321:- 2026-09-12 ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: Webhook team-secret enumeration oracle confirmed — POST /{teamSecret} no security scheme, 404 vs 201 oracle, status-keyword query config, 15+ integrations use URL-embedded static team secret (live probe: invalid secret → 404)
+340:- 2026-09-12 ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated).
+374:- 2026-09-13 ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated).
+390:- 2026-09-13 ACCEPTED AUTH @ api/devapi/connect/devconnect /webhook/{teamSecret}: GET leaf returns byte-identical `{"GET not supported"+docs link}` on all 4 hosts; `/webhook/docs/v1/swagger.json` 200 on api+connect+devapi (no security scheme, POST /{teamSecret}); OPTIONS api → 405 Allow:GET,POST — team-secret URI-embedded attack surface estate-wide.
+423:- 2026-09-14 ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated)
+455:- 2026-09-14 ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated)
+511:- 2026-09-15 ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated)
+567:- 2026-09-16 ACCEPTED DOCS @ /api/v2/events/{webhookIdOrTeamId}: docs.signl4.com + api-evangelist OpenAPI confirm auth = X-S4-Api-Key carrying team/webhook secret; events "API key" == team secret; global subscription-scope key variant documented → reinforces secret-gated events family, no separate high-entropy tier
+575:- 2026-09-17 ACCEPTED DOCS @ /api/v2/events/{webhookIdOrTeamId}: docs + api-evangelist OpenAPI confirm auth = X-S4-Api-Key carrying team/webhook secret; events "API key" == team secret; reinforces secret-gated events family
+[0m
+[0m→ [0mRead recon-notes/DEDICATED-DEEP.md
+[0m→ [0mRead reports/valid-bugs.md
+[0m→ [0mRead .github/workflows/hunt.yml
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt; echo "=== reposcan-raw/summary ==="; cat reposcan-raw/summary.txt; echo; echo "=== reposcan-derdack head ==="; sed -n '1,60p' leads/reposcan-derdack.md; echo "=== probe-results head ==="; sed -n '1,60p' probe-results.md
+=== reposcan-raw/summary ===
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+
+=== reposcan-derdack head ===
+## REPOSCAN 2026-09-03 15:10:29 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-03 18:40:05 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-03 21:20:17 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-03 23:19:28 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 01:02:53 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 05:58:17 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 10:02:04 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 14:23:16 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 17:50:03 UTC
+[HYP] Hardcoded SIGNL4 Team Secret in Google IoT Integration Sample
+class: SECRET
+asset: signl4/signl4-integration-google-iot/index.js:19
+confidence: 85
+reasoning: SIGNL4 team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a public repo under the signl4 GitHub org (Derdack-owned). The secret is a real alphanumeric string committed to source. No other files in this repo reference this value, suggesting it may be a Derdack-internal demo/test team.
+impact: Medium — If valid, any party can send arbitrary alerts to this SIGNL4 team via the webhook. Could be used for alert flooding, social engineering via fake incident notifications, or to probe the team's response workflows. Impact取决于 whether the team still exists and is active.
+verify_steps: Passive only: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) Check if `connect.signl4.com/webhook/96sbq38s` returns HTTP 201 vs 404 via `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If 404, team was deleted and finding is historical only.
+[HYP] Hardcoded SIGNL4 Team Secret in Postman Collection & DevTools YAML (same secret, two files)
+class: SECRET
+asset: signl4/code-snippets/SIGNL4.postman_collection.json:42 + signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7
+confidence: 80
+reasoning: Team secret `vbguzfsi` appears in two public repos: (1) Postman collection path array `[webhook, vbguzfsi]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardcoded directly. Both are under signl4 GitHub org. Same secret reused across two sample repos suggests a Derdack employee's real team secret used during development.
+impact: Medium — Same as above: unauthorized alert injection, alert flooding, potential social engineering via fake incidents. Two repos expose the same secret, increasing the blast radius.
+verify_steps: Passive only: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+[HYP] Commented-Out Pipedream Debug Webhook in Zabbix Integration
+class: OTHER
+asset: signl4/signl4-integration-zabbix/signl4-mediatype.yaml:103
+confidence: 70
+reasoning: Line contains commented-out debug endpoint: `//endpoint = 'https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net';` — a Pipedream request inspection URL. This is a developer debug/test artifact left in production Zabbix media type export. While commented out, it reveals an internal testing endpoint and confirms Pipedream was used for webhook debugging. The UUID `b58aee12b873eae71b5db8b4fdc77d78` is a real Pipedream endpoint ID.
+impact: Low — Commented-out code is not executed. However, it leaks a historical debug endpoint that could be investigated for further information. If someone uncomments it, all Zabbix alerts would be sent to a third-party service (Pipedream) instead of SIGNL4.
+verify_steps: Passive only: (1) Check if the Pipedream endpoint is still active: `curl -s -o /dev/null -w '%{http_code}' https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net` (2) If active, confirms debug artifact was real (not just a test UUID).
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 19:57:19 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 21:58:22 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 23:38:42 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 01:23:46 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 06:16:24 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 10:38:14 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 13:32:46 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 16:13:33 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 18:18:56 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 20:26:45 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 22:13:27 UTC
+=== probe-results head ===
+
+## 2026-09-02 21:30:25 UTC
+
+
+## 2026-09-02 23:34:06 UTC
+
+
+## 2026-09-03 01:27:36 UTC
+
+
+## 2026-09-03 06:47:03 UTC
+
+
+## 2026-09-03 11:44:06 UTC
+
+
+## 2026-09-03 15:39:54 UTC
+https://signl4.derdack.com/.well-known/jwks.json -> ERR <urlopen error timed out>
+https://signl4.derdack.com/api/v1/user -> ERR <urlopen error timed out>
+https://signl4.derdack.com/api/auth/login -> ERR <urlopen error timed out>
+https://signals.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://signals.derdack.com/api/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://signals.derdack.com/webhook -> ERR <urlopen error [Errno -2] Name or service not know
+https://dev.derdack.com/actuator -> HTTP 404
+https://dev.derdack.com/swagger-ui.html -> HTTP 404
+https://dev.derdack.com/api/docs -> HTTP 404
+https://dev.derdack.com/graphql -> HTTP 404
+https://dev.derdack.com/.well-known/openid-configuration -> HTTP 300
+https://signl4.derdack.com/api/v1/health -> ERR <urlopen error timed out>
+
+## 2026-09-03 19:05:58 UTC
+https://dev.derdack.com/.ssh/id_rsa -> HTTP 403
+https://dev.derdack.com/.bash_history -> HTTP 403
+https://dev.derdack.com/.viminfo -> HTTP 403
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://www.derdack.com/wp-json/wp/v2/users -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/posts?status=draft -> HTTP 400
+https://www.derdack.com/wp-json/wp/v2/pages?status=draft -> HTTP 400
+https://signl4.derdack.com/ -> ERR <urlopen error timed out>
+https://api.signl4.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://app.signl4.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://signl4.derdack.com/.well-known/openid-configuration -> ERR <urlopen error timed out>
+https://signl4.derdack.com/.well-known/jwks.json -> ERR <urlopen error timed out>
+
+## 2026-09-03 21:37:31 UTC
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://dev.derdack.com/.ssh/id_rsa -> HTTP 403
+https://dev.derdack.com/.bash_history -> HTTP 403
+https://dev.derdack.com/.viminfo -> HTTP 403
+https://www.derdack.com/wp-json/wp/v2/users -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/posts -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/pages -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/posts?status=draft -> HTTP 400
+https://signl4.derdack.com/ -> ERR <urlopen error timed out>
+https://api.signl4.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://app.signl4.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://www.derdack.com/wp-json/wp/v2/users/1 -> 200 len=?
+
+## 2026-09-03 23:33:19 UTC
+https://dev.derdack.com/.well-known/ -> HTTP 300
+[0m
+Let me passively enrich the two secret leads via read-only GitHub API (ownership + commit authorship). No POSTs to live webhooks — that would violate the no-mutation rule.
+[0m$ [0mcd /tmp/opencode
+echo "=== repo: google-iot ==="
+curl -s "https://api.github.com/repos/signl4/signl4-integration-google-iot" | grep -E '"(full_name|description|created_at|pushed_at|archived|fork|stargazers_count)"'
+echo "=== commits touching index.js ==="
+curl -s "https://api.github.com/repos/signl4/signl4-integration-google-iot/commits?path=index.js&per_page=5" | grep -E '"(date|name|login|message|sha)"' | head -30
+echo
+echo "=== repo: code-snippets ==="
+curl -s "https://api.github.com/repos/signl4/code-snippets" | grep -E '"(full_name|description|created_at|pushed_at|archived|fork|stargazers_count)"'
+echo "=== commits touching Postman collection ==="
+curl -s "https://api.github.com/repos/signl4/code-snippets/commits?path=SIGNL4.postman_collection.json&per_page=5" | grep -E '"(date|name|login|message|sha)"' | head -30
+echo
+echo "=== repo: docs ==="
+curl -s "https://api.github.com/repos/signl4/docs" | grep -E '"(full_name|description|created_at|pushed_at|archived|fork|stargazers_count)"'
+=== repo: google-iot ===
+  "full_name": "signl4/signl4-integration-google-iot",
+  "description": "SIGNL4 - Mobile Alerting via app, push, text, voice with tracking & escalation",
+  "fork": false,
+  "created_at": "2019-02-01T15:17:50Z",
+  "pushed_at": "2019-02-15T11:04:15Z",
+  "stargazers_count": 1,
+  "archived": false,
+=== commits touching index.js ===
+    "sha": "b064ccdc1bf2e3318f4c0701b52df354129e74ac",
+        "name": "Ron",
+        "date": "2019-02-01T15:47:02Z"
+        "name": "GitHub",
+        "date": "2019-02-01T15:47:02Z"
+      "message": "Add files via upload",
+        "sha": "bb77e782588974d527182c8228e6b022c9080930",
+      "login": "rons4",
+      "login": "web-flow",
+
+=== repo: code-snippets ===
+  "full_name": "signl4/code-snippets",
+  "description": "Code snippets on how to send alerts using the SIGNL4 webhook.",
+  "fork": false,
+  "created_at": "2020-11-18T08:02:54Z",
+  "pushed_at": "2024-11-04T13:17:06Z",
+  "stargazers_count": 2,
+  "archived": false,
+=== commits touching Postman collection ===
+    "sha": "bc8fb0b40121f6c31a15aee17dfcd1dc792a8fbc",
+        "name": "Ron",
+        "date": "2024-02-15T12:13:55Z"
+        "name": "GitHub",
+        "date": "2024-02-15T12:13:55Z"
+      "message": "Add files via upload",
+        "sha": "2e3c6c3f2487fbac799d4205bd37da491c57c84e",
+      "login": "rons4",
+      "login": "web-flow",
+        "sha": "5868acf6bc1900010f00a4cc09c29494ff65444b",
+
+=== repo: docs ===
+  "full_name": "signl4/docs",
+  "description": null,
+  "fork": false,
+  "created_at": "2024-03-13T11:54:03Z",
+  "pushed_at": "2026-10-08T12:25:53Z",
+  "stargazers_count": 1,
+  "archived": false,
+[0m
+I ran the passive verification I could do within the rules. Here is the result.
+
+## Result — both secrets are real committed Derdack credentials (passive-confirmed)
+
+Read-only GitHub API + raw file fetch confirm:
+
+| Secret | Location | Author | Date | Persisted |
+|---|---|---|---|---|
+| `96sbq38s` | `signl4/signl4-integration-google-iot/index.js:19` (`request.post('https://connect.signl4.com/webhook/96sbq38s')`) | `rons4` (Derdack staff) | 2019-02-01 | 7+ yrs, repo still public |
+| `vbguzfsi` | `signl4/code-snippets/SIGNL4.postman_collection.json` path `[webhook,vbguzfsi]` (raw field is `--team-secret--`, path array was NOT sanitized) + `signl4/docs/.../SIGNL4_Alerting.yaml:7` | `rons4` | 2024-02-15 | also in `signl4/docs`, last pushed 2026-10-08 |
+
+This **refutes the 2026-09-11 KB rejection** ("only placeholder secrets") — that check only looked at the Postman `raw` field and missed the `path` array.
+
+## Structured analyst output
+
+```
+[CHANGED] 2026-09-11 REJECTED code-snippets/Postman "placeholder-only" is REFUTED: raw=placeholder but path=[webhook,vbguzfsi] is real; docs YAML also real.
+[NEW] Both leaked secrets authored by GitHub user rons4 (Derdack staff); vbguzfsi still present in signl4/docs (pushed 2026-10-08).
+[PRIO] github.com/signl4 public sample corpus, 5.2, tech_exposure(webhook credential in public source)
+[HYP] Hardcoded SIGNL4 Team Secret 96sbq38s in Google IoT Integration
+class: OTHER
+asset: connect.signl4.com/webhook/96sbq38s
+confidence: 85
+reasoning: Real operator-chosen team secret committed by staff user rons4 on 2019-02-01; no placeholder markers; repo signl4-owned, unarchived.
+evidence_needed: liveness of the team secret (POST 404 vs 201)
+verify_steps: POST /webhook/96sbq38s (MUTATING - see blocker)
+impact: Unauthenticated alert injection / flooding / fake incidents to Derdack team; Medium.
+testability: HUMAN_ONLY
+[HYP] Hardcoded SIGNL4 Team Secret vbguzfsi in Postman Collection & DevTools YAML
+class: OTHER
+asset: connect.signl4.com/webhook/vbguzfsi
+confidence: 80
+reasoning: Same secret in 2 files across 2 repos; path array unsanitized vs raw placeholder; reused by staff author rons4.
+evidence_needed: liveness of the team secret
+verify_steps: POST /webhook/vbguzfsi (MUTATING - see blocker)
+impact: Same as above; larger blast radius (2 repos); Medium.
+testability: HUMAN_ONLY
+[FINAL] 1) 96sbq38s leak  2) vbguzfsi leak
+[LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: vendor's own staff committed real (non-placeholder) team secrets to public repos — prior placeholder-only rejection was a false negative.
+[RISK] derdack: 20 - leaked low-entropy webhook secrets; impact limited by operator-chosen low entropy and unverified liveness.
+```
+
+## Blocker — I stopped before the final step and need your call
+
+The remaining verification is `POST` to `connect.signl4.com/webhook/{secret}`. That is a **mutating write** (creates a live alert in the target team), but the binding rules say: *"GET/HEAD/OPTIONS only for live probes; no auth-bypass or mutating tests against live customer data."* There is **no read-only liveness oracle** for the webhook (GET always returns "GET not supported"), so liveness cannot be confirmed passively.
+
+Evidence suggests these are Derdack's **own** demo/staff teams (author `rons4`), not a customer's — which would make a single benign POST lower-risk, but it is still a write.
+
+**Do you want me to proceed with one benign liveness POST** (e.g. `{"Title":"[bb] connectivity test"}`) to each secret, or **report the leak as-is with liveness unverified** and leave confirmation to the vendor?

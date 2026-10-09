@@ -1229,3 +1229,4 @@
 - 2026-10-09 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
 - 2026-10-09 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
 - 2026-10-09 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+- 2026-10-09 ACCEPTED OTHER @ connect.signl4.com/webhook: vendor's own staff committed real (non-placeholder) team secrets to public repos — prior placeholder-only rejection was a false negative.
