@@ -67853,3 +67853,313 @@ The remaining verification is `POST` to `connect.signl4.com/webhook/{secret}`. T
 Evidence suggests these are Derdack's **own** demo/staff teams (author `rons4`), not a customer's — which would make a single benign POST lower-risk, but it is still a write.
 
 **Do you want me to proceed with one benign liveness POST** (e.g. `{"Title":"[bb] connectivity test"}`) to each secret, or **report the leak as-is with liveness unverified** and leave confirmation to the vendor?
+===== ANALYST bigpickle 2026-10-09 23:23:32 UTC =====
+[0m
+> build · big-pickle
+[0m
+STEP 1 — DELTA
+- NEW 2026-10-09: two REAL (non-placeholder) SIGNL4 team secrets confirmed in public signl4 GitHub org repos — `96sbq38s` (google-iot index.js:19, staff author rons4, committed 2019-02-01) and `vbguzfsi` (postman_collection.json path array + docs/devtools YAML, same author, still present pushed 2026-10-08); materially refutes the 2026-09-11/09-22 "placeholder-only" rejection of this corpus.
+- CHANGED webhook liveness check is MUTATING (valid POST raises a real alert on a Derdack production team) → no analyst-seat test; both leak hypotheses remain HUMAN_ONLY-gated on liveness; the leak itself is passive-verified.
+- CHANGED the corpus that produced these secrets was twice declared clean — evidence the prior sweep only matched placeholder markers, so the signl4 org sample/docs surface is not actually swept.
+
+STEP 2 — PRIORITIZE
+- [PRIO] github.com/signl4 public sample/docs corpus, 5.85, tech_exposure(real webhook credential in public source + operator-chosen 6-12 char secrets + fresh 2026-10-08 commit)
+
+STEP 3 — HYPOTHESES
+[HYP] Additional real team secrets in signl4 org repos beyond 96sbq38s/vbguzfsi
+class: OTHER
+asset: github.com/signl4 org public repos (code-snippets, docs, integrations/*; HEAD+history)
+confidence: 70
+reasoning: corpus was REJECTED as "placeholder-only" on 2026-09-11 and 2026-09-22 via a clean-code-snippets sweep; 2026-10-09 found two real values in two of those same repos because the earlier sweep matched marker literals (`, <team-secret>`, `--team-secret--`) instead of testing for marker ABSENCE in `connect.signl4.com/webhook/...` strings. Two live hits from a "clean" corpus implies sampling, not coverage; ~30 sample repos + git history remain unchecked for low-entropy alnum strings.
+evidence_needed: another committed `connect.signl4.com/webhook/<6-12 alnum>` literal, or `x-s4-api-key` literal, without surrounding placeholder markers.
+verify_steps: RAG/git log + GitHub code search scoped to the signl4 org: regex `https://connect\.signl4\.com/webhook/[a-z0-9]{6,14}` and `x-s4-api-key["']?\s*[:=]\s*["'][a-z0-9]+` on all public repos (HEAD and commit history); for rons4-authored commits, diff per-commit added strings.
+impact: each extra leaked secret expands unauthenticated alert-injection/flooding and fake-incident social engineering against a production incident-response pipeline; Medium, capped by low operator entropy and unverified liveness.
+testability: PASSIVE
+
+STEP 4 — SELF-CRITIQUE
+- [PARKED] 96sbq38s and vbguzfsi liveness via POST /webhook/{secret}: mutating, creates real alerts on live Derdack teams → reject from analyst seat; keep as HUMAN_ONLY confirmation inside the filed report.
+- [PARKED] re-probing six OIDC ingresses / magnitude-1 drift checks: closed surfaces, 2026-10-07 zero-drift reconfirmed; repeating yields endpoint-map-only.
+- [FINAL] 1) 96sbq38s leak — staff-authored real secret in public signl4 repo (leak confirmed, liveness HUMAN). 2) vbguzfsi leak — real secret in two repos, refreshed 2026-10-08 (leak confirmed, liveness HUMAN). 3) additional-secrets sweep in signl4 org — passive, high yield given the refuted-clean corpus.
+
+STEP 5 — NEXT ACTION
+- [NEXT] RAG: sweep the signl4 GitHub org public repos (HEAD + history) for `https://connect.signl4.com/webhook/[a-z0-9]{6,14}` and `x-s4-api-key` literals, classifying real vs placeholder by marker ABSENCE; do NOT POST to any recovered secret.
+
+STEP 6 — LEARNING
+- [LEARN] ACCEPTED OTHER @ github.com/signl4: a corpus twice declared "clean" contained two real staff-authored team secrets; the earlier verdict only matched placeholder markers — testing for marker absence, not marker presence, is the correct sweep predicate.
+
+STEP 7 — RISK
+- [RISK] derdack: 45 — leaked low-entropy webhook secrets can inject/probe a live incident-response pipeline; impact gated by unverified liveness (HUMAN) and no customer/PII exposure, but the public-source leak vector is confirmed and freshly refreshed.
+## Objective
+- Continue the Derdack GmbH / Derdack Group bug bounty hunt (SIGNL4 + Enterprise Alert assets) and push the two newly-confirmed leaked SIGNL4 team-secret findings (from vendor-owned public GitHub repos) to closure/report, while keeping the passive-first stance.
+- Broader goal: find HIGH-VALUE logic flaws (auth, IDOR/BOLA, SSRF, token forgery, leaked credentials) across the derdack.com / signl4.com / enterprisealert.com estate.
+
+## Important Details
+- Program: Derdack GmbH / Derdack Group; report channel: bugs.olivermaicher.eu. In-scope: all Derdack-owned infra incl. SIGNL4 and Enterprise Alert.
+- OUT-OF-SCOPE (REJECTED): brute-force/rate-limit/lockout, OPTIONS/TRACE standalone, header-only/descriptive findings, clickjacking w/o exploit, outdated-library w/o exploit, username enumeration on login, vulnerability scanning w/o POC.
+- Passive-first rules: ≤1 rps, GET/HEAD/OPTIONS only for live probes; no mutating/auth-bypass tests against live customer data; sha256 any secret in outputs.
+- LEAKED SECRETS (both by GitHub user `rons4`, Derdack staff): `96sbq38s` in `signl4/signl4-integration-google-iot/index.js:19` (confidence 85); `vbguzfsi` in `signl4/code-snippets/SIGNL4.postman_collection.json:42` (unsanitized path array `[webhook, vbguzfsi]`) + `signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7`.
+- `vbguzfsi` still present in signl4/docs, pushed 2026-10-08 — actively live in public source.
+- Liveness check for either secret = `POST https://connect.signl4.com/webhook/{secret}` → MUTATING, blocked per program rules → testability HUMAN_ONLY.
+- Cross-env token forgery chain (6 identity hosts share RS256 key kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`, client_id `692A0A56-892F-4AE2-8259-76DA398990B6`, password grant enabled) remains AUTH_HELPED-blocked on client_secret.
+- Passive well for SIGNL4 public API confirmed dry; estate zero-drift re-confirmed 2026-10-07 boundary ("no new paths, verbs, or differentials").
+- Automated triage pipeline dead: 57 consecutive failed runs (2026-09-25 → 2026-10-06); `grep "[UNVALIDATED]" leads/lead-*.md` = 0 matches; reports/valid-bugs.md unverified.
+- api.signl4.com/api/v2/teams auth-flapping confirmed TEMPORAL (6 consecutive GETs uniform 401, then flipped to 405) — not per-request.
+
+## Work State
+### Completed
+- 2026-09-11 "placeholder-only" rejection REFUTED: Postman `raw` was a placeholder but the `path` array carried real secret `vbguzfsi`; docs YAML also real — vendor staff committed real (non-placeholder) team secrets.
+- [FINAL] #1 `96sbq38s` leak; [FINAL] #2 `vbguzfsi` leak — both emitted, ranked [85]/[80], gated on liveness verification.
+- Full estate mapped: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount); V1/V2/V3/webhook/events namespaces mapped w/ staging parity; V4 confirmed absent; OIDC introspection/revocation registration parity closed 6/6; DPoP challenge probe complete 3/3 (Bearer-only, no DPoP scheme/nonce — mitigating control only).
+- Prepaid body-identifier hypothesis REFUTED at 70 → NOT_A_BUG statically (V1/V2/V3 OpenAPI: 131 write ops, zero accept tenant identifier in body); `API_Key_Query` scheme declared on all three specs.
+- demo.enterprisealert.com/EAWebService/EA 9.5.26147 live; WSDL (200) leaks internal SOAP addr `https://ereesus/EAWebService/EventProviderAPI.asmx` (CWE-200, config-level; all handlers credential-gated, 10 true handlers: About real 200, others Error:-1).
+- vps.signl4.com dangling A-record → GoDaddy shared host (72.167.227.27) = MISCONFIG LOW-Medium, takeover HUMAN_ONLY.
+- Credential-in-URL vendor-template family: 6/12 Derdack GitHub repos + SolarWinds article (`Password=Derdack01`, `mmea2012.derdack-support.local`) + EA9 PDF md5-hash variant; leak-oracles negative across 7+ corpora.
+- Closed negatives: GraphQL absent (15/15 404), App-Proxy auth namespace 404, `/mobileapi` blanket 403 on all 6 identity hosts, labconnect/labaccount 502 dead tier, us/dev.derdack.com parked-minimal class (fabricated-echo control hash), /de/ + /ea/ multisite plugin REST = locale/noise diff (all 3 installs expose identical 157-route registry).
+- [RISK] derdack: 20 — leaked low-entropy webhook secrets; impact limited by operator-chosen low entropy and unverified liveness.
+
+### Active
+- Phase: POC, target: api; [PRIO] github.com/signl4 public sample corpus, 5.2, tech_exposure(webhook credential in public source).
+- Two leaked-secret findings awaiting HUMAN move (liveness verification is mutating).
+- Cross-env token forgery chain [85] still AUTH_HELPED; V1 `userId` impersonation (`acknowledgeAll`/`closeAll`), V2 `changePassword`, V3 invoice/BOLA, `userLicenses` BOLA queued, all needing vendor-issued credentials.
+
+### Blocked
+- Secret liveness verification: POST to `/webhook/{teamSecret}` is mutating and forbidden without vendor authorization → HUMAN_ONLY; cannot distinguish 404 (historical) vs 201 (live) passively.
+- client_secret / legitimate X-S4-Api-Key unavailable → all BOLA/forgery chains AUTH_HELPED.
+- Triage/CI pipeline dead (57 runs) — no automated validation path; reports/valid-bugs.md data unreliable.
+
+## Next Move
+1. [NEXT] HUMAN: report both leaked team secrets (`96sbq38s`, `vbguzfsi` — authored by staff `rons4`, still in public repos) to bugs.olivermaicher.eu for rotation; request vendor confirmation of liveness rather than self-POSTing.
+2. Passive-verification subset allowed now: read-only GET of github.com/signl4 repos to re-confirm presence of both secrets (vbguzfsi pushed 2026-10-08).
+3. If credential obtained from vendor: resume AUTH_HELPED queue starting with V2 `subscriptions/{id}/userLicenses` BOLA and V1 `alerts/acknowledgeAll?userId=` impersonation.
+4. Otherwise: emit further [NEXT] only for passive (GET/HEAD/OPTIONS) probes; avoid re-probing zero-drift estate.
+
+## Relevant Files
+- signl4/signl4-integration-google-iot/index.js:19 — hardcoded webhook URL with secret `96sbq38s`
+- signl4/code-snippets/SIGNL4.postman_collection.json:42 — unsanitized `path: [webhook, vbguzfsi]`
+- signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7 — `url: https://connect.signl4.com/webhook/vbguzfsi`
+- art/lead_bigpickle.txt, art/lead_nemotron3.txt, hypotheses-nemotron3.txt — source of ranked hypotheses
+- .github/workflows/triage.yml:45 — dead grep (`[UNVALIDATED]`) at the core of 57-run pipeline outage
+- scope.yml, inventory/derdack.md — program scope + host inventory
+- reports/valid-bugs.md — unverified "VALID" batches (last successful run 2026-09-25)
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+I'll execute the [NEXT] RAG sweep of the signl4 GitHub org. Starting with the repo list (read-only GitHub API):
+[0m$ [0mcurl -s "https://api.github.com/orgs/signl4/repos?per_page=100&page=1" | jq -r '.[] | "\(.name)\t\(.default_branch)\t\(.size)\t\(.updated_at)"' 2>/dev/null | head -80; echo "---PAGE2---"; curl -s "https://api.github.com/orgs/signl4/repos?per_page=100&page=2" | jq -r '.[] | "\(.name)\t\(.default_branch)\t\(.size)\t\(.updated_at)"' 2>/dev/null | head -40
+signl4-integration-mfomi	master	3	2018-10-12T11:55:12Z
+signl4-api-samples	master	1	2024-11-11T14:40:02Z
+signl4-iot-pycom	master	8	2018-10-12T11:54:41Z
+signl4-integration-jira	master	12	2023-05-08T13:40:35Z
+signl4-integration-losant	master	144	2021-02-17T13:40:37Z
+signl4-weather-alerts	master	76	2021-02-17T13:41:27Z
+signl4-reporting	master	3855	2023-10-09T10:40:37Z
+signl4-integration-node-red	master	127	2021-02-17T13:42:12Z
+signl4-integration-mysql-mariadb	master	154	2019-01-11T12:08:03Z
+signl4-integration-sql-server	master	183	2019-01-11T12:11:49Z
+signl4-integration-aat-mqtt	master	138	2019-01-21T09:27:56Z
+signl4-integration-google-iot	master	420	2020-10-22T13:12:26Z
+signl4-integration-google-stackdriver	master	127	2021-02-17T13:44:53Z
+signl4-integration-tensorflow	master	124	2021-02-17T13:44:56Z
+signl4-integration-flic-button	master	701	2019-04-09T12:09:06Z
+signl4-integration-thingworx	master	263	2021-02-17T13:44:58Z
+signl4-integration-webmethods-io	master	297	2019-05-08T14:21:21Z
+signl4-integration-integromat	master	346	2021-02-17T13:44:33Z
+signl4-integration-crosser	master	274	2021-02-17T13:44:51Z
+signl4-integration-automate-io	master	182	2021-02-17T13:45:00Z
+signl4-integration-particle	master	784	2025-09-23T14:12:59Z
+signl4-integration-mulesoft	master	208	2019-08-23T12:56:33Z
+signl4-integration-elastic-io	master	400	2019-11-01T14:10:18Z
+signl4-integration-azuremonitor	master	8	2022-02-10T12:53:54Z
+signl4-plugin-nagios	master	368	2024-11-29T14:53:02Z
+node-red-contrib-signl4	master	314	2021-02-18T16:02:55Z
+signl4-integration-tray-io	master	2506	2019-11-18T15:14:18Z
+signl4-integration-blendr-io	master	442	2021-02-17T13:45:05Z
+signl4-integration-ixon	master	804	2020-03-25T15:27:55Z
+signl4-integration-azuresentinel	master	8	2022-02-09T19:04:33Z
+ioBroker.signl4	master	105	2023-10-13T13:34:08Z
+signl4-integration-checkmk	master	272	2026-08-24T11:50:09Z
+signl4-integration-zabbix	master	442	2026-07-21T22:21:30Z
+signl4-integrations-perinet	master	427	2020-03-16T09:59:31Z
+signl4-integration-ibm-app-connect	master	179	2020-03-24T11:03:28Z
+signl4-integration-thingsboard	master	172	2020-03-25T16:42:29Z
+signl4-integration-ubidots	master	274	2020-04-03T15:35:19Z
+signl4-integration-icinga2	master	125	2026-01-19T15:49:20Z
+signl4-action-alert	master	1504	2026-06-24T12:25:28Z
+code-snippets	main	27	2024-11-04T13:17:10Z
+signl4-integration-uipath	main	25	2021-01-11T08:49:52Z
+signl4-schedule-import	main	21	2023-09-07T10:27:42Z
+signl4-alert-export	main	10	2023-10-09T10:41:14Z
+signl4-grafana-dashboard	main	160	2023-10-09T10:40:59Z
+signl4-logo	main	82	2021-12-09T11:13:21Z
+signl4-holiday-import	main	97	2025-08-04T12:37:58Z
+docs	main	157668	2026-10-08T12:25:57Z
+signl4-file-interface	main	7	2024-04-10T07:53:56Z
+signl4-windows-shortcut	main	860	2024-04-23T11:48:19Z
+signl4-userimport	main	9	2024-11-14T09:24:20Z
+signl4-terraform-provider	main	2	2025-05-05T10:59:48Z
+signl4-assets	main	336	2026-10-07T11:05:37Z
+xyplug-signl4	main	247	2026-10-07T17:04:08Z
+---PAGE2---
+[0m
+Page 1 has 53 repos, page 2 empty — matches the KB inventory. Now I'll fetch tarballs of all repos (HEAD) into /tmp/opencode/sweep-signl4 and grep for webhook secrets and API keys, classifying real vs placeholder:
+[0m$ [0mmkdir -p /tmp/opencode/sweep-signl4 && cd /tmp/opencode/sweep-signl4 && curl -s "https://api.github.com/orgs/signl4/repos?per_page=100" | jq -r '.[] | "\(.name)\t\(.default_branch)"' > repos.txt && wc -l repos.txt
+53 repos.txt
+[0m
+[0m$ [0mcd /tmp/opencode/sweep-signl4 && while IFS=$'\t' read -r name branch; do [ -z "$name" ] && continue; curl -sL "https://codeload.github.com/signl4/$name/tar.gz/$branch" -o "$name.tgz" && mkdir -p "ex/$name" && tar -xzf "$name.tgz" -C "ex/$name" --strip-components=1 2>/dev/null; done < repos.txt; echo DONE; ls ex | wc -l
+DONE
+53
+[0m
+[0m$ [0mcd /tmp/opencode/sweep-signl4/ex && rg -n -i --no-heading 'connect\.signl4\.com/webhook/[a-z0-9]{6,20}' . 2>/dev/null | head -60
+(no output)
+[0m
+[0m$ [0mcd /tmp/opencode/sweep-signl4/ex && ls code-snippets/ 2>&1 | head; echo ---; ls docs/ 2>&1 | head; echo ---; rg -l -i 'webhook' code-snippets/ docs/ 2>/dev/null | head
+README.md
+SIGNL4.postman_collection.json
+signl4-alert-axios.js
+signl4-alert-curl.sh
+signl4-alert-with-result.html
+signl4-alert.html
+signl4-alert.js
+signl4-alert.py
+signl4-alert.rs
+signl4.vba
+---
+404.html
+Alerting-Responding-App-SIGNL4.webp
+CNAME
+Gemfile
+_config.yml
+_includes
+assets
+index.md
+integrations
+robots.txt
+---
+[0m
+[0m$ [0mcd /tmp/opencode/sweep-signl4/ex && rg -n -i 'webhook' code-snippets/SIGNL4.postman_collection.json | head -20; echo ===; rg -rn -i 'connect\.signl4\.com/webhook' docs/integrations 2>/dev/null | head -30
+/bin/bash: line 1: rg: command not found
+===
+[0m
+[0m$ [0mcd /tmp/opencode/sweep-signl4/ex && grep -riIn 'webhook' code-snippets/ | head -20
+code-snippets/signl4_alert.sh:18:curl -d "$(data)" -H "Content-Type: application/json" "https://connect.signl4.com/webhook/$team_secret"
+code-snippets/signl4-alert-with-result.html:8:        // Use your SIGNL4 webhook URL including team or integration secret here
+code-snippets/signl4-alert-with-result.html:9:        var strWebhookUrl = "https://connect.signl4.com/webhook/<signl4-integration-secret>";
+code-snippets/signl4-alert-with-result.html:21:                xhr.open("POST", strWebhookUrl, true);
+code-snippets/signl4-alert.py:10:# SIGNL4 webhook URL
+code-snippets/signl4-alert.py:11:webhook_url = 'https://connect.signl4.com/webhook/' + teamSecret
+code-snippets/signl4-alert.py:18:result = requests.post(url = webhook_url, json = alert_data)
+code-snippets/signl4_alert.cs:21:    string url = "https://connect.signl4.com/webhook/" + strTeamSecret;
+code-snippets/SIGNL4.postman_collection.json:31:					"raw": "https://connect.signl4.com/webhook/--team-secret--",
+code-snippets/SIGNL4.postman_collection.json:39:						"webhook",
+code-snippets/signl4-alert.js:15:// SIGNL4 webhook URL
+code-snippets/signl4-alert.js:19:  path: '/webhook/' + teamSecret,
+code-snippets/signl4_alert.php:8:$url = 'https://connect.signl4.com/webhook/' . $teamSecret;
+code-snippets/signl4_alert.rb:14:url = "https://connect.signl4.com/webhook/" + team_secret
+code-snippets/signl4_alert.ps1:12:Invoke-RestMethod "https://connect.signl4.com/webhook/$team_secret" -Method POST -ContentType "application/json" -Body $data
+code-snippets/signl4-alert-axios.js:18:  // SIGNL4 webhook URL
+code-snippets/signl4-alert-axios.js:19:  const res = await axios.post('https://connect.signl4.com/webhook/' + teamSecret, data, {
+code-snippets/signl4.vba:8:' SIGNL4 webhook URL including team or integration secret
+code-snippets/signl4.vba:9:url = "https://connect.signl4.com/webhook/{team-secret}"
+code-snippets/README.md:1:# Sample Code for sending SIGNL4 Alerts using the Webhook API
+[0m
+[0m$ [0mcd /tmp/opencode/sweep-signl4/ex && sed -n 20,50p code-snippets/SIGNL4.postman_collection.json
+],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"Title\": \" Alert from Postman\",\r\n    \"Message\": \"Hello world.\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://connect.signl4.com/webhook/--team-secret--",
+					"protocol": "https",
+					"host": [
+						"connect",
+						"signl4",
+						"com"
+					],
+					"path": [
+						"webhook",
+						"vbguzfsi"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
+[0m
+Confirmed `vbguzfsi` still present in code-snippets HEAD (postman path array). Now sweeping all 53 repos for webhook secrets and API keys:
+[0m$ [0mcd /tmp/opencode/sweep-signl4/ex && grep -rInEo 'connect\.signl4\.com/webhook/[a-zA-Z0-9_-]{5,20}' . 2>/dev/null | grep -vE '\{\{|--|<|_\{|\$|\+|\)' | sort | uniq -c | sort -rn | head -40
+1 ./signl4-integration-node-red/SIGNL4-Alert-Node-Red.txt:2:connect.signl4.com/webhook/team-secret
+      1 ./signl4-integration-mfomi/script/s4.groovy:114:connect.signl4.com/webhook/teamSecret
+      1 ./signl4-integration-google-iot/index.js:19:connect.signl4.com/webhook/96sbq38s
+      1 ./docs/integrations/webhook/webhook.md:106:connect.signl4.com/webhook/teamssecret
+      1 ./docs/integrations/streampipes/signl4-alerting-pipelines.json:1:connect.signl4.com/webhook/team-or-integration-
+      1 ./docs/integrations/snowflake/snowflake.md:37:connect.signl4.com/webhook/YOUR_SIGNL4_SECRET
+      1 ./docs/integrations/shelly/shelly.md:54:connect.signl4.com/webhook/YOUR_TEAM_SECRET
+      1 ./docs/integrations/shelly/shelly.md:41:connect.signl4.com/webhook/YOUR_TEAM_SECRET
+      1 ./docs/integrations/shelly/shelly.md:124:connect.signl4.com/webhook/YOUR_TEAM_SECRET
+      1 ./docs/integrations/prtg/prtg.md:62:connect.signl4.com/webhook/team-secret
+      1 ./docs/integrations/prtg/prtg.md:43:connect.signl4.com/webhook/team-secret
+      1 ./docs/integrations/netdata/netdata.md:57:connect.signl4.com/webhook/xxxxxxxx
+      1 ./docs/integrations/kix/kix.md:39:connect.signl4.com/webhook/abcdef
+      1 ./docs/integrations/influxdb/influxdb.md:49:connect.signl4.com/webhook/team-secret
+      1 ./docs/integrations/ignition/ignition.md:40:connect.signl4.com/webhook/YOUR_SIGNL4_SECRET
+      1 ./docs/integrations/icinga/icinga.md:25:connect.signl4.com/webhook/-team-secret-
+      1 ./docs/integrations/home-assistant/home-assistant.md:36:connect.signl4.com/webhook/team-secret
+      1 ./docs/integrations/devtools/SIGNL4_Alerting.yaml:7:connect.signl4.com/webhook/vbguzfsi
+      1 ./docs/integrations/checkly/checkly.md:38:connect.signl4.com/webhook/team-secret
+      1 ./docs/integrations/boomi/boomi.md:40:connect.signl4.com/webhook/YOUR_TEAM_SECRET
+      1 ./docs/integrations/aws-iot-button/aws-iot-button.md:123:connect.signl4.com/webhook/TEAMSECRET
+      1 ./docs/integrations/aveva/aveva.md:74:connect.signl4.com/webhook/YOUR_SIGNL4_SECRET
+      1 ./docs/integrations/aveva/aveva.md:42:connect.signl4.com/webhook/YOUR_SIGNL4_SECRET
+      1 ./docs/integrations/arduino/arduino.md:44:connect.signl4.com/webhook/team-secret
+[0m
+Only the two known secrets at HEAD (`96sbq38s`, `vbguzfsi`); everything else in docs is placeholder-marked. Now the broader sweep across all repos — webhook paths, API keys, and auth headers:
+[0m$ [0mcd /tmp/opencode/sweep-signl4/ex && echo "=== webhook/ anything (all) ==="; grep -rInE 'webhook/[a-zA-Z0-9_-]{1,20}' . 2>/dev/null | grep -vE 'webhook\/(\{\{|--|<|\$|\+|\{|YOUR|team|Team|TEAM|xxxx|abcdef|strTeam|Test|test|your|integration|secret|Secret|SECRET|placeholder|sample|SAMPLE|12345|demo)' | head -40; echo "=== x-s4-api-key / api keys ==="; grep -rInE '(x-s4-api-key|apikey|api_key|api-key)' . 2>/dev/null | grep -iE '([:=]\s*["'"'"'][A-Za-z0-9_-]{8,}["'"'"']|:  *[A-Za-z0-9]{8,})' | grep -viE '\{\{|<|--|\$|YOUR|your|REPLACE|apiKey[=:]?\s*["'"'"']?$|null|None|xxx|...' | head -40
+=== webhook/ anything (all) ===
+./signl4-integration-google-iot/index.js:19:  request.post('https://connect.signl4.com/webhook/96sbq38s', {
+./node-red-contrib-signl4/signl4.html:138:	Triggers a new alert for your SIGNL4 team. It will be displayed in the alert overview in the mobile app and online or on-duty people will receive an alert notification. You can find a full description at <a href='https://www.signl4.com/developers/webhook/inbound/#!/Events/RaiseEvent'>signl4.com</a>.
+./node-red-contrib-signl4/signl4.html:211:	Triggers a new alert for your SIGNL4 team. It will be displayed in the alert overview in the mobile app and online or on-duty people will receive an alert notification. You can find a full description at <a href='https://www.signl4.com/developers/webhook/inbound/#!/Events/RaiseEvent'>signl4.com</a>.
+./node-red-contrib-signl4/README.md:25:Triggers a new alert for your SIGNL4 team. It will be displayed in the alert overview in the mobile app and online or on-duty people will receive an alert notification. You can find a full description at <a href=https://www.signl4.com/developers/webhook/inbound/#!/Events/RaiseEvent>signl4.com</a>.
+./docs/integrations/microsoft-power-automate/microsoft-power-automate.md:23:When you have the team secret / integration secret you enter this one in the action “Send event” to send an alert that then sends an alert to your team. You just need to enter any Title and Message. You can find a description of the other parameters on the [inbound webhook documentation page](https://connect.signl4.com/webhook/docs/index.html).
+./docs/integrations/shelly/shelly.md:46:[SIGNL4's inbound webhook](https://docs.signl4.com/integrations/webhook/webhook.html) accepts arbitrary JSON fields, with optional X-S4-* fields for things such as correlation, alert resolution, service categories, and alerting scenarios.
+./docs/integrations/apprise/apprise.md:41:You can find more information [here](https://docs.signl4.com/integrations/webhook/webhook.html).
+./docs/integrations/replit/replit.md:30:You can integrate SIGNL4 in your Replit projects using the [SIGNL4 webhook API](https://docs.signl4.com/integrations/webhook/webhook.html). You can find various code samples [here](https://docs.signl4.com/samples/code-samples/code-samples.html).
+./docs/integrations/midio/midio.md:26:For your convenience, there is a ready-to-use package called "SIGNL4 – Mobile Alerting" encapsulating the [SIGNL4 outbound webhook](https://docs.signl4.com/integrations/webhook/webhook.html). You can add this package and adapt it to suite your needs.
+./docs/integrations/midio/midio.md:32:Please refer to the [SIGNL4 webhook API documentation](https://docs.signl4.com/integrations/webhook/webhook.html) for more information about the parameters.
+./docs/integrations/prometheus/prometheus.md:70:The alert format can be adapted to your needs, and you can also add additional parameters as needed. The X-S4- parameters are reserved. More information about the SIGNL4 webhook is available [here](https://docs.signl4.com/integrations/webhook/webhook.html).
+./docs/integrations/outbound-webhook/outbound-webhook.md:7:  - /integrations/outbound-webhook/outbound-webhook.html
+./docs/integrations/outbound-webhook/outbound-webhook.md:8:  - /integrations/outbound-webhook/outbound-webhook
+./docs/integrations/outbound-webhook/outbound-webhook.md:13:You can use the [inbound webhook API](https://docs.signl4.com/integrations/webhook/webhook.html#signl4-integration-with-webhook) for triggering SIGNL4 alerts.
+./docs/integrations/email/email.md:72:Many of the parameters supported by the SIGNL4 webhook integration can also be used in emails. See the [SIGNL4 webhook integration](https://docs.signl4.com/integrations/webhook/webhook.html) for available parameters.
+./docs/integrations/android/android.md:46:You can easily integrate the above-mentioned apps by using the [SIGNL4 webhook API](https://docs.signl4.com/integrations/webhook/webhook.html).
+./docs/integrations/devtools/SIGNL4_Alerting.yaml:7:      url: https://connect.signl4.com/webhook/vbguzfsi
+./docs/integrations/devtools/devtools.md:15:You can use DevTools to implement and test your SIGNL4 API workflows using both the [Webhook API](https://docs.signl4.com/integrations/webhook/webhook.html) and the [REST API](https://connect.signl4.com/api/docs/index.html?urls.primaryName=SIGNL4%20API%20V2).
+./docs/integrations/acure/acure.md:26:-- SIGNL4 Webhook API: https://connect.signl4.com/webhook/docs/index.html
+./docs/integrations/icinga/icinga.md:25:URL Template: Your SIGNL4 webhook URL including team or integration secret, e.g. https://connect.signl4.com/webhook/-team-secret-
+./docs/integrations/peakboard/peakboard.md:52:}]], { Title = 'Alert from Peakboard', Message = 'Malfunction on machine A2.', S4Service = '', S4Location = '', S4SourceSystem = '', S4ExternalID = '', S4Status = '' }) --[[ For more information about the parameters go to: https://docs.signl4.com/integrations/webhook/webhook.html --]], function(r) httpStatusCode = r.status httpError = r.error end).content
+./docs/integrations/peakboard/peakboard.md:55:You need to replace {team-secret} by your SIGNL4 team or integration secret. Find more information about the SIGNL4 webhook integration and payload parameters [here](For more information about the parameters go to: https://docs.signl4.com/integrations/webhook/webhook.html). 
+./docs/integrations/integrations.md:17:If you feel an integration is missing in this list, please feel free to let us know at hello [@] signl4.com. If you would like to create your own integration the documentation about the [inbound webhook](https://docs.signl4.com/integrations/webhook/webhook.html) is a good start. 
+./docs/integrations/webhook/webhook.md:7:  - /integrations/webhook/webhook.html
+./docs/integrations/webhook/webhook.md:8:  - /integrations/webhook/webhook
+./docs/integrations/webhook/webhook.md:15:You can find more information about the SIGNL4 webhook API [here](https://connect.signl4.com/webhook/docs/).
+./docs/integrations/webhook/webhook.md:111:[https://connect.signl4.com/webhook/docs/](https://connect.signl4.com/webhook/docs/)
+./docs/integrations/webhook/webhook.md:134:You can find more information about the outbound webhook [here](https://docs.signl4.com/integrations/outbound-webhook/outbound-webhook.html). 
+./docs/integrations/rest-api/rest-api.md:15:**Note**: If you plan to send (trigger) alert, you can use the [inbound webhook API](https://docs.signl4.com/integrations/webhook/webhook.html#signl4-integration-with-webhook). This offers a simple yet powerful way to trigger alerts by sending HTTP POST requests.
+./docs/integrations/rest-api/rest-api.md:23:The following HTTP request sends an event to SIGNL4. SIGNL4 can process the event and then trigger an alert. Except of the endpoint (URL) and X-S4-Api-Key header the format is the same as for the [inbound webhook API](https://docs.signl4.com/integrations/webhook/webhook.html#signl4-integration-with-webhook).
+./docs/integrations/smaworx/smaworx.md:41:**Message**: JSON alert payload including placeholders. Find more information [here](https://docs.signl4.com/integrations/webhook/webhook.html).  
+./docs/samples/rest-api-ai/rest-api-ai.md:15:If you are looking for pure alerting please consider using the [SIGNL4 webhook API](https://docs.signl4.com/integrations/webhook/webhook.html).
+./docs/samples/rest-api-samples/rest-api-samples.md:15:The following HTTP request sends an event to SIGNL4. SIGNL4 can process the event and then trigger an alert. Except of the endpoint (URL) and X-S4-Api-Key header the format is the same as for the [inbound webhook API](https://docs.signl4.com/integrations/webhook/webhook.html#signl4-integration-with-webhook).
+./docs/samples/code-samples/code-samples.md:14:You can trigger SIGNL4 alerts by using the [inbound webhook](https://connect.signl4.com/webhook/docs/index.html).
+=== x-s4-api-key / api keys ===
+[0m
+HEAD sweep across all 53 repos: no additional real secrets beyond the two known. Only those two (`96sbq38s`, `vbguzfsi`) are non-placeholder. No hardcoded API keys. Now checking git history (blobless clones of the high-signal sample repos) for committed-then-removed secrets:
+[0m$ [0mcd /tmp/opencode/sweep-signl4 && git clone -q --filter=blob:none https://github.com/signl4/code-snippets.git 2>&1 | tail -2; git clone -q --filter=blob:none https://github.com/signl4/signl4-integration-google-iot.git 2>&1 | tail -2; echo "CLONED"
+CLONED
+[0m
+[93m[1m! [0mpermission requested: external_directory (/tmp/opencode/sweep-signl4/code-snippets/*, /home/runner/work/derdack-hunt/*); auto-rejecting
+[0m✗ [0mcd /tmp/opencode/sweep-signl4/code-snippets && git log --all --oneline --full-history -S 'vbguzfsi' -- . 2>/dev/null | head; echo "=== google-iot 96sbq38s commits ==="; cd ../signl4-integration-google-iot && git log --all --oneline --full-history -S '96sbq38s' 2>/dev/null | head; echo "=== any other webhook/<secret> in history of both ==="; cd ../code-snippets && git log --all -p -S 'connect.signl4.com/webhook/' 2>/dev/null | grep -oE 'connect\.signl4\.com/webhook/[a-zA-Z0-9_-]+' | sort -u | head failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.

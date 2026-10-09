@@ -2409,3 +2409,17 @@ www.derdack.com
 - CHANGED connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on ALL 6 identity hosts (was 3-host record) — undocumented mobile ingress with custom error page
 - CHANGED Cross-env token forgery chain stable at 6 hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled, account IdP issuer mismatch (claims connect) + plain PKCE
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+
+## 2026-10-09 23:23:32 UTC
+- NEW GitHub credential leak CONFIRMED: signl4/docs repo contains real team secret `vbguzfsi` (authored by Derdack staff rons4, pushed 2026-10-08); prior "placeholder-only" rejection was false negative
+- NEW OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts — routing layer complete, only token validation behavior unverified
+- NEW DPoP challenge-layer probe COMPLETE: 3/3 hosts return identical `WWW-Authenticate: Bearer` with no DPoP scheme/nonce — mitigating control advertised but not enforced
+- NEW Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED (V1/V2/V3 OpenAPI schemas show zero write ops accepting tenant identifier in body; 131 write ops swept repo-wide)
+- NEW V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
+- NEW Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); `grep "\[UNVALIDATED\]"` matches 0 — automated validation broken
+- CHANGED api.signl4.com/api/v2/teams auth-status confirmed temporal flapping (not per-request): 6 consecutive unauth GETs at 1.2s intervals all returned 401 with identical 0-byte body; then flipped back to 405
+- CHANGED connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on ALL 6 identity hosts (was 3-host record) — undocumented mobile ingress with custom error page
+- CHANGED vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
+- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+- CHANGED Cross-env token forgery chain stable at 6 hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled, account IdP issuer mismatch (claims connect) + plain PKCE
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted

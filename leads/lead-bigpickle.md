@@ -9732,3 +9732,13 @@ testability: HUMAN_ONLY
 [FINAL] 1) 96sbq38s leak  2) vbguzfsi leak
 [LEARN] ACCEPTED OTHER @ connect.signl4.com/webhook: vendor's own staff committed real (non-placeholder) team secrets to public repos — prior placeholder-only rejection was a false negative.
 [RISK] derdack: 20 - leaked low-entropy webhook secrets; impact limited by operator-chosen low entropy and unverified liveness.
+## 2026-10-09 23:23:17 UTC [target] (model bigpickle)
+[HYP] Additional real team secrets in signl4 org repos beyond 96sbq38s/vbguzfsi
+class: OTHER
+asset: github.com/signl4 org public repos (code-snippets, docs, integrations/*; HEAD+history)
+confidence: 70
+reasoning: corpus was REJECTED as "placeholder-only" on 2026-09-11 and 2026-09-22 via a clean-code-snippets sweep; 2026-10-09 found two real values in two of those same repos because the earlier sweep matched marker literals (`, <team-secret>`, `--team-secret--`) instead of testing for marker ABSENCE in `connect.signl4.com/webhook/...` strings. Two live hits from a "clean" corpus implies sampling, not coverage; ~30 sample repos + git history remain unchecked for low-entropy alnum strings.
+evidence_needed: another committed `connect.signl4.com/webhook/<6-12 alnum>` literal, or `x-s4-api-key` literal, without surrounding placeholder markers.
+verify_steps: RAG/git log + GitHub code search scoped to the signl4 org: regex `https://connect\.signl4\.com/webhook/[a-z0-9]{6,14}` and `x-s4-api-key["']?\s*[:=]\s*["'][a-z0-9]+` on all public repos (HEAD and commit history); for rons4-authored commits, diff per-commit added strings.
+impact: each extra leaked secret expands unauthenticated alert-injection/flooding and fake-incident social engineering against a production incident-response pipeline; Medium, capped by low operator entropy and unverified liveness.
+testability: PASSIVE
