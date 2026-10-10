@@ -9871,3 +9871,8 @@ testability: HUMAN_ONLY
 [LEARN] REJECTED OTHER @ public leak: using externally-leaked team secret as live auth is out of scope + non-mutating validation already shows 403; close the "leak->exploit" chain.
 [LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: dangling A to GoDaddy shared host re-confirmed live; reportable takeover candidate.
 [RISK] derdack: 24 (low). Passive surface exhausted; remaining high-value vectors are report-only (human-gated). Two reportable findings stand; exploit chains are blocked by scope rules, not by lack of leads.
+## 2026-10-10 19:07:29 UTC [target] (model bigpickle)
+[NEW]   Leak localized: integrations/devtools/SIGNL4_Alerting.yaml:7 → https://connect.signl4.com/webhook/vbguzfsi
+[CHANGED] docs.signl4.com = GitHub Pages (CNAME file -> docs.signl4.com; access-control-allow-origin: *).
+[NEW]   Unmapped live hosts: fix.signl4.com (Kestrel/Blazor, 200), admin.signl4.com (PTR=mail.signl4.com, no HTTPS),
+[CHANGED] signl4.com apex + www -> 160.153.0.44 (GoDaddy secureserver) behind Cloudflare; 301->www.

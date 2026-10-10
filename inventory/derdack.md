@@ -2444,3 +2444,18 @@ www.derdack.com
 - CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
 - CHANGED Cross-env token forgery chain stable at 6 hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled, account IdP issuer mismatch (claims connect) + plain PKCE
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+
+## 2026-10-10 19:07:38 UTC
+- NEW Leak localized: integrations/devtools/SIGNL4_Alerting.yaml:7 → https://connect.signl4.com/webhook/vbguzfsi
+- CHANGED docs.signl4.com = GitHub Pages (CNAME file -> docs.signl4.com; access-control-allow-origin: *).
+- NEW Unmapped live hosts: fix.signl4.com (Kestrel/Blazor, 200), admin.signl4.com (PTR=mail.signl4.com, no HTTPS),
+- CHANGED signl4.com apex + www -> 160.153.0.44 (GoDaddy secureserver) behind Cloudflare; 301->www.
+- NEW GitHub credential leak CONFIRMED: signl4/docs repo contains real team secret `vbguzfsi` (authored by Derdack staff rons4, pushed 2026-10-08); prior "placeholder-only" rejection was false negative
+- NEW vps.signl4.com re-resolved 2026-10-10: A=72.167.227.27 (GoDaddy shared host, secureserver.net) — dangling/subdomain-takeover candidate stable
+- NEW Leaked team secret vbguzfsi already probed as X-S4-Api-Key @ /api/v2/teams -> 403 (same-hash-as-junk): NOT a valid REST key
+- CHANGED OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts — routing layer complete, only token validation behavior unverified
+- CHANGED DPoP challenge-layer probe COMPLETE: 3/3 hosts return identical `WWW-Authenticate: Bearer` with no DPoP scheme/nonce — mitigating control advertised but not enforced
+- CHANGED Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED (V1/V2/V3 OpenAPI schemas show zero write ops accepting tenant identifier in body; 131 write ops swept repo-wide)
+- CHANGED V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
+- CHANGED Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); `grep "\[UNVALIDATED\]"` matches 0 — automated validation broken
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
