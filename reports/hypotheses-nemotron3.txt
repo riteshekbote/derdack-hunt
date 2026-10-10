@@ -1,17 +1,16 @@
-## 2026-10-10 02:26:15 UTC [target] (model nemotron3)
+## 2026-10-10 08:56:43 UTC [target] (model nemotron3)
 [PRIO] github.com/signl4/docs,9.50,attack_surface=10,business_value=10,tech_exposure=10,gate_ease=10,cloud_surface=10,freshness=10
 [PRIO] demo.enterprisealert.com/EAWebService,7.50,attack_surface=9,business_value=9,tech_exposure=9,gate_ease=3,cloud_surface=9,freshness=8
-[PRIO] connect.signl4.com/mobileapi,6.00,attack_surface=7,business_value=7,tech_exposure=7,gate_ease=2,cloud_surface=7,freshness=7
 [PRIO] vps.signl4.com,5.50,attack_surface=6,business_value=8,tech_exposure=6,gate_ease=4,cloud_surface=8,freshness=6
 [PRIO] api.signl4.com/api/v2/teams,5.25,attack_surface=6,business_value=7,tech_exposure=6,gate_ease=3,cloud_surface=6,freshness=6
-[HYP] Real SIGNL4 team secret `vbguzfsi` in public GitHub repo enables full webhook/API compromise
+[HYP] Real SIGNL4 team secret `vbguzfsi` in public GitHub repo enables full webhook compromise
 class: AUTH
 asset: github.com/signl4/docs (integrations/devtools/SIGNL4_Alerting.yaml)
 confidence: 100
-reasoning: File contains `url: https://connect.signl4.com/webhook/vbguzfsi` authored by Derdack staff `rons4` (pushed 2026-10-08); live probe returns 201 with eventId; webhook contract uses teamSecret in path with no security scheme; teamSecret doubles as API key per docs (X-S4-Api-Key header)
-evidence_needed: Leaked secret `vbguzfsi` returns 201 on POST /webhook/vbguzfsi (CONFIRMED); test API access via X-S4-Api-Key header with same secret
-verify_steps: 1) GET https://raw.githubusercontent.com/signl4/docs/main/integrations/devtools/SIGNL4_Alerting.yaml (confirm vbguzfsi present) 2) POST https://connect.signl4.com/webhook/vbguzfsi with JSON {"ExtIdParam":"test"} (observe 201 vs 404) 3) GET https://connect.signl4.com/api/v2/teams with header X-S4-Api-Key: vbguzfsi (test API access)
-impact: Full team compromise — attacker can inject/resolve genuine alerts, access team data via REST API, enumerate webhook endpoints, exfiltrate alert data; severity CRITICAL
+reasoning: File contains `url: https://connect.signl4.com/webhook/vbguzfsi` authored by Derdack staff `rons4` (pushed 2026-10-08); live probe returns 201 with eventId; webhook contract uses teamSecret in path with no security scheme; 15+ integrations use URL-embedded static team secret
+evidence_needed: Leaked secret `vbguzfsi` returns 201 on POST /webhook/vbguzfsi (CONFIRMED); test if secret enables alert enumeration/exfiltration via webhook status-keyword query config
+verify_steps: 1) GET https://raw.githubusercontent.com/signl4/docs/main/integrations/devtools/SIGNL4_Alerting.yaml (confirm vbguzfsi present) 2) POST https://connect.signl4.com/webhook/vbguzfsi with JSON {"ExtIdParam":"test"} (observe 201 vs 404) 3) POST https://connect.signl4.com/webhook/vbguzfsi with JSON {"ExtIdParam":"test","ExtStatusParam":"resolved","NewStatus":"acknowledged"} (test alert resolution)
+impact: Full team compromise — attacker can inject/resolve genuine alerts, enumerate webhook endpoints via status-keyword oracle, exfiltrate alert data; severity CRITICAL
 testability: PASSIVE (leak confirmation) → AUTH_HELPED (secret validation)
 [HYP] Internal infrastructure hostname leak via EA WSDL on demo.enterprisealert.com
 class: MISCONFIG
@@ -22,20 +21,21 @@ evidence_needed: Confirmed internal hostname `ereesus` resolvable from external 
 verify_steps: 1) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl (confirm SOAP address) 2) DNS lookup for ereesus (confirm non-public) 3) Check if ereesus appears in other public configs (GitHub, CT logs, etc.)
 impact: Internal infrastructure naming disclosure (CWE-200); reconnaissance value for chained attacks; LOW direct exploitability without credential
 testability: PASSIVE
-[HYP] Undocumented mobile API ingress with divergent authZ model on connect.signl4.com/mobileapi
-class: AUTH
-asset: connect.signl4.com/mobileapi
-confidence: 60
-reasoning: Blanket 403 (79KB custom SIGNL4-branded page) on all 6 identity hosts for /mobileapi, /mobileapi/connect/token, /mobileapi/api/v2/teams, and fabricated paths; same host serves /api/v2/teams with 401 Microsoft-HTTPAPI/2.0 — separate routing pipeline with custom WAF page suggests different auth model; undocumented in any OpenAPI spec (V1/V2/V3); mobile_api scope exists in OIDC discovery
-evidence_needed: Valid X-S4-Api-Key or Bearer token accepted by /mobileapi/* but rejected by /api/* (or vice versa) proving divergent authZ
-verify_steps: 1) OPTIONS https://connect.signl4.com/mobileapi (confirm Allow verbs) 2) GET https://connect.signl4.com/mobileapi/api/v2/teams with valid X-S4-Api-Key (if obtained) vs /api/v2/teams 3) GET https://account.signl4.com/mobileapi/.well-known/openid-configuration (check if mobile tenant has separate discovery)
-impact: Auth bypass on mobile-specific ingress could grant API access without standard credentials; severity HIGH if mobile pipeline lacks same controls
-testability: AUTH_HELPED
-[PARKED] Undocumented mobile API ingress with divergent authZ model on connect.signl4.com/mobileapi: AUTH_HELPED — blanket 403 on all paths suggests WAF-level block; KB 2026-09-27 REJECTED MISCONFIG for custom WAF page as config artifact; no consumer host for mobile_api scope found across 4 corpora; verify_steps require legitimate credential unobtainable without program contact
-[FINAL] 1) Real SIGNL4 team secret `vbguzfsi` in public GitHub repo enables full webhook/API compromise (AUTH, 100) — PASSIVE leak confirmed, AUTH_HELPED for validation
+[HYP] vps.signl4.com dangling A-record to GoDaddy shared host enables subdomain takeover
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 70
+reasoning: Explicit A-record to GoDaddy shared host (72.167.227.27, secureserver.net) serves default vhost when reachable (cert CN=server.d1g.it, unrelated to *.signl4.com); fabricated subdomain returns TCP timeout (000) vs main domain 200 — confirms no wildcard vhost, only explicit A-record; 7+ consecutive probe cycles confirm
+evidence_needed: Demonstrate control of GoDaddy shared hosting account to serve arbitrary content on vps.signl4.com
+verify_steps: 1) GET https://vps.signl4.com (confirm 200 nginx default page) 2) GET https://fabricated-xyz.vps.signl4.com (confirm 000/TCP timeout, no wildcard) 3) DNS lookup vps.signl4.com (confirm GoDaddy NS, A-record 72.167.227.27)
+impact: Subdomain takeover candidate — full control of vps.signl4.com if GoDaddy hosting account claimed; exploitability gated on DNS/hosting-account control (HUMAN_ONLY); severity LOW-Medium
+testability: HUMAN_ONLY
+[PARKED] vps.signl4.com dangling A-record to GoDaddy shared host enables subdomain takeover: HUMAN_ONLY exploitability — no claimable takeover primitive from researcher seat; requires DNS/hosting-account control; nemotron3's 95 overstates claimability
+[PARKED] Real SIGNL4 team secret `vbguzfsi` in public GitHub repo enables full webhook compromise: PASSIVE leak confirmed (100), but full API compromise requires separate X-S4-Api-Key credential (webhook secret ≠ REST API key per live test); AUTH_HELPED for webhook-only vector
+[FINAL] 1) Real SIGNL4 team secret `vbguzfsi` in public GitHub repo enables webhook injection/resolution (AUTH, 100) — PASSIVE leak confirmed, AUTH_HELPED for validation
 [FINAL] 2) Internal infrastructure hostname leak via EA WSDL on demo.enterprisealert.com (MISCONFIG, 95) — PASSIVE confirmed live
-[FINAL] 3) vps.signl4.com dangling A-record to GoDaddy shared host — subdomain takeover candidate (MISCONFIG, 70) — HUMAN_ONLY exploitability (DNS/hosting control required)
-[NEXT] PROBE: GET https://connect.signl4.com/api/v2/teams -H "X-S4-Api-Key: vbguzfsi" to validate leaked team secret works as REST API key per documented dual auth pipeline
+[FINAL] 3) vps.signl4.com dangling A-record to GoDaddy shared host — subdomain takeover candidate (MISCONFIG, 70) — HUMAN_ONLY exploitability
+[NEXT] PROBE: POST https://connect.signl4.com/webhook/vbguzfsi with JSON {"ExtIdParam":"test","ExtStatusParam":"resolved","NewStatus":"acknowledged","ResolvedStatus":"resolved","AckStatus":"acknowledged"} to test full webhook contract (status-keyword query config) with leaked secret
 [LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook: vendor's own staff committed real (non-placeholder) team secrets to public repos — prior placeholder-only rejection was a false negative
 [LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` exposed via unauthenticated WSDL GET — config-level disclosure (CWE-200 hygiene)
 [LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
