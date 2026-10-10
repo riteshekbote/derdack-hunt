@@ -2459,3 +2459,13 @@ www.derdack.com
 - CHANGED V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
 - CHANGED Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); `grep "\[UNVALIDATED\]"` matches 0 — automated validation broken
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+
+## 2026-10-10 22:37:22 UTC
+- NEW Leak localized: `github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7` → `https://connect.signl4.com/webhook/vbguzfsi` (authored by Derdack staff `rons4`, pushed 2026-10-08)
+- NEW Unmapped live hosts discovered: `fix.signl4.com` (Kestrel/Blazor, 200), `admin.signl4.com` (PTR=mail.signl4.com, no HTTPS)
+- NEW `signl4.com` apex + `www` → `160.153.0.44` (GoDaddy secureserver) behind Cloudflare; 301→www
+- CHANGED `vps.signl4.com` HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 — transient network/host block; DNS A-record unchanged
+- CHANGED `api.signl4.com/api/v2/teams` auth-status confirmed temporal flapping (6 consecutive unauth GETs at 1.2s intervals all returned 401 with identical 0-byte body; then flipped back to 405)
+- CHANGED OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts — routing layer complete, only token validation behavior unverified
+- CHANGED DPoP challenge-layer probe COMPLETE: 3/3 hosts return identical `WWW-Authenticate: Bearer` with no DPoP scheme/nonce — mitigating control advertised but not enforced
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials

@@ -9876,3 +9876,4 @@ testability: HUMAN_ONLY
 [CHANGED] docs.signl4.com = GitHub Pages (CNAME file -> docs.signl4.com; access-control-allow-origin: *).
 [NEW]   Unmapped live hosts: fix.signl4.com (Kestrel/Blazor, 200), admin.signl4.com (PTR=mail.signl4.com, no HTTPS),
 [CHANGED] signl4.com apex + www -> 160.153.0.44 (GoDaddy secureserver) behind Cloudflare; 301->www.
+## 2026-10-10 22:37:12 UTC [target] (model bigpickle)
