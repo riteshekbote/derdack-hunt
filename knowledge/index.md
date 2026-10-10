@@ -1250,3 +1250,5 @@
 - 2026-10-10 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
 - 2026-10-10 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
 - 2026-10-10 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+- 2026-10-10 REJECTED OTHER @ public leak: using externally-leaked team secret as live auth is out of scope + non-mutating validation already shows 403; close the "leak->exploit" chain.
+- 2026-10-10 ACCEPTED MISCONFIG @ vps.signl4.com: dangling A to GoDaddy shared host re-confirmed live; reportable takeover candidate.
