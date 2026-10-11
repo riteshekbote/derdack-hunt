@@ -2528,3 +2528,18 @@ www.derdack.com
 - CHANGED V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
 - CHANGED Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); `grep "\[UNVALIDATED\]" leads/lead-*.md` matches 0 occurrences — automated validation broken
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+
+## 2026-10-11 18:59:36 UTC
+- NEW GitHub credential leak CONFIRMED live: `github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7` contains real team secret `vbguzfsi` (authored by Derdack staff `rons4`, pushed 2026-10-08)
+- NEW Webhook contract validated: `POST https://connect.signl4.com/webhook/vbguzfsi` returns 201 with eventId; full status-keyword query config works (ExtIdParam, ExtStatusParam, NewStatus, ResolvedStatus, 
+- NEW EA WSDL internal hostname leak CONFIRMED live: `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non
+- NEW vps.signl4.com subdomain takeover RE-VERIFIED at 2026-10-11 boundary: A=72.167.227.27 (GoDaddy secureserver.net), HTTPS 200 serves default vhost redirect to `/cgi-sys/defaultwebpage.cgi`, cert CN=serv
+- NEW Leaked secret `vbguzfsi` tested as `X-S4-Api-Key` header against `/api/v2/teams` → returns 403 with same hash as junk key; NOT a valid REST API key (webhook secret ≠ REST key)
+- CHANGED api.signl4.com/api/v2/teams auth-status flapping confirmed TEMPORAL (not per-request): 6 consecutive unauth GETs at 1.2s intervals all returned 401 with identical 0-byte body; then flipped back to 405
+- CHANGED OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing layer complete, only token validation behavior unverifi
+- CHANGED DPoP challenge-layer probe COMPLETE: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce — mitigating control advertis
+- CHANGED Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show zero write ops accepting tenant identifier in body; 131 write ops swept repo-wide)
+- CHANGED V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
+- CHANGED Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); `grep "\[UNVALIDATED\]" leads/lead-*.md` matches 0 occurrences — automated validation broken
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+- CHANGED connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on ALL 6 identity hosts (was 3-host record) — undocumented mobile ingress with custom error page
