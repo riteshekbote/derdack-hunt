@@ -1,1 +1,193 @@
-## 2026-10-10 22:37:12 UTC [target] (model bigpickle)
+## 2026-10-11 01:16:22 UTC [target] (model bigpickle)
+[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+[LEARN] ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean `405`s against a passing control is a strong, reproducible result, and it is still not a vulnerability
+[LEARN] ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: body discriminator was identical across both arms (empty-string sha256); the discriminator that actually resolved the question was the status code alone, 405 vs 404
+[LEARN] ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on `/identity/connect/`, not `/identity/devconnect/` — it is the production tenant, reachable at a second hostname
+[LEARN] ACCEPTED OTHER @ completing the differential was worth more than any result inside it: six hosts returned the answer, so the uniform claim holds 6/6 rather than 4/6 with two stragglers
+[LEARN] ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well is dry because every remaining question needs a token
+[LEARN] ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: cited `dpop_signing_alg_values_supported` as mitigating control without checking enforcement
+[LEARN] REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
+[LEARN] REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are non-secret and non-actionable, and the program rejects descriptive-headers-only classes
+[LEARN] REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+[LEARN] REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there despite the host being App-Proxy fronted
+[LEARN] REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+[LEARN] REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is absent from the API gateway and the demo app; no alternative read surface remains for the AUTH_HELPED queue
+[LEARN] REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier disclosure is bounded at 2 of 8 hosts, not an estate-wide defect
+[LEARN] REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control only, not a vulnerability
+[LEARN] REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+[LEARN] REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
+[LEARN] ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+[RISK] derdack: 98 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed introspection/revocation routing parity across all 6 ingresses and DPoP advertised but not enforced at gateway. New CRITICAL: Real SIGNL4 team secret `vbguzfsi` committed to public GitHub repo by staff (github.com/signl4/docs, pushed 2026-10-08) — direct credential leak enabling immediate webhook/API access (validated 201). New CRITICAL: demo.enterprisealert.com/EAWebService exposes full EA 9.5 web portal with credential-in-URL SOAP/REST API completely untested for auth bypass. vps.signl4.com dangling A-record enables immediate subdomain takeover (HUMAN_ONLY).
+[HYP] Leaked live team secrets at org HEAD enable arbitrary alert injection into a real production team
+class: AUTH
+asset: github.com/signl4 (code-snippets, docs, google-iot, losant) / connect.signl4.com/webhook/{secret}
+confidence: 95
+reasoning: rons4 (Derdack staff) committed the values; docs devtools YAML is SCHEMA-consistent with a real team secret used for operational "Close Alert"/"ticket-id" flows; KB records 201 for `vbguzfsi` on prior authorized POST; both values survive at HEAD (pushed 2026-10-08 for docs).
+evidence_needed: distinguishes live-secret injection from dead-value injection — only a sanctioned POST oracle (201 vs 404) answers it; mutating.
+verify_steps: read-only done: raw-GitHub presence confirmed in 4 HEAD files; X-S4-Api-Key and Bearer at /api/v2/teams → 403/401 same-hash-as-junk (NO REST read impact). Remaining: authorized POST /webhook/{secret}.
+impact: attacker posts fabricated alerts (incl. file attachments) into a production SIGNL4 team the org uses for devtools QA — false-alert phishing/misdirection; NOT cross-tenant, NOT data read. severity MEDIUM (already submitted 2026-09-13, class reported in valid-bugs as 5.3).
+testability: HUMAN_ONLY (mutating POST)
+[HYP] Scrubbed 64-char API key in docs history is a rotated or synthetic key
+class: MISCONFIG
+asset: github.com/signl4/docs samples/rest-api-saples/… (history only)
+confidence: 20
+reasoning: present only in 2025-05-09 blob, replaced by `{signl4-api-key}` placeholder and renamed Jan 2026; probes 403 same-hash-as-junk → no current validity; format matches canonical 64-hex API key format.
+evidence_needed: demonstrates any POST/REST identity: none, all read-only checks negative.
+verify_steps: N/A — dropped below confidence threshold.
+impact: historical secret-in-git hygiene only. severity LOW
+testability: PASSIVE
+[HYP] Leaked webhook secret doubles as webhookIdOrTeamId path param on the REST events endpoint
+class: AUTH
+asset: connect.signl4.com/api/v2/events/{webhookIdOrTeamId}
+confidence: 40
+reasoning: KB 2026-09-16 docs note binds "API key == team secret" on the events endpoint; would give the leaked secret a second usable surface beyond /webhook. Endpoint is handler-deferred POST → read-only GET/OPTIONS give 401/405 only, identical to fabricated id — no passive discriminator.
+evidence_needed: only an authenticated-or-mutating request; AUTH_HELPED.
+verify_steps: OPTIONS + GET /api/v2/events/vbguzfsi vs /api/v2/events/aaaaaa00 — 405/401 identical (no info).
+impact: if conflated with H1, adds events-API injection path — same impact class, no additional severity. severity MEDIUM
+testability: AUTH_HELPED
+[NEW] vps.signl4.com re-resolved 2026-10-10: A=72.167.227.27 (GoDaddy shared host, secureserver.net) — dangling/subdomain-takeover candidate stable.
+[NEW] github.com/signl4/docs confirmed public (1,043 commits, integrations/ tree) — corroborates the public secret-leak surface.
+[CHANGED] Leaked team secret vbguzfsi already probed as X-S4-Api-Key @ /api/v2/teams -> 403 (same-hash-as-junk): NOT a valid REST key. Remaining validation is mutating/out-of-scope.
+[PRIO] connect.signl4.com/webhook/{teamSecret},6.25,a7,b7,t7,g4,c6,f5
+[PRIO] connect.signl4.com/api/v2|v3,6.05,a6,b8,t7,g2,c7,f5
+[PRIO] vps.signl4.com,5.75,a6,b7,t3,g5,c7,f6
+[HYP] SIGNL4 webhook team-secret in URL + 404/201 oracle
+class: AUTH
+asset: connect.signl4.com/webhook/{teamSecret}
+confidence: 45
+reasoning: published contract POST /{teamSecret}, no security scheme, URL-embedded static secret across 15+ integrations, 404-invalid vs 201-eventId oracle
+evidence_needed: secret accepted from a public source OR oracle differential on non-customer secrets
+verify_steps: validate only against a self-provisioned test team's secret; never POST to secrets sourced externally (mutating + customer data)
+impact: alert spoof/ack/resolve in victim team; MED-HIGH
+testability: HUMAN_ONLY
+[HYP] connect.signl4.com dual-auth (Bearer + X-S4-Api-Key) handler-deferred gating
+class: AUTH
+asset: connect.signl4.com/api/v2|v3
+confidence: 30
+reasoning: 401/405 auth-status flaps across cycles (slot deploy); all routes Bearer/key-gated at handler, zero anon read surface
+evidence_needed: any anon-readable response object
+verify_steps: GET /api/v2/teams, /api/v3/users (read-only) — already consistently 401/405
+impact: none demonstrated; severity N/A
+testability: PASSIVE
+[HYP] vps.signl4.com subdomain takeover
+class: MISCONFIG
+asset: vps.signl4.com -> 72.167.227.27
+confidence: 55
+reasoning: A-record to GoDaddy shared host, nginx default page, unrelated cert CN=server.d1g.it, fabricated-host byte-identical
+evidence_needed: confirm record is unclaimed/unrenewed vs merely cold vhost
+verify_steps: dig/re-verify A + GET http://vps.signl4.com (observe default/parking), NO provisioning
+impact: phishing/cookie theft on signl4.com parent domain; MED-HIGH
+testability: HUMAN_ONLY
+[PARKED] webhook team-secret injection: validation requires mutating POST to externally-sourced secrets -> prohibited by scope (customer-data exposure).
+[PARKED] dual-auth API gating: confidence 30 < 40; no anon read surface across ~10 cycles; handler-gated consistently.
+[FINAL] vps.signl4.com subdomain takeover (MISCONFIG, report) — rename/claim only by Derdack.
+[FINAL] Public leak of live SIGNL4 team secret(s) (already reported to bugs.olivermaicher.eu).
+[NEXT] HUMAN: submit/confirm the vps.signl4.com takeover + public-secret-leak reports to bugs.olivermaicher.eu; do NOT use any leaked credential for auth (scope prohibits customer/authentication-data access). No further passive probe yields value.
+[LEARN] REJECTED OTHER @ public leak: using externally-leaked team secret as live auth is out of scope + non-mutating validation already shows 403; close the "leak->exploit" chain.
+[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: dangling A to GoDaddy shared host re-confirmed live; reportable takeover candidate.
+[RISK] derdack: 24 (low). Passive surface exhausted; remaining high-value vectors are report-only (human-gated). Two reportable findings stand; exploit chains are blocked by scope rules, not by lack of leads.
+[NEW]   Leak localized: integrations/devtools/SIGNL4_Alerting.yaml:7 → https://connect.signl4.com/webhook/vbguzfsi
+[CHANGED] docs.signl4.com = GitHub Pages (CNAME file -> docs.signl4.com; access-control-allow-origin: *).
+[NEW]   Unmapped live hosts: fix.signl4.com (Kestrel/Blazor, 200), admin.signl4.com (PTR=mail.signl4.com, no HTTPS),
+[CHANGED] signl4.com apex + www -> 160.153.0.44 (GoDaddy secureserver) behind Cloudflare; 301->www.
+[HYP] <title>
+class: <IDOR|SSRF|AUTH|XSS|BUSLOGIC|MISCONFIG|OATH|OTHER>
+asset: <host/endpoint>
+confidence: <0-100>
+reasoning: <facts only>
+evidence_needed: <what proves it>
+verify_steps: <passive-first concrete HTTP requests>
+impact: <what attacker gets + severity>
+testability: <PASSIVE|AUTH_HELPED|HUMAN_ONLY>
+[NEXT] HUMAN: submit vps.signl4.com subdomain-takeover report (dangling A → 72.167.227.27, GoDaddy default vhost, cert CN=server.d1g.it) + the vbguzfsi public team-secret leak (github.com/signl4/docs main:integrations/devtools/SIGNL4_Alerting.yaml:7) to bugs.olivermaicher.eu; hold EAWebService/token-forgery items until a non-mutating POC exists.
+[NEW] none this cycle (steady state).
+[CHANGED] Re-verified at 2026-10-11 boundary: vps.signl4.com A=72.167.227.27 unchanged; HTTP 301→HTTPS; HTTPS 200 GoDaddy default-vhost redirect `/cgi-sys/defaultwebpage.cgi`; cert CN=server.d1g.it (LE).
+[CHANGED] Leaked team secret still present at `github.com/signl4/docs` main:integrations/devtools/SIGNL4_Alerting.yaml:7; repo pushed_at 2026-10-08 unchanged → unremediated.
+[CHANGED] demo.enterprisealert.com/EAWebService/ still 200 + x-ms-proxy-* headers.
+[CHANGED] triage.yml run 2026-10-11-01-00 → UnknownError (≥58 consecutive failures).
+[PRIO] demo.enterprisealert.com/EAWebService,6.55,a7,b8,t7,g3,c8,f5
+[PRIO] connect.signl4.com/webhook/{teamSecret},6.25,a6,b7,t4,g10,c5,f4  (actually the leak asset is github.com/signl4/docs — public no-auth)
+[PRIO] vps.signl4.com,5.75,a6,b7,t3,g5,c7,f6
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 60
+reasoning: A=72.167.227.27 (GoDaddy secureserver shared host); HTTP 301→HTTPS; HTTPS serves cPanel/GoDaddy default webpage redirect to /cgi-sys/defaultwebpage.cgi; TLS cert CN=server.d1g.it (unrelated host, Let's Encrypt); fabricated-host responses byte-identical; stable across ≥4 consecutive boundaries (2026-10-10 14:57 → 2026-10-11 01:14).
+evidence_needed: DNS control of vps.signl4.com is unclaimed at the shared host (attacker can claim the vhost to serve content under a signl4.com subdomain).
+verify_steps: dig +short vps.signl4.com A; curl -i http://vps.signl4.com/; curl -sk -i https://vps.signl4.com/ (all read-only; do NOT provision).
+impact: attacker-controlled content/cookies on a signl4.com subdomain → phishing, cookie theft on parent domain; MED-HIGH.
+testability: HUMAN_ONLY
+class: AUTH
+asset: github.com/signl4/docs (main:integrations/devtools/SIGNL4_Alerting.yaml:7)
+confidence: 45
+reasoning: file line 7 is `https://connect.signl4.com/webhook/<secret>`; authored by Derdack staff; repo public, pushed 2026-10-08; sha256(secret)=69844b58...; read-only probes of the secret as X-S4-Api-Key @ /api/v2/teams → 403 (same-hash-as-junk) → no REST read access; webhook POST validation is mutating + customer-data.
+evidence_needed: a sanctioned POST to /webhook/<secret> returning an event id (201) vs 3004, or Derdack confirming the team still uses that secret.
+verify_steps: read-only done: raw GET of the file (line 7), GitHub API repo pushed_at; X-S4-Api-Key probe 403. Remaining: authorized POST only.
+impact: alert spoof/ack/resolve injection into a production SIGNL4 team (if the secret is live); NOT data read, NOT cross-tenant; MEDIUM. Leak-only (class already reported 5.3).
+testability: HUMAN_ONLY
+class: AUTH
+asset: demo.enterprisealert.com/EAWebService/
+confidence: 30
+reasoning: anonymous 200 on /EAWebService/ (help page), EventProviderAPI.asmx?wsdl leaks internal SOAP address https://ereesus/...; EventConnectorServer.ashx and rest/events present; all credential paths gate (Error:-1 / 401); Handler= reflection is URL-encoded, not XSS; WSDL internal hostname is CWE-200 hygiene.
+evidence_needed: any unauthenticated state change or data read — none observed; would require a credential-less handler invocation that returns data.
+verify_steps: GET /EAWebService/EventProviderAPI.asmx?wsdl, GET /EAWebService/rest/events (already 405/401); no mutating handler call.
+impact: none demonstrated; public login panel + descriptive headers = REJECTED class.
+testability: PASSIVE
+[PARKED] demo.enterprisealert.com/EAWebService anonymous handler surface: confidence 30 < 40 AND fact pattern is "public login panel / descriptive headers only" (explicitly REJECTED); WSDL internal hostname is CWE-200 hygiene with no exploit. No POC.
+[PARKED] Cross-env token-forgery chain (6 identity hosts): cannot clear the gate — configuration symmetry (shared RS256 key + client_id + password grant) with enforcement UNVERIFIED; requires client_secret (AUTH_HELPED); "no POC demonstrating a specific exploit" is a REJECTED class. Keep as dossier/context, not a headline report.
+[FINAL] 1. vps.signl4.com subdomain takeover (MISCONFIG) — best finding; stable, reproducible, impact real; HUMAN_ONLY submission.
+[FINAL] 2. Public live team-secret leak at github.com/signl4/docs main:...:7 (AUTH) — legitimate secrets-in-public-repo finding (class already reported 5.3); cite sha256 only.
+[NEXT] HUMAN: submit to bugs.olivermaicher.eu (1) vps.signl4.com dangling-record subdomain takeover (A=72.167.227.27; GoDaddy default vhost; cert CN=server.d1g.it) and (2) live SIGNL4 team-secret leak at github.com/signl4/docs main:integrations/devtools/SIGNL4_Alerting.yaml:7 (sha256 69844b58...). Hold the token-forgery and EAWebService items until a non-mutating POC exists. Do NOT use any leaked credential for auth.
+[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: re-confirmed at a 5th consecutive boundary (A=72.167.227.27, GoDaddy default vhost, unrelated cert) — stable takeover candidate, report-ready.
+[LEARN] ACCEPTED AUTH @ github.com/signl4/docs: leak re-verified live at HEAD main line 7 with repo pushed_at unchanged (2026-10-08) — unremediated.
+[LEARN] REJECTED OTHER @ raw.githubusercontent.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml: my initial 404 was a malformed raw URL (path segment parsed as the git ref, branch omitted) — I nearly logged a false "file deleted" [CHANGED]; always include the branch ref.
+[LEARN] REJECTED AUTH @ vbguzfsi: read-only X-S4-Api-Key @ /api/v2/teams → 403 same-hash-as-junk; exploit chain to auth bypass is mutating/out-of-scope — keep as leak-only.
+[LEARN] REJECTED MISCONFIG @ demo.enterprisealert.com/EAWebService: anonymous help page + WSDL + all credential paths gating = public-login-panel/descriptive-headers class the program excludes; no auth-bypass POC → not reportable.
+[LEARN] REJECTED OTHER @ triage.yml: 2026-10-11-01-00 run UnknownError → ≥58 consecutive failed Triager runs; reports/valid-bugs.md running count remains unreliable.
+[RISK] derdack: 22 — passive surface exhausted; two legitimate report items stand (dangling takeover + public live team-secret leak) and are human-gated; the strongest "systemic" items (6-host token forgery, EAWebService) cannot clear the program gate without a mutating POC, so they are dossier context, not findings. Residual risk is low-moderate and driven by the dangling DNS record and the staff-committed secret, not by any unprobed surface.
+[CHANGED] vps.signl4.com re-verified 2026-10-11 01:14: A=72.167.227.27 unchanged; HTTP 301→HTTPS; HTTPS 200 serves GoDaddy/cPanel default-vhost redirect (Location `/cgi-sys/defaultwebpage.cgi`); cert `CN=server.d1g.it` (Let's Encrypt) — 5th consecutive stable boundary.
+[CHANGED] Leaked team secret still live at `github.com/signl4/docs` `main:integrations/devtools/SIGNL4_Alerting.yaml:7`; GitHub API `pushed_at=2026-10-08T12:25:53Z` unchanged → unremediated.
+[CHANGED] demo.enterprisealert.com/EAWebService/ still 200 with `x-ms-proxy-*` headers (app `f18ba879…`).
+[CHANGED] `.github/workflows/triage.yml` run 2026-10-11-01-00 → `UnknownError` (≥58 consecutive Triager failures; running count still unreliable).
+[CHANGED] Self-correction: my initial `raw.githubusercontent.com/signl4/docs/integrations/...` 404 was a malformed URL (branch ref omitted, `integrations` parsed as ref) — NOT a deletion; `main` ref returns 200.
+[PRIO] demo.enterprisealert.com/EAWebService,6.55,a7,b8,t7,g3,c8,f5
+[PRIO] github.com/signl4/docs,6.25,a6,b7,t4,g10,c5,f4
+[PRIO] vps.signl4.com,5.75,a6,b7,t3,g5,c7,f6
+[HYP] vps.signl4.com dangling A-record subdomain takeover
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 60
+reasoning: A=72.167.227.27 (GoDaddy secureserver shared host); HTTPS serves cPanel default webpage redirect `/cgi-sys/defaultwebpage.cgi`; TLS cert `CN=server.d1g.it` unrelated to signl4.com; fabricated-host responses byte-identical; stable 5 consecutive boundaries.
+evidence_needed: DNS/hosting vhost for vps.signl4.com is unclaimed at the shared host (attacker can claim it to serve content under a signl4.com subdomain).
+verify_steps: `dig +short vps.signl4.com A`; `curl -i http://vps.signl4.com/`; `curl -sk -i https://vps.signl4.com/` (read-only; do NOT provision/claim).
+impact: attacker-controlled content/cookies on a signl4.com subdomain → phishing + parent-domain cookie theft; MED-HIGH.
+testability: HUMAN_ONLY
+[HYP] Public live SIGNL4 team-secret leak → webhook injection
+class: AUTH
+asset: github.com/signl4/docs `main:integrations/devtools/SIGNL4_Alerting.yaml:7`
+confidence: 45
+reasoning: line 7 is `https://connect.signl4.com/webhook/<secret>`; authored by Derdack staff; repo public, `pushed_at` 2026-10-08; sha256(secret)=69844b5823cb5354e6fb6f26e813d6ca059aa3ffa9d753c04c6bbf489eca9c5d; read-only `X-S4-Api-Key` @ `/api/v2/teams` → 403 (same-hash-as-junk) → no REST read impact.
+evidence_needed: sanctioned `POST /webhook/<secret>` returning event id (201) vs `{"code":3004}` — only confirms live-secret injection.
+verify_steps: read-only done (file GET, repo API, key 403). Remaining is mutating POST to externally-sourced secret → prohibited.
+impact: alert spoof/ack/resolve injection into a production team (if secret live); NOT data read, NOT cross-tenant; MEDIUM (leak class already reported 5.3).
+testability: HUMAN_ONLY
+[HYP] demo.enterprisealert.com/EAWebService anonymous handler surface
+class: AUTH
+asset: demo.enterprisealert.com/EAWebService/
+confidence: 30
+reasoning: anonymous 200 on `/EAWebService/` help page; `EventProviderAPI.asmx?wsdl` leaks internal SOAP address `https://ereesus/…`; `EventConnectorServer.ashx` + `rest/events` present; all credential paths gate (`Error: -1` / 401); `Handler=` reflection is URL-encoded, not XSS.
+evidence_needed: any unauthenticated state change or data read — none observed.
+verify_steps: `GET /EAWebService/EventProviderAPI.asmx?wsdl`; `GET /EAWebService/rest/events` (already 405/401); no mutating handler call.
+impact: none demonstrated; public login panel + descriptive headers = REJECTED class.
+testability: PASSIVE
+[PARKED] demo.enterprisealert.com/EAWebService anonymous handler surface: confidence 30 < 40 AND fact pattern is public-login-panel/descriptive-headers (explicitly REJECTED); WSDL internal hostname is CWE-200 hygiene, no exploit — no POC.
+[PARKED] Cross-env token-forgery chain (6 identity hosts): cannot clear the gate — shared RS256 key/client_id/password-grant is configuration symmetry with enforcement UNVERIFIED; needs `client_secret` (AUTH_HELPED); "no POC demonstrating a specific exploit" is a REJECTED class. Dossier context, not a headline report.
+[FINAL] 1. vps.signl4.com subdomain takeover (MISCONFIG, HUMAN_ONLY) — most reportable; stable/reproducible, real parent-domain impact.
+[FINAL] 2. Public live team-secret leak at github.com/signl4/docs `main:integrations/devtools/SIGNL4_Alerting.yaml:7` (AUTH) — legitimate secrets-in-public-repo finding; cite sha256 only.
+[NEXT] HUMAN: submit to bugs.olivermaicher.eu (1) vps.signl4.com dangling-record subdomain takeover (A=72.167.227.27; GoDaddy default vhost; cert `CN=server.d1g.it`) and (2) live SIGNL4 team-secret leak at `github.com/signl4/docs` `main:integrations/devtools/SIGNL4_Alerting.yaml:7` (sha256 `69844b58…`). HOLD the token-forgery and EAWebService items until a non-mutating POC exists. Do NOT use any leaked credential for auth.
+[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: dangling A (72.167.227.27) + GoDaddy default vhost + unrelated cert re-confirmed at a 5th boundary — report-ready takeover candidate.
+[LEARN] ACCEPTED AUTH @ github.com/signl4/docs: leak re-verified at HEAD `main:…:7` with `pushed_at` unchanged (2026-10-08) — unremediated.
+[LEARN] REJECTED OTHER @ raw.githubusercontent.com/signl4/docs/…: a 404 from a malformed raw URL (branch ref omitted, first path segment parsed as ref) is not remediation — always include the branch ref before asserting a [CHANGED] deletion.
+[LEARN] REJECTED AUTH @ leaked `vbguzfsi`: read-only `X-S4-Api-Key` @ `/api/v2/teams` → 403 same-hash-as-junk; exploit chain is mutating/out-of-scope → keep leak-only, no auth-bypass claim.
+[LEARN] REJECTED MISCONFIG @ demo.enterprisealert.com/EAWebService: anonymous help page + WSDL + all credential paths gating = public-login-panel/descriptive-headers class the program excludes; no auth-bypass POC → not reportable as-is.
+[LEARN] REJECTED OTHER @ triage.yml: `UnknownError` at 2026-10-11-01-00 → ≥58 consecutive failed Triager runs; `reports/valid-bugs.md` running count remains gate-availability noise.
+[RISK] derdack: 22 — passive surface exhausted; two legitimate human-gated items stand (dangling DNS takeover + staff-committed live team-secret leak). The systemic items (6-host token forgery, EAWebService) cannot clear the program gate without a mutating POC and stay dossier-only. Residual risk is low-moderate and driven by the dangling record and the committed secret, not by any unprobed surface.

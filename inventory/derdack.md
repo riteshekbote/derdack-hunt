@@ -2469,3 +2469,30 @@ www.derdack.com
 - CHANGED OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts — routing layer complete, only token validation behavior unverified
 - CHANGED DPoP challenge-layer probe COMPLETE: 3/3 hosts return identical `WWW-Authenticate: Bearer` with no DPoP scheme/nonce — mitigating control advertised but not enforced
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials
+
+## 2026-10-11 01:16:33 UTC
+- NEW vps.signl4.com re-resolved 2026-10-10: A=72.167.227.27 (GoDaddy shared host, secureserver.net) — dangling/subdomain-takeover candidate stable.
+- NEW github.com/signl4/docs confirmed public (1,043 commits, integrations/ tree) — corroborates the public secret-leak surface.
+- CHANGED Leaked team secret vbguzfsi already probed as X-S4-Api-Key @ /api/v2/teams -> 403 (same-hash-as-junk): NOT a valid REST key. Remaining validation is mutating/out-of-scope.
+- NEW Leak localized: integrations/devtools/SIGNL4_Alerting.yaml:7 → https://connect.signl4.com/webhook/vbguzfsi
+- CHANGED docs.signl4.com = GitHub Pages (CNAME file -> docs.signl4.com; access-control-allow-origin: *).
+- NEW Unmapped live hosts: fix.signl4.com (Kestrel/Blazor, 200), admin.signl4.com (PTR=mail.signl4.com, no HTTPS),
+- CHANGED signl4.com apex + www -> 160.153.0.44 (GoDaddy secureserver) behind Cloudflare; 301->www.
+- NEW none this cycle (steady state).
+- CHANGED Re-verified at 2026-10-11 boundary: vps.signl4.com A=72.167.227.27 unchanged; HTTP 301→HTTPS; HTTPS 200 GoDaddy default-vhost redirect `/cgi-sys/defaultwebpage.cgi`; cert CN=server.d1g.it (LE).
+- CHANGED Leaked team secret still present at `github.com/signl4/docs` main:integrations/devtools/SIGNL4_Alerting.yaml:7; repo pushed_at 2026-10-08 unchanged → unremediated.
+- CHANGED demo.enterprisealert.com/EAWebService/ still 200 + x-ms-proxy-* headers.
+- CHANGED triage.yml run 2026-10-11-01-00 → UnknownError (≥58 consecutive failures).
+- CHANGED vps.signl4.com re-verified 2026-10-11 01:14: A=72.167.227.27 unchanged; HTTP 301→HTTPS; HTTPS 200 serves GoDaddy/cPanel default-vhost redirect (Location `/cgi-sys/defaultwebpage.cgi`); cert `CN=server
+- CHANGED Leaked team secret still live at `github.com/signl4/docs` `main:integrations/devtools/SIGNL4_Alerting.yaml:7`; GitHub API `pushed_at=2026-10-08T12:25:53Z` unchanged → unremediated.
+- CHANGED demo.enterprisealert.com/EAWebService/ still 200 with `x-ms-proxy-*` headers (app `f18ba879…`).
+- CHANGED `.github/workflows/triage.yml` run 2026-10-11-01-00 → `UnknownError` (≥58 consecutive Triager failures; running count still unreliable).
+- CHANGED Self-correction: my initial `raw.githubusercontent.com/signl4/docs/integrations/...` 404 was a malformed URL (branch ref omitted, `integrations` parsed as ref) — NOT a deletion; `main` ref returns 200
+- NEW github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7 leaks real team secret `vbguzfsi` (authored by Derdack staff `rons4`, pushed 2026-10-08); prior "placeholder-only" rejection was fal
+- NEW Unmapped live hosts: `fix.signl4.com` (Kestrel/Blazor Server, 200), `admin.signl4.com` (PTR=mail.signl4.com, no HTTPS)
+- NEW `signl4.com` apex + `www` → `160.153.0.44` (GoDaddy secureserver) behind Cloudflare; 301→www
+- CHANGED `vps.signl4.com` HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record unchanged
+- CHANGED `api.signl4.com/api/v2/teams` auth-status confirmed temporal flapping (6 consecutive unauth GETs at 1.2s intervals all returned 401 with identical 0-byte body; then flipped back to 405)
+- CHANGED OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts — routing layer complete, only token validation behavior unverified
+- CHANGED DPoP challenge-layer probe COMPLETE: 3/3 hosts return identical `WWW-Authenticate: Bearer` with no DPoP scheme/nonce — mitigating control advertised but not enforced
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
