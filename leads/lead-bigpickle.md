@@ -10070,3 +10070,4 @@ testability: PASSIVE
 [LEARN] REJECTED MISCONFIG @ demo.enterprisealert.com/EAWebService: anonymous help page + WSDL + all credential paths gating = public-login-panel/descriptive-headers class the program excludes; no auth-bypass POC → not reportable as-is.
 [LEARN] REJECTED OTHER @ triage.yml: `UnknownError` at 2026-10-11-01-00 → ≥58 consecutive failed Triager runs; `reports/valid-bugs.md` running count remains gate-availability noise.
 [RISK] derdack: 22 — passive surface exhausted; two legitimate human-gated items stand (dangling DNS takeover + staff-committed live team-secret leak). The systemic items (6-host token forgery, EAWebService) cannot clear the program gate without a mutating POC and stay dossier-only. Residual risk is low-moderate and driven by the dangling record and the committed secret, not by any unprobed surface.
+## 2026-10-11 07:16:01 UTC [target] (model bigpickle)
