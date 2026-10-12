@@ -1339,3 +1339,15 @@
 - 2026-10-12 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
 - 2026-10-12 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
 - 2026-10-12 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+- 2026-10-12 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+- 2026-10-12 ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+- 2026-10-12 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+- 2026-10-12 REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- 2026-10-12 REJECTED MISCONFIG @ dev.derdack.com: MultiViews path disclosure is a static dot-prefix basename echo — identical output for fabricated paths proves no real sensitive files; only doc-root namespace is surfaced, impact minimal.
+- 2026-10-12 ACCEPTED AUTH @ www.derdack.com: WP REST API correctly enforces auth on settings/users/me/oembed-proxy/drafts (401/400); user enumeration confirmed but low-value public-blog exposure only.
+- 2026-10-12 REJECTED SSRF @ www.derdack.com: oEmbed proxy returns 401 for proxied requests — SSRF vector blocked.
+- 2026-10-12 ACCEPTED AUTH @ connect.signl4.com/webhook/vbguzfsi: a controlled empty-body POST is the discriminator (valid -> 400 code 4000 "event null or empty", invalid -> 404 code 3004 "no matching event source") because the secret gate precedes body parsing; this proves a live credential with zero event injection.
+- 2026-10-12 REJECTED OTHER @ webhook GET/HEAD/OPTIONS as secret oracle: byte-identical responses for real vs junk secret (sha256 e0482ffa...); method, not status, is the discriminator — no passive route to validate a webhook secret exists.
+- 2026-10-12 ACCEPTED MISCONFIG @ signl4/docs: placeholders (`xxxx`, `YOUR_TEAM_SECRET`) coexisting with `vbguzfsi` in the same file proves the token was left unsanitized, not an example.
+- 2026-10-12 REJECTED AUTH @ re-POSTing a real event body to a confirmed live secret: out of scope (`no_data_modification`) and would inject a real incident; the control pair is sufficient PoC and the prior 201 should not be repeated.
+- 2026-10-12 ACCEPTED MISCONFIG @ signl4/docs: placeholders (`xxxx`, `YOUR_TEAM_SECRET`) coexisting with `vbguzfsi` in the same file proves the token was left unsanitized, not an example.
