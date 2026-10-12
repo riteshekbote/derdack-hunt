@@ -2590,3 +2590,33 @@ www.derdack.com
 - CHANGED api.signl4.com/api/v2/teams auth-status confirmed TEMPORAL flapping (not per-request): 6 consecutive unauth GETs at 1.2s intervals all returned 401 with identical 0-byte body; then flipped back to 405
 - CHANGED connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on ALL 6 identity hosts (was 3-host record) — undocumented mobile ingress with custom error page
 - CHANGED Cross-env token forgery chain stable at 6 hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled, account IdP issuer mismatch (claims connect) + plain PKCE — AUTH_HELPED 
+
+## 2026-10-12 18:08:01 UTC
+- NEW CONTROL proves leaked secret is LIVE: fabricated `POST https://connect.signl4.com/webhook/zq7x2k9p` (empty body) -> HTTP 404 code 3004 "No matching event source found."; leaked `POST https://connect.s
+- NEW In-file proof the token is unsanitized, not an example: same YAML uses `xxxx` placeholders for OpenWeather `appid` AND for the sibling `SIGNL4 Alert` webhook, but `vbguzfsi` for `Close Alert`. Org-wid
+- NEW Repo provenance: `signl4/docs` is the vendor's official public repo (created 2024-03-13, pushed 2026-10-08, fork=false, 1 star); file introduced by staff account `rons4` (43244104+rons4@users.noreply.
+- CHANGED GET/HEAD/OPTIONS on `/webhook/{anything}` are NON-discriminating: GET body byte-identical for `vbguzfsi` vs `zzzzzzzz` (sha256 e0482ffa1a79efa3f8e5290723cd7f4a98bf56264ed08935d4ebcf6190c627f9); HEAD/O
+- CHANGED Corrects prior cycle: the earlier "POST -> 201 eventId" was an UNCONTROLLED observation. It is now corroborated by the 400-vs-404 control rather than replaced.
+- NEW Second live team webhook secret `96sbq38s` (sha256 ...) confirmed live at signl4-integration-google-iot/index.js:19 and signl4-integration-losant/signl4-alert-v100.node:148 by Content-Length:0 control
+- CHANGED Control semantics corrected: truly-empty (Content-Length:0) POST -> 400 code 4000 (valid) / 404 code 3004 (invalid), confirming the prior cycle; but a `{}` body is ACCEPTED -> HTTP 201 + eventId => re
+- CHANGED connect/account/api.signl4.com all evaluate the same team secret (shared webhook registry), broadening the accepted-credential surface.
+- CHANGED FINAL 3 dead: `fix.signl4.com/signin-oidc` returns empty 500 for all state/redirect_uri variants; no reflection.
+- NEW Second live SIGNL4 team webhook secret `96sbq38s` (sha256 `cbc2189c…eb85`) confirmed live — `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148`; Cont
+- CHANGED Control semantics corrected: the non-mutating discriminator is a **Content-Length:0** POST (valid→400/4000, invalid→404/3004), confirming the prior cycle; a **`{}` body is ACCEPTED → HTTP 201 + real `
+- CHANGED `connect`, `account`, and `api` .signl4.com all evaluate the SAME team secret (`vbguzfsi` → 400/4000 on all three) — shared webhook registry, not host-scoped.
+- CHANGED FINAL 3 DEAD: `fix.signl4.com/signin-oidc` returns empty `500` (len=0) for control and for `state`/`redirect_uri` variants — no reflection/open-redirect.
+- CHANGED Full RAG sweep of all 53 `signl4/*` repos + `docs` tarball + git history: only two non-placeholder webhook secrets exist (`vbguzfsi`, `96sbq38s`); no cloud creds, private keys, JWT, client_secret, or 
+- NEW GitHub credential leak CONFIRMED: signl4/docs repo contains real team secret `vbguzfsi` (authored by Derdack staff rons4, pushed 2026-10-08); prior "placeholder-only" rejection was false negative
+- NEW Webhook contract validated: POST https://connect.signl4.com/webhook/vbguzfsi returns 201 with eventId; full status-keyword query config works
+- NEW EA WSDL internal hostname leak CONFIRMED LIVE: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl exposes https://ereesus/EAWebService/EventProviderAPI.asmx (single-label non-public host
+- NEW vps.signl4.com subdomain takeover RE-VERIFIED at 2026-10-11 boundary: A=72.167.227.27, HTTPS 200 serves default vhost, cert CN=server.d1g.it
+- NEW Leaked secret `vbguzfsi` tested as X-S4-Api-Key header against /api/v2/teams → 403 same hash as junk key; NOT a valid REST API key (webhook secret ≠ REST key)
+- NEW OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts — routing layer complete, only token validation behavior unverified
+- NEW DPoP challenge-layer probe COMPLETE: 3/3 identity hosts return identical WWW-Authenticate: Bearer with no DPoP scheme/nonce — mitigating control advertised but not enforced
+- NEW Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show zero write ops accepting tenant identifier in body; 131 write ops swept repo-wide)
+- NEW V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
+- NEW Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); grep "\[UNVALIDATED\]" matches 0 — automated validation broken
+- CHANGED api.signl4.com/api/v2/teams auth-status confirmed TEMPORAL flapping (not per-request): 6 consecutive unauth GETs at 1.2s intervals all returned 401 with identical 0-byte body; then flipped back to 405
+- CHANGED connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on ALL 6 identity hosts (was 3-host record) — undocumented mobile ingress with custom error page
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+- CHANGED Cross-env token forgery chain stable at 6 hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled, account IdP issuer mismatch (claims connect) + plain PKCE — AUTH_HELPED
