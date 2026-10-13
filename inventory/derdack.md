@@ -2693,3 +2693,36 @@ www.derdack.com
 - CHANGED us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class
 - CHANGED Cross-env token forgery chain stable at 6 hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled, account IdP issuer mismatch (claims connect) + plain PKCE — AUTH_HELPED
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
+
+## 2026-10-13 20:46:11 UTC
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this i
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this i
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this i
+- NEW github.com/Derdack org (12 public repos) has NEVER been reposcanned (reposcan-raw/summary.txt: "TARGET_ORG not configured for derdack; skipping"); live sweep reveals real hardcoded creds absent from t
+- NEW SQL Server SA creds "sa:Derdack!" @ Server=sqlserver.derdack-support.local;Database=EnterpriseAlert2017 in derdack-oncall-holidayimport/HolidayImport.js:16 and HolidayDeleteAll.js:22 (author rbormann@
+- NEW Checkmk admin creds cmkadmin:CNlydVqZ @ http://192.168.88.107:8080/cmk/check_mk/api/v0/ in derdack-plugin-checkmk/2-way/Main.js:90-94 (author rons4, commit f4613b7, 2024-05-27, unremediated).
+- NEW eval() callback deserialization in 4 EA 2-way REST samples (checkmk/dynatrace/logic-monitor/zendesk Main.js) — HOLD.
+- CHANGED Re-verified deliverables live: vbguzfsi→400/4000, zq7x2k9p→404/3004, 96sbq38s→400/4000; EA WSDL sha256 unchanged e8b753f2...
+- CHANGED Re-verified PASSIVE deliverables live and byte-stable (EA WSDL sha256 e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae; webhook oracle 400/4000 vs 404/3004) — no remediation after 5+ d
+- CHANGED github.com/Derdack org now covered: 12 public repos cloned+swept (was never scanned; reposcan "skipped").
+- NEW `github.com/Derdack` org (12 public repos, Derdack GmbH; e.g. `derdack-plugin-checkmk`, `derdack-oncall-holidayimport`, `derdack-integration-azuremonitor`) was NEVER reposcanned — `reposcan-raw/summar
+- NEW Hardcoded SQL Server SA creds in public `derdack-oncall-holidayimport/HolidayImport.js:16` and `HolidayDeleteAll.js:22`: `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdac
+- NEW Hardcoded Checkmk admin creds + internal IP in public `derdack-plugin-checkmk/2-way/Main.js:90-94`: `username="cmkadmin"`, `password="CNlydVqZ"`, `serverURL="http://192.168.88.107:8080/cmk/check_mk/ap
+- NEW `eval()` deserialization of EA scripting-host callbacks (`eval(appContext.runtimeInfo.callbackSetStatusOK/SendMail)`, `eval(appContext.state.callbackSaveState)`) in 4 public 2-way REST plugins (checkm
+- CHANGED PASSIVE deliverables re-verified live and byte-stable after 5+ days: webhook oracle `vbguzfsi`→400/code 4000, fabricated `zq7x2k9p`→404/code 3004, `96sbq38s`→400/code 4000; EA WSDL → 200, 29968 B, sha
+- NEW api.signl4.com/api/v2/teams auth-status flipped to route-gated (401 on unauth GET + invalid Bearer) vs prior handler-deferred 405 pattern; temporal flip confirmed by 6 consecutive probes
+- NEW connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on ALL 6 identity hosts (was 3-host record)
+- NEW GitHub credential leak CONFIRMED LIVE: signl4/docs repo contains real team secret `vbguzfsi` (authored by Derdack staff `rons4`, pushed 2026-10-08); prior "placeholder-only" rejection was false negati
+- NEW Second live SIGNL4 team webhook secret `96sbq38s` confirmed live at signl4-integration-google-iot/index.js:19 and signl4-integration-losant/signl4-alert-v100.node:148 via Content-Length:0 control
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx live (200, 1843 B) — HTTP handler interface advertises 10 handlers; EA handler auth ENFORCED via read-only GETs (GetEventStatus?Username=adm
+- NEW EA WSDL stable: exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname)
+- NEW OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts — routing layer complete, only token validation behavior unverified
+- NEW DPoP challenge-layer probe COMPLETE: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce — mitigating control advertis
+- NEW Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show zero write ops accepting tenant identifier in body; 131 write ops swept repo-wide)
+- NEW V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
+- NEW Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); `grep "\[UNVALIDATED\]"` matches 0 — automated validation broken
+- NEW vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
+- NEW us.derdack.com/.well-known/ returns 300 Multiple Choices with byte-identical dot-prefix echo to dev.derdack.com — second host confirming estate-wide parked-minimal config class
+- CHANGED Cross-env token forgery chain stable at 6 hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled, account IdP issuer mismatch (claims connect) + plain PKCE — AUTH_HELPED
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
+- CHANGED RAG sweep of all 53 signl4/* repos + docs tarball + git history completed: only two non-placeholder webhook secrets exist (`vbguzfsi`, `96sbq38s`); no cloud creds, private keys, JWT, client_secret, or

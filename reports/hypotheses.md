@@ -6563,3 +6563,66 @@
 - LEARN: REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
 - LEARN: REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files;
 - LEARN: ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across a
+
+## RANKED HYPOTHESES 2026-10-13 20:46:11 UTC
+- [85] account.signl4.com/identity: Cross-env token forgery via account IdP issuer mismatch + plain PKCE + shared RS256 key (from art/lead_nemotron3.txt)
+- [80] vps.signl4.com: [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598) (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: compile and submit the PASSIVE-confirmed set to bugs.olivermaicher.eu — EA WebService internal-hostname disclosure (CWE-200) plus confirmation that the l
+- NEXT(hypotheses-nemotron3.txt): RAG: passive sweep of signl4-integration-* repos (google-iot, losant, and 2+ unscanned) for additional webhook secrets or REST API keys using patterns `/webhook
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: internal single-label SOAP hostname (`ereesus`) exposed via unauthenticat
+- LEARN: REJECTED AUTH @ demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx: handler-level credential validation executes before handler logic (wrong creds → "I
+- LEARN: ACCEPTED OTHER @ demo.enterprisealert.com/EAWebService: the HTTP `.aspx` root advertises 10 handlers yet serves `GetTicketStatus`/`UpdateTicket` too (12-op WSDL
+- LEARN: REJECTED OTHER @ triage pipeline: the automated validation gate stays dead — `grep "\[UNVALIDATED\]"` matches 0, so `reports/valid-bugs.md` count remains unreli
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address https://ereesus/EAWebService/EventProv
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response prove
+- LEARN: ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean 405s against a passing control is a strong, reprodu
+- LEARN: ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: body discriminator was identical across both arms
+- LEARN: ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on /identity/connect/, n
+- LEARN: ACCEPTED OTHER @ completing the differential was worth more than any result inside it: six hosts returned the answer, so the uniform claim holds 6/6 rather than
+- LEARN: ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well is dry because every remaining question needs a token
+- LEARN: ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: cited dpop_signing_alg_values_supported as mitigating control without checking enf
+- LEARN: REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-
+- LEARN: REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are no
+- LEARN: REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the ver
+- LEARN: REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there 
+- LEARN: REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a tran
+- LEARN: REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is
+- LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier 
+- LEARN: REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control on
+- LEARN: REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+- LEARN: REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files;
+- LEARN: ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across a
+- LEARN: ACCEPTED AUTH @ github.com/Derdack: a signl4-only org RAG created a false "surface exhausted" conclusion — the sibling Derdack org was never scanned (reposcan: 
+- LEARN: ACCEPTED AUTH @ both credential leaks: "already reported" annotations in valid-bugs.md were model-generated and unverified, yet were real — the signl4 RAG's "ze
+- LEARN: REJECTED OTHER @ mkp/zip archives: Checkmk .mkp and nagios .zip contain only `<api-key>` placeholders — archive content swept negative.
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: /WebInterface/ path family (WSDL namespace) uniformly 404 — path-family probe negative.
+- LEARN: ACCEPTED AUTH @ github.com/Derdack: brand-scoped RAG ("53 signl4/* repos") produced a false "secrets exhausted" conclusion; the sibling Derdack org was never sc
+- LEARN: ACCEPTED AUTH @ derdack-oncall-holidayimport + derdack-plugin-checkmk: the valid-bugs.md "hardcoded SA/Checkmk creds" entries were dismissed as model hallucinat
+- LEARN: REJECTED OTHER @ derdack .mkp/.zip artifacts: Checkmk EnterpriseAlert-*.mkp and nagios plugin zip contain only `<api-key>`/`<enterprise alert server>` placehold
+- LEARN: REJECTED MISCONFIG @ demo.enterprisealert.com/WebInterface/EnterpriseAlert/*: WSDL-namespace path family returns uniform bare 404 (0 bytes) matching control — n
+- LEARN: ACCEPTED OTHER @ deliverables re-verified live this cycle: oracle vbguzfsi→400/4000, fabricated→404/3004, 96sbq38s→400/4000; EA WSDL sha256 e8b753f2... unchange
+- LEARN: ACCEPTED AUTH @ github.com/Derdack: brand-scoped RAG ("53 signl4/* repos") produced a false "secrets exhausted" conclusion — the sibling Derdack org was never s
+- LEARN: ACCEPTED AUTH @ derdack-oncall-holidayimport + derdack-plugin-checkmk: the valid-bugs.md "hardcoded SA/Checkmk creds" entries dismissed as model hallucination w
+- LEARN: REJECTED OTHER @ Derdack `.mkp`/`.zip` artifacts: Checkmk `EnterpriseAlert-*.mkp` and nagios plugin zip contain only `<api-key>`/`<enterprise alert server>` pla
+- LEARN: REJECTED MISCONFIG @ demo.enterprisealert.com/WebInterface/EnterpriseAlert/*: WSDL-namespace path family returns uniform bare 404 (0 bytes, matches control) — n
+- LEARN: ACCEPTED OTHER @ deliverables: oracle + EA WSDL re-verified with zero drift after 5+ days — submission-ready.
+- LEARN: ACCEPTED AUTH @ connect.signl4.com/webhook: vendor's own staff committed real (non-placeholder) team secrets to public repos — prior placeholder-only rejection 
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address https://ereesus/EAWebService/EventProv
+- LEARN: ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response prove
+- LEARN: ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean 405s against a passing control is a strong, reprodu
+- LEARN: ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: body discriminator was identical across both arms
+- LEARN: ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on /identity/connect/, n
+- LEARN: ACCEPTED OTHER @ completing the differential was worth more than any result inside it: six hosts returned the answer, so the uniform claim holds 6/6 rather than
+- LEARN: ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well is dry because every remaining question needs a token
+- LEARN: ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: cited dpop_signing_alg_values_supported as mitigating control without checking enf
+- LEARN: REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-
+- LEARN: REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are no
+- LEARN: REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the ver
+- LEARN: REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there 
+- LEARN: REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a tran
+- LEARN: REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is
+- LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier 
+- LEARN: REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control on
+- LEARN: REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+- LEARN: REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files;
+- LEARN: ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across a
