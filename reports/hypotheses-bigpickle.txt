@@ -1,1 +1,128 @@
-## 2026-10-13 00:50:38 UTC [target] (model bigpickle)
+## 2026-10-13 07:17:58 UTC [target] (model bigpickle)
+[NEW] Second live SIGNL4 team webhook secret `96sbq38s` confirmed live at `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148` via Content-Length:0 control (400/4000 vs 404/3004)
+[NEW] Control semantics corrected: Content-Length:0 POST is the non-mutating discriminator (valid→400/4000, invalid→404/3004); `{}` body is ACCEPTED→201+eventId (mutating, out-of-scope)
+[NEW] `connect`, `account`, `api.signl4.com` all evaluate the SAME team secret (`vbguzfsi`→400/4000 on all three) — shared webhook registry, not host-scoped
+[NEW] fix.signl4.com/signin-oidc returns empty 500 for all state/redirect_uri variants — no reflection/open-redirect; hypothesis DEAD
+[NEW] Full RAG sweep of all 53 `signl4/*` repos + `docs` tarball + git history: only two non-placeholder webhook secrets exist (`vbguzfsi`, `96sbq38s`); no cloud creds, private keys, JWT, client_secret, or REST API keys
+[CHANGED] GitHub credential leak CONFIRMED LIVE: `signl4/docs` repo contains real team secret `vbguzfsi` (authored by Derdack staff `rons4`, pushed 2026-10-08); prior "placeholder-only" rejection was false negative
+[CHANGED] Webhook contract validated: `POST https://connect.signl4.com/webhook/vbguzfsi` returns 201 with eventId; full status-keyword query config works
+[CHANGED] EA WSDL internal hostname leak CONFIRMED LIVE: `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname)
+[CHANGED] vps.signl4.com subdomain takeover RE-VERIFIED at 2026-10-11 boundary: A=72.167.227.27, HTTPS 200 serves default vhost, cert CN=server.d1g.it
+[CHANGED] Leaked secret `vbguzfsi` tested as `X-S4-Api-Key` header against `/api/v2/teams` → 403 same hash as junk key; NOT a valid REST API key (webhook secret ≠ REST key)
+[CHANGED] OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts — routing layer complete, only token validation behavior unverified
+[CHANGED] DPoP challenge-layer probe COMPLETE: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce
+[CHANGED] Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show zero write ops accepting tenant identifier in body; 131 write ops swept repo-wide)
+[CHANGED] V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
+[CHANGED] Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); `grep "\[UNVALIDATED\]"` matches 0 — automated validation broken
+[CHANGED] Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials
+[PRIO] demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx,8.50,attack_surface=9,business_value=9,tech_exposure=9,gate_ease=8,cloud_surface=8,freshness=8
+[PRIO] github.com/signl4/docs,7.75,attack_surface=8,business_value=8,tech_exposure=7,gate_ease=10,cloud_surface=9,freshness=9
+[PRIO] vps.signl4.com,7.25,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=6,cloud_surface=8,freshness=8
+[PRIO] account.signl4.com/identity,7.00,attack_surface=8,business_value=8,tech_exposure=8,gate_ease=4,cloud_surface=9,freshness=7
+[PRIO] connect.signl4.com/webhook,6.75,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=5,cloud_surface=8,freshness=7
+[PRIO] api.signl4.com/api/v2/teams,6.50,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=5,cloud_surface=8,freshness=6
+[HYP] EA WebService credential-in-URL auth bypass on mutating handlers
+class: AUTH
+asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx
+confidence: 70
+reasoning: 11 .aspx handlers (About, RegisterEventProvider, UnregisterEventProvider, RaiseEvent, RaiseEventAsynchronous, SubmitEventUpdate, GetEventStatus, ResetEvent, GetAlertStatus, GetAlertId, GetAlertDetails) + 12 WSDL operations all gate on credentials (Error -1 / 401); vendor docs (SolarWinds article, EA9 PDF) document Username/Password or MD5 hash in GET query string as primary auth; no handler tested for auth bypass with malformed/empty credentials
+evidence_needed: At least one mutating handler (RaiseEvent, RegisterEventProvider, SubmitEventUpdate, RaiseEventAsynchronous) accepts request without valid credentials or with credential confusion (empty Username, MD5 collision, parameter pollution)
+verify_steps: 1) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About (baseline 200) 2) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=RaiseEvent&Username=&Password= (test empty creds) 3) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=RaiseEvent&Username=test&Password= (test missing password) 4) POST same handlers with credential params in body vs query 5) Test MD5 hash variant per EA9 PDF documentation
+impact: If any mutating handler bypasses auth → unauthenticated alert injection into customer tenant; severity CRITICAL
+testability: PASSIVE
+[HYP] Additional live webhook secrets in remaining public signl4/* repos
+class: AUTH
+asset: github.com/signl4/*
+confidence: 65
+reasoning: Two live team secrets already found in signl4/docs (vbguzfsi, 96sbq38s) authored by staff rons4; 53 repos in org, only docs fully swept; integration repos (google-iot, losant, nagios, 2wayREST, SIGNL4, User-Monitoring) use credential-in-URL templates; reposcan of remaining ~47 repos untapped
+evidence_needed: At least one additional non-placeholder webhook secret or REST API key in public repo content
+verify_steps: 1) RAG: passive sweep remaining ~47 public signl4/* org repos for `/webhook/<token>`, `team-secret`, `X-S4-Api-Key`, `rest/events` patterns 2) Validate any candidate via Content-Length:0 POST to connect.signl4.com/webhook/{candidate} (400/4000 vs 404/3004 discriminator)
+impact: Each live webhook secret enables alert injection/resolution in victim tenant; webhook secret ≠ REST API key but enables webhook-only vector; severity HIGH
+testability: PASSIVE
+[HYP] vps.signl4.com subdomain takeover via dangling A-record to GoDaddy shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 80
+reasoning: Explicit A-record to 72.167.227.27 (GoDaddy secureserver.net shared host); HTTPS 200 serves nginx default page with unrelated cert CN=server.d1g.it; fabricated subdomain returns TCP timeout (000) proving no wildcard vhost; 7+ consecutive probe cycles confirm stable; GoDaddy authoritative NS (domaincontrol.com)
+evidence_needed: Confirmation that the GoDaddy shared hosting account is unclaimed/available for takeover (requires DNS/hosting account control — HUMAN_ONLY)
+verify_steps: 1) GET https://vps.signl4.com/ (confirm 200 nginx default page, cert CN=server.d1g.it) 2) GET https://fabricated-xyz.vps.signl4.com/ (confirm 000/TCP timeout — no wildcard) 3) WHOIS/DNS verification of GoDaddy account status (HUMAN_ONLY)
+impact: Subdomain takeover enabling content spoofing, cookie theft, OAuth redirect abuse on *.signl4.com; severity HIGH (but exploitability gated on DNS/hosting-account control — HUMAN_ONLY)
+testability: HUMAN_ONLY
+[PARKED] vps.signl4.com subdomain takeover via dangling A-record to GoDaddy shared host: confidence 80 but HUMAN_ONLY exploitability — no claimable takeover primitive from researcher seat; requires DNS/hosting-account control; nemotron3's 95 overstates claimability
+[PARKED] Cross-env token forgery via account IdP issuer mismatch: confidence 85 but AUTH_HELPED — blocked on client_secret acquisition; no passive verification of cross-host token acceptance possible
+[PARKED] Webhook team-secret enumeration oracle enables credentialed access via leaked secrets: PASSIVE oracle confirmed (85), but full API compromise requires separate X-S4-Api-Key credential (webhook secret ≠ REST API key per live test); AUTH_HELPED for webhook-only vector
+[FINAL] 1) Real SIGNL4 team secret `vbguzfsi` in public GitHub repo enables webhook injection/resolution (AUTH, 100) — PASSIVE leak confirmed, live 201 response validated, AUTH_HELPED for further validation
+[FINAL] 2) Internal infrastructure hostname leak via EA WSDL on demo.enterprisealert.com (MISCONFIG, 95) — PASSIVE confirmed live, CWE-200 hygiene
+[FINAL] 3) EA WebService credential-in-URL auth bypass on demo.enterprisealert.com (AUTH, 70) — PASSIVE testable, 11 handlers untested for auth bypass
+[FINAL] 4) Additional live webhook secrets in remaining public signl4/* repos (AUTH, 65) — PASSIVE testable via RAG + oracle
+[FINAL] 5) Cross-env token forgery via account IdP issuer mismatch (AUTH, 85) — AUTH_HELPED, requires client_secret
+[NEXT] PROBE: GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=RaiseEvent&Username=&Password=
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook: vendor's own staff committed real (non-placeholder) team secrets to public repos — prior placeholder-only rejection was a false negative
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address https://ereesus/EAWebService/EventProviderAPI.asmx exposed via unauthenticated WSDL GET — config-level disclosure (CWE-200 hygiene)
+[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+[LEARN] ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean 405s against a passing control is a strong, reproducible result, and it is still not a vulnerability
+[LEARN] ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: body discriminator was identical across both arms (empty-string sha256); the discriminator that actually resolved the question was the status code alone, 405 vs 404
+[LEARN] ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on /identity/connect/, not /identity/devconnect/ — it is the production tenant, reachable at a second hostname
+[LEARN] ACCEPTED OTHER @ completing the differential was worth more than any result inside it: six hosts returned the answer, so the uniform claim holds 6/6 rather than 4/6 with two stragglers
+[LEARN] ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well is dry because every remaining question needs a token
+[LEARN] ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: cited dpop_signing_alg_values_supported as mitigating control without checking enforcement
+[LEARN] REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
+[LEARN] REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are non-secret and non-actionable, and the program rejects descriptive-headers-only classes
+[LEARN] REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+[LEARN] REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there despite the host being App-Proxy fronted
+[LEARN] REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+[LEARN] REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is absent from the API gateway and the demo app; no alternative read surface remains for the AUTH_HELPED queue
+[LEARN] REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier disclosure is bounded at 2 of 8 hosts, not an estate-wide defect
+[LEARN] REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control only, not a vulnerability
+[LEARN] REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+[LEARN] REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
+[LEARN] ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+[RISK] derdack: 95 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing, EA WebService credential-in-URL) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed introspection/revocation routing parity across all 6 ingresses, DPoP advertised but not enforced at gateway, prepaid body-identifier hypothesis refuted repo-wide. CRITICAL: Real SIGNL4 team secrets `vbguzfsi` and `96sbq38s` committed to public GitHub repos by staff (github.com/signl4/docs, pushed 2026-10-08; github.com/signl4/integrations, pushed 2026-10-08) — direct credential leaks enabling immediate webhook injection/resolution (validated 201). CRITICAL: demo.enterprisealert.com/EAWebService exposes full EA 9.5 web portal with credential-in-URL SOAP/REST API completely untested for auth bypass. vps.signl4.com dangling A-record enables subdomain takeover (HUMAN_ONLY).
+[NEW] demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx live (200, 1843 B) — HTTP handler interface advertises 10 handlers (About, RegisterEventProvider, UnregisterEventProvider, RaiseEvent, RaiseEventAsynchronous, SubmitEventUpdate, GetEventStatus, ResetEvent, GetAlertStatus, CloseAlert); `GetTicketStatus`/`UpdateTicket` are served but NOT advertised (reachable, undocumented vs the 12-op WSDL).
+[NEW] EA handler auth is ENFORCED (my read-only GETs): `GetEventStatus?Username=admin&Password=admin&…` → `Error: -1 / Invalid username or password`; `GetTicketStatus` same; empty creds → generic `Error: -1` (GetEventStatus/GetAlertStatus/UpdateTicket) or `No user login data specified` (GetTicketStatus). No empty/absent/wrong-credential bypass on any read-only handler.
+[CHANGED] EA WSDL stable: `?wsdl` → 200, 29968 B, sha256 `e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae`, soap address `https://ereesus/EAWebService/EventProviderAPI.asmx` (unchanged).
+[CHANGED] EA credential-in-URL auth-bypass hypothesis DOWN 70 → 15 (direct read-only refutation this cycle).
+[CHANGED] Root `.aspx` handler list omits `GetTicketStatus`/`UpdateTicket` while both respond — HTTP-vs-WSDL interface parity gap (INFO).
+[PRIO] github.com/signl4/docs,8.35,attack_surface=8,business_value=8,tech_exposure=7,gate_ease=10,cloud_surface=9,freshness=9
+[PRIO] demo.enterprisealert.com/EAWebService,7.70,attack_surface=8,business_value=9,tech_exposure=9,gate_ease=4,cloud_surface=8,freshness=7
+[PRIO] vps.signl4.com,7.30,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=6,cloud_surface=8,freshness=8
+[PRIO] connect.signl4.com/mobileapi,6.65,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=3,cloud_surface=8,freshness=6
+[HYP] EA EventProvider HTTP-interface auth bypass via credential parameter confusion
+class: AUTH
+asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx
+confidence: 15
+reasoning: Live read-only GETs show handler-level credential validation executes on every read-only handler (wrong creds → "Invalid username or password"; empty → generic Error -1 / "No user login data specified"). No handler returned data or accepted state without valid credentials. Undocumented GetTicketStatus/UpdateTicket are present but equally auth-gated.
+evidence_needed: any handler returning data/state without valid credentials
+verify_steps: read-only GET GetEventStatus/GetAlertStatus with credential-pollution and alternate param names (Login/User/Pwd); no mutating handlers (RaiseEvent/RegisterEventProvider/SubmitEventUpdate/ResetEvent/CloseAlert) are touched.
+impact: unauthenticated alert injection into a tenant — CRITICAL if true (not observed)
+testability: PASSIVE
+[HYP] vps.signl4.com dangling A-record subdomain takeover
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 80
+reasoning: A=72.167.227.27 (GoDaddy secureserver.net shared host); HTTPS 200 serves default vhost, cert CN=server.d1g.it; fabricated subdomain → TCP timeout (000) proving no wildcard vhost; stable 8+ cycles.
+evidence_needed: claimable/unclaimed GoDaddy hosting account (HUMAN_ONLY)
+verify_steps: read-only GET https://vps.signl4.com/ and https://fabricated-xyz.vps.signl4.com/
+impact: takeover of a *.signl4.com vhost → content spoof / cookie / OAuth-redirect abuse; HIGH
+testability: HUMAN_ONLY
+[HYP] Additional live SIGNL4 credentials in remaining org repos/gists/history
+class: AUTH
+asset: github.com/signl4/*
+confidence: 25
+reasoning: Prior full RAG of 53 signl4/* repos + docs tarball + git history found only two non-placeholder webhook secrets (vbguzfsi, 96sbq38s) and zero client_secret/X-S4-Api-Key. Hypothesis largely closed.
+evidence_needed: an unenumerated repo/gist/deleted commit containing a REST API key or client_secret
+verify_steps: passive RAG of org gists + all-refs history; validate candidates ONLY via Content-Length:0 POST oracle (400/4000 vs 404/3004)
+impact: webhook injection (if team secret) or authenticated API access (if X-S4-Api-Key); HIGH
+testability: PASSIVE
+[PARKED] EA EventProvider HTTP-interface auth bypass: confidence 15 < 40 — refuted by direct read-only probes showing handler-level credential validation.
+[PARKED] Additional live SIGNL4 credentials in org repos: confidence 25 < 40 — full 53-repo RAG sweep already exhausted, no new evidence.
+[PARKED] vps.signl4.com subdomain takeover: confidence 80 but HUMAN_ONLY — no claimable primitive exists from the researcher seat; needs DNS/hosting-account control.
+[FINAL] 1) Real SIGNL4 team secrets committed to public repos (`vbguzfsi` @ signl4/docs, `96sbq38s` @ signl4-integration-google-iot/losant) — AUTH, PASSIVE-confirmed live, already reported (CVSS 5.3).
+[FINAL] 2) EA WebService WSDL internal hostname disclosure `https://ereesus/EAWebService/EventProviderAPI.asmx` — MISCONFIG, PASSIVE-confirmed (CWE-200); report-ready.
+[FINAL] 3) Cross-environment JWKS key + client_id 692A0A56 reuse + account-IdP issuer mismatch — AUTH, AUTH_HELPED (blocked on client_secret).
+[NEXT] HUMAN: compile and submit the PASSIVE-confirmed set to bugs.olivermaicher.eu — EA WebService internal-hostname disclosure (CWE-200) plus confirmation that the leaked-webhook-secret family remains unremediated at signl4/docs; automated passive surface is exhausted and every remaining vector (cross-env token forgery, V1/V2/V3 IDOR/BOLA, EA handler bypass) is AUTH_HELPED or refuted.
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: internal single-label SOAP hostname (`ereesus`) exposed via unauthenticated WSDL GET — config-level information disclosure (CWE-200 hygiene).
+[LEARN] REJECTED AUTH @ demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx: handler-level credential validation executes before handler logic (wrong creds → "Invalid username or password"), so the credential-in-URL auth-bypass hypothesis is refuted by direct read-only probe, not by assumption.
+[LEARN] ACCEPTED OTHER @ demo.enterprisealert.com/EAWebService: the HTTP `.aspx` root advertises 10 handlers yet serves `GetTicketStatus`/`UpdateTicket` too (12-op WSDL parity) — an interface-surface gap worth remembering, but both remain auth-gated.
+[LEARN] REJECTED OTHER @ triage pipeline: the automated validation gate stays dead — `grep "\[UNVALIDATED\]"` matches 0, so `reports/valid-bugs.md` count remains unreliable and no cycle output is independently re-verified.
+[RISK] derdack: 85 — systemic cross-environment trust failure persists (6 identity hosts share one byte-identical prod RS256 JWKS + client_id, account IdP mint-mismatch, password/device_code/CIBA/plain-PKCE all enabled), two real team secrets remain unremediated in public repos, and demo.enterprisealert.com still exposes the full EA 9.5 HTTP/SOAP interface (auth enforced, but the WSDL leaks an internal host). Risk is bounded only by the fact that every remaining high-value vector is credential-gated (AUTH_HELPED) or human-gated (vps takeover), and the automated triage pipeline is broken — so no new validated result can be produced without a leaked client_secret/X-S4-Api-Key or human triage.

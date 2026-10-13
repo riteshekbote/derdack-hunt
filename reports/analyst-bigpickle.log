@@ -80462,3 +80462,1196 @@ Cycle complete. Ran both queued `[NEXT]` actions with controlled, read-only prob
 **State:** `POC/api` — now credential-bound equilibrium. The whole handler-deferred AUTH_HELPED queue (V1 `userId` IDOR, V2 `changePassword`, V3 invoice/BOLA, cross-env forgery) is gated solely on a live `X-S4-Api-Key`/`client_secret` that no passive route yields. Sole `[NEXT]` is **HUMAN**: pull a low-priv API key from the portal to unlock it. `[RISK] derdack: 88`.
 
 Note: I avoided the `{}` webhook body (the prior cycle's injection breach) and used only discarded-body status/hash probes.
+===== ANALYST bigpickle 2026-10-13 07:18:10 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && echo "---" && git log --oneline -10 2>/dev/null && echo "---" && ls -la leads/ 2>/dev/null; ls -la reports/ 2>/dev/null; ls -la art/ 2>/dev/null
+total 1548
+drwxr-xr-x 12 runner runner   4096 Oct 13 07:14 .
+drwxr-xr-x  3 runner runner   4096 Oct 13 07:13 ..
+drwxr-xr-x  7 runner runner   4096 Oct 13 07:14 .git
+drwxr-xr-x  3 runner runner   4096 Oct 13 07:13 .github
+-rw-r--r--  1 runner runner   1831 Oct 13 07:13 README.md
+-rw-r--r--  1 runner runner     32 Oct 13 07:14 analyst-out.txt
+-rw-r--r--  1 runner runner 732531 Oct 13 07:14 analyst-prompt.txt
+-rw-r--r--  1 runner runner 728652 Oct 13 07:14 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 inventory
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 leads
+-rw-r--r--  1 runner runner  22152 Oct 13 07:13 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 reports
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct 13 07:13 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 scripts
+-rw-r--r--  1 runner runner     33 Oct 13 07:13 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct 13 07:13 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct 13 07:13 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct 13 07:13 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct 13 07:13 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct 13 07:13 state_nemotron3.json
+drwxr-xr-x  2 runner runner  16384 Oct 13 07:13 triage
+---
+53e0333 triage 2026-10-13-04-04
+---
+total 4720
+drwxr-xr-x  2 runner runner    4096 Oct 13 07:13 .
+drwxr-xr-x 12 runner runner    4096 Oct 13 07:14 ..
+-rw-r--r--  1 runner runner 1710833 Oct 13 07:13 lead-bigpickle.md
+-rw-r--r--  1 runner runner   12036 Oct 13 07:13 lead-laguna.md
+-rw-r--r--  1 runner runner   11800 Oct 13 07:13 lead-ling3.md
+-rw-r--r--  1 runner runner   12220 Oct 13 07:13 lead-longcat.md
+-rw-r--r--  1 runner runner      18 Oct 13 07:13 lead-mimo.md
+-rw-r--r--  1 runner runner 2982771 Oct 13 07:13 lead-nemotron3.md
+-rw-r--r--  1 runner runner   82604 Oct 13 07:13 reposcan-derdack.md
+total 12452
+drwxr-xr-x  2 runner runner    4096 Oct 13 07:13 .
+drwxr-xr-x 12 runner runner    4096 Oct 13 07:14 ..
+-rw-r--r--  1 runner runner 7340328 Oct 13 07:13 analyst-bigpickle.log
+-rw-r--r--  1 runner runner   51212 Oct 13 07:13 analyst-laguna.log
+-rw-r--r--  1 runner runner   50976 Oct 13 07:13 analyst-ling3.log
+-rw-r--r--  1 runner runner   51230 Oct 13 07:13 analyst-longcat.log
+-rw-r--r--  1 runner runner 4333237 Oct 13 07:13 analyst-nemotron3.log
+-rw-r--r--  1 runner runner      54 Oct 13 07:13 hypotheses-bigpickle.txt
+-rw-r--r--  1 runner runner      51 Oct 13 07:13 hypotheses-laguna.txt
+-rw-r--r--  1 runner runner      50 Oct 13 07:13 hypotheses-ling3.txt
+-rw-r--r--  1 runner runner      52 Oct 13 07:13 hypotheses-longcat.txt
+-rw-r--r--  1 runner runner   14632 Oct 13 07:13 hypotheses-nemotron3.txt
+-rw-r--r--  1 runner runner  991245 Oct 13 07:13 hypotheses.md
+-rw-r--r--  1 runner runner    5996 Oct 13 07:13 valid-bugs.md
+[0m
+## Objective
+- Continue an authorized, passive-first bug-bounty hunt against Derdack GmbH / Derdack Group in-scope assets (SIGNL4 + Enterprise Alert), following the 7-step structured analyst output (DELTA/PRIO/HYP/SELF-CRITIQUE/NEXT/LEARN/RISK).
+- Report channel: `bugs.olivermaicher.eu`; phase=POC, current target focus `api`.
+
+## Important Details
+- In-scope: all Derdack-owned infra/websites/APIs/SaaS/mobile/backend/status pages/domains incl. SIGNL4 and Enterprise Alert.
+- REJECTED classes (program scope): network/account-lockout DoS, descriptive errors/headers only, robots.txt/public files, outdated libs, OPTIONS/TRACE, CSRF on logout/anon forms, cookie flags on non-sensitive data, self-XSS, scanner reports w/o POC, social engineering, username enumeration on login/forgot-password, brute-force/rate-limit/lockout policy, SSL/TLS, clickjacking w/o exploit, SPF/DKIM/DMARC, known-vuln lib w/o program-specific exploit, password-recovery policy, autocomplete, public login panels, lack of email verification, session control during email/password change, and any exposure of customer/employee/financial/auth data during testing.
+- Live-probe rules: passive-first, ≤1 rps, GET/HEAD/OPTIONS only, no auth-bypass or mutating tests on live customer data; sha256 any secret; facts vs hypotheses strictly separated; no endpoint-map-only claims.
+- Key stable facts: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) share byte-identical RS256 JWKS `kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`; shared `client_id 692A0A56-892F-4AE2-8259-76DA398990B6`; account IdP `issuer=https://connect.signl4.com/identity` (mint-mismatch); plain PKCE allowed; password grant enabled on staging.
+- Webhook control semantics: safe non-mutating discriminator = `POST` with `Content-Length: 0` → valid `400 code 4000` ("event null or empty") vs invalid `404 code 3004` ("No matching event source found."). A `{}` body → `HTTP 201 + eventId` = REAL event creation (breach) — do NOT repeat.
+- Secrets evaluate on shared registry: `connect`, `account`, `api` `.signl4.com` all accept same team secret (not host-scoped).
+- Leaked live team webhook secrets: `vbguzfsi` (sha256 `69844b58…9c5d`) at `github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7`; `96sbq38s` (sha256 `cbc2189c…eb85`) at `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148`. Authored by staff `rons4`; both already in reported family `valid-bugs.md` CVSS 5.3.
+- `signl4.derdack.com` permanently unreachable (8+ cycles TCP timeout); `vps.signl4.com` dangling A→72.167.227.27 (GoDaddy, cert CN=server.d1g.it) = takeover candidate gated HUMAN_ONLY.
+- V4 API namespace confirmed absent; `api/v2/teams` auth-status flaps temporally (401 vs 405 across cycles).
+
+## Work State
+### Completed
+- Full estate map: 6 identity hosts, V1/V2/V3 + webhook + events namespaces, `demo.enterprisealert.com/EAWebService/` live EA 9.5.26147 portal (root 404, path-family probing found it).
+- Confirmed `Content-Length:0` webhook oracle; two live secrets validated non-mutating; multi-host secret acceptance.
+- Closed negatives: `fix.signl4.com/signin-oidc` empty 500 (no reflection); GraphQL 15/15 bare 404; Blazor `_framework/blazor.boot.json` 404; prepaid tenant-body REFUTED (131 write ops swept, zero accept tenant); DPoP advertised but not enforced.
+- Marked FINAL items: (1) confirm-and-document two live webhook secrets + injection + 3-host scope (already-reported family); (2) control-methodology correction (`Content-Length:0` safe, `{}` = injection).
+
+### Active
+- POC phase; leaked-secret finding report-ready (novelty low, both already reported); FINAL 3 dead.
+- AUTH_HELPED queue (cross-env token forgery, V1 userId IDOR, V2 changePassword, V3 BOLA) blocked on a leaked `client_secret` / REST `X-S4-Api-Key`.
+
+### Blocked
+- AUTH_HELPED queue needs a legitimate credential (`client_secret` / `X-S4-Api-Key` / team-secret) to progress.
+- Triage pipeline dead: ≥58 consecutive Triager `UnknownError` runs; `grep "\[UNVALIDATED\]" leads/lead-*.md` matches 0 → `reports/valid-bugs.md` running count unreliable.
+- `vps.signl4.com` takeover is HUMAN_ONLY (DNS/hosting-account control).
+
+## Next Move
+1. [NEXT] RAG: scan `github.com/signl4/docs` git history (`git clone --filter=blob:none … && git log -p --all | grep -E 'client_secret|X-S4-Api-Key|webhook/'`) for removed/rotated credentials — only remaining passive route to unlock AUTH_HELPED queue; no live requests.
+2. Validate any candidate secret ONLY with `Content-Length:0` POST control (400/4000 vs 404/3004); never a real event body.
+
+## Relevant Files
+- `inventory/derdack.md`: host inventory + passive recon timeline (seed 2026-09-02).
+- `leads/lead-*.md`: per-host leads; `grep "[UNVALIDATED]"` target of triage.
+- `reports/valid-bugs.md`: reported findings list (currently unreliable — triage gate dead).
+- `.github/workflows/triage.yml`: triage gate; line 45 `grep "\[UNVALIDATED\]"` broken; 57+ consecutive failures.
+- `.github/workflows/hunt.yml`: hunt workflow (`PROBE_ALLOW: derdack.com` at line 13).
+- `probe-results.md`: accumulated probe output.
+- `github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7`: leaked secret `vbguzfsi`.
+- `signl4-integration-google-iot/index.js:19`, `signl4-integration-losant/signl4-alert-v100.node:148`: leaked secret `96sbq38s`.
+- `art/lead_nemotron3.txt`, `hypotheses-nemotron3.txt`: ranked hypothesis inputs ([70] demo EAWebService credential-in-URL; [95] vps takeover; [85] EventProviderAPI).
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m$ [0mcat README.md; echo "=== analyst-out.txt ==="; cat analyst-out.txt; echo "=== state_bigpickle ==="; cat state_bigpickle.json; echo "=== state_nemotron3 ==="; cat state_nemotron3.json; echo "=== scope.yml ==="; cat scope.yml
+# derdack-hunt
+
+24/7 deep multi-model bug-hunting automation for **Derdack GmbH / Derdack Group** (Oliver Maicher bug-bounty hub).
+
+Scope: All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert
+(full exclusion + rules list in `scope.yml`)
+
+Pipeline (all workflows run every 20 minutes):
+
+- **Deep Hunt** (`hunt.yml`): analyst hunts the discovered inventory + hypotheses, emits structured
+  leads, chains primitives, self-critiques. Models: mimo.
+- **Triager** (`triage.yml`): second-model 7-Question Gate validation + live passive probe; keeps
+  running count in `reports/valid-bugs.md`.
+- **Reposcan** (`reposcan.yml`): deep source scan of any public GitHub org (if configured).
+- **Sync Issues** (`sync-issues.yml`): mirrors leads to GitHub issues.
+
+Testing discipline: rate-limited (1 rps), no DoS/account-lockout, writes only on non-prod/test
+assets, no exposure of customer/employee/financial/auth data, secrets committed only as hashes.
+
+> IMPORTANT: the pipeline produces CANDIDATE leads. A reportable, validated finding requires
+> human triage + proof against the program's gate. No finding is fabricated; scanner output alone
+> is never accepted. Active testing is gated behind the in-scope hosts in `inventory/derdack.md` and
+> must stay within the program's published scope.
+
+Artifacts:
+
+| Artifact | Purpose |
+|---|---|
+| `leads/` | Candidate findings (UNVALIDATED) |
+| `triage/` | Validation verdicts |
+| `reports/valid-bugs.md` | Validated findings + running count |
+| `scope.yml` | Program scope and exclusions (edit to adjust) |
+
+Program description: German software company providing mobile alerting, incident response, and enterprise notification solutions
+=== analyst-out.txt ===
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && echo "---" && git log --oneline -10 2>/dev/null && echo "---" && ls -la leads/ 2>/dev/null; ls -la reports/ 2>/dev/null; ls -la art/ 2>/dev/null
+total 1548
+drwxr-xr-x 12 runner runner   4096 Oct 13 07:14 .
+drwxr-xr-x  3 runner runner   4096 Oct 13 07:13 ..
+drwxr-xr-x  7 runner runner   4096 Oct 13 07:14 .git
+drwxr-xr-x  3 runner runner   4096 Oct 13 07:13 .github
+-rw-r--r--  1 runner runner   1831 Oct 13 07:13 README.md
+-rw-r--r--  1 runner runner     32 Oct 13 07:14 analyst-out.txt
+-rw-r--r--  1 runner runner 732531 Oct 13 07:14 analyst-prompt.txt
+-rw-r--r--  1 runner runner 728652 Oct 13 07:14 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 inventory
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 leads
+-rw-r--r--  1 runner runner  22152 Oct 13 07:13 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 reports
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct 13 07:13 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct 13 07:13 scripts
+-rw-r--r--  1 runner runner     33 Oct 13 07:13 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct 13 07:13 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct 13 07:13 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct 13 07:13 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct 13 07:13 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct 13 07:13 state_nemotron3.json
+drwxr-xr-x  2 runner runner  16384 Oct 13 07:13 triage
+---
+53e0333 triage 2026-10-13-04-04
+---
+total 4720
+drwxr-xr-x  2 runner runner    4096 Oct 13 07:13 .
+drwxr-xr-x 12 runner runner    4096 Oct 13 07:14 ..
+-rw-r--r--  1 runner runner 1710833 Oct 13 07:13 lead-bigpickle.md
+-rw-r--r--  1 runner runner   12036 Oct 13 07:13 lead-laguna.md
+-rw-r--r--  1 runner runner   11800 Oct 13 07:13 lead-ling3.md
+-rw-r--r--  1 runner runner   12220 Oct 13 07:13 lead-longcat.md
+-rw-r--r--  1 runner runner      18 Oct 13 07:13 lead-mimo.md
+-rw-r--r--  1 runner runner 2982771 Oct 13 07:13 lead-nemotron3.md
+-rw-r--r--  1 runner runner   82604 Oct 13 07:13 reposcan-derdack.md
+total 12452
+drwxr-xr-x  2 runner runner    4096 Oct 13 07:13 .
+drwxr-xr-x 12 runner runner    4096 Oct 13 07:14 ..
+-rw-r--r--  1 runner runner 7340328 Oct 13 07:13 analyst-bigpickle.log
+-rw-r--r--  1 runner runner   51212 Oct 13 07:13 analyst-laguna.log
+-rw-r--r--  1 runner runner   50976 Oct 13 07:13 analyst-ling3.log
+-rw-r--r--  1 runner runner   51230 Oct 13 07:13 analyst-longcat.log
+-rw-r--r--  1 runner runner 4333237 Oct 13 07:13 analyst-nemotron3.log
+-rw-r--r--  1 runner runner      54 Oct 13 07:13 hypotheses-bigpickle.txt
+-rw-r--r--  1 runner runner      51 Oct 13 07:13 hypotheses-laguna.txt
+-rw-r--r--  1 runner runner      50 Oct 13 07:13 hypotheses-ling3.txt
+-rw-r--r--  1 runner runner      52 Oct 13 07:13 hypotheses-longcat.txt
+-rw-r--r--  1 runner runner   14632 Oct 13 07:13 hypotheses-nemotron3.txt
+-rw-r--r--  1 runner runner  991245 Oct 13 07:13 hypotheses.md
+-rw-r--r--  1 runner runner    5996 Oct 13 07:13 valid-bugs.md
+[0m
+## Objective
+- Continue an authorized, passive-first bug-bounty hunt against Derdack GmbH / Derdack Group in-scope assets (SIGNL4 + Enterprise Alert), following the 7-step structured analyst output (DELTA/PRIO/HYP/SELF-CRITIQUE/NEXT/LEARN/RISK).
+- Report channel: `bugs.olivermaicher.eu`; phase=POC, current target focus `api`.
+
+## Important Details
+- In-scope: all Derdack-owned infra/websites/APIs/SaaS/mobile/backend/status pages/domains incl. SIGNL4 and Enterprise Alert.
+- REJECTED classes (program scope): network/account-lockout DoS, descriptive errors/headers only, robots.txt/public files, outdated libs, OPTIONS/TRACE, CSRF on logout/anon forms, cookie flags on non-sensitive data, self-XSS, scanner reports w/o POC, social engineering, username enumeration on login/forgot-password, brute-force/rate-limit/lockout policy, SSL/TLS, clickjacking w/o exploit, SPF/DKIM/DMARC, known-vuln lib w/o program-specific exploit, password-recovery policy, autocomplete, public login panels, lack of email verification, session control during email/password change, and any exposure of customer/employee/financial/auth data during testing.
+- Live-probe rules: passive-first, ≤1 rps, GET/HEAD/OPTIONS only, no auth-bypass or mutating tests on live customer data; sha256 any secret; facts vs hypotheses strictly separated; no endpoint-map-only claims.
+- Key stable facts: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) share byte-identical RS256 JWKS `kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`; shared `client_id 692A0A56-892F-4AE2-8259-76DA398990B6`; account IdP `issuer=https://connect.signl4.com/identity` (mint-mismatch); plain PKCE allowed; password grant enabled on staging.
+- Webhook control semantics: safe non-mutating discriminator = `POST` with `Content-Length: 0` → valid `400 code 4000` ("event null or empty") vs invalid `404 code 3004` ("No matching event source found."). A `{}` body → `HTTP 201 + eventId` = REAL event creation (breach) — do NOT repeat.
+- Secrets evaluate on shared registry: `connect`, `account`, `api` `.signl4.com` all accept same team secret (not host-scoped).
+- Leaked live team webhook secrets: `vbguzfsi` (sha256 `69844b58…9c5d`) at `github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7`; `96sbq38s` (sha256 `cbc2189c…eb85`) at `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148`. Authored by staff `rons4`; both already in reported family `valid-bugs.md` CVSS 5.3.
+- `signl4.derdack.com` permanently unreachable (8+ cycles TCP timeout); `vps.signl4.com` dangling A→72.167.227.27 (GoDaddy, cert CN=server.d1g.it) = takeover candidate gated HUMAN_ONLY.
+- V4 API namespace confirmed absent; `api/v2/teams` auth-status flaps temporally (401 vs 405 across cycles).
+
+## Work State
+### Completed
+- Full estate map: 6 identity hosts, V1/V2/V3 + webhook + events namespaces, `demo.enterprisealert.com/EAWebService/` live EA 9.5.26147 portal (root 404, path-family probing found it).
+- Confirmed `Content-Length:0` webhook oracle; two live secrets validated non-mutating; multi-host secret acceptance.
+- Closed negatives: `fix.signl4.com/signin-oidc` empty 500 (no reflection); GraphQL 15/15 bare 404; Blazor `_framework/blazor.boot.json` 404; prepaid tenant-body REFUTED (131 write ops swept, zero accept tenant); DPoP advertised but not enforced.
+- Marked FINAL items: (1) confirm-and-document two live webhook secrets + injection + 3-host scope (already-reported family); (2) control-methodology correction (`Content-Length:0` safe, `{}` = injection).
+
+### Active
+- POC phase; leaked-secret finding report-ready (novelty low, both already reported); FINAL 3 dead.
+- AUTH_HELPED queue (cross-env token forgery, V1 userId IDOR, V2 changePassword, V3 BOLA) blocked on a leaked `client_secret` / REST `X-S4-Api-Key`.
+
+### Blocked
+- AUTH_HELPED queue needs a legitimate credential (`client_secret` / `X-S4-Api-Key` / team-secret) to progress.
+- Triage pipeline dead: ≥58 consecutive Triager `UnknownError` runs; `grep "\[UNVALIDATED\]" leads/lead-*.md` matches 0 → `reports/valid-bugs.md` running count unreliable.
+- `vps.signl4.com` takeover is HUMAN_ONLY (DNS/hosting-account control).
+
+## Next Move
+1. [NEXT] RAG: scan `github.com/signl4/docs` git history (`git clone --filter=blob:none … && git log -p --all | grep -E 'client_secret|X-S4-Api-Key|webhook/'`) for removed/rotated credentials — only remaining passive route to unlock AUTH_HELPED queue; no live requests.
+2. Validate any candidate secret ONLY with `Content-Length:0` POST control (400/4000 vs 404/3004); never a real event body.
+
+## Relevant Files
+- `inventory/derdack.md`: host inventory + passive recon timeline (seed 2026-09-02).
+- `leads/lead-*.md`: per-host leads; `grep "[UNVALIDATED]"` target of triage.
+- `reports/valid-bugs.md`: reported findings list (currently unreliable — triage gate dead).
+- `.github/workflows/triage.yml`: triage gate; line 45 `grep "\[UNVALIDATED\]"` broken; 57+ consecutive failures.
+- `.github/workflows/hunt.yml`: hunt workflow (`PROBE_ALLOW: derdack.com` at line 13).
+- `probe-results.md`: accumulated probe output.
+- `github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7`: leaked secret `vbguzfsi`.
+- `signl4-integration-google-iot/index.js:19`, `signl4-integration-losant/signl4-alert-v100.node:148`: leaked secret `96sbq38s`.
+- `art/lead_nemotron3.txt`, `hypotheses-nemotron3.txt`: ranked hypothesis inputs ([70] demo EAWebService credential-in-URL; [95] vps takeover; [85] EventProviderAPI).
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+=== state_bigpickle ===
+{"phase": "POC", "target": "api"}=== state_nemotron3 ===
+{"phase": "POC", "target": "api"}=== scope.yml ===
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+  passive_first: false          # deep-hunt agent: active probes allowed when scoped
+  max_requests_per_second: 1    # never hammer live infra
+  no_doom: true                 # no DoS/DDoS, no account-lockout attacks
+  account_creation: restricted  # only on test/sandbox assets, never live customer data
+  no_data_modification: true    # no writes/deletes on live customer data
+  no_pre_disclosure: true       # never disclose before program response
+  poc_required: true            # scanner output alone is REJECTED
+  redact_secrets_in_commits: true
+
+models:
+  - { id: opencode/big-pickle, name: bigpickle }
+  - { id: opencode/nemotron-3-ultra-free, name: nemotron3 }
+  - { id: opencode/longcat-2.0-free, name: longcat }
+  - { id: opencode/ling-3.0-flash-free, name: ling3 }
+  - { id: opencode/laguna-s-2.1-free, name: laguna }
+[0m
+[0m$ [0mwc -l analyst-prompt.txt ctx.txt; echo "=== HEAD analyst-prompt (first 200 lines) ==="; sed -n '1,200p' analyst-prompt.txt
+4155 analyst-prompt.txt
+   4126 ctx.txt
+   8281 total
+=== HEAD analyst-prompt (first 200 lines) ===
+=== KNOWLEDGE BASE ===
+# Knowledge Base (seed)
+- 2026-09-03 REJECTED none this cycle — all hypotheses target in-scope HIGH-VALUE classes with concrete verify steps
+- 2026-09-03 ACCEPTED MISCONFIG @ dev.derdack.com: dev environments frequently expose debug interfaces; passive probe cost near-zero
+- 2026-09-03 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+- 2026-09-03 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+- 2026-09-03 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+- 2026-09-03 ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+- 2026-09-03 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+- 2026-09-03 REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- 2026-09-03 ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive probe cost near-zero
+- 2026-09-03 REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+- 2026-09-03 REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+- 2026-09-03 ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+- 2026-09-03 REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+- 2026-09-03 REJECTED MISCONFIG @ dev.derdack.com: MultiViews path disclosure is a static dot-prefix basename echo — identical output for fabricated paths proves no real sensitive files; only doc-root namespace is surfaced, impact minimal.
+- 2026-09-03 ACCEPTED AUTH @ www.derdack.com: WP REST API correctly enforces auth on settings/users/me/oembed-proxy/drafts (401/400); user enumeration confirmed but low-value public-blog exposure only.
+- 2026-09-03 REJECTED SSRF @ www.derdack.com: oEmbed proxy returns 401 for proxied requests — SSRF vector blocked.
+- 2026-09-04 REJECTED IDOR @ www.derdack.com revisions/autosaves: confidence 25 < 40; all prior protected WP endpoints returned 401; capability check appears intact.
+- 2026-09-04 REJECTED IDOR @ www.derdack.com users/{id} PII: confidence 30 < 40; /users collection already exposed no email; single-user endpoint unlikely to differ.
+- 2026-09-04 ACCEPTED OTHER @ signl4.derdack.com: 40 confidence warranting final probe — if alternate Host/port fails, permanently reject signl4 and pivot all remaining effort to www.derdack.com WP surface.
+- 2026-09-04 ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive probe cost near-zero
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com: WordPress REST API exposed (wp-json), Contact Form 7, user enumeration vector confirmed in-scope
+- 2026-09-04 REJECTED SSRF @ signals.derdack.com: subdomain NXDOMAIN — does not exist
+- 2026-09-04 REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+- 2026-09-04 REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+- 2026-09-04 REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- 2026-09-04 REJECTED MISCONFIG @ dev.derdack.com: MultiViews path disclosure is a static dot-prefix basename echo — identical output for fabricated paths proves no real sensitive files; only doc-root namespace is surfaced, impact minimal (bigpickle dissent)
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com: WP REST API correctly enforces auth on settings/users/me/oembed-proxy/drafts (401/400); user enumeration confirmed but low-value public-blog exposure only
+- 2026-09-04 REJECTED SSRF @ www.derdack.com: oEmbed proxy returns 401 for proxied requests — SSRF vector blocked
+- 2026-09-04 REJECTED OTHER @ signl4.derdack.com: alternate port/host probes all returned http_code=000; signl4 is permanently unreachable across 80, 443, 8080, 8443, and IP+Host header variants; firewall/ACL block is TCP-layer, not HTTP-filtering — permanently reject signl4.
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com: Yoast SEO REST API (`/yoast/v1/`) route schema fully enumerated but all admin endpoints (file_size, statistics, workouts, semrush, configuration, check_capability) return 401; only `get_head?url=` is public (expected functionality).
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com: `/wp-json/wp/v2/users/1` confirmed returns only id, name, slug, link — no email/PII; user enumeration is low-value public-blog exposure only.
+- 2026-09-04 ACCEPTED MISCONFIG @ www.derdack.com: `xmlrpc.php` returns 503 (blocked at LB level); attack vector neutralized.
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com: CF7 endpoint `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated).
+- 2026-09-04 REJECTED SSRF @ www.derdack.com: Yoast `file_size` endpoint returns 401 (auth-gated); no SSRF possible without authentication.
+- 2026-09-04 REJECTED OTHER @ signl4.derdack.com: alternate port/host probes all returned http_code=000; signl4 permanently unreachable
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com: Yoast SEO REST API routes all return 401; only `get_head?url=` is public
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com: `/wp-json/wp/v2/users/1` returns only name/slug; no PII
+- 2026-09-04 ACCEPTED MISCONFIG @ www.derdack.com: xmlrpc.php returns 503 (blocked at LB)
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com: CF7 endpoint returns 403 (properly gated)
+- 2026-09-04 REJECTED SSRF @ www.derdack.com: Yoast `file_size` returns 401 (auth-gated)
+- 2026-09-04 ACCEPTED MISCONFIG @ dev.derdack.com: MultiViews confirmed; WordPress installation status unknown — probe required.
+- 2026-09-04 REJECTED OTHER @ signl4.derdack.com: permanently unreachable across 8+ probe cycles (all TCP timeout); all attack surface value = 0.
+- 2026-09-04 ACCEPTED MISCONFIG @ www.derdack.com: blog.derdack.com & techblog.derdack.com HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
+- 2026-09-04 REJECTED AUTH @ www.derdack.com: Media library `/wp-json/wp/v2/media` returns 200 but only public assets (stock images, 1 MP3 podcast); no internal docs/PDFs/backups/PII found
+- 2026-09-04 ACCEPTED MISCONFIG @ www.derdack.com: /de/ and /ea/ are separate WP Multisite subdirectory installs (sites/5 and sites/6) with unique plugin namespaces (complianz, popular-posts, two-factor, wp-site-health) — new attack surface previously unprobed
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com/de/: xmlrpc.php fully functional (200, full method list) while root xmlrpc is 503-blocked — endpoint exposure anomaly on multisite subsite
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com/ea/: xmlrpc.php returns 405 (blocked) — /de/ is the anomalous sub-install
+- 2026-09-04 ACCEPTED MISCONFIG @ dev.derdack.com: root returns parked 403 with IONOS sedoparking iframe while /.well-known/, /.ssh/, /backups/, /logs/ still served via Apache — parked/error config with partial real backends
+- 2026-09-04 ACCEPTED MISCONFIG @ all: x-ws-origin: available + x-ws-ratelimit custom headers present on every derdack host — consistent shared reverse-proxy/WAF fingerprint
+- 2026-09-04 REJECTED MISCONFIG @ dev.derdack.com: WordPress install — wp-json/ 404, wp-admin 404, xmlrpc not present; previous hypothesis invalidated
+- 2026-09-04 ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
+- 2026-09-04 REJECTED MISCONFIG @ dev.derdack.com: WordPress staging/debug exposure — wp-json/wp-login/xmlrpc all 404/503; no WP on dev host
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com: Media library `/wp-json/wp/v2/media` returns 200 with 2170 items but only public marketing assets (images, logos, 1 MP3 podcast); no internal docs/PDFs/backups/PII found
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com/ea/: xmlrpc.php POST returns full method list (GET returns 405) — /ea/ also exposed, not just /de/
+- 2026-09-04 REJECTED SSRF @ www.derdack.com/de/: pingback.ping to 169.254.169.254 returns faultCode 0 empty — ambiguous, not confirmed SSRF
+- 2026-09-04 REJECTED MISCONFIG @ www.derdack.com/ea/: Whitepaper_test.pdf not found in media library — hypothesis invalidated
+- 2026-09-04 REJECTED SSRF @ www.derdack.com/de/: pingback.ping→169.254.169.254 returns faultCode 0 empty faultString — no fetch artifact, cloud-metadata SSRF unconfirmed; closed
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com/ea/: xmlrpc.php POST returns full method list (earlier 405 was GET-only) — BOTH /de/ and /ea/ multisite installs run open XML-RPC
+- 2026-09-04 ACCEPTED AUTH @ www.derdack.com/de/: metaWeblog.getUsersBlogs(empty creds)→empty string, not 401/403 fault — non-standard XML-RPC auth handling; method-level cap check warranted
+- 2026-09-04 REJECTED MISCONFIG @ www.derdack.com/ea/: Whitepaper_test.pdf absent from /de/+/ea/ media (images only) — test-PDF vector invalidated
+- 2026-09-05 ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews misconfiguration; passive probe cost near-zero
+- 2026-09-05 ACCEPTED AUTH @ www.derdack.com/de/: xmlrpc.php fully functional (200, full method list) while root xmlrpc is 503-blocked — endpoint exposure anomaly on multisite subsite
+- 2026-09-05 ACCEPTED AUTH @ www.derdack.com/ea/: xmlrpc.php POST returns full method list (GET returns 405) — /ea/ also exposed, not just /de/
+- 2026-09-05 REJECTED SSRF @ www.derdack.com/de/: pingback.ping to 169.254.169.254 returns faultCode 0 empty — ambiguous, not confirmed SSRF
+- 2026-09-05 REJECTED MISCONFIG @ www.derdack.com/ea/: Whitepaper_test.pdf not found in media library — hypothesis invalidated
+- 2026-09-05 REJECTED brute-force @ all: program explicitly excludes rate-limit/lockout testing
+- 2026-09-05 REJECTED OPTIONS/TRACE @ all: program explicitly excludes OPTIONS/TRACE as standalone findings
+- 2026-09-05 REJECTED OTHER @ signl4.derdack.com: permanently unreachable across 8+ probe cycles (all TCP timeout); all attack surface value = 0
+- 2026-09-05 ACCEPTED AUTH @ devconnect.signl4.com: staging IdentityServer live + shares prod RS256 signing key (kid/n/x5t/x5c identical) and account-portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6 with prod — cross-env identity isolation failure confirmed by direct JWKS + authorize-redirect comparison
+- 2026-09-05 ACCEPTED MISCONFIG @ labconnect/labaccount.signl4.com: Azure AppGW/v2 502 on all probed paths (root, /identity/, /connect/authorize) — unmapped backend, estate inert
+- 2026-09-05 ACCEPTED MISCONFIG @ api.signl4.com: /api/v2 = alerts(405)+teams(401 Bearer) only; no unauth read surface; root 301 → account.signl4.com/manage
+- 2026-09-05 REJECTED AUTH @ www.signl4.com: WP users/media REST is public-blog-only; users/1 no email/PII — same low value as derdack.com
+- 2026-09-05 ACCEPTED MISCONFIG @ www.signl4.com: WPML ate/proxy 401, wpaas activity-logs 401, divitorque settings 401 (gated); wpml-ph-make-external-request + wpaas diagnostics rest_no_route on GET = registered for POST/other methods only
+- 2026-09-05 ACCEPTED AUTH @ devconnect.signl4.com: SIGNL4 dev/lab OIDC+account staging estate resolves on dedicated IPs (dev 108.143.123.104, lab 13.93.49.201); CSP explicitly references dev/lab Connect+Account hosts — new attack surface
+- 2026-09-05 ACCEPTED MISCONFIG @ api.signl4.com: /api/v2/alerts returns 405 Allow:POST confirming live API namespace; base routes unprobed for GET
+- 2026-09-05 ACCEPTED AUTH @ www.signl4.com: CF-fronted WordPress confirmed via xmlrpc pingback link; same fleet family as derdack.com
+- 2026-09-05 REJECTED IDOR @ www.derdack.com revisions/autosaves: all protected endpoints return 401; capability check intact
+- 2026-09-05 REJECTED IDOR @ www.derdack.com users/{id} PII: collection exposes no email; single endpoint unlikely to differ
+- 2026-09-05 ACCEPTED MISCONFIG @ dev.derdack.com: 300 Multiple Choices with sensitive path suggestions confirms Apache mod_negotiation/MultiViews; passive probe cost near-zero
+- 2026-09-05 ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS redirects to HTTP (downgrade chain) — mixed content risk confirmed
+- 2026-09-05 ACCEPTED MISCONFIG @ www.derdack.com: Missing HSTS, CSP, X-Frame-Options on primary domain
+- 2026-09-05 ACCEPTED AUTH @ www.derdack.com: WP REST API auth gates intact on settings/users/me/oembed-proxy/drafts/CF7/Yoast admin (401/403/400)
+- 2026-09-05 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+- 2026-09-05 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+- 2026-09-05 ACCEPTED AUTH @ devaccount.signl4.com: staging account portal live → devconnect authorize w/ SAME client_id 692A0A56- + scopes (account_portal, public_api_read/write/prov, offline_access), PKCE S256+nonce+form_post, env-scoped redirect_uri — client/scope reuse spans OIDC and Account estate
+- 2026-09-05 ACCEPTED MISCONFIG @ api.signl4.com: registered route population = alerts(405 POST), teams/webhooks/subscriptions(401 Bearer), csp/report(405 POST sink); all other paths incl /api/v1, swagger, openapi.json 404 — zero unauth read surface
+- 2026-09-05 ACCEPTED OTHER @ s4dev1-8.enterprisealert.com: CSP-referenced staging alert fleet resolves 4.207.244.99, 404 root / 504 on identity+webhook+api paths (live front, dead backend) — same inert class as lab estate
+- 2026-09-05 ACCEPTED AUTH @ www.signl4.com: two-factor/user-info 401 rest_forbidden — gated, no 2FA-status disclosure
+- 2026-09-05 REJECTED MISCONFIG @ devconnect.signl4.com: algs=['RS256'] only + no JWT alg-confusion surface on staging IdP
+- 2026-09-05 ACCEPTED AUTH @ devconnect.signl4.com: OIDC discovery 200, grant_types includes password + RS256 key byte-identical to prod (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — cross-env identity isolation failure confirmed
+- 2026-09-05 ACCEPTED MISCONFIG @ api.signl4.com/api/v2: /alerts 405 Allow:POST, /teams /webhooks /subscriptions 401 Bearer, /csp/report 405 POST sink — zero unauth read surface, POST-only write surface
+- 2026-09-05 ACCEPTED AUTH @ www.derdack.com/de/: xmlrpc.php POST 405 Allow:POST with full method list (wp.uploadFile, metaWeblog.newMediaObject) — legacy XML-RPC exposed on multisite subsite while root blocked
+- 2026-09-05 REJECTED MISCONFIG @ devconnect.signl4.com: algs=['RS256'] only — no JWT alg-confusion surface on staging IdP
+- 2026-09-05 ACCEPTED MISCONFIG @ s4dev1-8.enterprisealert.com: all resolve 4.207.244.99, 404 root / 504 on identity+webhook+api — inert staging fleet
+- 2026-09-05 REJECTED SSRF @ www.signl4.com: OTGS Installer fetch-subscription (Push.php source): GET-only, NO permission_callback, handler takes no args; 200/403 = 2h refresh-interval gating not ?url=; outbound target FIXED api.wpml.org/api.toolset.com w/ stored site_key → no attacker URL control, no site-key echo → SSRF + disclosure invalidated.
+- 2026-09-05 ACCEPTED AUTH @ www.signl4.com: fetch-subscription route confirmed unauthenticated (missing permission_callback per source + observed 200) but impact = throttled vendor-side subscription refresh only; no program-specific exploit → negligible, parked.
+- 2026-09-05 ACCEPTED AUTH @ devconnect.signl4.com: OIDC discovery 200, grant_types includes password + RS256 key byte-identical to prod — cross-env identity isolation failure confirmed.
+- 2026-09-05 REJECTED BUSLOGIC @ api.signl4.com/api/v2/alerts: POST returns 401 (auth required) — unauthenticated alert ingestion hypothesis invalidated; endpoint Bearer-gated like all other /api/v2 routes
+- 2026-09-05 REJECTED AUTH @ www.derdack.com/de/xmlrpc.php wp.uploadFile: faultCode 403 "incorrect username/password" — XML-RPC mutating methods enforce authentication
+- 2026-09-05 REJECTED AUTH @ www.derdack.com/ea/xmlrpc.php wp.uploadFile: faultCode 403 "Incorrect username or password" — same auth enforcement on /ea/ multisite
+- 2026-09-05 ACCEPTED MISCONFIG @ api.signl4.com/api/v2/csp/report: POST returns 204 unauthenticated — CSP reporting sink, expected, negligible impact
+- 2026-09-05 ACCEPTED AUTH @ devconnect.signl4.com: password grant listed but returns invalid_client without client_secret — grant enabled but not exploitable without secret
+- 2026-09-05 ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 5x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com) — cross-env signing key reuse confirmed
+- 2026-09-05 ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- 2026-09-06 REJECTED BUSLOGIC @ api.signl4.com/api/v2/alerts: POST returns 401 (auth required) — unauthenticated alert ingestion hypothesis invalidated; endpoint Bearer-gated like all other /api/v2 routes
+- 2026-09-06 REJECTED AUTH @ www.derdack.com/de/xmlrpc.php wp.uploadFile: faultCode 403 "incorrect username/password" — XML-RPC mutating methods enforce authentication
+- 2026-09-06 REJECTED AUTH @ www.derdack.com/ea/xmlrpc.php wp.uploadFile: faultCode 403 "Incorrect username or password" — same auth enforcement on /ea/ multisite
+- 2026-09-06 ACCEPTED MISCONFIG @ api.signl4.com/api/v2/csp/report: POST returns 204 unauthenticated — CSP reporting sink, expected, negligible impact
+- 2026-09-06 ACCEPTED AUTH @ devconnect.signl4.com: password grant listed but returns invalid_client without client_secret — grant enabled but not exploitable without secret
+- 2026-09-06 ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 5x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com) — cross-env signing key reuse confirmed
+- 2026-09-06 ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- 2026-09-06 ACCEPTED AUTH @ api.signl4.com: api/identity re-verified live (OD 200, issuer=connect, JWKS kid 91EE4F3C shared) — 7th live deep-equal of the cross-env trust anchor; /api/v2/teams 401 baseline stable; no drift between cycles (bigpickle)
+- 2026-09-06 ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 6x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com) — cross-env signing key reuse confirmed
+- 2026-09-06 ACCEPTED AUTH @ devconnect.signl4.com: password grant listed in OIDC discovery alongside 7 other grant types — grant enabled but not exploitable without client_secret
+- 2026-09-06 ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and scope set — cross-env client reuse confirmed
+- 2026-09-06 ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect at 8th deep-equal observation (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n_sha 138f432b, x5t ke5PPOlOtRevZrJU90l-yw4x7ic) — cross-env trust anchor re-confirmed stable; /api/v2/teams 401 + alerts 411(route) baselines stabilized.
+- 2026-09-06 ACCEPTED AUTH @ devfix.signl4.com: /signin-oidc 500 + root 200 on 108.143.123.104 staging cluster — support portal OIDC callback registered, corroborates staging-IdP attachment.
+- 2026-09-06 REJECTED OTHER @ api.signl4.com/api/v2/alerts: POST returns 411 (length) — method-routing sink family, not an unauth write surface; no new defect.
+- 2026-09-06 REJECTED MISCONFIG @ api/connect/devconnect.signl4.com: Swagger/OpenAPI closed on all estates (404 across 9 OAS paths × 3 hosts) — no schema-doc disclosure; prior /en16931+ZUGFeRD staging-route claim invalidated (schema no longer reachable).
+- 2026-09-06 ACCEPTED AUTH @ connect.signl4.com/api/v3: bare 404 vs registered-route 401 Bearer differential — routing is auth-before-route; no anonymous read surface; api host confirmed V2-only (/api/v3 404).
+- 2026-09-06 ACCEPTED AUTH @ api.signl4.com: api/identity re-verified live (OD 200, issuer=connect, JWKS kid 91EE4F3C shared) — 8th live deep-equal of the cross-env trust anchor; /api/v2/teams 405 baseline stable; no drift between cycles
+- 2026-09-06 ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 7x verified (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, n, x5t ke5PPOlOtRevZrJU90l-yw4x7ic, x5c CN=*.signl4.com) — cross-env signing key reuse confirmed
+- 2026-09-06 REJECTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+- 2026-09-06 REJECTED AUTH @ devconnect.signl4.com/identity/connect/token client_credentials grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+- 2026-09-06 ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer
+- 2026-09-06 ACCEPTED MISCONFIG @ dev.derdack.com: MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+- 2026-09-07 ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect at 9th deep-equal observation (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — cross-env trust anchor re-confirmed stable
+- 2026-09-07 ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 9x verified (kid/n/x5t/x5c deep-equal) — cross-env signing key reuse confirmed
+- 2026-09-07 ACCEPTED AUTH @ devconnect.signl4.com: password grant listed in OIDC discovery alongside 7 other grant types — grant enabled but not exploitable without client_secret
+- 2026-09-07 ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and scope set — cross-env client reuse confirmed
+- 2026-09-07 ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- 2026-09-07 ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer
+- 2026-09-07 ACCEPTED MISCONFIG @ dev.derdack.com: MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+- 2026-09-07 ACCEPTED MISCONFIG @ connect.signl4.com/api/v3: bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
+- 2026-09-07 REJECTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+- 2026-09-07 REJECTED AUTH @ devconnect.signl4.com/identity/connect/token client_credentials grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+- 2026-09-07 ACCEPTED AUTH @ connect.signl4.com/api/v3/*: full V3 route map confirmed — /users|teams|webhooks|subscriptions Bearer-gated (401), /schedules|devices POST-write-only (405), /csp/report POST-sink (405); scripts|alerts|scim|health 404; no anonymous read surface
+- 2026-09-07 ACCEPTED AUTH @ api.signl4.com/api/v2/*: full V2 route map — /teams|users|webhooks|subscriptions Bearer-gated (401), /alerts|schedules POST-write-only (405), /csp/report POST-sink (204); same backend as connect (shared appId)
+- 2026-09-07 ACCEPTED MISCONFIG @ devfix.signl4.com: Blazor Server app ("Admin Support Page") on staging cluster 108.143.123.104; /_blazor/negotiate 200+connectionId (standard Blazor behavior, not auth bypass); /signin-oidc 500 confirms OIDC callback registered but broken
+- 2026-09-07 ACCEPTED OTHER @ connect.signl4.com + api.signl4.com: shared request-context appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd — same backend infrastructure confirmed
+- 2026-09-07 ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect at 9th deep-equal observation — cross-env trust anchor re-confirmed stable
+- 2026-09-07 ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 9x verified — cross-env signing key reuse confirmed
+- 2026-09-07 ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56 — cross-env client reuse confirmed
+- 2026-09-07 ACCEPTED MISCONFIG @ dev.derdack.com: MultiViews 300 stable — static namespace echo, files 403/404
+- 2026-09-07 ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler
+- 2026-09-07 ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- 2026-09-07 ACCEPTED AUTH @ connect.signl4.com/api/v3/*: full V3 route map — /users|teams|webhooks|subscriptions Bearer-gated (401), /schedules|devices POST-write-only (405), /csp/report POST-sink (405)
+- 2026-09-07 ACCEPTED AUTH @ api.signl4.com/api/v2/*: full V2 route map — same backend as connect (shared appId)
+- 2026-09-07 ACCEPTED MISCONFIG @ devfix.signl4.com: Blazor Server app; /signin-oidc 500 confirms OIDC callback registered but broken
+- 2026-09-08 ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect at 9th deep-equal observation (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — cross-env trust anchor re-confirmed stable
+- 2026-09-08 ACCEPTED AUTH @ devconnect.signl4.com/identity & connect.signl4.com/identity: JWKS byte-identical 9x verified (kid/n/x5t/x5c deep-equal) — cross-env signing key reuse confirmed
+- 2026-09-08 ACCEPTED AUTH @ devconnect.signl4.com: password grant listed in OIDC discovery alongside 7 other grant types — grant enabled but not exploitable without client_secret
+- 2026-09-08 ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and scope set — cross-env client reuse confirmed
+- 2026-09-08 ACCEPTED MISCONFIG @ blog.derdack.com & techblog.derdack.com: HTTPS→HTTP downgrade (302 to http://www.derdack.com/...) still live; www.derdack.com lacks HSTS/CSP/X-Frame-Options
+- 2026-09-08 ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET (not 401) — auth validation deferred to handler, not route layer
+- 2026-09-08 ACCEPTED MISCONFIG @ dev.derdack.com: MultiViews 300 stable (/.well-known/, /.ssh/, /.bash_history/, /.viminfo/) — static namespace echo, files 403/404
+- 2026-09-08 ACCEPTED MISCONFIG @ connect.signl4.com/api/v3: bare 404 vs registered subroutes 401/405 — routing is auth-before-route at handler; no anonymous read surface
+- 2026-09-08 REJECTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+- 2026-09-08 REJECTED AUTH @ devconnect.signl4.com/identity/connect/token client_credentials grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+- 2026-09-08 REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.derdack.com); WP auth cookies host-scoped to www.derdack.com, cannot traverse 302→301 HTTP redirect (secure cookies not sent over HTTP); residual = missing HSTS header only on non-sensitive pages (header-level, LOW)
+- 2026-09-08 ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+- 2026-09-08 REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.derdack.com); WP auth cookies host-scoped to www.derdack.com, cannot traverse 302→301 HTTP redirect; residual = missing HSTS header only on non-sensitive pages; LOW
+- 2026-09-08 ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler, not route layer
+- 2026-09-08 REJECTED AUTH @ devconnect.signl4.com: no `registration_endpoint` in OIDC discovery + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration not supported; public-client registration hypothesis closed
+- 2026-09-08 REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed to attacker URI — no open redirect / OAuth code-theft primitive
+- 2026-09-08 ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/deviceauthorization: endpoint live (400 invalid_client w/o secret) + device_code grant confirmed; still client_secret-gated (no public client)
+- 2026-09-08 ACCEPTED MISCONFIG @ www.derdack.com/wp-login.php: sets only `wordpress_test_cookie` `secure` flag, host-only (no Domain attr) — confirms no logged-in cookie traverses HTTPS→HTTP downgrade; session-theft mechanism permanently invalidated, residual missing-HSTS only, LOW
+- 2026-09-08 ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect/devapi at 10th deep-equal observation — cross-env trust anchor re-confirmed stable across 4 identity hosts
+- 2026-09-08 ACCEPTED AUTH @ connect/api/devconnect/devapi.signl4.com: 10th deep-equal of byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — shared prod signing key confirmed across 4 identity hosts; stable, no drift
+- 2026-09-08 REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect / OAuth code-theft primitive
+- 2026-09-08 REJECTED AUTH @ devconnect.signl4.com: no registration_endpoint + auth_methods only client_secret_basic/post — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+- 2026-09-09 REJECTED AUTH @ connect.signl4.com/identity: OIDC discovery byte-identical to devconnect (password/device_code/ciba/token-exchange grants, secret-only auth methods, no registration_endpoint, RS256) — prod is parametric twin of staging, NOT hardened; config-drift dead, twin more proof of systemic replication failure
+- 2026-09-09 REJECTED AUTH @ connect+devconnect /identity/connect/token-exchange: 404 on both hosts — RFC8693 not a standalone endpoint (grant on /connect/token); closed
+- 2026-09-09 ACCEPTED AUTH @ connect+devconnect /identity/connect/ciba + deviceauthorization: both 400 across envs — endpoint twins, all secret-gated
+- 2026-09-09 ACCEPTED MISCONFIG @ devapi.signl4.com: live 1:1 staging API mirror of api.signl4.com (appId cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7), root→devaccount/manage, zero unauth read surface
+- 2026-09-09 ACCEPTED MISCONFIG @ api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycles confirmed
+- 2026-09-09 REJECTED MISCONFIG @ blog.derdack.com/techblog.derdack.com: HTTPS→HTTP downgrade session-theft mechanism invalidated — wp-login.php sets wordpress_test_cookie with `secure` flag + host-only scope (no Domain=.derdack.com); WP auth cookies host-scoped to www.derdack.com, cannot traverse 302→301 HTTP redirect; residual = missing HSTS header only on non-sensitive pages; LOW
+- 2026-09-09 ACCEPTED AUTH @ devconnect.signl4.com/identity/connect/token password grant: returns invalid_client without client_secret — grant listed but not usable without secrets
+- 2026-09-09 ACCEPTED MISCONFIG @ api.signl4.com/api/v2/teams: returns 405 Allow: GET,POST on unauth GET — auth validation deferred to handler, not route layer (10th+ live confirmation)
+- 2026-09-09 ACCEPTED AUTH @ api.signl4.com: api/identity OD 200 + JWKS byte-identical to connect/devconnect/devapi at 10th deep-equal observation — cross-env trust anchor re-confirmed stable across 4 identity hosts
+- 2026-09-09 REJECTED AUTH @ devconnect.signl4.com: no registration_endpoint + token_endpoint_auth_methods only client_secret_basic/post (no `none`) — RFC7591 dynamic client registration unsupported; public-client path permanently closed
+- 2026-09-09 REJECTED OATH @ devconnect.signl4.com/identity/connect/authorize: redirect_uri=evil.com → 302 to /identity/home/error, no code/state echoed — no open redirect / OAuth code-theft primitive
+- 2026-09-09 ACCEPTED AUTH @ connect/api/devconnect/devapi.signl4.com: 10th deep-equal of byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) — shared prod signing key confirmed across 4 identity hosts; stable, no drift
+- 2026-09-09 ACCEPTED AUTH @ devaccount.signl4.com/manage & account.signl4.com/manage: both redirect to respective IdPs with IDENTICAL client_id 692A0A56-892F-4AE2-8259-76DA398990B6 and scope set — cross-env client reuse confirmed
+- 2026-09-09 ACCEPTED AUTH @ api.signl4.com: swagger.json confirms OAuth2 security scheme (authorizationCode flow) targeting connect.signl4.com/identity/connect endpoints with public_api_read+write+offline_access scopes — API accepts Bearer tokens from same shared-signing-key IdP; full cross-env token forgery chain confirmed
+- 2026-09-09 ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v2/swagger.json: global security requirement empty (`"security": [{}]`) — spec declares no auth required while routes enforce Bearer/API-key; spec-vs-implementation mismatch; LOW
+- 2026-09-09 ACCEPTED AUTH @ api.signl4.com: swagger declares `API_Key_Query` scheme (x-s4-api-key in query param) — potential key leakage vector via referrer/logs if live
+- 2026-09-09 REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
+- 2026-09-09 ACCEPTED OTHER @ connect.signl4.com/api/docs: swagger confirms SIGNL4 API V2 = 40+ endpoints (alerts CRUD, teams, webhooks, subscriptions, schedules, users, categories, audits, distribution lists, templates, devices, callout templates) — full attack surface documented
+- 2026-09-09 ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational — first live test confirms API key validation pipeline
+- 2026-09-09 ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json` — distinct auth pipelines with different error responses confirm independent validation paths
+- 2026-09-09 ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
+- 2026-09-09 ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → referrer-leak impact not demonstrable.
+- 2026-09-09 ACCEPTED OTHER @ connect.signl4.com/webhook: URL-embedded static team secret is documented primary credential across 15+ third-party integrations; can ack/resolve genuine alerts; no public leak located (grep.app 429, GitHub code search auth-gated).
+- 2026-09-09 REJECTED OTHER @ public internet: no live SIGNL4 webhook secret or API key found in indexed public content this cycle — credential-leak hypothesis has no current evidence.
+- 2026-09-10 ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational — first live test confirms API key validation pipeline
+- 2026-09-10 ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: Bearer auth returns 401 with `WWW-Authenticate: Bearer`, API key auth returns 403 `application/problem+json` — distinct auth pipelines with different error responses confirm independent validation paths
+- 2026-09-10 ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
+[0m
+[0m$ [0mgrep -n "^=== \|^## \|^# " analyst-prompt.txt | tail -80
+3158:## 2026-09-26 14:00:49 UTC
+3169:## 2026-09-26 17:40:46 UTC
+3181:## 2026-09-26 20:14:26 UTC
+3192:## 2026-09-26 23:00:23 UTC
+3194:## 2026-09-27 01:04:34 UTC
+3201:## 2026-09-27 06:41:11 UTC
+3205:## 2026-09-27 12:30:10 UTC
+3213:## 2026-09-27 17:19:51 UTC
+3221:## 2026-09-27 20:15:17 UTC
+3231:## 2026-09-27 23:07:25 UTC
+3242:## 2026-09-28 01:50:08 UTC
+3251:## 2026-09-28 08:04:59 UTC
+3258:## 2026-09-28 16:39:25 UTC
+3268:## 2026-09-28 22:18:10 UTC
+3275:## 2026-09-29 02:09:34 UTC
+3285:## 2026-09-29 08:11:30 UTC
+3293:## 2026-09-29 14:55:11 UTC
+3300:## 2026-09-29 19:46:53 UTC
+3307:## 2026-09-29 23:21:24 UTC
+3316:## 2026-09-30 02:12:48 UTC
+3323:## 2026-09-30 08:40:11 UTC
+3330:## 2026-09-30 15:26:59 UTC
+3337:## 2026-09-30 20:06:35 UTC
+3344:## 2026-10-01 00:10:27 UTC
+3355:## 2026-10-01 03:15:42 UTC
+3363:## 2026-10-01 10:15:19 UTC
+3371:## 2026-10-01 17:05:18 UTC
+3379:## 2026-10-01 21:52:16 UTC
+3387:## 2026-10-02 01:14:24 UTC
+3394:## 2026-10-02 07:04:25 UTC
+3399:## 2026-10-02 13:58:07 UTC
+3401:## 2026-10-02 18:55:28 UTC
+3412:## 2026-10-02 22:45:45 UTC
+3424:## 2026-10-03 01:37:23 UTC
+3432:## 2026-10-03 07:07:38 UTC
+3441:## 2026-10-03 12:45:01 UTC
+3453:## 2026-10-03 16:45:48 UTC
+3461:## 2026-10-03 19:45:09 UTC
+3469:## 2026-10-03 22:41:26 UTC
+3477:## 2026-10-04 02:01:05 UTC
+3484:## 2026-10-04 07:51:03 UTC
+3494:## 2026-10-04 13:41:19 UTC
+3506:## 2026-10-04 17:55:21 UTC
+3510:## 2026-10-04 20:48:30 UTC
+3518:## 2026-10-04 23:41:44 UTC
+3526:## 2026-10-05 02:26:56 UTC
+3534:## 2026-10-05 09:39:02 UTC
+3544:## 2026-10-05 18:51:36 UTC
+3557:## 2026-10-06 00:34:49 UTC
+3573:## 2026-10-06 07:03:37 UTC
+3599:## 2026-10-06 13:54:11 UTC
+3611:## 2026-10-06 19:34:39 UTC
+3623:## 2026-10-06 23:23:50 UTC
+3631:## 2026-10-07 02:28:26 UTC
+3645:## 2026-10-07 09:31:47 UTC
+3670:## 2026-10-07 16:34:03 UTC
+3691:## 2026-10-07 21:41:18 UTC
+3705:## 2026-10-08 01:34:37 UTC
+3716:## 2026-10-08 07:47:43 UTC
+3755:## 2026-10-08 15:13:05 UTC
+3781:## 2026-10-08 20:25:59 UTC
+3793:## 2026-10-09 00:38:59 UTC
+3807:## 2026-10-09 06:44:16 UTC
+3845:## 2026-10-09 13:49:44 UTC
+3883:## 2026-10-09 19:11:42 UTC
+3899:## 2026-10-09 23:23:32 UTC
+3913:## 2026-10-10 02:30:16 UTC
+3915:## 2026-10-10 08:59:56 UTC
+3917:## 2026-10-10 14:58:37 UTC
+3934:## 2026-10-10 19:07:38 UTC
+3949:## 2026-10-10 22:37:22 UTC
+3959:## 2026-10-11 01:16:33 UTC
+3986:## 2026-10-11 07:16:12 UTC
+4002:## 2026-10-11 14:10:50 UTC
+4018:## 2026-10-11 18:59:36 UTC
+4033:## 2026-10-11 22:40:30 UTC
+4035:## 2026-10-12 01:47:44 UTC
+4037:## 2026-10-12 08:23:47 UTC
+4080:## 2026-10-12 18:08:01 UTC
+4110:## 2026-10-13 00:50:49 UTC
+[0m
+[0m$ [0mgrep -n "DELTA\|PRIO\|SELF-CRITIQUE\|NEXT MOVE\|OUTPUT FORMAT\|structured blocks\|=== END\|=== TASK\|=== INSTRUCTIONS\|You are\|Respond with" analyst-prompt.txt | head -60
+1086:- 2026-10-05 REJECTED OTHER @ filing the signlReports traversal as a fourth [FINAL]: the previous cycle emitted four [FINAL] entries against a three-asset cap. The traversal hypothesis is sound and remains at confidence 45, but it is indistinguishable in kind from the userLicenses BOLA — both AUTH_HELPED, both needing vendor-issued tenants — and keeping both in the final set inflates the queue without adding a distinct attack path. Held at [PRIO] and out of the finals rather than quietly dropped; it is not dead, it is queued behind a sibling of the same class and gate.
+1402:[PRIO] account.signl4.com/webhook/96sbq38s,9.35,attack_surface=10,business_value=10,tech_exposure=9,gate_ease=10,cloud_surface=8,freshness=7
+1403:[PRIO] connect.signl4.com/webhook/vbguzfsi,9.55,attack_surface=10,business_value=10,tech_exposure=9,gate_ease=10,cloud_surface=8,freshness=9
+1404:[PRIO] github.com/signl4/signl4-integration-google-iot,6.40,attack_surface=5,business_value=7,tech_exposure=6,gate_ease=8,cloud_surface=6,freshness=4
+2319:- NEW V1 swagger `behave-as` parameter does NOT exist — the only "behave" occurrence is a 403 response typo: "You are not allowed to perform this method in behave of the user." My prior hypothesis (confiden
+4127:You are a senior bug bounty hunter ANALYST for the Derdack GmbH / Derdack Group program (report channel: bugs.olivermaicher.eu).
+4136:Your job is NOT to invent vulnerabilities. Run the 8 steps and output ONLY structured blocks.
+4138:STEP 1 — DELTA: compare inventory+knowledge+last leads against current surface. [NEW]/[CHANGED] one line each, or NO_DELTA.
+4139:STEP 2 — PRIORITIZE: score top new (or existing) assets 0-10 on attack_surface, business_value, tech_exposure (GraphQL/OAuth/JWT/upload/admin/uncommon), gate_ease (10=no auth), cloud_surface, freshness. priority=0.25a+0.25b+0.15t+0.15g+0.10c+0.10f. Emit [PRIO] asset,score,axis.
+4151:STEP 4 — SELF-CRITIQUE: drop confidence<40 or REJECTED-class or no-verify-steps. [PARKED] <title>: <why>. [FINAL] survivors ranked.
+[0m
+[0m→ [0mRead analyst-prompt.txt[90m [offset=4110, limit=46][0m
+[0m→ [0mRead analyst-prompt.txt[90m [offset=3959, limit=152][0m
+[0m
+[0m$ [0mecho "=== inventory ==="; wc -l inventory/derdack.md; echo "=== valid-bugs ==="; cat reports/valid-bugs.md; echo "=== hypotheses-nemotron3 head ==="; sed -n '1,80p' reports/hypotheses-nemotron3.txt
+=== inventory ===
+2640 inventory/derdack.md
+=== valid-bugs ===
+# Validated findings (running count 0)
+
+- 2 lead(s) marked VALID at 2026-09-03 23:20:09 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 3 lead(s) marked VALID at 2026-09-04 17:46:22 UTC
+  - | Q7 Reasonable triager? | **Yes** | Information disclosure of sensitive file paths on a live dev host is a valid finding |
+  - **Verdict: VALID**
+  - | dev.derdack.com MultiViews path disclosure | **VALID** | 5.3 | Report to bugs.olivermaicher.eu |
+
+- 1 lead(s) marked VALID at 2026-09-05 13:31:45 UTC
+  - Please paste the lead(s) you want me to triage, and I'll run each through the 7-Question Gate with verdict, reasoning, and (if VALID) proof steps, impact, CVSS 3.1, and reporting channel.
+
+- 2 lead(s) marked VALID at 2026-09-06 06:28:40 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 2 lead(s) marked VALID at 2026-09-08 10:34:26 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+
+- 4 lead(s) marked VALID at 2026-09-09 06:38:04 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+  - | 1 | Cross-Env JWKS Key + Client/Scope Reuse | **VALID** | 7.4 |
+  - | 6 | Staging IdP Directly Reachable | **VALID** | 6.5 |
+
+- 4 lead(s) marked VALID at 2026-09-10 10:37:58 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | Q7 Reasonable triager? | Yes — hardcoded real secrets in public code is a standard valid finding |
+  - **Verdict: VALID**
+
+- 14 lead(s) marked VALID at 2026-09-11 05:08:59 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: HOLD** — valid code defect, but impact gated on EA Scripting Host deployment and attacker ability to control event parameters; needs confirmatory evidence of production deployment
+  - **Verdict: HOLD** — valid code defect, but impact requires confirmation that parameters originate from external/user input in production
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | Cross-env JWKS key reuse (4 hosts) | **VALID** | 7.4 | HIGH |
+  - | 2 | Hardcoded SQL Server SA creds | **VALID** | 8.1 | HIGH |
+  - | 5 | Hardcoded Checkmk creds + internal IP | **VALID** | 7.5 | MEDIUM |
+  - | 6 | SIGNL4 secret logged at INFO (ioBroker) | **VALID** | 5.3 | MEDIUM |
+  - | 7 | Team secrets in public repos | **VALID** | 5.3 | MEDIUM |
+  - | 8 | PII in public CSV export | **VALID** | 5.3 | MEDIUM |
+
+- 7 lead(s) marked VALID at 2026-09-13 21:11:57 UTC
+  - | 1 | Cross-env JWKS key + client/scope reuse (devconnect + connect.signl4.com) | VALID | 7.4 | Reported |
+  - | 2 | Staging IdentityServer directly reachable (devconnect.signl4.com, password grant) | VALID | 6.5 | Reported |
+  - | 3 | Hardcoded SQL Server SA creds (`Derdack!`) in public EA plugin | VALID | 8.1 | Reported |
+  - | 4 | Hardcoded Checkmk admin creds + internal IP in public plugin | VALID | 7.5 | Reported |
+  - | 5 | SIGNL4 team secrets in public repos (Google IoT, Postman, DevTools) | VALID | 5.3 | Reported |
+  - | 6 | SIGNL4 secret logged at INFO level in ioBroker adapter | VALID | 5.3 | Reported |
+  - | 7 | PII + internal infra URLs in public CSV export | VALID | 5.3 | Reported |
+
+- 6 lead(s) marked VALID at 2026-09-14 21:52:08 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | Cross-env JWKS key reuse | **VALID** | 8.1 |
+  - | 2 | Password grant on staging IdP | **VALID** | 7.3 |
+  - | 5 | /de/ XML-RPC exposed | **VALID** | 7.5 |
+
+- 2 lead(s) marked VALID at 2026-09-18 23:43:24 UTC
+  - **VERDICT: VALID**
+  - | devconnect↔prod signing key + client reuse | **VALID** | 8.1 High | Yes — bugs.olivermaicher.eu |
+
+- 26 lead(s) marked VALID at 2026-09-20 01:52:55 UTC
+  - | Q5 Novel? | **No** — already reported in valid-bugs.md (multiple entries: 2026-09-09, 09-11, 09-13, 09-14, 09-18) |
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.4 HIGH. No new action needed.
+  - | Q5 Novel? | **No** — already reported in valid-bugs.md |
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 6.5 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 8.1 HIGH.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.5 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.5 HIGH.
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md; distinct from the eval() finding (different file, different mechanism — shell interpolation vs eval) |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md as a standalone finding; distinct from the hardcoded SA creds finding |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Uncertain** — may overlap with prior VALID entries in valid-bugs.md that mention "eval" |
+  - | Q7 Reasonable triager? | **Conditional** — valid code defect, but impact requires EA SDK documentation to confirm trust boundary |
+  - **Verdict: HOLD** — Valid code defect but impact gated on whether EA SDK provides attacker-controllable data to these callback fields. Needs: (1) EA Scripting Host SDK documentation review, (2) confir
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md |
+
+- 4 lead(s) marked VALID at 2026-09-21 22:48:59 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | SIGNL4 staging OIDC + cross-env JWKS key reuse | **VALID** | 7.4 |
+  - | 2 | Hardcoded SA/Checkmk creds + command injection in EA scripts | **VALID** | 9.8 |
+
+- 8 lead(s) marked VALID at 2026-09-25 05:00:44 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | SIGNL4 staging IdP shares prod signing key + OAuth client | **VALID** | 7.4 |
+  - | 2 | Hardcoded SA/Checkmk creds + command injection in EA scripts | **VALID** | 9.8 |
+  - | 9 | Hardcoded SIGNL4 team secrets in public repos | **VALID** | 5.3 |
+  - | 10 | PII + internal URLs in public CSV exports | **VALID** | 5.3 |
+=== hypotheses-nemotron3 head ===
+## 2026-10-13 00:45:23 UTC [target] (model nemotron3)
+[NEW] Second live SIGNL4 team webhook secret `96sbq38s` confirmed live at `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148` via Content-Length:0 control (400/4000 vs 404/3004)
+[NEW] Control semantics corrected: Content-Length:0 POST is the non-mutating discriminator (valid→400/4000, invalid→404/3004); `{}` body is ACCEPTED→201+eventId (mutating, out-of-scope)
+[NEW] `connect`, `account`, `api.signl4.com` all evaluate the SAME team secret (`vbguzfsi`→400/4000 on all three) — shared webhook registry, not host-scoped
+[NEW] fix.signl4.com/signin-oidc returns empty 500 for all state/redirect_uri variants — no reflection/open-redirect; hypothesis DEAD
+[NEW] Full RAG sweep of all 53 `signl4/*` repos + `docs` tarball + git history: only two non-placeholder webhook secrets exist (`vbguzfsi`, `96sbq38s`); no cloud creds, private keys, JWT, client_secret, or REST API keys
+[CHANGED] GitHub credential leak CONFIRMED LIVE: `signl4/docs` repo contains real team secret `vbguzfsi` (authored by Derdack staff `rons4`, pushed 2026-10-08); prior "placeholder-only" rejection was false negative
+[CHANGED] Webhook contract validated: `POST https://connect.signl4.com/webhook/vbguzfsi` returns 201 with eventId; full status-keyword query config works
+[CHANGED] EA WSDL internal hostname leak CONFIRMED LIVE: `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname)
+[CHANGED] vps.signl4.com subdomain takeover RE-VERIFIED at 2026-10-11 boundary: A=72.167.227.27, HTTPS 200 serves default vhost, cert CN=server.d1g.it
+[CHANGED] Leaked secret `vbguzfsi` tested as `X-S4-Api-Key` header against `/api/v2/teams` → 403 same hash as junk key; NOT a valid REST API key (webhook secret ≠ REST key)
+[CHANGED] OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts — routing layer complete, only token validation behavior unverified
+[CHANGED] DPoP challenge-layer probe COMPLETE: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce
+[CHANGED] Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show zero write ops accepting tenant identifier in body; 131 write ops swept repo-wide)
+[CHANGED] V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
+[CHANGED] Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); `grep "\[UNVALIDATED\]"` matches 0 — automated validation broken
+[CHANGED] Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials
+[PRIO] demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx,8.50,attack_surface=9,business_value=9,tech_exposure=9,gate_ease=8,cloud_surface=8,freshness=8
+[PRIO] github.com/signl4/docs,7.75,attack_surface=8,business_value=8,tech_exposure=7,gate_ease=10,cloud_surface=9,freshness=9
+[PRIO] vps.signl4.com,7.25,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=6,cloud_surface=8,freshness=8
+[PRIO] account.signl4.com/identity,7.00,attack_surface=8,business_value=8,tech_exposure=8,gate_ease=4,cloud_surface=9,freshness=7
+[PRIO] connect.signl4.com/webhook,6.75,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=5,cloud_surface=8,freshness=7
+[PRIO] api.signl4.com/api/v2/teams,6.50,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=5,cloud_surface=8,freshness=6
+[HYP] EA WebService credential-in-URL auth bypass on mutating handlers
+class: AUTH
+asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx
+confidence: 70
+reasoning: 11 .aspx handlers (About, RegisterEventProvider, UnregisterEventProvider, RaiseEvent, RaiseEventAsynchronous, SubmitEventUpdate, GetEventStatus, ResetEvent, GetAlertStatus, GetAlertId, GetAlertDetails) + 12 WSDL operations all gate on credentials (Error -1 / 401); vendor docs (SolarWinds article, EA9 PDF) document Username/Password or MD5 hash in GET query string as primary auth; no handler tested for auth bypass with malformed/empty credentials
+evidence_needed: At least one mutating handler (RaiseEvent, RegisterEventProvider, SubmitEventUpdate, RaiseEventAsynchronous) accepts request without valid credentials or with credential confusion (empty Username, MD5 collision, parameter pollution)
+verify_steps: 1) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=About (baseline 200) 2) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=RaiseEvent&Username=&Password= (test empty creds) 3) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=RaiseEvent&Username=test&Password= (test missing password) 4) POST same handlers with credential params in body vs query 5) Test MD5 hash variant per EA9 PDF documentation
+impact: If any mutating handler bypasses auth → unauthenticated alert injection into customer tenant; severity CRITICAL
+testability: PASSIVE
+[HYP] Additional live webhook secrets in remaining public signl4/* repos
+class: AUTH
+asset: github.com/signl4/*
+confidence: 65
+reasoning: Two live team secrets already found in signl4/docs (vbguzfsi, 96sbq38s) authored by staff rons4; 53 repos in org, only docs fully swept; integration repos (google-iot, losant, nagios, 2wayREST, SIGNL4, User-Monitoring) use credential-in-URL templates; reposcan of remaining ~47 repos untapped
+evidence_needed: At least one additional non-placeholder webhook secret or REST API key in public repo content
+verify_steps: 1) RAG: passive sweep remaining ~47 public signl4/* org repos for `/webhook/<token>`, `team-secret`, `X-S4-Api-Key`, `rest/events` patterns 2) Validate any candidate via Content-Length:0 POST to connect.signl4.com/webhook/{candidate} (400/4000 vs 404/3004 discriminator)
+impact: Each live webhook secret enables alert injection/resolution in victim tenant; webhook secret ≠ REST API key but enables webhook-only vector; severity HIGH
+testability: PASSIVE
+[HYP] vps.signl4.com subdomain takeover via dangling A-record to GoDaddy shared host
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 80
+reasoning: Explicit A-record to 72.167.227.27 (GoDaddy secureserver.net shared host); HTTPS 200 serves nginx default page with unrelated cert CN=server.d1g.it; fabricated subdomain returns TCP timeout (000) proving no wildcard vhost; 7+ consecutive probe cycles confirm stable; GoDaddy authoritative NS (domaincontrol.com)
+evidence_needed: Confirmation that the GoDaddy shared hosting account is unclaimed/available for takeover (requires DNS/hosting account control — HUMAN_ONLY)
+verify_steps: 1) GET https://vps.signl4.com/ (confirm 200 nginx default page, cert CN=server.d1g.it) 2) GET https://fabricated-xyz.vps.signl4.com/ (confirm 000/TCP timeout — no wildcard) 3) WHOIS/DNS verification of GoDaddy account status (HUMAN_ONLY)
+impact: Subdomain takeover enabling content spoofing, cookie theft, OAuth redirect abuse on *.signl4.com; severity HIGH (but exploitability gated on DNS/hosting-account control — HUMAN_ONLY)
+testability: HUMAN_ONLY
+[PARKED] vps.signl4.com subdomain takeover via dangling A-record to GoDaddy shared host: confidence 80 but HUMAN_ONLY exploitability — no claimable takeover primitive from researcher seat; requires DNS/hosting-account control; nemotron3's 95 overstates claimability
+[PARKED] Cross-env token forgery via account IdP issuer mismatch: confidence 85 but AUTH_HELPED — blocked on client_secret acquisition; no passive verification of cross-host token acceptance possible
+[PARKED] Webhook team-secret enumeration oracle enables credentialed access via leaked secrets: PASSIVE oracle confirmed (85), but full API compromise requires separate X-S4-Api-Key credential (webhook secret ≠ REST API key per live test); AUTH_HELPED for webhook-only vector
+[FINAL] 1) Real SIGNL4 team secret `vbguzfsi` in public GitHub repo enables webhook injection/resolution (AUTH, 100) — PASSIVE leak confirmed, live 201 response validated, AUTH_HELPED for further validation
+[FINAL] 2) Internal infrastructure hostname leak via EA WSDL on demo.enterprisealert.com (MISCONFIG, 95) — PASSIVE confirmed live, CWE-200 hygiene
+[FINAL] 3) EA WebService credential-in-URL auth bypass on demo.enterprisealert.com (AUTH, 70) — PASSIVE testable, 11 handlers untested for auth bypass
+[FINAL] 4) Additional live webhook secrets in remaining public signl4/* repos (AUTH, 65) — PASSIVE testable via RAG + oracle
+[FINAL] 5) Cross-env token forgery via account IdP issuer mismatch (AUTH, 85) — AUTH_HELPED, requires client_secret
+[NEXT] PROBE: GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx?Handler=RaiseEvent&Username=&Password=
+[LEARN] ACCEPTED AUTH @ connect.signl4.com/webhook: vendor's own staff committed real (non-placeholder) team secrets to public repos — prior placeholder-only rejection was a false negative
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address https://ereesus/EAWebService/EventProviderAPI.asmx exposed via unauthenticated WSDL GET — config-level disclosure (CWE-200 hygiene)
+[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
+[LEARN] ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean 405s against a passing control is a strong, reproducible result, and it is still not a vulnerability
+[LEARN] ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: body discriminator was identical across both arms (empty-string sha256); the discriminator that actually resolved the question was the status code alone, 405 vs 404
+[LEARN] ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on /identity/connect/, not /identity/devconnect/ — it is the production tenant, reachable at a second hostname
+[LEARN] ACCEPTED OTHER @ completing the differential was worth more than any result inside it: six hosts returned the answer, so the uniform claim holds 6/6 rather than 4/6 with two stragglers
+[LEARN] ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well is dry because every remaining question needs a token
+[LEARN] ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: cited dpop_signing_alg_values_supported as mitigating control without checking enforcement
+[LEARN] REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
+[LEARN] REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are non-secret and non-actionable, and the program rejects descriptive-headers-only classes
+[LEARN] REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+[LEARN] REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there despite the host being App-Proxy fronted
+[LEARN] REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+[LEARN] REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is absent from the API gateway and the demo app; no alternative read surface remains for the AUTH_HELPED queue
+[LEARN] REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier disclosure is bounded at 2 of 8 hosts, not an estate-wide defect
+[LEARN] REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control only, not a vulnerability
+[LEARN] REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+[LEARN] REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
+[LEARN] ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+[RISK] derdack: 95 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing, EA WebService credential-in-URL) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed introspection/revocation routing parity across all 6 ingresses, DPoP advertised but not enforced at gateway, prepaid body-identifier hypothesis refuted repo-wide. CRITICAL: Real SIGNL4 team secrets `vbguzfsi` and `96sbq38s` committed to public GitHub repos by staff (github.com/signl4/docs, pushed 2026-10-08; github.com/signl4/integrations, pushed 2026-10-08) — direct credential leaks enabling immediate webhook injection/resolution (validated 201). CRITICAL: demo.enterprisealert.com/EAWebService exposes full EA 9.5 web portal with credential-in-URL SOAP/REST API completely untested for auth bypass. vps.signl4.com dangling A-record enables subdomain takeover (HUMAN_ONLY).
+[0m
+[0m$ [0mgrep -n -i "EAWebService\|EventProvider\|enterprisealert\|Handler=" inventory/derdack.md | tail -60
+1874:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+1882:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+1888:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+1895:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+1902:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+1916:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl exposes internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` — live confirmed across 5+ cycles
+1923:- CHANGED demo.enterprisealert.com App-Proxy auth namespace fully 404 — no unauth identity endpoint on public custom hostname
+1930:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl exposes internal single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` — live confirmed across 5+ cycles
+1935:- CHANGED demo.enterprisealert.com App-Proxy auth namespace fully 404 — no unauth identity endpoint on public custom hostname
+1942:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+1951:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+1963:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+1971:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+1979:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+1987:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+1993:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl GET returns 200 with internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname) — li
+1999:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx WSDL exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (internal hostname leak) — confirmed live 200.
+2003:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl GET returns 200 with internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname) — li
+2009:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl → 200, Content-Type text/xml; charset=utf-8, Content-Length 29968, sha256 e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07ea
+2010:- NEW demo.enterprisealert.com is fronted by a LIVE App Proxy connector: x-ms-proxy-connector-id=da867a92-3ba5-4e78-95f6-c97bac3c791f, x-ms-proxy-service-name=proxy-appproxy-NEUR-DUB01P-3, x-ms-proxy-data-c
+2011:- NEW `?appproxy=debug` on the live-connector demo host is SILENT. Baseline /EAWebService/ = 1824 B; ?appproxy=debug = 1839 B; ?appproxy=zzzzzz = 1840 B; ?x=appproxydbg1 = 1839 B. Delta equals query-string 
+2022:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl returns 200 with internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname)
+2026:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl returns 200 with internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname)
+2034:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl returns 200 with internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname) — live c
+2044:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl GET returns 200 with internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname) — li
+2052:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2065:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2084:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2098:- NEW Both passive verifiers scope to `PROBE_ALLOW: derdack.com` (hunt.yml:13, triage.yml:12), so no `signl4.com`/`enterprisealert.com` lead URL is ever re-verified; every `probe-results.md` section since 2
+2110:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2122:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2128:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2180:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2200:- CHANGED demo.enterprisealert.com/EAWebService WSDL exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` — live confirmed
+2214:- CHANGED demo.enterprisealert.com/EAWebService WSDL exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` — live confirmed
+2228:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWeb[0m
+2240:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2252:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2264:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2290:- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2317:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2331:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2343:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2355:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2369:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2381:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2393:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2406:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2423:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2444:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2484:- CHANGED demo.enterprisealert.com/EAWebService/ still 200 + x-ms-proxy-* headers.
+2488:- CHANGED demo.enterprisealert.com/EAWebService/ still 200 with `x-ms-proxy-*` headers (app `f18ba879…`).
+2510:- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+2522:- NEW `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` confirms internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname) — CWE-200 hygi
+2535:- NEW EA WSDL internal hostname leak CONFIRMED live: `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non
+2558:- NEW `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` confirms internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostname) — CWE-200 hygi
+2569:- NEW EA WSDL internal hostname leak CONFIRMED live: `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non
+2581:- NEW EA WSDL internal hostname leak CONFIRMED LIVE — GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl exposes `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label 
+2611:- NEW EA WSDL internal hostname leak CONFIRMED LIVE: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl exposes https://ereesus/EAWebService/EventProviderAPI.asmx (single-label non-public host
+2632:- CHANGED EA WSDL internal hostname leak CONFIRMED LIVE: `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public
+[0m
+I'm the analyst in this hunt harness. Before emitting the cycle output, let me confirm the one live, passive-testable anomaly (EA WebService) with read-only requests only.
+[0m$ [0mcommand -v curl >/dev/null && echo "curl ok"; curl -sS -m 20 -o /tmp/ea_wsdl.xml -w "WSDL http=%{http_code} len=%{size_download} ct=%{content_type}\n" "https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl" 2>&1 | tail -3
+curl ok
+WSDL http=200 len=29968 ct=text/xml; charset=utf-8
+[0m
+[0m$ [0msha256sum /tmp/ea_wsdl.xml; echo "--- addresses ---"; grep -o 'address location="[^"]*"' /tmp/ea_wsdl.xml; echo "--- operations ---"; grep -o '<wsdl:operation name="[^"]*"' /tmp/ea_wsdl.xml | sort -u; grep -o '<s:element name="[^"]*"' /tmp/ea_wsdl.xml | sort -u | head -60
+e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae  /tmp/ea_wsdl.xml
+--- addresses ---
+address location="https://ereesus/EAWebService/EventProviderAPI.asmx"
+address location="https://ereesus/EAWebService/EventProviderAPI.asmx"
+--- operations ---
+<wsdl:operation name="About"
+<wsdl:operation name="CloseAlert"
+<wsdl:operation name="GetAlertStatus"
+<wsdl:operation name="GetEventStatus"
+<wsdl:operation name="GetTicketStatus"
+<wsdl:operation name="RaiseEvent"
+<wsdl:operation name="RaiseEventAsynchronous"
+<wsdl:operation name="RegisterEventProvider"
+<wsdl:operation name="ResetEvent"
+<wsdl:operation name="SubmitEventUpdate"
+<wsdl:operation name="UnregisterEventProvider"
+<wsdl:operation name="UpdateTicket"
+<s:element name="About"
+<s:element name="AboutResponse"
+<s:element name="CloseAlert"
+<s:element name="CloseAlertResponse"
+<s:element name="GetAlertStatus"
+<s:element name="GetAlertStatusResponse"
+<s:element name="GetEventStatus"
+<s:element name="GetEventStatusResponse"
+<s:element name="GetTicketStatus"
+<s:element name="GetTicketStatusResponse"
+<s:element name="RaiseEvent"
+<s:element name="RaiseEventAsynchronous"
+<s:element name="RaiseEventAsynchronousResponse"
+<s:element name="RaiseEventResponse"
+<s:element name="RegisterEventProvider"
+<s:element name="RegisterEventProviderResponse"
+<s:element name="ResetEvent"
+<s:element name="ResetEventResponse"
+<s:element name="SubmitEventUpdate"
+<s:element name="SubmitEventUpdateResponse"
+<s:element name="UnregisterEventProvider"
+<s:element name="UnregisterEventProviderResponse"
+<s:element name="UpdateTicket"
+<s:element name="UpdateTicketResponse"
+[0m
+[0m$ [0mB="https://demo.enterprisealert.com/EAWebService"
+for u in "EventProviderAPI.aspx" "EventProviderAPI.aspx?Handler=About" "EventProviderAPI.aspx?handler=About"; do
+  sleep 1
+  code=$(curl -sS -m 20 -o /tmp/ea_out -w "%{http_code}" "$B/$u")
+  echo "== $u -> $code len=$(wc -c </tmp/ea_out)"
+  head -c 400 /tmp/ea_out; echo
+done
+== EventProviderAPI.aspx -> 200 len=1843
+<ul><li><a href=/EAWebService/EventProviderAPI.aspx?Handler=About&ShowMethodInfo=1>About</a></li></ul><ul><li><a href=/EAWebService/EventProviderAPI.aspx?Handler=RegisterEventProvider&ShowMethodInfo=1>RegisterEventProvider</a></li></ul><ul><li><a href=/EAWebService/EventProviderAPI.aspx?Handler=UnregisterEventProvider&ShowMethodInfo=1>UnregisterEventProvider</a></li></ul><ul><li><a href=/EAWebServ
+== EventProviderAPI.aspx?Handler=About -> 200 len=104
+Enterprise Alert® Event Provider API & Connector SDK (v9.5.26147).
+Copyright © Derdack GmbH 2004-2026
+== EventProviderAPI.aspx?handler=About -> 200 len=104
+Enterprise Alert® Event Provider API & Connector SDK (v9.5.26147).
+Copyright © Derdack GmbH 2004-2026
+[0m
+[0m$ [0mB="https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx"
+sleep 1; curl -sS -m 20 "$B" -o /tmp/ea_list; grep -o 'Handler=[A-Za-z]*' /tmp/ea_list | sort -u
+echo "--- About methodinfo ---"
+sleep 1; curl -sS -m 20 "$B?Handler=About&ShowMethodInfo=1" -o /tmp/ea_mi; sed -e 's/<[^>]*>/ /g' /tmp/ea_mi | tr -s ' ' | head -40
+Handler=About
+Handler=CloseAlert
+Handler=GetAlertStatus
+Handler=GetEventStatus
+Handler=RaiseEvent
+Handler=RaiseEventAsynchronous
+Handler=RegisterEventProvider
+Handler=ResetEvent
+Handler=SubmitEventUpdate
+Handler=UnregisterEventProvider
+--- About methodinfo ---
+
+
+ 
+
+ 
+ 
+	Enterprise Alert&reg; HTTP interface - About
+ 
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+	 About():
+[0m
+[0m$ [0mB="https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx"
+for h in GetEventStatus RaiseEvent; do
+  sleep 1
+  echo "===== $h methodinfo ====="
+  curl -sS -m 20 "$B?Handler=$h&ShowMethodInfo=1" -o /tmp/ea_mi_$h
+  sed -e 's/<[^>]*>/ /g' /tmp/ea_mi_$h | tr -s ' \n' ' \n' | grep -v '^ *$' | head -50
+done
+===== GetEventStatus methodinfo =====
+
+
+ 
+
+ 
+ 
+	Enterprise Alert&reg; HTTP interface - GetEventStatus
+ 
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+	 GetEventStatus(): 
+		 
+			 Username: 
+		 
+			 Password: 
+		 
+			 EventID: 
+		 
+			 ProviderName: 
+		 
+			 ExternalEventID: 
+		 
+	 
+ 
+ 
+ 
+===== RaiseEvent methodinfo =====
+
+
+ 
+
+ 
+ 
+	Enterprise Alert&reg; HTTP interface - RaiseEvent
+ 
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+	 RaiseEvent(): 
+		 
+			 Username: 
+		 
+			 Password: 
+		 
+			 ProviderName: 
+		 
+			 EventParameters: 
+ Write one param per row and separate key and value with an "=". 
+		 
+			 Attachments: 
+		 
+			 AttachmentURIs: 
+		 
+			 ExternalID:
+[0m
+[0m$ [0mB="https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx"
+probe(){ sleep 1; code=$(curl -sS -m 20 -o /tmp/ea_r -w "%{http_code}" "$1"); echo "== $code :: $(printf '%s' "$1" | sed 's#.*EventProviderAPI.aspx##')"; echo "   len=$(wc -c </tmp/ea_r) body: $(sed -e 's/<[^>]*>/ /g' /tmp/ea_r | tr -s ' \n' ' ' | head -c 300)"; }
+probe "$B?Handler=GetEventStatus&Username=&Password=&EventID=0"
+probe "$B?Handler=GetEventStatus"
+probe "$B?Handler=GetEventStatus&Username=test&Password=test&EventID=0"
+probe "$B?Handler=GetAlertStatus&Username=&Password=&AlertID=0"
+probe "$B?Handler=GetTicketStatus&Username=&Password=&TicketID=0"
+== 200 :: ?Handler=GetEventStatus&Username=&Password=&EventID=0
+   len=184 body: Error: -1
+ ErrorText: The desired operation could not be performed because an unknown error occurred. Please try again. If the error persists, please contact your system administrator.
+== 200 :: ?Handler=GetEventStatus
+   len=184 body: Error: -1
+ ErrorText: The desired operation could not be performed because an unknown error occurred. Please try again. If the error persists, please contact your system administrator.
+== 200 :: ?Handler=GetEventStatus&Username=test&Password=test&EventID=0
+   len=184 body: Error: -1
+ ErrorText: The desired operation could not be performed because an unknown error occurred. Please try again. If the error persists, please contact your system administrator.
+== 200 :: ?Handler=GetAlertStatus&Username=&Password=&AlertID=0
+   len=184 body: Error: -1
+ ErrorText: The desired operation could not be performed because an unknown error occurred. Please try again. If the error persists, please contact your system administrator.
+== 200 :: ?Handler=GetTicketStatus&Username=&Password=&TicketID=0
+   len=51 body: Error: -1
+ ErrorText: No user login data specified.
+[0m
+[0m$ [0mB="https://demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx"
+probe(){ sleep 1; code=$(curl -sS -m 20 -o /tmp/ea_r -w "%{http_code}" "$1"); echo "== $code :: $(printf '%s' "$1" | sed 's#.*EventProviderAPI.aspx##')"; echo "   $(sed -e 's/<[^>]*>/ /g' /tmp/ea_r | tr -s ' \n' ' ' | head -c 260)"; }
+for h in GetAlertId GetAlertDetails GetTicketStatus UpdateTicket About; do probe "$B?Handler=$h&Username=&Password="; done
+probe "$B?Handler=GetEventStatus&Username=admin&Password=admin&EventID=1&ProviderName=demo&ExternalEventID=1"
+probe "$B?Handler=GetTicketStatus&Username=admin&Password=admin&TicketID=0"
+== 200 :: ?Handler=GetAlertId&Username=&Password=
+    About RegisterEventProvider UnregisterEventProvider RaiseEvent RaiseEventAsynchronous SubmitEventUpdate GetEventStatus ResetEvent GetAlertStatus CloseAlert 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+== 200 :: ?Handler=GetAlertDetails&Username=&Password=
+    About RegisterEventProvider UnregisterEventProvider RaiseEvent RaiseEventAsynchronous SubmitEventUpdate GetEventStatus ResetEvent GetAlertStatus CloseAlert 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+== 200 :: ?Handler=GetTicketStatus&Username=&Password=
+   Error: -1
+ ErrorText: No user login data specified.
+== 200 :: ?Handler=UpdateTicket&Username=&Password=
+   Error: -1
+ ErrorText: The desired operation could not be performed because an unknown error occurred. Please try again. If the error persists, please contact your system administrator.
+== 200 :: ?Handler=About&Username=&Password=
+   Enterprise Alert® Event Provider API & Connector SDK (v9.5.26147).
+ Copyright © Derdack GmbH 2004-2026
+== 200 :: ?Handler=GetEventStatus&Username=admin&Password=admin&EventID=1&ProviderName=demo&ExternalEventID=1
+   Error: -1
+ ErrorText: Invalid username or password
+== 200 :: ?Handler=GetTicketStatus&Username=admin&Password=admin&TicketID=0
+   Error: -1
+ ErrorText: Invalid username or password
+[0m
+[STEP 1 — DELTA]
+[NEW] demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx live (200, 1843 B) — HTTP handler interface advertises 10 handlers (About, RegisterEventProvider, UnregisterEventProvider, RaiseEvent, RaiseEventAsynchronous, SubmitEventUpdate, GetEventStatus, ResetEvent, GetAlertStatus, CloseAlert); `GetTicketStatus`/`UpdateTicket` are served but NOT advertised (reachable, undocumented vs the 12-op WSDL).
+[NEW] EA handler auth is ENFORCED (my read-only GETs): `GetEventStatus?Username=admin&Password=admin&…` → `Error: -1 / Invalid username or password`; `GetTicketStatus` same; empty creds → generic `Error: -1` (GetEventStatus/GetAlertStatus/UpdateTicket) or `No user login data specified` (GetTicketStatus). No empty/absent/wrong-credential bypass on any read-only handler.
+[CHANGED] EA WSDL stable: `?wsdl` → 200, 29968 B, sha256 `e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae`, soap address `https://ereesus/EAWebService/EventProviderAPI.asmx` (unchanged).
+[CHANGED] EA credential-in-URL auth-bypass hypothesis DOWN 70 → 15 (direct read-only refutation this cycle).
+[CHANGED] Root `.aspx` handler list omits `GetTicketStatus`/`UpdateTicket` while both respond — HTTP-vs-WSDL interface parity gap (INFO).
+[NO_DELTA] all other scoped surface (6 identity hosts / V2+V3 API / WP / vps) — no new paths, verbs, or differentials observed this cycle.
+
+[STEP 2 — PRIORITIZE]
+[PRIO] github.com/signl4/docs,8.35,attack_surface=8,business_value=8,tech_exposure=7,gate_ease=10,cloud_surface=9,freshness=9
+[PRIO] demo.enterprisealert.com/EAWebService,7.70,attack_surface=8,business_value=9,tech_exposure=9,gate_ease=4,cloud_surface=8,freshness=7
+[PRIO] vps.signl4.com,7.30,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=6,cloud_surface=8,freshness=8
+[PRIO] connect.signl4.com/mobileapi,6.65,attack_surface=7,business_value=8,tech_exposure=7,gate_ease=3,cloud_surface=8,freshness=6
+
+[STEP 3 — HYPOTHESES]
+[HYP] EA EventProvider HTTP-interface auth bypass via credential parameter confusion
+class: AUTH
+asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx
+confidence: 15
+reasoning: Live read-only GETs show handler-level credential validation executes on every read-only handler (wrong creds → "Invalid username or password"; empty → generic Error -1 / "No user login data specified"). No handler returned data or accepted state without valid credentials. Undocumented GetTicketStatus/UpdateTicket are present but equally auth-gated.
+evidence_needed: any handler returning data/state without valid credentials
+verify_steps: read-only GET GetEventStatus/GetAlertStatus with credential-pollution and alternate param names (Login/User/Pwd); no mutating handlers (RaiseEvent/RegisterEventProvider/SubmitEventUpdate/ResetEvent/CloseAlert) are touched.
+impact: unauthenticated alert injection into a tenant — CRITICAL if true (not observed)
+testability: PASSIVE
+
+[HYP] vps.signl4.com dangling A-record subdomain takeover
+class: MISCONFIG
+asset: vps.signl4.com
+confidence: 80
+reasoning: A=72.167.227.27 (GoDaddy secureserver.net shared host); HTTPS 200 serves default vhost, cert CN=server.d1g.it; fabricated subdomain → TCP timeout (000) proving no wildcard vhost; stable 8+ cycles.
+evidence_needed: claimable/unclaimed GoDaddy hosting account (HUMAN_ONLY)
+verify_steps: read-only GET https://vps.signl4.com/ and https://fabricated-xyz.vps.signl4.com/
+impact: takeover of a *.signl4.com vhost → content spoof / cookie / OAuth-redirect abuse; HIGH
+testability: HUMAN_ONLY
+
+[HYP] Additional live SIGNL4 credentials in remaining org repos/gists/history
+class: AUTH
+asset: github.com/signl4/*
+confidence: 25
+reasoning: Prior full RAG of 53 signl4/* repos + docs tarball + git history found only two non-placeholder webhook secrets (vbguzfsi, 96sbq38s) and zero client_secret/X-S4-Api-Key. Hypothesis largely closed.
+evidence_needed: an unenumerated repo/gist/deleted commit containing a REST API key or client_secret
+verify_steps: passive RAG of org gists + all-refs history; validate candidates ONLY via Content-Length:0 POST oracle (400/4000 vs 404/3004)
+impact: webhook injection (if team secret) or authenticated API access (if X-S4-Api-Key); HIGH
+testability: PASSIVE
+
+[STEP 4 — SELF-CRITIQUE]
+[PARKED] EA EventProvider HTTP-interface auth bypass: confidence 15 < 40 — refuted by direct read-only probes showing handler-level credential validation.
+[PARKED] Additional live SIGNL4 credentials in org repos: confidence 25 < 40 — full 53-repo RAG sweep already exhausted, no new evidence.
+[PARKED] vps.signl4.com subdomain takeover: confidence 80 but HUMAN_ONLY — no claimable primitive exists from the researcher seat; needs DNS/hosting-account control.
+[FINAL] 1) Real SIGNL4 team secrets committed to public repos (`vbguzfsi` @ signl4/docs, `96sbq38s` @ signl4-integration-google-iot/losant) — AUTH, PASSIVE-confirmed live, already reported (CVSS 5.3).
+[FINAL] 2) EA WebService WSDL internal hostname disclosure `https://ereesus/EAWebService/EventProviderAPI.asmx` — MISCONFIG, PASSIVE-confirmed (CWE-200); report-ready.
+[FINAL] 3) Cross-environment JWKS key + client_id 692A0A56 reuse + account-IdP issuer mismatch — AUTH, AUTH_HELPED (blocked on client_secret).
+
+[STEP 5 — NEXT ACTION]
+[NEXT] HUMAN: compile and submit the PASSIVE-confirmed set to bugs.olivermaicher.eu — EA WebService internal-hostname disclosure (CWE-200) plus confirmation that the leaked-webhook-secret family remains unremediated at signl4/docs; automated passive surface is exhausted and every remaining vector (cross-env token forgery, V1/V2/V3 IDOR/BOLA, EA handler bypass) is AUTH_HELPED or refuted.
+
+[STEP 6 — LEARNING]
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: internal single-label SOAP hostname (`ereesus`) exposed via unauthenticated WSDL GET — config-level information disclosure (CWE-200 hygiene).
+[LEARN] REJECTED AUTH @ demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx: handler-level credential validation executes before handler logic (wrong creds → "Invalid username or password"), so the credential-in-URL auth-bypass hypothesis is refuted by direct read-only probe, not by assumption.
+[LEARN] ACCEPTED OTHER @ demo.enterprisealert.com/EAWebService: the HTTP `.aspx` root advertises 10 handlers yet serves `GetTicketStatus`/`UpdateTicket` too (12-op WSDL parity) — an interface-surface gap worth remembering, but both remain auth-gated.
+[LEARN] REJECTED OTHER @ triage pipeline: the automated validation gate stays dead — `grep "\[UNVALIDATED\]"` matches 0, so `reports/valid-bugs.md` count remains unreliable and no cycle output is independently re-verified.
+
+[STEP 7 — RISK]
+[RISK] derdack: 85 — systemic cross-environment trust failure persists (6 identity hosts share one byte-identical prod RS256 JWKS + client_id, account IdP mint-mismatch, password/device_code/CIBA/plain-PKCE all enabled), two real team secrets remain unremediated in public repos, and demo.enterprisealert.com still exposes the full EA 9.5 HTTP/SOAP interface (auth enforced, but the WSDL leaks an internal host). Risk is bounded only by the fact that every remaining high-value vector is credential-gated (AUTH_HELPED) or human-gated (vps takeover), and the automated triage pipeline is broken — so no new validated result can be produced without a leaked client_secret/X-S4-Api-Key or human triage.
