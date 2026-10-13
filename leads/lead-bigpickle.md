@@ -10787,3 +10787,4 @@ testability: PASSIVE
 [LEARN] REJECTED OATH @ fix.signl4.com/signin-oidc: all variants return empty HTTP 500, no param reflection — reflection/open-redirect hypothesis dead.
 [LEARN] REJECTED MISCONFIG @ signl4/* org source: exhaustive clone+tarball+history scan of 53 repos yielded no cloud creds, private keys, client_secret, or API-key literals — only the two known webhook tokens.
 [RISK] derdack: 90 — two live team webhook secrets are controlled-confirmed with demonstrated unauthenticated event injection across 3 hosts, but both already sit in the reported "SIGNL4 team secrets in public repos" family (CVSS 5.3), so net novelty is low; the previously-held FINAL 3 is now disproven. No new high-value class surfaced this cycle; the AUTH_HELPED queue remains one leaked REST client_secret/API key away.
+## 2026-10-13 00:50:38 UTC [target] (model bigpickle)

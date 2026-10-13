@@ -2620,3 +2620,21 @@ www.derdack.com
 - CHANGED connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on ALL 6 identity hosts (was 3-host record) — undocumented mobile ingress with custom error page
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
 - CHANGED Cross-env token forgery chain stable at 6 hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled, account IdP issuer mismatch (claims connect) + plain PKCE — AUTH_HELPED
+
+## 2026-10-13 00:50:49 UTC
+- NEW Second live SIGNL4 team webhook secret `96sbq38s` confirmed live at `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148` via Content-Length:0 control 
+- NEW Control semantics corrected: Content-Length:0 POST is the non-mutating discriminator (valid→400/4000, invalid→404/3004); `{}` body is ACCEPTED→201+eventId (mutating, out-of-scope)
+- NEW `connect`, `account`, `api.signl4.com` all evaluate the SAME team secret (`vbguzfsi`→400/4000 on all three) — shared webhook registry, not host-scoped
+- NEW fix.signl4.com/signin-oidc returns empty 500 for all state/redirect_uri variants — no reflection/open-redirect; hypothesis DEAD
+- NEW Full RAG sweep of all 53 `signl4/*` repos + `docs` tarball + git history: only two non-placeholder webhook secrets exist (`vbguzfsi`, `96sbq38s`); no cloud creds, private keys, JWT, client_secret, or 
+- CHANGED GitHub credential leak CONFIRMED LIVE: `signl4/docs` repo contains real team secret `vbguzfsi` (authored by Derdack staff `rons4`, pushed 2026-10-08); prior "placeholder-only" rejection was false nega
+- CHANGED Webhook contract validated: `POST https://connect.signl4.com/webhook/vbguzfsi` returns 201 with eventId; full status-keyword query config works
+- CHANGED EA WSDL internal hostname leak CONFIRMED LIVE: `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` exposes `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public 
+- CHANGED vps.signl4.com subdomain takeover RE-VERIFIED at 2026-10-11 boundary: A=72.167.227.27, HTTPS 200 serves default vhost, cert CN=server.d1g.it
+- CHANGED Leaked secret `vbguzfsi` tested as `X-S4-Api-Key` header against `/api/v2/teams` → 403 same hash as junk key; NOT a valid REST API key (webhook secret ≠ REST key)
+- CHANGED OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts — routing layer complete, only token validation behavior unverified
+- CHANGED DPoP challenge-layer probe COMPLETE: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce
+- CHANGED Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show zero write ops accepting tenant identifier in body; 131 write ops swept repo-wide)
+- CHANGED V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
+- CHANGED Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); `grep "\[UNVALIDATED\]"` matches 0 — automated validation broken
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials
