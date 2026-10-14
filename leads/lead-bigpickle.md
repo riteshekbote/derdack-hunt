@@ -11502,3 +11502,4 @@ testability: AUTH_HELPED
 [LEARN] ACCEPTED OTHER @ report pipeline: re-verifying frozen findings each cycle has diminishing returns; when the validation gate is dead, the highest-value action is the HUMAN submission path, not re-probing closed surfaces.
 [RISK] derdack: 92 — public exposure of production-adjacent SQL SA + Checkmk admin credentials and live team webhook secrets requires immediate rotation and Git-history scrub.
 [RISK] signl4: 85 — six identity hosts share one RS256 signing key while the account host advertises a foreign issuer; a single client credential compromise yields estate-wide token forgery.
+## 2026-10-14 22:38:50 UTC [target] (model bigpickle)
