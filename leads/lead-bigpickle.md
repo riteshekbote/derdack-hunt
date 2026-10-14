@@ -11157,3 +11157,4 @@ testability: AUTH_HELPED
 [LEARN] REJECTED MISCONFIG @ demo.enterprisealert.com/WebInterface/EnterpriseAlert/*: WSDL-namespace path family returns uniform bare 404 (0 bytes, matches control) — no hidden web interface.
 [LEARN] ACCEPTED OTHER @ deliverables: oracle + EA WSDL re-verified with zero drift after 5+ days — submission-ready.
 [RISK] derdack: 90 — the signl4-only RAG's "exhausted" claim was falsified this cycle: the never-scanned `github.com/Derdack` org leaks an Enterprise Alert SQL SA credential (`Derdack!`) and Checkmk admin credentials with an internal IP, both public and unremediated for 2–4 years, on top of two live SIGNL4 team secrets and the EA WSDL internal-hostname leak; the shared-key cross-env forgery chain remains one leaked client_secret away, and the automated triage pipeline is still broken.
+## 2026-10-14 04:59:26 UTC [target] (model bigpickle)

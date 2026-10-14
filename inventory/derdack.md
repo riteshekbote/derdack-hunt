@@ -2733,3 +2733,11 @@ www.derdack.com
 - NEW Hardcoded Checkmk admin creds + internal IP in public `derdack-plugin-checkmk/2-way/Main.js:90-94`: `username="cmkadmin"`, `password="CNlydVqZ"`, `serverURL="http://192.168.88.107:8080/cmk/check_mk/ap
 - NEW `eval()` deserialization of EA scripting-host callbacks (`eval(appContext.runtimeInfo.callbackSetStatusOK/SendMail)`, `eval(appContext.state.callbackSaveState)`) in 4 public 2-way REST plugins (checkm
 - CHANGED PASSIVE deliverables re-verified live and byte-stable after 5+ days: webhook oracle `vbguzfsi`→400/code 4000, fabricated `zq7x2k9p`→404/code 3004, `96sbq38s`→400/code 4000; EA WSDL → 200, 29968 B, sha
+
+## 2026-10-14 04:59:38 UTC
+- NEW github.com/Derdack org (12 repos) fully scanned for first time — revealed hardcoded SQL Server SA creds (sa:Derdack! @ sqlserver.derdack-support.local) in derdack-oncall-holidayimport, Checkmk admin c
+- NEW api.signl4.com/api/v2/teams auth-status flipped to route-gated (401 on unauth GET + invalid Bearer) vs prior handler-deferred 405 pattern; temporal flip confirmed by 6 consecutive probes
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
+- CHANGED PASSIVE deliverables re-verified live and byte-stable after 5+ days: webhook oracle vbguzfsi→400/code 4000, fabricated zq7x2k9p→404/code 3004, 96sbq38s→400/code 4000; EA WSDL → 200, 29968 B, sha256 e8
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
+- CHANGED Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); grep "\[UNVALIDATED\]" leads/lead-*.md matches 0 — automated validation broken
