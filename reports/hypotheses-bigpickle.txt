@@ -1,121 +1,25 @@
-## 2026-10-13 20:45:59 UTC [target] (model bigpickle)
-[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
-[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
-[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
-[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
-[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
-class: MISCONFIG
-asset: vps.signl4.com
-confidence: 80
-reasoning: A=72.167.227.27 (GoDaddy secureserver.net shared host); HTTPS 200 serves default vhost, cert CN=server.d1g.it; fabricated subdomain → TCP timeout (000) proving no wildcard vhost; stable 8+ cycles.
-evidence_needed: claimable/unclaimed GoDaddy hosting account (HUMAN_ONLY)
-verify_steps: read-only GET https://vps.signl4.com/ and https://fabricated-xyz.vps.signl4.com/
-impact: takeover of a *.signl4.com vhost → content spoof / cookie / OAuth-redirect abuse; HIGH
-testability: HUMAN_ONLY
-[HYP] Additional live SIGNL4 credentials in remaining org repos/gists/history
-class: AUTH
-asset: github.com/signl4/*
-confidence: 25
-reasoning: Prior full RAG of 53 signl4/* repos + docs tarball + git history found only two non-placeholder webhook secrets (vbguzfsi, 96sbq38s) and zero client_secret/X-S4-Api-Key. Hypothesis largely closed.
-evidence_needed: an unenumerated repo/gist/deleted commit containing a REST API key or client_secret
-verify_steps: passive RAG of org gists + all-refs history; validate candidates ONLY via Content-Length:0 POST oracle (400/4000 vs 404/3004)
-impact: webhook injection (if team secret) or authenticated API access (if X-S4-Api-Key); HIGH
-testability: PASSIVE
-[PARKED] EA EventProvider HTTP-interface auth bypass: confidence 15 < 40 — refuted by direct read-only probes showing handler-level credential validation.
-[PARKED] Additional live SIGNL4 credentials in org repos: confidence 25 < 40 — full 53-repo RAG sweep already exhausted, no new evidence.
-[PARKED] vps.signl4.com subdomain takeover: confidence 80 but HUMAN_ONLY — no claimable primitive exists from the researcher seat; needs DNS/hosting-account control.
-[FINAL] 1) Real SIGNL4 team secrets committed to public repos (`vbguzfsi` @ signl4/docs, `96sbq38s` @ signl4-integration-google-iot/losant) — AUTH, PASSIVE-confirmed live, already reported (CVSS 5.3).
-[FINAL] 2) EA WebService WSDL internal hostname disclosure `https://ereesus/EAWebService/EventProviderAPI.asmx` — MISCONFIG, PASSIVE-confirmed (CWE-200); report-ready.
-[FINAL] 3) Cross-environment JWKS key + client_id 692A0A56 reuse + account-IdP issuer mismatch — AUTH, AUTH_HELPED (blocked on client_secret).
-[NEXT] HUMAN: compile and submit the PASSIVE-confirmed set to bugs.olivermaicher.eu — EA WebService internal-hostname disclosure (CWE-200) plus confirmation that the leaked-webhook-secret family remains unremediated at signl4/docs; automated passive surface is exhausted and every remaining vector (cross-env token forgery, V1/V2/V3 IDOR/BOLA, EA handler bypass) is AUTH_HELPED or refuted.
-[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: internal single-label SOAP hostname (`ereesus`) exposed via unauthenticated WSDL GET — config-level information disclosure (CWE-200 hygiene).
-[LEARN] REJECTED AUTH @ demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx: handler-level credential validation executes before handler logic (wrong creds → "Invalid username or password"), so the credential-in-URL auth-bypass hypothesis is refuted by direct read-only probe, not by assumption.
-[LEARN] ACCEPTED OTHER @ demo.enterprisealert.com/EAWebService: the HTTP `.aspx` root advertises 10 handlers yet serves `GetTicketStatus`/`UpdateTicket` too (12-op WSDL parity) — an interface-surface gap worth remembering, but both remain auth-gated.
-[LEARN] REJECTED OTHER @ triage pipeline: the automated validation gate stays dead — `grep "\[UNVALIDATED\]"` matches 0, so `reports/valid-bugs.md` count remains unreliable and no cycle output is independently re-verified.
-[RISK] derdack: 85 — systemic cross-environment trust failure persists (6 identity hosts share one byte-identical prod RS256 JWKS + client_id, account IdP mint-mismatch, password/device_code/CIBA/plain-PKCE all enabled), two real team secrets remain unremediated in public repos, and demo.enterprisealert.com still exposes the full EA 9.5 HTTP/SOAP interface (auth enforced, but the WSDL leaks an internal host). Risk is bounded only by the fact that every remaining high-value vector is credential-gated (AUTH_HELPED) or human-gated (vps takeover), and the automated triage pipeline is broken — so no new validated result can be produced without a leaked client_secret/X-S4-Api-Key or human triage.
-[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl: Internal single-label SOAP address https://ereesus/EAWebService/EventProviderAPI.asmx exposed via unauthenticated WSDL GET — config-level disclosure (CWE-200 hygiene)
-[LEARN] ACCEPTED MISCONFIG @ vps.signl4.com: Explicit A-record to GoDaddy shared host serves default vhost when reachable; fabricated-host byte-identical response proves dangling → subdomain takeover candidate (HUMAN_ONLY)
-[LEARN] ACCEPTED OTHER @ registration is not enforcement, and the gap between them is the whole finding: eight clean 405s against a passing control is a strong, reproducible result, and it is still not a vulnerability
-[LEARN] ACCEPTED OTHER @ the control I designed was half-inert, and the half that worked was not the half I predicted: body discriminator was identical across both arms (empty-string sha256); the discriminator that actually resolved the question was the status code alone, 405 vs 404
-[LEARN] ACCEPTED OTHER @ dev-tier hosts serving the production tenant prefix is the detail worth carrying forward: devconnect and devapi answer on /identity/connect/, not /identity/devconnect/ — it is the production tenant, reachable at a second hostname
-[LEARN] ACCEPTED OTHER @ completing the differential was worth more than any result inside it: six hosts returned the answer, so the uniform claim holds 6/6 rather than 4/6 with two stragglers
-[LEARN] ACCEPTED OTHER @ "exhausted" is a conclusion about the seat, not about the surface: the passive well is dry because every remaining question needs a token
-[LEARN] ACCEPTED OTHER @ an advertised mitigation is a hypothesis, not a reassurance: cited dpop_signing_alg_values_supported as mitigating control without checking enforcement
-[LEARN] REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
-[LEARN] REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are non-secret and non-actionable, and the program rejects descriptive-headers-only classes
-[LEARN] REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
-[LEARN] REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there despite the host being App-Proxy fronted
-[LEARN] REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
-[LEARN] REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is absent from the API gateway and the demo app; no alternative read surface remains for the AUTH_HELPED queue
-[LEARN] REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier disclosure is bounded at 2 of 8 hosts, not an estate-wide defect
-[LEARN] REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control only, not a vulnerability
-[LEARN] REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
-[LEARN] REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
-[LEARN] ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
-[RISK] derdack: 95 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing, EA WebService credential-in-URL) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed introspection/revocation routing parity across all 6 ingresses, DPoP advertised but not enforced at gateway, prepaid body-identifier hypothesis refuted repo-wide. CRITICAL: Real SIGNL4 team secrets `vbguzfsi` and `96sbq38s` committed to public GitHub repos by staff (github.com/signl4/docs, pushed 2026-10-08; github.com/signl4/integrations, pushed 2026-10-08) — direct credential leaks enabling immediate webhook injection/resolution (validated 201). CRITICAL: demo.enterprisealert.com/EAWebService exposes full EA 9.5 web portal with credential-in-URL SOAP/REST API completely untested for auth bypass. vps.signl4.com dangling A-record enables subdomain takeover (HUMAN_ONLY).
-[NEW] github.com/Derdack org (12 public repos) has NEVER been reposcanned (reposcan-raw/summary.txt: "TARGET_ORG not configured for derdack; skipping"); live sweep reveals real hardcoded creds absent from the signl4-only RAG.
-[NEW] SQL Server SA creds "sa:Derdack!" @ Server=sqlserver.derdack-support.local;Database=EnterpriseAlert2017 in derdack-oncall-holidayimport/HolidayImport.js:16 and HolidayDeleteAll.js:22 (author rbormann@de.derdack.com, commit 5f9dcc1, 2022-12-07, default branch, unremediated).
-[NEW] Checkmk admin creds cmkadmin:CNlydVqZ @ http://192.168.88.107:8080/cmk/check_mk/api/v0/ in derdack-plugin-checkmk/2-way/Main.js:90-94 (author rons4, commit f4613b7, 2024-05-27, unremediated).
-[NEW] eval() callback deserialization in 4 EA 2-way REST samples (checkmk/dynatrace/logic-monitor/zendesk Main.js) — HOLD.
-[CHANGED] Re-verified deliverables live: vbguzfsi→400/4000, zq7x2k9p→404/3004, 96sbq38s→400/4000; EA WSDL sha256 unchanged e8b753f2...
-class: AUTH
-asset: github.com/Derdack
-confidence: 95
-reasoning: ...
-evidence_needed: confirmation the creds are live against internal hosts (not testable from researcher seat — hosts are RFC1918/.local)
-verify_steps: read-only clone + grep (done); DNS/NXDOMAIN for host
-impact: ...
-testability: PASSIVE (leak confirmed) / HUMAN for exploitation
-class: OTHER (or AUTH)
-asset: github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js
-confidence: 35
-reasoning: eval of appContext.runtimeInfo.* — trust boundary unclear
-testability: HUMAN_ONLY/HOLD
-[NEXT] HUMAN: submit the two newly-verified hardcoded-credential leaks in the public github.com/Derdack org (SA `Derdack!`, Checkmk `cmkadmin:CNlydVqZ`+internal IP) alongside the existing PASSIVE set; and fix reposcan `github_orgs` to scan Derdack (currently skipped).
-[LEARN] ACCEPTED AUTH @ github.com/Derdack: a signl4-only org RAG created a false "surface exhausted" conclusion — the sibling Derdack org was never scanned (reposcan: "TARGET_ORG not configured"), and it holds real hardcoded SA/Checkmk credentials; org coverage must be enumerated per-org, not per-brand.
-[LEARN] ACCEPTED AUTH @ both credential leaks: "already reported" annotations in valid-bugs.md were model-generated and unverified, yet were real — the signl4 RAG's "zero cloud creds" claim was scoped and did not cover the derdack org.
-[LEARN] REJECTED OTHER @ mkp/zip archives: Checkmk .mkp and nagios .zip contain only `<api-key>` placeholders — archive content swept negative.
-[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: /WebInterface/ path family (WSDL namespace) uniformly 404 — path-family probe negative.
-[HYP] Hardcoded production database + monitoring credentials committed to public Derdack org repos
-class: AUTH
-asset: github.com/Derdack/derdack-oncall-holidayimport + github.com/Derdack/derdack-plugin-checkmk
-confidence: 95
-reasoning: HolidayImport.js:16 and HolidayDeleteAll.js:22 embed "Server=sqlserver.derdack-support.local;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017" (commit 5f9dcc1, author rbormann@de.derdack.com); derdack-plugin-checkmk/2-way/Main.js:90-94 embed username "cmkadmin", password "CNlydVqZ", serverURL "http://192.168.88.107:8080/cmk/check_mk/api/v0/" (commit f4613b7, author rons4). Both on default branch, unremediated since 2022/2024. Publicly cloneable without auth.
-evidence_needed: confirmation creds are live (requires reach to internal RFC1918/.local hosts — not reachable from researcher seat)
-verify_steps: 1) git clone --depth 1 https://github.com/Derdack/derdack-oncall-holidayimport (done) 2) grep PWD= (done) 3) getent hosts sqlserver.derdack-support.local -> NXDOMAIN (internal)
-impact: SA database credential for EA DB (EnterpriseAlert2017) + Checkmk admin creds with internal IP enable full DB read/write and monitoring/admin control if the internal network is reachable (e.g., via any foothold or VPN); severity HIGH
-testability: PASSIVE (leak) / HUMAN_ONLY (validation)
-[HYP] eval() deserialization of EA scripting-host callbacks in four public 2-way REST plugins
-class: OTHER
-asset: github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js
-confidence: 35
-reasoning: eval(appContext.runtimeInfo.callbackSetStatusOK/SendMail/...) and eval(appContext.state.callbackSaveState) execute strings pulled from the EA scripting host runtime; identical pattern in Dynatrace/Logic Monitor/zendesk samples; exploitability depends on whether appContext is populated from attacker-controllable external input
-evidence_needed: EA Scripting Host SDK docs confirming trust boundary of appContext.runtimeInfo/state
-verify_steps: passive source read (done); needs EA SDK documentation
-impact: RCE within the EA scripting host context if appContext is externally influenceable; otherwise defense-in-depth; severity UNDETERMINED
-testability: HUMAN_ONLY
-[HYP] Cross-environment token forgery via account IdP issuer mismatch + shared prod signing key
-class: AUTH
-asset: account.signl4.com/identity
+## 2026-10-14 00:03:24 UTC [target] (model bigpickle)
+[HYP] Hardcoded SIGNL4 Team Secret in Google IoT Integration Sample
+class: SECRET
+asset: signl4/signl4-integration-google-iot/index.js:19
 confidence: 85
-reasoning: ... (as before)
-testability: AUTH_HELPED
-[FINAL] 1) Hardcoded SA DB creds `sa:Derdack!` in public github.com/Derdack/derdack-oncall-holidayimport (HolidayImport.js:16, HolidayDeleteAll.js:22) — AUTH, PASSIVE-confirmed, unremediated since 2022-12-07; NEW this cycle.
-[FINAL] 2) Hardcoded Checkmk admin creds `cmkadmin:CNlydVqZ` + internal IP 192.168.88.107 in public github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js:90-94 — AUTH, PASSIVE-confirmed, unremediated since 2024-05-27; NEW this cycle.
-[FINAL] 3) EA WebService WSDL internal hostname disclosure https://ereesus/... on demo.enterprisealert.com — MISCONFIG, PASSIVE-confirmed, byte-stable.
-[FINAL] 4) Leaked SIGNL4 team secrets vbguzfsi (signl4/docs) + 96sbq38s (google-iot/losant) — AUTH, PASSIVE-confirmed live via oracle.
-[FINAL] 5) Cross-env JWKS/client_id reuse + account IdP issuer mismatch — AUTH, AUTH_HELPED.
-[PARKED] eval() callback deserialization: confidence 35 < 40 — trust boundary unprovable without EA SDK docs.
-[PARKED] vps.signl4.com takeover: HUMAN_ONLY.
-[PARKED] EA EventProvider HTTP auth bypass: refuted.
-[NEXT] HUMAN: submit credential-leak set to bugs.olivermaicher.eu and extend reposcan config to scan github.com/Derdack.
-[LEARN] ACCEPTED AUTH @ github.com/Derdack: brand-scoped RAG ("53 signl4/* repos") produced a false "secrets exhausted" conclusion; the sibling Derdack org was never scanned (reposcan-raw/summary.txt "TARGET_ORG not configured for derdack") and holds real hardcoded SA + Checkmk credentials unremediated for 2-4 years — org coverage must be enumerated per-org, not per-brand.
-[LEARN] ACCEPTED AUTH @ derdack-oncall-holidayimport + derdack-plugin-checkmk: the valid-bugs.md "hardcoded SA/Checkmk creds" entries were dismissed as model hallucination against the signl4-only RAG, but they were real and located in the unscanned derdack org — a scoped negative is not a global negative.
-[LEARN] REJECTED OTHER @ derdack .mkp/.zip artifacts: Checkmk EnterpriseAlert-*.mkp and nagios plugin zip contain only `<api-key>`/`<enterprise alert server>` placeholders — archive contents swept negative.
-[LEARN] REJECTED MISCONFIG @ demo.enterprisealert.com/WebInterface/EnterpriseAlert/*: WSDL-namespace path family returns uniform bare 404 (0 bytes) matching control — no hidden web interface.
-[LEARN] ACCEPTED OTHER @ deliverables re-verified live this cycle: oracle vbguzfsi→400/4000, fabricated→404/3004, 96sbq38s→400/4000; EA WSDL sha256 e8b753f2... unchanged — no drift after 5+ days, submission-ready.
-[CHANGED] Re-verified PASSIVE deliverables live and byte-stable (EA WSDL sha256 e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae; webhook oracle 400/4000 vs 404/3004) — no remediation after 5+ days.
-[CHANGED] github.com/Derdack org now covered: 12 public repos cloned+swept (was never scanned; reposcan "skipped").
+reasoning: SIGNL4 team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a public repo under the signl4 GitHub org (Derdack-owned). The secret is a real alphanumeric string committed to source. No other files in this repo reference this value, suggesting it may be a Derdack-internal demo/test team.
+impact: Medium — If valid, any party can send arbitrary alerts to this SIGNL4 team via the webhook. Could be used for alert flooding, social engineering via fake incident notifications, or to probe the team's response workflows. Impact取决于 whether the team still exists and is active.
+verify_steps: Passive only: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) Check if `connect.signl4.com/webhook/96sbq38s` returns HTTP 201 vs 404 via `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If 404, team was deleted and finding is historical only.
+[HYP] Hardcoded SIGNL4 Team Secret in Postman Collection & DevTools YAML (same secret, two files)
+class: SECRET
+asset: signl4/code-snippets/SIGNL4.postman_collection.json:42 + signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7
+confidence: 80
+reasoning: Team secret `vbguzfsi` appears in two public repos: (1) Postman collection path array `[webhook, vbguzfsi]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardcoded directly. Both are under signl4 GitHub org. Same secret reused across two sample repos suggests a Derdack employee's real team secret used during development.
+impact: Medium — Same as above: unauthorized alert injection, alert flooding, potential social engineering via fake incidents. Two repos expose the same secret, increasing the blast radius.
+verify_steps: Passive only: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+[HYP] Commented-Out Pipedream Debug Webhook in Zabbix Integration
+class: OTHER
+asset: signl4/signl4-integration-zabbix/signl4-mediatype.yaml:103
+confidence: 70
+reasoning: Line contains commented-out debug endpoint: `//endpoint = 'https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net';` — a Pipedream request inspection URL. This is a developer debug/test artifact left in production Zabbix media type export. While commented out, it reveals an internal testing endpoint and confirms Pipedream was used for webhook debugging. The UUID `b58aee12b873eae71b5db8b4fdc77d78` is a real Pipedream endpoint ID.
+impact: Low — Commented-out code is not executed. However, it leaks a historical debug endpoint that could be investigated for further information. If someone uncomments it, all Zabbix alerts would be sent to a third-party service (Pipedream) instead of SIGNL4.
+verify_steps: Passive only: (1) Check if the Pipedream endpoint is still active: `curl -s -o /dev/null -w '%{http_code}' https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net` (2) If active, confirms debug artifact was real (not just a test UUID).
 [NEW] `github.com/Derdack` org (12 public repos, Derdack GmbH; e.g. `derdack-plugin-checkmk`, `derdack-oncall-holidayimport`, `derdack-integration-azuremonitor`) was NEVER reposcanned — `reposcan-raw/summary.txt` literally records "TARGET_ORG not configured for derdack; skipping public-org deep scan". Live anonymous clone + sweep reveals real hardcoded credentials absent from the signl4-only RAG.
 [NEW] Hardcoded SQL Server SA creds in public `derdack-oncall-holidayimport/HolidayImport.js:16` and `HolidayDeleteAll.js:22`: `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017` (commit `5f9dcc1`, author René Bormann `<rbormann@de.derdack.com>`, 2022-12-07, default branch, unremediated). sha256(`Derdack!`)=`6945282c83ae3eca8da57e513d2cab27bc1567f7a4e28d7320edaaac88173421`.
 [NEW] Hardcoded Checkmk admin creds + internal IP in public `derdack-plugin-checkmk/2-way/Main.js:90-94`: `username="cmkadmin"`, `password="CNlydVqZ"`, `serverURL="http://192.168.88.107:8080/cmk/check_mk/api/v0/"` (commit `f4613b7`, author rons4, 2024-05-27, unremediated). sha256(`CNlydVqZ`)=`beb9fa72e9bc07032ea98c931ca87cc1fba08e30679ce97544a401ac911f8ba2`.

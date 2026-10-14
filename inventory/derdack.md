@@ -2726,3 +2726,10 @@ www.derdack.com
 - CHANGED Cross-env token forgery chain stable at 6 hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled, account IdP issuer mismatch (claims connect) + plain PKCE — AUTH_HELPED
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
 - CHANGED RAG sweep of all 53 signl4/* repos + docs tarball + git history completed: only two non-placeholder webhook secrets exist (`vbguzfsi`, `96sbq38s`); no cloud creds, private keys, JWT, client_secret, or
+
+## 2026-10-14 00:05:40 UTC
+- NEW `github.com/Derdack` org (12 public repos, Derdack GmbH; e.g. `derdack-plugin-checkmk`, `derdack-oncall-holidayimport`, `derdack-integration-azuremonitor`) was NEVER reposcanned — `reposcan-raw/summar
+- NEW Hardcoded SQL Server SA creds in public `derdack-oncall-holidayimport/HolidayImport.js:16` and `HolidayDeleteAll.js:22`: `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdac
+- NEW Hardcoded Checkmk admin creds + internal IP in public `derdack-plugin-checkmk/2-way/Main.js:90-94`: `username="cmkadmin"`, `password="CNlydVqZ"`, `serverURL="http://192.168.88.107:8080/cmk/check_mk/ap
+- NEW `eval()` deserialization of EA scripting-host callbacks (`eval(appContext.runtimeInfo.callbackSetStatusOK/SendMail)`, `eval(appContext.state.callbackSaveState)`) in 4 public 2-way REST plugins (checkm
+- CHANGED PASSIVE deliverables re-verified live and byte-stable after 5+ days: webhook oracle `vbguzfsi`→400/code 4000, fabricated `zq7x2k9p`→404/code 3004, `96sbq38s`→400/code 4000; EA WSDL → 200, 29968 B, sha
