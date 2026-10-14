@@ -11389,3 +11389,116 @@ confidence: 70
 reasoning: Line contains commented-out debug endpoint: `//endpoint = 'https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net';` — a Pipedream request inspection URL. This is a developer debug/test artifact left in production Zabbix media type export. While commented out, it reveals an internal testing endpoint and confirms Pipedream was used for webhook debugging. The UUID `b58aee12b873eae71b5db8b4fdc77d78` is a real Pipedream endpoint ID.
 impact: Low — Commented-out code is not executed. However, it leaks a historical debug endpoint that could be investigated for further information. If someone uncomments it, all Zabbix alerts would be sent to a third-party service (Pipedream) instead of SIGNL4.
 verify_steps: Passive only: (1) Check if the Pipedream endpoint is still active: `curl -s -o /dev/null -w '%{http_code}' https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net` (2) If active, confirms debug artifact was real (not just a test UUID).
+## 2026-10-14 19:06:38 UTC [target] (model bigpickle)
+[CHANGED] github.com/Derdack org (12 public repos) now covered (previously "TARGET_ORG not configured"); confirmed unremediated hardcoded SA + Checkmk credentials.
+[CHANGED] Webhook oracle re-verified byte-stable: `vbguzfsi`→400/4000, `96sbq38s`→400/4000, fabricated `zq7x2k9p`→404/3004.
+[CHANGED] `api.signl4.com/api/v2/teams` 401↔405 flips confirmed temporal (6/6 identical in-session), not per-request — no security differential.
+[CHANGED] `vps.signl4.com` A=72.167.227.27 (GoDaddy) unchanged; intermittent 000, no drift.
+[CHANGED] `account.signl4.com/identity` still advertises `issuer=connect.signl4.com/identity` + byte-identical JWKS across 6 hosts.
+[CHANGED] Triage gate remains dead (≥57 consecutive failed runs) — report channel is the bottleneck, not discovery.
+[NEW] None. identity/API/CT/WP/EA surfaces zero-drift; passive route maps exhausted.
+[PRIO] connect.signl4.com, 7.30, a9/b10/t8/g3/c7/f2
+[PRIO] account.signl4.com, 6.80, a7/b10/t9/g2/c7/f2
+[PRIO] github.com/Derdack, 6.45, a6/b8/t5/g10/c3/f4
+[PRIO] demo.enterprisealert.com, 5.70, a6/b7/t7/g4/c5/f3
+[PRIO] vps.signl4.com, 4.65, a3/b5/t3/g10/c2/f5
+[HYP] Live SIGNL4 team webhook secrets leaked in public vendor repos enable unauthorized alert manipulation
+class: AUTH
+asset: https://connect.signl4.com/webhook/vbguzfsi (+ https://connect.signl4.com/webhook/96sbq38s)
+confidence: 95
+reasoning: `vbguzfsi` at github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7 (staff `rons4`, pushed 2026-10-08); `96sbq38s` at signl4-integration-google-iot/index.js:19 and signl4-integration-losant/signl4-alert-v100.node:148. Same files use `xxxx`/`YOUR_TEAM_SECRET` placeholders for siblings, proving non-example. Non-mutating differential: Content-Length:0 POST to valid secret → 400 code 4000 ("event null or empty"); fabricated → 404 code 3004. Same secret accepted on connect/account/api (shared webhook registry).
+evidence_needed: the 400/4000-vs-404/3004 control proves the secret is live without creating an event; no event injection required.
+verify_steps: (already established, non-mutating) `POST /webhook/vbguzfsi` with Content-Length:0 → expect 400/code 4000 vs control `POST /webhook/zq7x2k9p` Content-Length:0 → 404/code 3004. GET/HEAD are non-discriminating (byte-identical bodies). Do NOT submit a JSON body (`{}` is accepted → 201, mutating/out-of-scope).
+impact: any holder of the public secret can raise/ack/resolve/close alerts for the team — manipulation of safety-critical alerting. HIGH.
+testability: PASSIVE
+[HYP] Public Derdack GitHub org exposes hardcoded SQL Server SA and Checkmk admin credentials
+class: AUTH
+asset: github.com/Derdack/derdack-oncall-holidayimport + github.com/Derdack/derdack-plugin-checkmk
+confidence: 90
+reasoning: `HolidayImport.js:16` and `HolidayDeleteAll.js:22` contain `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017` (author rbormann@de.derdack.com, 2022-12-07). `derdack-plugin-checkmk/2-way/Main.js:90-94` contains `username="cmkadmin"`, `password="CNlydVqZ"`, `serverURL="http://192.168.88.107:8080/cmk/check_mk/api/v0/"` (author rons4, 2024-05-27). Both repos public; both hosts internal-only (NXDOMAIN externally).
+evidence_needed: public-indexed exposure is sufficient; internal reachability is not verifiable from an internet seat.
+verify_steps: `GET https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/main/HolidayImport.js` → 200 containing `UID=sa;PWD=Derdack!`; `GET https://raw.githubusercontent.com/Derdack/derdack-plugin-checkmk/main/2-way/Main.js` → 200 containing `cmkadmin`/`CNlydVqZ`.
+impact: DB sysadmin (sa) credentials → full read/write of EnterpriseAlert2017 if the internal host is reachable; Checkmk admin → internal monitoring host. HIGH (exposure); exploitation gated on network position.
+testability: PASSIVE
+[HYP] Cross-environment token acceptance via shared RS256 signing key + account-host issuer mismatch
+class: OATH
+asset: https://account.signl4.com/identity/.well-known/openid-configuration
+confidence: 50
+reasoning: six identity hosts (connect/devconnect/api/devapi/account/devaccount) serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) and identical discovery parameterics; account advertises `issuer=https://connect.signl4.com/identity` (host/issuer mismatch); client_id `692A0A56-892F-4AE2-8259-76DA398990B6` shared dev↔prod; devconnect lists password/device/CIBA/token-exchange grants. Document + route parity proven; enforcement at the token endpoint is NOT proven.
+evidence_needed: a token minted at one host accepted by another — requires a legitimate client credential.
+verify_steps: (read-only) `GET` both `/.well-known/openid-configuration` and diff `issuer`/`jwks_uri`; `GET` both `/identity/.well-known/openid-configuration/jwks` and confirm byte-identical.
+impact: if enforced cross-environment, token forgery → full SIGNL4 API access. CRITICAL but unverified.
+testability: AUTH_HELPED
+[PARKED] vps.signl4.com dangling A-record: real dangling DNS but takeover is gated on DNS/hosting-account control (HUMAN_ONLY); no researcher-attachable endpoint → not a claimable primitive.
+[PARKED] EA WSDL internal SOAP hostname (`ereesus`) leak: single-label CWE-200 hygiene, no exploit path → not reportable alone.
+[PARKED] eval() callback deserialization in 4 public 2-way REST plugins: client-side connector code, requires MITM/compromised EA server → no program-specific exploit.
+[PARKED] api.signl4.com/api/v2/teams 401↔405: temporal deploy state, no security differential (6/6 identical in-session).
+[PARKED] demo.enterprisealert.com/EAWebService exposure: all credential paths gate (Error:-1/401); config-level only.
+[PARKED] dev.derdack.com + us.derdack.com MultiViews 300: fabricated-path control proves static namespace echo, no real files.
+[PARKED] s4dev1..8 Azure resource IDs: descriptive-headers-only, program-rejected class.
+[FINAL] 1. Leaked live webhook secrets `vbguzfsi`/`96sbq38s` — AUTH, HIGH.
+[FINAL] 2. Public GitHub org credential exposure (SA + Checkmk) — AUTH, HIGH.
+[FINAL] 3. Cross-env token-forgery chain (6-host JWKS + issuer mismatch) — OATH, CRITICAL (AUTH_HELPED).
+[NEXT] HUMAN: Submit the frozen findings to bugs.olivermaicher.eu — (1) live webhook secrets `vbguzfsi`/`96sbq38s` with public file/line and the non-mutating Content-Length:0 400/4000-vs-404/3004 oracle; (2) `sa:Derdack!` (derdack-oncall-holidayimport) and `cmkadmin:CNlydVqZ` (derdack-plugin-checkmk) with commit/authors; (3) cross-env token-forgery chain with the 6-host JWKS deep-equal and account issuer mismatch.
+[LEARN] ACCEPTED AUTH @ github.com/Derdack: brand-scoped scanning produced a false "secrets exhausted" result; enumerate orgs per-org, not per-brand.
+[LEARN] REJECTED MISCONFIG @ vps.signl4.com: dangling DNS is genuine but takeover is gated on hosting-account control (HUMAN_ONLY) — reproducible volume is not severity.
+[LEARN] ACCEPTED AUTH @ signl4/docs: the prior "placeholder-only" rejection was a false negative; webhook secret ≠ REST API key, and the non-mutating Content-Length:0 oracle validates it without touching customer data.
+[LEARN] ACCEPTED OTHER @ report pipeline: re-verifying frozen findings each cycle has diminishing returns; when the validation gate is dead, the highest-value action is the HUMAN submission path, not re-probing closed surfaces.
+[RISK] derdack: 92 — public exposure of production-adjacent SQL SA + Checkmk admin credentials and live team webhook secrets requires immediate rotation and Git-history scrub.
+[RISK] signl4: 85 — six identity hosts share one RS256 signing key while the account host advertises a foreign issuer; a single client credential compromise yields estate-wide token forgery.
+[CHANGED] github.com/Derdack org (12 public repos) now covered (previously "TARGET_ORG not configured"); confirmed unremediated hardcoded SA + Checkmk credentials.
+[CHANGED] Webhook oracle re-verified byte-stable: `vbguzfsi`→400/4000, `96sbq38s`→400/4000, fabricated `zq7x2k9p`→404/3004.
+[CHANGED] `api.signl4.com/api/v2/teams` 401↔405 flips confirmed temporal (6/6 identical in-session), not per-request — no security differential.
+[CHANGED] `vps.signl4.com` A=72.167.227.27 (GoDaddy) unchanged; intermittent 000, no drift.
+[CHANGED] `account.signl4.com/identity` still advertises `issuer=connect.signl4.com/identity` + byte-identical JWKS across 6 hosts.
+[CHANGED] Triage gate remains dead (≥57 consecutive failed runs) — report channel is the bottleneck, not discovery.
+[NEW] None. identity/API/CT/WP/EA surfaces zero-drift; passive route maps exhausted.
+[PRIO] connect.signl4.com, 7.30, a9/b10/t8/g3/c7/f2
+[PRIO] account.signl4.com, 6.80, a7/b10/t9/g2/c7/f2
+[PRIO] github.com/Derdack, 6.45, a6/b8/t5/g10/c3/f4
+[PRIO] demo.enterprisealert.com, 5.70, a6/b7/t7/g4/c5/f3
+[PRIO] vps.signl4.com, 4.65, a3/b5/t3/g10/c2/f5
+[HYP] Live SIGNL4 team webhook secrets leaked in public vendor repos enable unauthorized alert manipulation
+class: AUTH
+asset: https://connect.signl4.com/webhook/vbguzfsi (+ https://connect.signl4.com/webhook/96sbq38s)
+confidence: 95
+reasoning: `vbguzfsi` at github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7 (staff `rons4`, pushed 2026-10-08); `96sbq38s` at signl4-integration-google-iot/index.js:19 and signl4-integration-losant/signl4-alert-v100.node:148. Same files use `xxxx`/`YOUR_TEAM_SECRET` placeholders for siblings, proving non-example. Non-mutating differential: Content-Length:0 POST to valid secret → 400 code 4000 ("event null or empty"); fabricated → 404 code 3004. Same secret accepted on connect/account/api (shared webhook registry).
+evidence_needed: the 400/4000-vs-404/3004 control proves the secret is live without creating an event; no event injection required.
+verify_steps: (already established, non-mutating) `POST /webhook/vbguzfsi` with Content-Length:0 → expect 400/code 4000 vs control `POST /webhook/zq7x2k9p` Content-Length:0 → 404/code 3004. GET/HEAD are non-discriminating (byte-identical bodies). Do NOT submit a JSON body (`{}` is accepted → 201, mutating/out-of-scope).
+impact: any holder of the public secret can raise/ack/resolve/close alerts for the team — manipulation of safety-critical alerting. HIGH.
+testability: PASSIVE
+[HYP] Public Derdack GitHub org exposes hardcoded SQL Server SA and Checkmk admin credentials
+class: AUTH
+asset: github.com/Derdack/derdack-oncall-holidayimport + github.com/Derdack/derdack-plugin-checkmk
+confidence: 90
+reasoning: `HolidayImport.js:16` and `HolidayDeleteAll.js:22` contain `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017` (author rbormann@de.derdack.com, 2022-12-07). `derdack-plugin-checkmk/2-way/Main.js:90-94` contains `username="cmkadmin"`, `password="CNlydVqZ"`, `serverURL="http://192.168.88.107:8080/cmk/check_mk/api/v0/"` (author rons4, 2024-05-27). Both repos public; both hosts internal-only (NXDOMAIN externally).
+evidence_needed: public-indexed exposure is sufficient; internal reachability is not verifiable from an internet seat.
+verify_steps: `GET https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/main/HolidayImport.js` → 200 containing `UID=sa;PWD=Derdack!`; `GET https://raw.githubusercontent.com/Derdack/derdack-plugin-checkmk/main/2-way/Main.js` → 200 containing `cmkadmin`/`CNlydVqZ`.
+impact: DB sysadmin (sa) credentials → full read/write of EnterpriseAlert2017 if the internal host is reachable; Checkmk admin → internal monitoring host. HIGH (exposure); exploitation gated on network position.
+testability: PASSIVE
+[HYP] Cross-environment token acceptance via shared RS256 signing key + account-host issuer mismatch
+class: OATH
+asset: https://account.signl4.com/identity/.well-known/openid-configuration
+confidence: 50
+reasoning: six identity hosts (connect/devconnect/api/devapi/account/devaccount) serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) and identical discovery parameterics; account advertises `issuer=https://connect.signl4.com/identity` (host/issuer mismatch); client_id `692A0A56-892F-4AE2-8259-76DA398990B6` shared dev↔prod; devconnect lists password/device/CIBA/token-exchange grants. Document + route parity proven; enforcement at the token endpoint is NOT proven.
+evidence_needed: a token minted at one host accepted by another — requires a legitimate client credential.
+verify_steps: (read-only) `GET` both `/.well-known/openid-configuration` and diff `issuer`/`jwks_uri`; `GET` both `/identity/.well-known/openid-configuration/jwks` and confirm byte-identical.
+impact: if enforced cross-environment, token forgery → full SIGNL4 API access. CRITICAL but unverified.
+testability: AUTH_HELPED
+[PARKED] vps.signl4.com dangling A-record: real dangling DNS but takeover is gated on DNS/hosting-account control (HUMAN_ONLY); no researcher-attachable endpoint → not a claimable primitive.
+[PARKED] EA WSDL internal SOAP hostname (`ereesus`) leak: single-label CWE-200 hygiene, no exploit path → not reportable alone.
+[PARKED] eval() callback deserialization in 4 public 2-way REST plugins: client-side connector code, requires MITM/compromised EA server → no program-specific exploit.
+[PARKED] api.signl4.com/api/v2/teams 401↔405: temporal deploy state, no security differential (6/6 identical in-session).
+[PARKED] demo.enterprisealert.com/EAWebService exposure: all credential paths gate (Error:-1/401); config-level only.
+[PARKED] dev.derdack.com + us.derdack.com MultiViews 300: fabricated-path control proves static namespace echo, no real files.
+[PARKED] s4dev1..8 Azure resource IDs: descriptive-headers-only, program-rejected class.
+[FINAL] 1. Leaked live webhook secrets `vbguzfsi`/`96sbq38s` — AUTH, HIGH.
+[FINAL] 2. Public GitHub org credential exposure (SA + Checkmk) — AUTH, HIGH.
+[FINAL] 3. Cross-env token-forgery chain (6-host JWKS + issuer mismatch) — OATH, CRITICAL (AUTH_HELPED).
+[NEXT] HUMAN: Submit the frozen findings to bugs.olivermaicher.eu — (1) live webhook secrets `vbguzfsi`/`96sbq38s` with public file/line and the non-mutating Content-Length:0 400/4000-vs-404/3004 oracle; (2) `sa:Derdack!` (derdack-oncall-holidayimport) and `cmkadmin:CNlydVqZ` (derdack-plugin-checkmk) with commit/authors; (3) cross-env token-forgery chain with the 6-host JWKS deep-equal and account issuer mismatch.
+[LEARN] ACCEPTED AUTH @ github.com/Derdack: brand-scoped scanning produced a false "secrets exhausted" result; enumerate orgs per-org, not per-brand.
+[LEARN] REJECTED MISCONFIG @ vps.signl4.com: dangling DNS is genuine but takeover is gated on hosting-account control (HUMAN_ONLY) — reproducible volume is not severity.
+[LEARN] ACCEPTED AUTH @ signl4/docs: the prior "placeholder-only" rejection was a false negative; webhook secret ≠ REST API key, and the non-mutating Content-Length:0 oracle validates it without touching customer data.
+[LEARN] ACCEPTED OTHER @ report pipeline: re-verifying frozen findings each cycle has diminishing returns; when the validation gate is dead, the highest-value action is the HUMAN submission path, not re-probing closed surfaces.
+[RISK] derdack: 92 — public exposure of production-adjacent SQL SA + Checkmk admin credentials and live team webhook secrets requires immediate rotation and Git-history scrub.
+[RISK] signl4: 85 — six identity hosts share one RS256 signing key while the account host advertises a foreign issuer; a single client credential compromise yields estate-wide token forgery.

@@ -2774,3 +2774,26 @@ www.derdack.com
 - CHANGED vps.signl4.com A-record 72.167.227.27 (GoDaddy secureserver.net) remains dangling (nginx default vhost) — transient TCP-timeout observed in recent probes, DNS unchanged
 - CHANGED Triage pipeline remains broken: ≥57 consecutive failed Triager runs (2026-09-25→2026-10-06), `reports/valid-bugs.md` running count unreliable
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
+
+## 2026-10-14 19:07:34 UTC
+- CHANGED github.com/Derdack org (12 public repos) now covered (previously "TARGET_ORG not configured"); confirmed unremediated hardcoded SA + Checkmk credentials.
+- CHANGED Webhook oracle re-verified byte-stable: `vbguzfsi`→400/4000, `96sbq38s`→400/4000, fabricated `zq7x2k9p`→404/3004.
+- CHANGED `api.signl4.com/api/v2/teams` 401↔405 flips confirmed temporal (6/6 identical in-session), not per-request — no security differential.
+- CHANGED `vps.signl4.com` A=72.167.227.27 (GoDaddy) unchanged; intermittent 000, no drift.
+- CHANGED `account.signl4.com/identity` still advertises `issuer=connect.signl4.com/identity` + byte-identical JWKS across 6 hosts.
+- CHANGED Triage gate remains dead (≥57 consecutive failed runs) — report channel is the bottleneck, not discovery.
+- NEW None. identity/API/CT/WP/EA surfaces zero-drift; passive route maps exhausted.
+- CHANGED github.com/Derdack org (12 public repos) now covered (previously "TARGET_ORG not configured"); confirmed unremediated hardcoded SA + Checkmk credentials.
+- CHANGED Webhook oracle re-verified byte-stable: `vbguzfsi`→400/4000, `96sbq38s`→400/4000, fabricated `zq7x2k9p`→404/3004.
+- CHANGED `api.signl4.com/api/v2/teams` 401↔405 flips confirmed temporal (6/6 identical in-session), not per-request — no security differential.
+- CHANGED `vps.signl4.com` A=72.167.227.27 (GoDaddy) unchanged; intermittent 000, no drift.
+- CHANGED `account.signl4.com/identity` still advertises `issuer=connect.signl4.com/identity` + byte-identical JWKS across 6 hosts.
+- CHANGED Triage gate remains dead (≥57 consecutive failed runs) — report channel is the bottleneck, not discovery.
+- NEW None. identity/API/CT/WP/EA surfaces zero-drift; passive route maps exhausted.
+- NEW github.com/Derdack org (12 public repos) fully scanned for first time — revealed hardcoded SQL Server SA creds `sa:Derdack!` @ `sqlserver.derdack-support.local` in `derdack-oncall-holidayimport` + Che
+- NEW api.signl4.com/api/v2/teams auth-status flipped to route-gated (401 on unauth GET + invalid Bearer) vs prior handler-deferred 405 pattern; temporal flip confirmed by 6 consecutive probes
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
+- CHANGED PASSIVE deliverables re-verified live and byte-stable after 5+ days: webhook oracle `vbguzfsi`→400/code 4000, fabricated `zq7x2k9p`→404/code 3004, `96sbq38s`→400/code 4000; EA WSDL → 200, 29968 B, sha
+- CHANGED vps.signl4.com A-record 72.167.227.27 (GoDaddy secureserver.net) remains dangling (nginx default vhost) — transient TCP-timeout observed in recent probes, DNS unchanged
+- CHANGED Triage pipeline remains broken: ≥57 consecutive failed Triager runs (2026-09-25→2026-10-06), `reports/valid-bugs.md` running count unreliable
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted

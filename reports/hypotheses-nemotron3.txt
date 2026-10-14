@@ -1,8 +1,8 @@
-## 2026-10-14 14:50:17 UTC [target] (model nemotron3)
-[NEW] github.com/Derdack org (12 public repos) fully scanned for first time — hardcoded SQL Server SA creds `sa:Derdack!` @ `sqlserver.derdack-support.local` in `derdack-oncall-holidayimport/HolidayImport.js:16` + `HolidayDeleteAll.js:22`; Checkmk admin creds `cmkadmin:CNlydVqZ` @ `192.168.88.107:8080` in `derdack-plugin-checkmk/2-way/Main.js:90-94`; `eval()` deserialization in 4 public 2-way REST plugins (checkmk/dynatrace/logic-monitor/zendesk)
+## 2026-10-14 19:07:23 UTC [target] (model nemotron3)
+[NEW] github.com/Derdack org (12 public repos) fully scanned for first time — revealed hardcoded SQL Server SA creds `sa:Derdack!` @ `sqlserver.derdack-support.local` in `derdack-oncall-holidayimport` + Checkmk admin creds `cmkadmin:CNlydVqZ` @ `192.168.88.107:8080` in `derdack-plugin-checkmk/2-way/Main.js` + `eval()` deserialization in 4 EA 2-way REST plugins
 [NEW] api.signl4.com/api/v2/teams auth-status flipped to route-gated (401 on unauth GET + invalid Bearer) vs prior handler-deferred 405 pattern; temporal flip confirmed by 6 consecutive probes
-[CHANGED] Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain PKCE — AUTH_HELPED blocked on client_secret
-[CHANGED] PASSIVE deliverables re-verified live and byte-stable after 5+ days: webhook oracle `vbguzfsi`→400/code 4000, fabricated `zq7x2k9p`→404/code 3004, `96sbq38s`→400/code 4000; EA WSDL → 200, 29968 B, sha256 `e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae` unchanged; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`
+[CHANGED] Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain PKCE
+[CHANGED] PASSIVE deliverables re-verified live and byte-stable after 5+ days: webhook oracle `vbguzfsi`→400/code 4000, fabricated `zq7x2k9p`→404/code 3004, `96sbq38s`→400/code 4000; EA WSDL → 200, 29968 B, sha256 e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae
 [CHANGED] vps.signl4.com A-record 72.167.227.27 (GoDaddy secureserver.net) remains dangling (nginx default vhost) — transient TCP-timeout observed in recent probes, DNS unchanged
 [CHANGED] Triage pipeline remains broken: ≥57 consecutive failed Triager runs (2026-09-25→2026-10-06), `reports/valid-bugs.md` running count unreliable
 [CHANGED] Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
@@ -30,25 +30,25 @@ evidence_needed: Live EA instance with 2-way REST integration configured to test
 verify_steps: 1) READ github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js#L90-94 (eval with appContext.state.callbackSaveState) 2) READ dynatrace/logic-monitor/zendesk Main.js for same pattern 3) If live EA tenant available, configure 2-way integration and inject payload via callback (AUTH_HELPED)
 impact: RCE on EA server via scripting host callback; severity CRITICAL
 testability: AUTH_HELPED
-[HYP] Cross-env token forgery via account IdP issuer mismatch + plain PKCE + shared RS256 key
-class: AUTH
-asset: account.signl4.com/identity
-confidence: 85
-reasoning: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) share byte-identical RS256 signing key (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) and client_id 692A0A56-892F-4AE2-8259-76DA398990B6; account IdP claims connect issuer (cross-host mint-mismatch); plain PKCE allowed; password grant enabled on staging; API accepts Bearer tokens from shared key; full chain documented
-evidence_needed: Valid client_secret for client_id 692A0A56 to exercise password grant on devconnect and mint token accepted by api.signl4.com/api/v2/teams
-verify_steps: 1) Obtain legitimate client_secret (HUMAN_ONLY) 2) POST devconnect.signl4.com/identity/connect/token with grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<secret>&scope=public_api_read+write+offline_access 3) Use returned access_token as Bearer against api.signl4.com/api/v2/teams
-impact: Cross-environment token forgery enabling full API access (CRUD alerts, teams, webhooks, subscriptions, users, billing) across all SIGNL4 tenants; severity CRITICAL
-testability: AUTH_HELPED
-[PARKED] Cross-env token forgery via account IdP issuer mismatch + plain PKCE: confidence 85 but AUTH_HELPED — blocked on client_secret acquisition; no passive verification of cross-host token acceptance possible
+[HYP] Internal infrastructure hostname leak via EA WSDL on demo.enterprisealert.com
+class: MISCONFIG
+asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+confidence: 95
+reasoning: Live WSDL (sha256 e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae) exposes non-public single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` via unauthenticated GET; internal hostname naming is reconnaissance input for pivot
+evidence_needed: None — PASSIVE confirmed live across 5+ cycles, byte-stable
+verify_steps: 1) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl (200, 29968 B, confirms `ereesus` hostname) 2) Verify no auth required (confirmed)
+impact: Internal infrastructure disclosure (CWE-200 hygiene); enables targeted reconnaissance against internal EA deployment; severity LOW-MEDIUM
+testability: PASSIVE
+[PARKED] Cross-env token forgery via account IdP issuer mismatch + plain PKCE + shared RS256 key: confidence 85 but AUTH_HELPED — blocked on client_secret acquisition; no passive verification of cross-host token acceptance possible
 [PARKED] vps.signl4.com subdomain takeover via dangling A-record to GoDaddy shared host: confidence 75 but HUMAN_ONLY exploitability — no claimable takeover primitive from researcher seat; requires DNS/hosting-account control; transient HTTPS probe (000 vs 200) reduces reproducibility
 [PARKED] Webhook team-secret enumeration oracle enables credentialed access via leaked secrets: PASSIVE oracle confirmed (80), but full API compromise requires separate X-S4-Api-Key credential (webhook secret ≠ REST API key per live test); AUTH_HELPED for webhook-only vector
 [FINAL] 1) Hardcoded SQL Server SA creds in public Derdack GitHub repo (AUTH, 95) — LIVE in derdack-oncall-holidayimport, unremediated 2+ years
 [FINAL] 2) eval() deserialization in 4 public EA 2-way REST plugins (BUSLOGIC, 90) — LIVE in derdack-plugin-checkmk + 3 others, RCE via callback injection
-[FINAL] 3) Second live SIGNL4 team secret `96sbq38s` in public GitHub repos (AUTH, 90) — PASSIVE leak confirmed live via Content-Length:0 discriminator
-[FINAL] 4) Real SIGNL4 team secret `vbguzfsi` in public GitHub repo enables webhook injection/resolution (AUTH, 100) — PASSIVE leak confirmed, live 201 response validated
+[FINAL] 3) Live SIGNL4 team secret `vbguzfsi` in public GitHub repo enables webhook injection/resolution (AUTH, 100) — PASSIVE leak confirmed, live 201 response validated
+[FINAL] 4) Second live SIGNL4 team secret `96sbq38s` in public GitHub repos (AUTH, 90) — PASSIVE leak confirmed live via Content-Length:0 discriminator
 [FINAL] 5) Internal infrastructure hostname leak via EA WSDL on demo.enterprisealert.com (MISCONFIG, 95) — PASSIVE confirmed live, CWE-200 hygiene
 [FINAL] 6) Cross-env token forgery via account IdP issuer mismatch (AUTH, 85) — AUTH_HELPED, requires client_secret
-[NEXT] HUMAN: Submit the 4 findings to bugs.olivermaicher.eu: (1) Derdack-oncall-holidayimport hardcoded SA creds (2) Derdack-plugin-checkmk hardcoded Checkmk creds + eval() RCE (3) SIGNL4 webhook secrets vbguzfsi + 96sbq38s in public repos (4) EA WSDL internal hostname leak on demo.enterprisealert.com
+[NEXT] HUMAN: Submit the 6 findings to bugs.olivermaicher.eu: (1) Derdack-oncall-holidayimport hardcoded SA creds (2) Derdack-plugin-checkmk hardcoded Checkmk creds + eval() RCE (3) SIGNL4 webhook secrets vbguzfsi + 96sbq38s in public repos (4) EA WSDL internal hostname leak on demo.enterprisealert.com (5) Cross-env token forgery chain (AUTH_HELPED)
 [LEARN] ACCEPTED AUTH @ github.com/Derdack: Brand-scoped RAG ("53 signl4/* repos") produced false "secrets exhausted" conclusion — sibling `github.com/Derdack` org was never scanned (reposcan: "TARGET_ORG not configured"), and it holds real hardcoded SA/Checkmk credentials; org coverage must be enumerated per-org, not per-brand
 [LEARN] ACCEPTED AUTH @ signl4/docs: Prior "placeholder-only" rejection was false negative — `vbguzfsi` and `96sbq38s` are live team webhook secrets (unsanitized in vendor docs). Webhook secret ≠ REST API key; use Content-Length:0 oracle is effective for validation without creating incidents.
 [LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: Path-family probing of App-Proxy-fronted host recovered live EA sub-app (root-only status ≠ full-host status). Apply to future App-Proxy-fronted/multi-app hosts before declaring inert.
