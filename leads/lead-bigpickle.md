@@ -11333,3 +11333,59 @@ testability: PASSIVE
 [LEARN] Webhook secrets can be live even in vendor docs repos; Content-Length:0 oracle is effective for validation without creating incidents.
 [RISK] derdack: 92 - Public exposure of production-adjacent credentials requires rotation and secret removal from Git history.
 [RISK] derdack: 98 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=
+## 2026-10-14 14:52:33 UTC [target] (model bigpickle)
+[HYP] Live SIGNL4 team webhook secret leaked in vendor's public repo enables unauthorized alert injection
+class: AUTH
+asset: https://connect.signl4.com/webhook/vbguzfsi
+confidence: 95
+reasoning: secret `vbguzfsi` sits at github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7 (official vendor repo, pushed 2026-10-08, staff author rons4, unremediated); the same file uses `xxxx` placeholders for the sibling OpenWeather `appid` and sibling webhook, proving `vbguzfsi` is not an example. Non-mutating control: `POST /webhook/vbguzfsi` with Content-Length:0 returns 400 code 4000 ("event null or empty") while fabricated `POST /webhook/zq7x2k9p` returns 404 code 3004 ("No matching event source found"). The same secret is accepted on connect/account/api (shared webhook registry).
+evidence_needed: the 400/4000-vs-404/3004 differential is the proof; a real event injection must not be repeated (mutating/out-of-scope).
+verify_steps: compare `POST https://connect.signl4.com/webhook/vbguzfsi` (Content-Length:0) → expect 400/4000, against `POST https://connect.signl4.com/webhook/zq7x2k9p` (Content-Length:0) → expect 404/3004.
+impact: any holder of the public secret can raise/ack/resolve/close alerts for the team — unauthorized manipulation of safety-critical alerting. HIGH.
+testability: PASSIVE
+[HYP] Hardcoded SQL Server SA credentials exposed in public Derdack GitHub repo
+class: AUTH
+asset: https://github.com/Derdack/derdack-oncall-holidayimport/blob/main/HolidayImport.js#L16
+confidence: 90
+reasoning: connection string `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017` appears in HolidayImport.js:16 and HolidayDeleteAll.js:22; public repo, author rbormann@de.derdack.com, commit 2022-12-07, unremediated. Target host is internal-only (NXDOMAIN externally).
+evidence_needed: public exposure of the credential is sufficient; internal reachability is not verifiable from an internet seat.
+verify_steps: `GET https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/main/HolidayImport.js` → expect 200 containing `UID=sa;PWD=Derdack!`; confirm repo visibility via GitHub API.
+impact: DB sysadmin (sa) credentials to EnterpriseAlert2017 — full read/write of the product database if the internal host is reachable. HIGH.
+testability: PASSIVE
+[HYP] Cross-environment token acceptance via shared signing key + account-host issuer mismatch
+class: OATH
+asset: https://account.signl4.com/identity/.well-known/openid-configuration
+confidence: 50
+reasoning: six identity hosts (connect, devconnect, api, devapi, account, devaccount) serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`); account-hosted discovery advertises issuer `https://connect.signl4.com/identity` (host/issuer mismatch); client_id `692A0A56-892F-4AE2-8259-76DA398990B6` and full scope set are shared dev↔prod; devconnect lists password/device/CIBA/token-exchange grants. Document and route parity proven — enforcement at the token endpoint is not.
+evidence_needed: a token minted at account accepted by api.signl4.com — requires a legitimate client credential.
+verify_steps: `GET https://account.signl4.com/identity/.well-known/openid-configuration` and `GET https://connect.signl4.com/identity/.well-known/openid-configuration`, diff `issuer` + `jwks_uri`; `GET .../identity/.well-known/openid-configuration/jwks` on both and diff.
+impact: if enforced in practice, cross-environment/tenant token forgery → full SIGNL4 API access. CRITICAL, but unverified.
+testability: AUTH_HELPED
+[NEXT] HUMAN: Submit the three frozen findings to bugs.olivermaicher.eu — (1) live webhook secrets `vbguzfsi`/`96sbq38s` with public file/line + the Content-Length:0 400/4000-vs-404/3004 oracle, (2) `sa:Derdack!` in derdack-oncall-holidayimport + `cmkadmin:CNlydVqZ` in derdack-plugin-checkmk with commit/authors, (3) cross-env token-forgery chain with the 6-host JWKS deep-equal and account issuer mismatch.
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: path-family probing of an App-Proxy-fronted known-404 root recovered a live EA sub-app — root-only status is not full-host status.
+[LEARN] REJECTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx: the `Handler` value reflects into an attribute but is URL-encoded (`"`→`%22`, `<`→`%3c`) — not XSS.
+[LEARN] ACCEPTED AUTH @ github.com/Derdack: brand-scoped scanning (signl4/* only) produced a false "secrets exhausted" conclusion; org coverage must be enumerated per-org, not per-brand.
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v2/teams: the 401-vs-405 flip is temporal deploy state, not per-request routing — same-session N-sample testing is required before calling it flapping.
+[RISK] derdack: 92 — public exposure of production-adjacent credentials (SQL SA, Checkmk admin, live team webhook secrets) demands immediate rotation and Git-history scrub; the leaked webhook secret directly governs alert integrity.
+[RISK] signl4: 85 — six identity hosts share one RS256 signing key while the account host advertises a foreign issuer; a single client_secret/credential compromise yields estate-wide token forgery.
+[HYP] Hardcoded SIGNL4 Team Secret in Google IoT Integration Sample
+class: SECRET
+asset: signl4/signl4-integration-google-iot/index.js:19
+confidence: 85
+reasoning: SIGNL4 team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a public repo under the signl4 GitHub org (Derdack-owned). The secret is a real alphanumeric string committed to source. No other files in this repo reference this value, suggesting it may be a Derdack-internal demo/test team.
+impact: Medium — If valid, any party can send arbitrary alerts to this SIGNL4 team via the webhook. Could be used for alert flooding, social engineering via fake incident notifications, or to probe the team's response workflows. Impact取决于 whether the team still exists and is active.
+verify_steps: Passive only: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) Check if `connect.signl4.com/webhook/96sbq38s` returns HTTP 201 vs 404 via `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If 404, team was deleted and finding is historical only.
+[HYP] Hardcoded SIGNL4 Team Secret in Postman Collection & DevTools YAML (same secret, two files)
+class: SECRET
+asset: signl4/code-snippets/SIGNL4.postman_collection.json:42 + signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7
+confidence: 80
+reasoning: Team secret `vbguzfsi` appears in two public repos: (1) Postman collection path array `[webhook, vbguzfsi]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardcoded directly. Both are under signl4 GitHub org. Same secret reused across two sample repos suggests a Derdack employee's real team secret used during development.
+impact: Medium — Same as above: unauthorized alert injection, alert flooding, potential social engineering via fake incidents. Two repos expose the same secret, increasing the blast radius.
+verify_steps: Passive only: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+[HYP] Commented-Out Pipedream Debug Webhook in Zabbix Integration
+class: OTHER
+asset: signl4/signl4-integration-zabbix/signl4-mediatype.yaml:103
+confidence: 70
+reasoning: Line contains commented-out debug endpoint: `//endpoint = 'https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net';` — a Pipedream request inspection URL. This is a developer debug/test artifact left in production Zabbix media type export. While commented out, it reveals an internal testing endpoint and confirms Pipedream was used for webhook debugging. The UUID `b58aee12b873eae71b5db8b4fdc77d78` is a real Pipedream endpoint ID.
+impact: Low — Commented-out code is not executed. However, it leaks a historical debug endpoint that could be investigated for further information. If someone uncomments it, all Zabbix alerts would be sent to a third-party service (Pipedream) instead of SIGNL4.
+verify_steps: Passive only: (1) Check if the Pipedream endpoint is still active: `curl -s -o /dev/null -w '%{http_code}' https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net` (2) If active, confirms debug artifact was real (not just a test UUID).

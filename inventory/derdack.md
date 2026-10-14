@@ -2765,3 +2765,12 @@ www.derdack.com
 - CHANGED PASSIVE deliverables re-verified live and byte-stable after 5+ days: webhook oracle vbguzfsi→400/code 4000, fabricated zq7x2k9p→404/code 3004, 96sbq38s→400/code 4000; EA WSDL → 200, 29968 B, sha256 e8
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
 - CHANGED Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); grep "\[UNVALIDATED\]" leads/lead-*.md matches 0 — automated validation broken
+
+## 2026-10-14 14:52:44 UTC
+- NEW github.com/Derdack org (12 public repos) fully scanned for first time — hardcoded SQL Server SA creds `sa:Derdack!` @ `sqlserver.derdack-support.local` in `derdack-oncall-holidayimport/HolidayImport.j
+- NEW api.signl4.com/api/v2/teams auth-status flipped to route-gated (401 on unauth GET + invalid Bearer) vs prior handler-deferred 405 pattern; temporal flip confirmed by 6 consecutive probes
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
+- CHANGED PASSIVE deliverables re-verified live and byte-stable after 5+ days: webhook oracle `vbguzfsi`→400/code 4000, fabricated `zq7x2k9p`→404/code 3004, `96sbq38s`→400/code 4000; EA WSDL → 200, 29968 B, sha
+- CHANGED vps.signl4.com A-record 72.167.227.27 (GoDaddy secureserver.net) remains dangling (nginx default vhost) — transient TCP-timeout observed in recent probes, DNS unchanged
+- CHANGED Triage pipeline remains broken: ≥57 consecutive failed Triager runs (2026-09-25→2026-10-06), `reports/valid-bugs.md` running count unreliable
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted

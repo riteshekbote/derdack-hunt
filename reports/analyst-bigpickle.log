@@ -85601,3 +85601,1084 @@ Given the findings are stale/already-reported, I have no clear *new* bug to purs
 - **A)** Commit + push the triage fix (restores the reporting gate), or
 - **B)** Hunt for genuinely new attack surface (the estate map is otherwise stable), or
 - **C)** Verify whether the "Reported" entries were actually submitted to `bugs.olivermaicher.eu` (vs. just marked VALID locally).
+===== ANALYST bigpickle 2026-10-14 14:52:44 UTC =====
+[0m
+> build · big-pickle
+[0m
+## STEP 1 — DELTA
+- [CHANGED] `github.com/Derdack` org (12 public repos) got its first-ever reposcan this cycle — two public repos contain real hardcoded credentials (SQL SA, Checkmk admin) absent from every prior brand-scoped scan.
+- [CHANGED] `api.signl4.com/api/v2/teams` auth-status flipped route-gated (401 on anon GET + invalid Bearer) vs the long-running handler-deferred 405 — 6 consecutive same-session probes uniform, so temporal/deploy state, not per-request routing.
+- [CHANGED] `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` re-verified byte-stable (200, 29968 B, sha256 `e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae`); still leaks internal SOAP host `ereesus`.
+- [CHANGED] `vps.signl4.com` A=72.167.227.27 (GoDaddy secureserver.net) dangling confirmed; HTTPS flaps 200/000 across probes, DNS unchanged.
+- [NEW] None — no new live host, path, or verb this cycle.
+
+## STEP 2 — PRIORITIZE
+- [PRIO] connect.signl4.com/webhook/{teamSecret},7.95,attack_surface=8,business_value=8,tech_exposure=8,gate_ease=9,cloud_surface=5,freshness=9
+- [PRIO] account.signl4.com/identity,7.80,attack_surface=8,business_value=10,tech_exposure=9,gate_ease=3,cloud_surface=8,freshness=7
+- [PRIO] github.com/Derdack/derdack-oncall-holidayimport/HolidayImport.js:16,7.80,attack_surface=7,business_value=8,tech_exposure=9,gate_ease=10,cloud_surface=3,freshness=9
+- [PRIO] github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js:90-94,7.55,attack_surface=6,business_value=8,tech_exposure=9,gate_ease=10,cloud_surface=3,freshness=9
+- [PRIO] demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl,5.90,attack_surface=6,business_value=6,tech_exposure=5,gate_ease=7,cloud_surface=6,freshness=5
+
+## STEP 3 — HYPOTHESES
+[HYP] Live SIGNL4 team webhook secret leaked in vendor's public repo enables unauthorized alert injection
+class: AUTH
+asset: https://connect.signl4.com/webhook/vbguzfsi
+confidence: 95
+reasoning: secret `vbguzfsi` sits at github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7 (official vendor repo, pushed 2026-10-08, staff author rons4, unremediated); the same file uses `xxxx` placeholders for the sibling OpenWeather `appid` and sibling webhook, proving `vbguzfsi` is not an example. Non-mutating control: `POST /webhook/vbguzfsi` with Content-Length:0 returns 400 code 4000 ("event null or empty") while fabricated `POST /webhook/zq7x2k9p` returns 404 code 3004 ("No matching event source found"). The same secret is accepted on connect/account/api (shared webhook registry).
+evidence_needed: the 400/4000-vs-404/3004 differential is the proof; a real event injection must not be repeated (mutating/out-of-scope).
+verify_steps: compare `POST https://connect.signl4.com/webhook/vbguzfsi` (Content-Length:0) → expect 400/4000, against `POST https://connect.signl4.com/webhook/zq7x2k9p` (Content-Length:0) → expect 404/3004.
+impact: any holder of the public secret can raise/ack/resolve/close alerts for the team — unauthorized manipulation of safety-critical alerting. HIGH.
+testability: PASSIVE
+
+[HYP] Hardcoded SQL Server SA credentials exposed in public Derdack GitHub repo
+class: AUTH
+asset: https://github.com/Derdack/derdack-oncall-holidayimport/blob/main/HolidayImport.js#L16
+confidence: 90
+reasoning: connection string `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017` appears in HolidayImport.js:16 and HolidayDeleteAll.js:22; public repo, author rbormann@de.derdack.com, commit 2022-12-07, unremediated. Target host is internal-only (NXDOMAIN externally).
+evidence_needed: public exposure of the credential is sufficient; internal reachability is not verifiable from an internet seat.
+verify_steps: `GET https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/main/HolidayImport.js` → expect 200 containing `UID=sa;PWD=Derdack!`; confirm repo visibility via GitHub API.
+impact: DB sysadmin (sa) credentials to EnterpriseAlert2017 — full read/write of the product database if the internal host is reachable. HIGH.
+testability: PASSIVE
+
+[HYP] Cross-environment token acceptance via shared signing key + account-host issuer mismatch
+class: OATH
+asset: https://account.signl4.com/identity/.well-known/openid-configuration
+confidence: 50
+reasoning: six identity hosts (connect, devconnect, api, devapi, account, devaccount) serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`); account-hosted discovery advertises issuer `https://connect.signl4.com/identity` (host/issuer mismatch); client_id `692A0A56-892F-4AE2-8259-76DA398990B6` and full scope set are shared dev↔prod; devconnect lists password/device/CIBA/token-exchange grants. Document and route parity proven — enforcement at the token endpoint is not.
+evidence_needed: a token minted at account accepted by api.signl4.com — requires a legitimate client credential.
+verify_steps: `GET https://account.signl4.com/identity/.well-known/openid-configuration` and `GET https://connect.signl4.com/identity/.well-known/openid-configuration`, diff `issuer` + `jwks_uri`; `GET .../identity/.well-known/openid-configuration/jwks` on both and diff.
+impact: if enforced in practice, cross-environment/tenant token forgery → full SIGNL4 API access. CRITICAL, but unverified.
+testability: AUTH_HELPED
+
+## STEP 4 — SELF-CRITIQUE
+- [PARKED] Checkmk admin creds `cmkadmin:CNlydVqZ` @ `192.168.88.107` (derdack-plugin-checkmk): same class as the SQL-creds hypothesis; target is RFC1918/internal-only with no external path from this seat — folded into the credential-leak FINAL rather than filed separately.
+- [PARKED] vps.signl4.com dangling A → GoDaddy shared host: takeover is gated on DNS/hosting-account control (HUMAN_ONLY), not researcher-exploitable; 200/000 flapping reduces reproducibility.
+- [PARKED] EA WSDL internal hostname `ereesus`: descriptive-only information disclosure; program rejects descriptive-headers/hostname classes.
+- [PARKED] api/v2/teams 401-vs-405 flip: status-code/temporal artefact, no defect class.
+- [FINAL] 1 — Live webhook secret leak (`vbguzfsi`, `96sbq38s`) → unauthorized alert injection [95, PASSIVE].
+- [FINAL] 2 — Public hardcoded credential leak: SQL SA (`sa:Derdack!`) + Checkmk admin (`cmkadmin:CNlydVqZ`) [90, PASSIVE].
+- [FINAL] 3 — Cross-env token forgery chain (shared RS256 key + account issuer mismatch) [50, AUTH_HELPED — needs one client credential].
+
+## STEP 5 — NEXT ACTION
+[NEXT] HUMAN: Submit the three frozen findings to bugs.olivermaicher.eu — (1) live webhook secrets `vbguzfsi`/`96sbq38s` with public file/line + the Content-Length:0 400/4000-vs-404/3004 oracle, (2) `sa:Derdack!` in derdack-oncall-holidayimport + `cmkadmin:CNlydVqZ` in derdack-plugin-checkmk with commit/authors, (3) cross-env token-forgery chain with the 6-host JWKS deep-equal and account issuer mismatch.
+
+## STEP 6 — LEARNING
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: path-family probing of an App-Proxy-fronted known-404 root recovered a live EA sub-app — root-only status is not full-host status.
+[LEARN] REJECTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx: the `Handler` value reflects into an attribute but is URL-encoded (`"`→`%22`, `<`→`%3c`) — not XSS.
+[LEARN] ACCEPTED AUTH @ github.com/Derdack: brand-scoped scanning (signl4/* only) produced a false "secrets exhausted" conclusion; org coverage must be enumerated per-org, not per-brand.
+[LEARN] REJECTED AUTH @ connect.signl4.com/api/v2/teams: the 401-vs-405 flip is temporal deploy state, not per-request routing — same-session N-sample testing is required before calling it flapping.
+
+## STEP 7 — RISK
+[RISK] derdack: 92 — public exposure of production-adjacent credentials (SQL SA, Checkmk admin, live team webhook secrets) demands immediate rotation and Git-history scrub; the leaked webhook secret directly governs alert integrity.
+[RISK] signl4: 85 — six identity hosts share one RS256 signing key while the account host advertises a foreign issuer; a single client_secret/credential compromise yields estate-wide token forgery.
+## Objective
+- Hunt HIGH-VALUE vulnerability classes (broken auth, IDOR/BOLA, SSRF, mass assignment, JWT/OAuth flaws, business logic, file upload, GraphQL, subdomain takeover) across Derdack GmbH infrastructure (SIGNL4 + Enterprise Alert), producing report-ready findings for bugs.olivermaicher.eu.
+- Current phase: POC/REPORT — 5 deliverables frozen; blocked on submitting them (manual/human step) and on legitimate credential acquisition for all AUTH_HELPED chains.
+
+## Important Details
+- In scope: all Derdack GmbH / Derdack Group owned infra — domains, websites, APIs, SaaS, status pages, mobile apps. Report channel: bugs.olivermaicher.eu.
+- REJECTED classes (do not file): DoS/lockout, descriptive headers/errors only, robots.txt, OPTIONS/TRACE standalone, CSRF on logout, cookie flags on non-sensitive data, self-XSS, scanner output without POC, username enumeration on login, brute-force/rate-limit policy, SSL/TLS best practice, clickjacking w/o exploit, SPF/DKIM/DMARC, public login panels, outdated libraries w/o program-specific exploit.
+- Passive-first probing: GET/HEAD/OPTIONS only, ≤1 rps, no auth-bypass or mutating tests against live customer data. Content-Length:0 POST is the *only* sanctioned webhook oracle control (`{}` body creates a real event → out of scope).
+- Recurring methodological rules established: root-only status ≠ full-host status (path-family probing required on App-Proxy/multi-app hosts); status code without a control body hash is not evidence (MultiViews `300` is a generic Apache artefact that false-positives on every parked Derdack host); a size delta is not a sensitivity delta; server-rendered pages reflect their own URL so URL-derived deltas are noise; document parity ≠ enforcement parity (static OIDC discovery/JWKS proves configured, not enforced, trust symmetry); anomalies phrased as "flapping" need N samples in one session.
+- Scope notes: `signl4.derdack.com` permanently unreachable (8+ cycles TCP timeout, value 0). `status/support/trust/docs.signl4.com` are third-party. `www.vps.signl4.com` NXDOMAIN.
+- Triage pipeline is dead: ≥58 consecutive failed Triager runs; `grep "\[UNVALIDATED\]" leads/lead-*.md` matches 0 occurrences (triage.yml:45 has run empty 26+ times). Passive verifiers scope to `PROBE_ALLOW: derdack.com` (hunt.yml:13, triage.yml:12), so no signl4.com/enterprisealert.com lead is ever re-verified. `reports/valid-bugs.md` running count is unreliable — but its "already reported" claims proved real.
+- Org coverage lesson: `github.com/Derdack` was never reposcanned (`reposcan-raw/summary.txt`: "TARGET_ORG not configured for derdack; skipping") — brand-scoped (signl4-only) RAG produced a false "secrets exhausted" conclusion. Enumerate orgs per-org, not per-brand.
+- Website/key facts: 6 identity hosts share a byte-identical RS256 key (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) and client_id `692A0A56-892F-4AE2-8259-76DA398990B6`; account-hosted IdP claims connect's issuer; password grant enabled on staging; blocked on client_secret.
+- Shared backend appIds: `cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd` (api/connect), `cid-v1:d7865de8-ff22-4cec-8b2d-6e39fb5802f7` (devapi), `fe51434f` (fix).
+
+## Work State
+### Completed
+- **5 report-ready deliverables (frozen, re-verified byte-stable after 5+ days):**
+  1. Hardcoded SQL Server SA creds — `github.com/Derdack/derdack-oncall-holidayimport/HolidayImport.js:16` + `HolidayDeleteAll.js:22`: `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017` (author rbormann@de.derdack.com, 2022-12-07, unremediated).
+  2. Hardcoded Checkmk admin creds — `github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js:90-94`: `username="cmkadmin"`, `password="CNlydVqZ"`, `serverURL="http://192.168.88.107:8080/cmk/check_mk/api/v0/"` (author rons4, 2024-05-27).
+  3. Leaked live SIGNL4 team webhook secret `vbguzfsi` — `github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7` (author rons4, pushed 2026-10-08, unremediated). Oracle: `POST https://connect.signl4.com/webhook/vbguzfsi` with `Content-Length: 0` → 400 code 4000; fabricated `zq7x2k9p` → 404 code 3004.
+  4. Second live team webhook secret `96sbq38s` — `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148`; live → 400/4000 on connect, account, AND api hosts (shared webhook registry, not host-scoped).
+  5. EA WSDL internal hostname disclosure — `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` → 200, 29968 B, sha256 `e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae`, exposes non-public single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx`.
+- `eval()` deserialization of EA scripting-host callbacks (`eval(appContext.runtimeInfo.callbackSetStatusOK/SendMail)`, `eval(appContext.state.callbackSaveState)`) identified in 4 EA 2-way REST plugins (checkmk/dynatrace/logic-monitor/zendesk Main.js) — HELD.
+- Probe-identity validation: `connect/account/api.signl4.com/webhook/{secret}` all evaluate the SAME secret; `vbguzfsi` is NOT a valid REST API key (`X-S4-Api-Key` @ `/api/v2/teams` → 403, same hash as junk).
+- demo.enterprisealert.com EA surface fully mapped: `/EAWebService/` (200, 1824 B index, v9.5.26147), `EventProviderAPI.aspx` (10 authoritative handlers; any unknown `Handler` returns 200 fallback help page), `EventProviderAPI.asmx?wsdl` (12 ops), `EventConnectorServer.ashx` (200, 240 B, sha256 `eb3f77ccdd2b83b531f87225130a7237ff4b3a5fd98875177f707d2c9a1ab1c1`, EMPTY installed-handlers table), `rest/events` (405 GET / 401 POST). All credential paths gate (Error: -1 / 401). App Proxy IDs: app `f18ba879-…`, connector `da867a92-…`, group `6b26e6a4-…`, service `proxy-appproxy-NEUR-DUB01P-3`.
+- Closed negatives: GraphQL class (15/15 bare 404), `behave-as` param (403-response typo only), prepaid body-tenant (V1/V2/V3 all clean, 131 write ops swept), OIDC redirect_uri/state/open-redirect, RFC7591 dynamic client registration, Blazor assembly disclosure (`/_framework/blazor.boot.json` 404 on fix+devfix), introspection/revocation registration parity (6/6), non-discriminating GET/HEAD/OPTIONS webhook oracle, `Handler=` XSS (contextually URL-encoded), EA `.aspx` handler auth-bypass (refuted 70→15).
+- Route maps complete: V1/V2/V3/webhook/events namespaces; V4 confirmed absent; all anon reads → 401/405; all docs specs declare `security: [{}]` empty (spec under-declares auth).
+- vps.signl4.com: A=72.167.227.27 (GoDaddy secureserver.net), nginx default vhost, cert CN=server.d1g.it, fabricated-host byte-identical → dangling DNS, exploitability HUMAN_ONLY (PARKED).
+
+### Active
+- Preparing/submitting the 5 frozen findings to bugs.olivermaicher.eu with evidence — this is a HUMAN action, not automatable from this seat.
+- PARKED: cross-env token forgery chain (6 identity hosts, shared RS256 + client_id 692A0A56 + staging password grant; blocked on legitimate client_secret = AUTH_HELPED). PARKED: vps.signl4.com takeover (HUMAN_ONLY). PARKED: EA credential-gated endpoints (no unauth mutating primitive). PARKED: V1 bulk `userId` query param (acknowledgeAll/closeAll/paged/report) + V3 BOLA file-download family + V2 `users/{userId}/changePassword` — all AUTH_HELPED, no unprobed surface remains.
+- Deliberately not re-probing closed surfaces (OIDC discovery documents, `/api/v2/teams` flapping, EA handler list) — depth is not coverage.
+
+### Blocked
+- No legitimate credential (client_secret / X-S4-Api-Key / team-secret beyond the two leaked webhook secrets) → all AUTH_HELPED exploit chains cannot be completed from this seat.
+- Triage/validation pipeline dead (≥58 failed runs) → no automated route to a triager; submission must be manual.
+- `reports/valid-bugs.md` is untrustworthy as a coverage signal (gate-availability noise).
+- Mutating webhook validation (e.g. `{}` body → 201) breaches program `no_data_modification` → out of scope.
+
+## Next Move
+1. HUMAN: submit the 5 findings to bugs.olivermaicher.eu with evidence: (1) Derdack-oncall-holidayimport hardcoded SA creds, (2) Derdack-plugin-checkmk hardcoded Checkmk creds + internal IP, (3) live webhook secret `vbguzfsi` in signl4/docs (YAML line 7, sha256 the token, include the Content-Length:0 400/4000 vs fabricated 404/3004 control), (4) live webhook secret `96sbq38s` in google-iot/losant repos, (5) EA WSDL internal hostname `ereesus` (CWE-200 hygiene).
+2. RAG/SCAN: continue passive sweep of `github.com/Derdack` org (12 repos) for additional hardcoded credentials, internal hostnames, and `eval()` callback-deserialization patterns beyond the 2 confirmed repos; keep enumerating orgs per-org rather than per-brand.
+
+## Relevant Files
+- `inventory/derdack.md`: discovery/passive-recon host map + full dated probe log for derdack.com estate (dev/www/blog/techblog parked-MultiViews, WP REST gates, XML-RPC subsites).
+- `leads/lead-*.md` (6 files, incl. `lead_bigpickle.txt`): ranked hypothesis queue; note `[UNVALIDATED]` marker convention is being placed inside [HYP] title lines so triage.yml:45 can match.
+- `.github/workflows/triage.yml`: line 45 `grep "\[UNVALIDATED\]" leads/lead-*.md` (matches 0 — dead pipeline); line 12 `PROBE_ALLOW: derdack.com` (scopes out signl4/EA verification).
+- `.github/workflows/hunt.yml`: line 13 `PROBE_ALLOW: derdack.com`.
+- `reports/valid-bugs.md`: model-generated "already reported" annotations — unverified but historically accurate; do not trust the running count.
+- `reposcan-raw/summary.txt`: records "TARGET_ORG not configured for derdack; skipping" — root cause of the missed `github.com/Derdack` org.
+- `art/lead_bigpickle.txt`: source of the 4 top-ranked credential leads (scores 8.75 / 8.50 / 7.85 / 7.85).
+- `hypotheses-bigpickle.txt`, `hypotheses-nemotron3.txt`: cross-agent ranked hypotheses and NEXT actions.
+- `probe-results.md`: per-cycle passive probe output (currently endpoint-map-only, zero drift).
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m$ [0mgit -C /home/runner/work/derdack-hunt/derdack-hunt log --oneline -10 && echo "---STATUS---" && git -C /home/runner/work/derdack-hunt/derdack-hunt status --short
+09a8218 triage 2026-10-14-12-31
+---STATUS---
+?? analyst-out.txt
+?? analyst-prompt.txt
+?? ctx.txt
+[0m
+I'll verify the actual repo state rather than rely on the summary, then act on the one automatable thread.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && ls -la && echo "---" && find . -maxdepth 2 -type d -not -path '*/.git*' | sort
+total 1628
+drwxr-xr-x 12 runner runner   4096 Oct 14 14:47 .
+drwxr-xr-x  3 runner runner   4096 Oct 14 14:47 ..
+drwxr-xr-x  7 runner runner   4096 Oct 14 14:49 .git
+drwxr-xr-x  3 runner runner   4096 Oct 14 14:47 .github
+-rw-r--r--  1 runner runner   1831 Oct 14 14:47 README.md
+-rw-r--r--  1 runner runner  18684 Oct 14 14:49 analyst-out.txt
+-rw-r--r--  1 runner runner 762195 Oct 14 14:47 analyst-prompt.txt
+-rw-r--r--  1 runner runner 758316 Oct 14 14:47 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct 14 14:47 inventory
+drwxr-xr-x  2 runner runner   4096 Oct 14 14:47 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct 14 14:47 leads
+-rw-r--r--  1 runner runner  22850 Oct 14 14:47 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct 14 14:47 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct 14 14:47 reports
+drwxr-xr-x  2 runner runner   4096 Oct 14 14:47 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct 14 14:47 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct 14 14:47 scripts
+-rw-r--r--  1 runner runner     33 Oct 14 14:47 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct 14 14:47 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct 14 14:47 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct 14 14:47 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct 14 14:47 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct 14 14:47 state_nemotron3.json
+drwxr-xr-x  2 runner runner  16384 Oct 14 14:47 triage
+---
+.
+./inventory
+./knowledge
+./leads
+./recon-notes
+./reports
+./reposcan-raw
+./scripts
+./triage
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && echo "=== leads ===" && ls -la leads/ && echo "=== reports ===" && ls -la reports/ && echo "=== inventory ===" && ls -la inventory/ && echo "=== knowledge ===" && ls -la knowledge/ && echo "=== reposcan-raw ===" && ls -la reposcan-raw/ && echo "=== recon-notes ===" && ls -la recon-notes/
+=== leads ===
+total 4892
+drwxr-xr-x  2 runner runner    4096 Oct 14 14:47 .
+drwxr-xr-x 12 runner runner    4096 Oct 14 14:47 ..
+-rw-r--r--  1 runner runner 1796600 Oct 14 14:47 lead-bigpickle.md
+-rw-r--r--  1 runner runner   12342 Oct 14 14:47 lead-laguna.md
+-rw-r--r--  1 runner runner   12100 Oct 14 14:47 lead-ling3.md
+-rw-r--r--  1 runner runner   12532 Oct 14 14:47 lead-longcat.md
+-rw-r--r--  1 runner runner      18 Oct 14 14:47 lead-mimo.md
+-rw-r--r--  1 runner runner 3065210 Oct 14 14:47 lead-nemotron3.md
+-rw-r--r--  1 runner runner   83240 Oct 14 14:47 reposcan-derdack.md
+=== reports ===
+total 13068
+drwxr-xr-x  2 runner runner    4096 Oct 14 14:47 .
+drwxr-xr-x 12 runner runner    4096 Oct 14 14:47 ..
+-rw-r--r--  1 runner runner 7870586 Oct 14 14:47 analyst-bigpickle.log
+-rw-r--r--  1 runner runner   52514 Oct 14 14:47 analyst-laguna.log
+-rw-r--r--  1 runner runner   52272 Oct 14 14:47 analyst-ling3.log
+-rw-r--r--  1 runner runner   52538 Oct 14 14:47 analyst-longcat.log
+-rw-r--r--  1 runner runner 4426862 Oct 14 14:47 analyst-nemotron3.log
+-rw-r--r--  1 runner runner   25764 Oct 14 14:47 hypotheses-bigpickle.txt
+-rw-r--r--  1 runner runner      51 Oct 14 14:47 hypotheses-laguna.txt
+-rw-r--r--  1 runner runner      50 Oct 14 14:47 hypotheses-ling3.txt
+-rw-r--r--  1 runner runner      52 Oct 14 14:47 hypotheses-longcat.txt
+-rw-r--r--  1 runner runner   13364 Oct 14 14:47 hypotheses-nemotron3.txt
+-rw-r--r--  1 runner runner 1028022 Oct 14 14:47 hypotheses.md
+-rw-r--r--  1 runner runner    5996 Oct 14 14:47 valid-bugs.md
+=== inventory ===
+total 408
+drwxr-xr-x  2 runner runner   4096 Oct 14 14:47 .
+drwxr-xr-x 12 runner runner   4096 Oct 14 14:47 ..
+-rw-r--r--  1 runner runner 406209 Oct 14 14:47 derdack.md
+=== knowledge ===
+total 340
+drwxr-xr-x  2 runner runner   4096 Oct 14 14:47 .
+drwxr-xr-x 12 runner runner   4096 Oct 14 14:47 ..
+-rw-r--r--  1 runner runner 338770 Oct 14 14:47 index.md
+=== reposcan-raw ===
+total 12
+drwxr-xr-x  2 runner runner 4096 Oct 14 14:47 .
+drwxr-xr-x 12 runner runner 4096 Oct 14 14:47 ..
+-rw-r--r--  1 runner runner   70 Oct 14 14:47 summary.txt
+=== recon-notes ===
+total 12
+drwxr-xr-x  2 runner runner 4096 Oct 14 14:47 .
+drwxr-xr-x 12 runner runner 4096 Oct 14 14:47 ..
+-rw-r--r--  1 runner runner  817 Oct 14 14:47 DEDICATED-DEEP.md
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && cat state_bigpickle.json && echo "---" && cat README.md && echo "=== scope ===" && cat scope.yml
+{"phase": "POC", "target": "api"}---
+# derdack-hunt
+
+24/7 deep multi-model bug-hunting automation for **Derdack GmbH / Derdack Group** (Oliver Maicher bug-bounty hub).
+
+Scope: All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert
+(full exclusion + rules list in `scope.yml`)
+
+Pipeline (all workflows run every 20 minutes):
+
+- **Deep Hunt** (`hunt.yml`): analyst hunts the discovered inventory + hypotheses, emits structured
+  leads, chains primitives, self-critiques. Models: mimo.
+- **Triager** (`triage.yml`): second-model 7-Question Gate validation + live passive probe; keeps
+  running count in `reports/valid-bugs.md`.
+- **Reposcan** (`reposcan.yml`): deep source scan of any public GitHub org (if configured).
+- **Sync Issues** (`sync-issues.yml`): mirrors leads to GitHub issues.
+
+Testing discipline: rate-limited (1 rps), no DoS/account-lockout, writes only on non-prod/test
+assets, no exposure of customer/employee/financial/auth data, secrets committed only as hashes.
+
+> IMPORTANT: the pipeline produces CANDIDATE leads. A reportable, validated finding requires
+> human triage + proof against the program's gate. No finding is fabricated; scanner output alone
+> is never accepted. Active testing is gated behind the in-scope hosts in `inventory/derdack.md` and
+> must stay within the program's published scope.
+
+Artifacts:
+
+| Artifact | Purpose |
+|---|---|
+| `leads/` | Candidate findings (UNVALIDATED) |
+| `triage/` | Validation verdicts |
+| `reports/valid-bugs.md` | Validated findings + running count |
+| `scope.yml` | Program scope and exclusions (edit to adjust) |
+
+Program description: German software company providing mobile alerting, incident response, and enterprise notification solutions
+=== scope ===
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+  passive_first: false          # deep-hunt agent: active probes allowed when scoped
+  max_requests_per_second: 1    # never hammer live infra
+  no_doom: true                 # no DoS/DDoS, no account-lockout attacks
+  account_creation: restricted  # only on test/sandbox assets, never live customer data
+  no_data_modification: true    # no writes/deletes on live customer data
+  no_pre_disclosure: true       # never disclose before program response
+  poc_required: true            # scanner output alone is REJECTED
+  redact_secrets_in_commits: true
+
+models:
+  - { id: opencode/big-pickle, name: bigpickle }
+  - { id: opencode/nemotron-3-ultra-free, name: nemotron3 }
+  - { id: opencode/longcat-2.0-free, name: longcat }
+  - { id: opencode/ling-3.0-flash-free, name: ling3 }
+  - { id: opencode/laguna-s-2.1-free, name: laguna }
+[0m
+[0m→ [0mRead reports/valid-bugs.md
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && cat reposcan-raw/summary.txt && echo "=== DEDICATED-DEEP ===" && cat recon-notes/DEDICATED-DEEP.md && echo "=== scripts ===" && ls -la scripts/ && echo "=== triage dir count ===" && ls triage/ | wc -l && ls triage/ | tail -5
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+=== DEDICATED-DEEP ===
+# Dedicated deep surface (wildcard-filtered) 2026-09-03
+
+**Target:** `derdack`
+**Root zones:** `derdack.com`
+
+## Wildcard analysis
+
+- Total resolving hostnames in zone: 0
+- After shared/wildcard IP filtering: **0 genuinely dedicated hosts**
+- Reason: all resolving hostnames use shared/CDN/wildcard IP signatures
+
+## Honest conclusion
+
+This target's subdomain space is wildcard-dominated. No genuinely dedicated
+subdomain surface was recovered from passive brute + subfinder enumeration.
+The surface either (a) uses wildcard DNS records, (b) all CNAME records
+point to shared CDN/Cloudflare/CloudFront/AWS IPs, or (c) has no
+subdomain program at all. This is the honest exhaustive result.
+
+---
+_Honest framing: passive DNS enumeration + shared-IP wildcard filtering. No finding claimed. No active testing performed._
+=== scripts ===
+total 28
+drwxr-xr-x  2 runner runner  4096 Oct 14 14:47 .
+drwxr-xr-x 12 runner runner  4096 Oct 14 14:47 ..
+-rw-r--r--  1 runner runner 16987 Oct 14 14:47 sync-issues.py
+=== triage dir count ===
+250
+run-2026-10-13-18-33.md
+run-2026-10-13-23-04.md
+run-2026-10-14-01-54.md
+run-2026-10-14-06-48.md
+run-2026-10-14-12-31.md
+[0m
+[0m→ [0mRead triage/run-2026-10-14-12-31.md
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && for f in triage/run-2026-10-13-18-33.md triage/run-2026-10-13-23-04.md triage/run-2026-10-14-01-54.md triage/run-2026-10-14-06-48.md; do echo "===== $f ====="; cat "$f"; done
+===== triage/run-2026-10-13-18-33.md =====
+
+===== TRIAGE 2026-10-13 18:33:52 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+  "data": {
+    "message": "Unexpected server error. Check server logs for details.",
+    "ref": "err_b485bf57"
+  }
+}
+===== triage/run-2026-10-13-23-04.md =====
+
+===== TRIAGE 2026-10-13 23:04:23 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+  "data": {
+    "message": "Unexpected server error. Check server logs for details.",
+    "ref": "err_7fa23790"
+  }
+}
+===== triage/run-2026-10-14-01-54.md =====
+
+===== TRIAGE 2026-10-14 01:54:53 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+  "data": {
+    "message": "Unexpected server error. Check server logs for details.",
+    "ref": "err_07a1c855"
+  }
+}
+===== triage/run-2026-10-14-06-48.md =====
+
+===== TRIAGE 2026-10-14 06:48:45 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+  "data": {
+    "message": "Unexpected server error. Check server logs for details.",
+    "ref": "err_e8461540"
+  }
+}
+[0m
+[0m→ [0mRead analyst-out.txt
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && ls -la .github/workflows/ && echo "=== state files ===" && for f in state_*.json; do echo "$f: $(cat $f)"; done
+total 44
+drwxr-xr-x 2 runner runner  4096 Oct 14 14:47 .
+drwxr-xr-x 3 runner runner  4096 Oct 14 14:47 ..
+-rw-r--r-- 1 runner runner 14361 Oct 14 14:47 hunt.yml
+-rw-r--r-- 1 runner runner  5395 Oct 14 14:47 reposcan.yml
+-rw-r--r-- 1 runner runner  1040 Oct 14 14:47 sync-issues.yml
+-rw-r--r-- 1 runner runner  6518 Oct 14 14:47 triage.yml
+=== state files ===
+state_bigpickle.json: {"phase": "POC", "target": "api"}
+state_laguna.json: {"phase": "POC", "target": "api"}
+state_ling3.json: {"phase": "POC", "target": "api"}
+state_longcat.json: {"phase": "POC", "target": "api"}
+state_mimo.json: {"phase": "POC", "target": "api"}
+state_nemotron3.json: {"phase": "POC", "target": "api"}
+[0m
+[0m→ [0mRead .github/workflows/triage.yml
+[0m→ [0mRead .github/workflows/reposcan.yml
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && for s in vbguzfsi 96sbq38s 'Derdack!' CNlydVqZ ereesus 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256; do echo "=== $s ==="; grep -rl -- "$s" leads/ knowledge/ inventory/ reports/ 2>/dev/null; done
+=== vbguzfsi ===
+leads/reposcan-derdack.md
+leads/lead-bigpickle.md
+leads/lead-nemotron3.md
+knowledge/index.md
+inventory/derdack.md
+reports/hypotheses.md
+reports/analyst-nemotron3.log
+reports/hypotheses-bigpickle.txt
+reports/hypotheses-nemotron3.txt
+reports/analyst-bigpickle.log
+=== 96sbq38s ===
+leads/reposcan-derdack.md
+leads/lead-bigpickle.md
+leads/lead-nemotron3.md
+knowledge/index.md
+inventory/derdack.md
+reports/hypotheses.md
+reports/analyst-nemotron3.log
+reports/hypotheses-bigpickle.txt
+reports/hypotheses-nemotron3.txt
+reports/analyst-bigpickle.log
+=== Derdack! ===
+leads/reposcan-derdack.md
+leads/lead-bigpickle.md
+leads/lead-nemotron3.md
+inventory/derdack.md
+reports/analyst-nemotron3.log
+reports/valid-bugs.md
+reports/hypotheses-bigpickle.txt
+reports/hypotheses-nemotron3.txt
+reports/analyst-bigpickle.log
+=== CNlydVqZ ===
+leads/reposcan-derdack.md
+leads/lead-bigpickle.md
+leads/lead-nemotron3.md
+inventory/derdack.md
+reports/analyst-nemotron3.log
+reports/hypotheses-bigpickle.txt
+reports/hypotheses-nemotron3.txt
+reports/analyst-bigpickle.log
+=== ereesus ===
+leads/lead-bigpickle.md
+leads/lead-nemotron3.md
+knowledge/index.md
+inventory/derdack.md
+reports/hypotheses.md
+reports/analyst-nemotron3.log
+reports/hypotheses-bigpickle.txt
+reports/analyst-bigpickle.log
+=== 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256 ===
+leads/lead-bigpickle.md
+leads/lead-nemotron3.md
+knowledge/index.md
+inventory/derdack.md
+reports/hypotheses.md
+reports/analyst-nemotron3.log
+reports/hypotheses-nemotron3.txt
+reports/analyst-bigpickle.log
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && echo "=== reposcan-derdack.md head ===" && head -60 leads/reposcan-derdack.md && echo "..." && echo "=== occurrences of github.com/Derdack ===" && grep -c "github.com/Derdack" leads/reposcan-derdack.md 2>/dev/null; grep -oE 'github.com/Derdack/[A-Za-z0-9._-]+' leads/reposcan-derdack.md 2>/dev/null | sort -u | head -40
+=== reposcan-derdack.md head ===
+## REPOSCAN 2026-09-03 15:10:29 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-03 18:40:05 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-03 21:20:17 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-03 23:19:28 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 01:02:53 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 05:58:17 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 10:02:04 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 14:23:16 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 17:50:03 UTC
+[HYP] Hardcoded SIGNL4 Team Secret in Google IoT Integration Sample
+class: SECRET
+asset: signl4/signl4-integration-google-iot/index.js:19
+confidence: 85
+reasoning: SIGNL4 team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a public repo under the signl4 GitHub org (Derdack-owned). The secret is a real alphanumeric string committed to source. No other files in this repo reference this value, suggesting it may be a Derdack-internal demo/test team.
+impact: Medium — If valid, any party can send arbitrary alerts to this SIGNL4 team via the webhook. Could be used for alert flooding, social engineering via fake incident notifications, or to probe the team's response workflows. Impact取决于 whether the team still exists and is active.
+verify_steps: Passive only: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) Check if `connect.signl4.com/webhook/96sbq38s` returns HTTP 201 vs 404 via `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If 404, team was deleted and finding is historical only.
+[HYP] Hardcoded SIGNL4 Team Secret in Postman Collection & DevTools YAML (same secret, two files)
+class: SECRET
+asset: signl4/code-snippets/SIGNL4.postman_collection.json:42 + signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7
+confidence: 80
+reasoning: Team secret `vbguzfsi` appears in two public repos: (1) Postman collection path array `[webhook, vbguzfsi]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardcoded directly. Both are under signl4 GitHub org. Same secret reused across two sample repos suggests a Derdack employee's real team secret used during development.
+impact: Medium — Same as above: unauthorized alert injection, alert flooding, potential social engineering via fake incidents. Two repos expose the same secret, increasing the blast radius.
+verify_steps: Passive only: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+[HYP] Commented-Out Pipedream Debug Webhook in Zabbix Integration
+class: OTHER
+asset: signl4/signl4-integration-zabbix/signl4-mediatype.yaml:103
+confidence: 70
+reasoning: Line contains commented-out debug endpoint: `//endpoint = 'https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net';` — a Pipedream request inspection URL. This is a developer debug/test artifact left in production Zabbix media type export. While commented out, it reveals an internal testing endpoint and confirms Pipedream was used for webhook debugging. The UUID `b58aee12b873eae71b5db8b4fdc77d78` is a real Pipedream endpoint ID.
+impact: Low — Commented-out code is not executed. However, it leaks a historical debug endpoint that could be investigated for further information. If someone uncomments it, all Zabbix alerts would be sent to a third-party service (Pipedream) instead of SIGNL4.
+verify_steps: Passive only: (1) Check if the Pipedream endpoint is still active: `curl -s -o /dev/null -w '%{http_code}' https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net` (2) If active, confirms debug artifact was real (not just a test UUID).
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 19:57:19 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 21:58:22 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-04 23:38:42 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 01:23:46 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 06:16:24 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 10:38:14 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 13:32:46 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 16:13:33 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 18:18:56 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 20:26:45 UTC
+TARGET_ORG not configured for derdack; skipping public-org deep scan.
+## REPOSCAN 2026-09-05 22:13:27 UTC
+...
+=== occurrences of github.com/Derdack ===
+3
+github.com/Derdack/derdack-oncall-holidayimport
+github.com/Derdack/derdack-plugin-checkmk
+[0m
+[0m$ [0mcd /tmp/opencode && curl -s -m 20 -H "Accept: application/vnd.github+json" -H "User-Agent: passive-research" "https://api.github.com/orgs/Derdack/repos?per_page=100&sort=updated" -o derdack-repos.json; echo "exit=$?"; python3 -c "import json; d=json.load(open('derdack-repos.json')); print(type(d)); print(len(d) if isinstance(d,list) else d)"
+exit=0
+<class 'list'>
+12
+[0m
+Network works. Let me enumerate the `github.com/Derdack` org (never fully covered) and scan candidates.
+[0m$ [0mcd /tmp/opencode && python3 -c "
+import json
+d=json.load(open('derdack-repos.json'))
+d.sort(key=lambda r:r['updated_at'],reverse=True)
+for r in d:
+    print(f\"{r['name']:45} lang={str(r.get('language')):12} size={r.get('size'):>7} stars={r.get('stargazers_count'):>2} archived={r.get('archived')} updated={r['updated_at']}\")
+"
+derdack-plugin-checkmk                        lang=JavaScript   size=    441 stars= 2 archived=False updated=2024-05-27T12:15:01Z
+derdack-oncall-holidayimport                  lang=JavaScript   size=     12 stars= 3 archived=False updated=2023-02-15T09:36:20Z
+derdack-events-snmp                           lang=JavaScript   size=     86 stars= 1 archived=False updated=2022-02-02T17:07:13Z
+derdack-oncall-whoisoncallexport              lang=None         size=      3 stars= 1 archived=False updated=2022-01-27T19:40:31Z
+derdack-integration-SIGNL4                    lang=JavaScript   size=    236 stars= 2 archived=False updated=2022-01-27T19:40:26Z
+derdack-plugin-nagios                         lang=Shell        size=    856 stars= 1 archived=False updated=2022-01-27T19:40:08Z
+derdack-alert-forwarding                      lang=JavaScript   size=    155 stars= 2 archived=False updated=2022-01-27T19:40:03Z
+derdack-alert-augmentation                    lang=JavaScript   size=      2 stars= 1 archived=False updated=2022-01-27T19:39:59Z
+User-Monitoring                               lang=PowerShell   size=      1 stars= 1 archived=False updated=2022-01-27T19:39:54Z
+derdack-integration-azuremonitor              lang=PowerShell   size=      3 stars= 1 archived=False updated=2022-01-27T19:39:50Z
+derdack-integration-azuresentinel             lang=PowerShell   size=      4 stars= 1 archived=False updated=2022-01-27T19:39:47Z
+derdack-2wayREST-samples                      lang=JavaScript   size=     13 stars= 1 archived=False updated=2022-01-27T19:39:38Z
+[0m
+[0m$ [0mcd /tmp/opencode && rm -rf dorg && mkdir dorg && cd dorg && python3 -c "
+import json
+for r in json.load(open('/tmp/opencode/derdack-repos.json')):
+    print(r['name'])
+" | while read n; do git clone -q --depth=1 "https://github.com/Derdack/$n.git" "$n" 2>/dev/null && echo "cloned $n" || echo "FAILED $n"; done; echo "=== total ==="; du -sh .
+cloned derdack-plugin-checkmk
+cloned derdack-oncall-holidayimport
+cloned derdack-events-snmp
+cloned derdack-oncall-whoisoncallexport
+cloned derdack-integration-SIGNL4
+cloned derdack-plugin-nagios
+cloned derdack-alert-forwarding
+cloned derdack-alert-augmentation
+cloned User-Monitoring
+cloned derdack-integration-azuremonitor
+cloned derdack-integration-azuresentinel
+cloned derdack-2wayREST-samples
+=== total ===
+6.4M	.
+[0m
+[0m$ [0mcd /tmp/opencode/dorg && echo "=== SIGNL4 webhook secrets ===" && rg -n --hidden -g '!.git' -e 'webhook/[A-Za-z0-9]{6,}' . || echo none; echo; echo "=== password/pwd ===" && rg -ni --hidden -g '!.git' -e '(password|passwd|pwd)\s*[:=]' -e 'UID=sa' . | head -40 || echo none
+=== SIGNL4 webhook secrets ===
+/bin/bash: line 1: rg: command not found
+/bin/bash: line 1: rg: command not found
+none
+
+=== password/pwd ===
+[0m
+[0m$ [0mcd /tmp/opencode/dorg && echo "=== api keys / tokens / secrets ===" && rg -ni --hidden -g '!.git' -e '(api[_-]?key|apikey|client[_-]?secret|access[_-]?token|auth[_-]?token|token)\s*[:=]\s*["'"'"'][A-Za-z0-9_\-]{6,}' . | head -50 || echo none; echo; echo "=== cloud creds ===" && rg -n --hidden -g '!.git' -e 'AKIA[0-9A-Z]{16}' -e 'AIza[0-9A-Za-z_\-]{35}' -e 'gh[pousr]_[A-Za-z0-9]{36,}' -e 'sk_live_[0-9a-zA-Z]{24,}' -e '-----BEGIN [A-Z ]*PRIVATE KEY-----' . || echo none
+=== api keys / tokens / secrets ===
+/bin/bash: line 1: rg: command not found
+/bin/bash: line 1: rg: command not found
+
+=== cloud creds ===
+none
+[0m
+[0m✱ [0mGrep "webhook/[A-Za-z0-9]{6,}"[90m in /tmp/opencode/dorg · 0 matches[0m
+[0m✱ [0mGrep "(?i)(password|passwd|pwd|api[_-]?key|client[_-]?secret|access[_-]?token|secret)\s*[:=]"[90m in /tmp/opencode/dorg · 31 matches[0m
+[0m✱ [0mGrep "(?i)(192\.168\.|10\.[0-9]|172\.(1[6-9]|2[0-9]|3[01])\.|\.local|ereesus)"[90m in /tmp/opencode/dorg · 9 matches[0m
+[0m→ [0mRead /tmp/opencode/dorg/derdack-integration-SIGNL4/js/WebhookGateway.js
+[0m
+[0m$ [0mcd /tmp/opencode/dorg && echo "=== eval usage ===" && grep -rn --include=*.js --include=*.node -E '\beval\s*\(' . 2>/dev/null; echo; echo "=== internal http(s) hosts ===" && grep -rhoE 'https?://[A-Za-z0-9._-]+' --include=*.js --include=*.node --include=*.json --include=*.md --include=*.yaml --include=*.yml --include=*.xml . 2>/dev/null | sort -u | grep -viE 'signl4\.com|derdack\.com|schemas|w3\.org|json-schema|github|zendesk|logicmonitor|dynatrace|microsoft|azure|regex101|npmjs' | head -40
+=== eval usage ===
+./derdack-plugin-checkmk/2-way/Main.js:52:            appContext.state.callbackSaveState = eval(appContext.state.callbackSaveState);
+./derdack-plugin-checkmk/2-way/Main.js:57:                appContext.runtimeInfo.callbackSetStatusError = eval(appContext.runtimeInfo.callbackSetStatusError);
+./derdack-plugin-checkmk/2-way/Main.js:63:            appContext.runtimeInfo.callbackSetStatusOK = eval(appContext.runtimeInfo.callbackSetStatusOK);
+./derdack-plugin-checkmk/2-way/Main.js:68:            appContext.runtimeInfo.callbackSendMail = eval(appContext.runtimeInfo.callbackSendMail);
+./derdack-2wayREST-samples/Dynatrace/Main.js:53:            appContext.state.callbackSaveState = eval(appContext.state.callbackSaveState);
+./derdack-2wayREST-samples/Dynatrace/Main.js:58:                appContext.runtimeInfo.callbackSetStatusError = eval(appContext.runtimeInfo.callbackSetStatusError);
+./derdack-2wayREST-samples/Dynatrace/Main.js:64:            appContext.runtimeInfo.callbackSetStatusOK = eval(appContext.runtimeInfo.callbackSetStatusOK);
+./derdack-2wayREST-samples/Dynatrace/Main.js:69:            appContext.runtimeInfo.callbackSendMail = eval(appContext.runtimeInfo.callbackSendMail);
+./derdack-2wayREST-samples/Logic Monitor/Main.js:52:            appContext.state.callbackSaveState = eval(appContext.state.callbackSaveState);
+./derdack-2wayREST-samples/Logic Monitor/Main.js:57:                appContext.runtimeInfo.callbackSetStatusError = eval(appContext.runtimeInfo.callbackSetStatusError);
+./derdack-2wayREST-samples/Logic Monitor/Main.js:63:            appContext.runtimeInfo.callbackSetStatusOK = eval(appContext.runtimeInfo.callbackSetStatusOK);
+./derdack-2wayREST-samples/Logic Monitor/Main.js:68:            appContext.runtimeInfo.callbackSendMail = eval(appContext.runtimeInfo.callbackSendMail);
+./derdack-2wayREST-samples/zendesk/Main.js:52:            appContext.state.callbackSaveState = eval(appContext.state.callbackSaveState);
+./derdack-2wayREST-samples/zendesk/Main.js:57:                appContext.runtimeInfo.callbackSetStatusError = eval(appContext.runtimeInfo.callbackSetStatusError);
+./derdack-2wayREST-samples/zendesk/Main.js:63:            appContext.runtimeInfo.callbackSetStatusOK = eval(appContext.runtimeInfo.callbackSetStatusOK);
+./derdack-2wayREST-samples/zendesk/Main.js:68:            appContext.runtimeInfo.callbackSendMail = eval(appContext.runtimeInfo.callbackSendMail);
+
+=== internal http(s) hosts ===
+http://192.168.88.107
+https://calendar.google.com
+https://mysystem.com
+https://signl4.drift.help
+https://www.base64encode.org
+[0m
+[0m$ [0mcd /tmp/opencode/dorg && echo "=== derdack-events-snmp files ===" && find derdack-events-snmp -type f -not -path '*/.git/*' | head; echo; echo "=== snmp community ===" && grep -rniE 'community|public|private|snmp' derdack-events-snmp --include=*.js --include=*.json --include=*.md --include=*.config 2>/dev/null | grep -viE 'node_modules' | head -30
+=== derdack-events-snmp files ===
+derdack-events-snmp/SNMP-MIB-Importer.js
+derdack-events-snmp/README.MD
+derdack-events-snmp/ea-snmp-event.png
+derdack-events-snmp/README-DE.MD
+
+=== snmp community ===
+derdack-events-snmp/SNMP-MIB-Importer.js:106:	// Read SNMP provider ID
+derdack-events-snmp/SNMP-MIB-Importer.js:107:	getSnmpProviderId: function() {
+derdack-events-snmp/SNMP-MIB-Importer.js:111:		var oRes = oDb.Execute("SELECT TOP 1 id FROM EventProviders WHERE Name='SnmpConnector'");
+derdack-events-snmp/SNMP-MIB-Importer.js:138:		var iProviderId = DB.getSnmpProviderId();
+[0m
+[0m$ [0mcd /tmp/opencode/dorg && for r in derdack-alert-forwarding derdack-alert-augmentation derdack-oncall-whoisoncallexport derdack-plugin-nagios; do echo "===== $r ====="; find "$r" -type f -not -path '*/.git/*' | head -20; done
+===== derdack-alert-forwarding =====
+derdack-alert-forwarding/alert2team-general.png
+derdack-alert-forwarding/Alert2Team.js
+derdack-alert-forwarding/README.md
+derdack-alert-forwarding/alert2team-action.png
+derdack-alert-forwarding/app-alert2team.png
+===== derdack-alert-augmentation =====
+derdack-alert-augmentation/html-to-text/ps.js
+derdack-alert-augmentation/html-to-text/html_text.js
+derdack-alert-augmentation/README.md
+===== derdack-oncall-whoisoncallexport =====
+derdack-oncall-whoisoncallexport/README.md
+derdack-oncall-whoisoncallexport/OnCallPlanDuties.sql
+===== derdack-plugin-nagios =====
+derdack-plugin-nagios/ea_host_notify.sh
+derdack-plugin-nagios/Infographic.jpg
+derdack-plugin-nagios/ea_commands.cfg
+derdack-plugin-nagios/derdack-plugin-nagios.zip
+derdack-plugin-nagios/derdack.jpg
+derdack-plugin-nagios/ea_service_notify.sh
+derdack-plugin-nagios/README.md
+derdack-plugin-nagios/KeyVisual.jpg
+derdack-plugin-nagios/app.png
+[0m
+Found a new lead. Let me check the remaining unexamined repos (SNMP, forwarding, whoisoncall) for community strings / creds.
+[0m$ [0mcd /tmp/opencode/dorg && echo "=== Alert2Team.js ===" && grep -nE 'webhook|secret|team|http|Connect|Password|token' derdack-alert-forwarding/Alert2Team.js | head -20; echo; echo "=== whoisoncall SQL ===" && grep -niE 'password|uid|user|connection|server=|data source|integrated' derdack-oncall-whoisoncallexport/OnCallPlanDuties.sql | head -20; echo; echo "=== alert-augmentation ===" && grep -nE 'http|password|secret|token|key' derdack-alert-augmentation/html-to-text/*.js | head -20; echo; echo "=== holidayimport other files ==="; find derdack-oncall-holidayimport -type f -not -path '*/.git/*'
+=== Alert2Team.js ===
+4:This script redirects an alert to a given team. 
+15:var STRING_DB_CONNECTION 	= "Driver=SQL Server Native Client 11.0;Server=(local);Trusted_Connection=Yes;Database=EnterpriseAlert"; // DB connect string
+18:var oDbConn = new ActiveXObject("ADODB.Connection");
+
+=== whoisoncall SQL ===
+9:ProfileID, /* Profile ID of the user */
+10:ADRNAME, /* Name of the user */
+11:PROFNAME, /* Username of the user */
+23:ADRMOBILE, /* Mobile phone number of the user */
+24:ADREMAIL, /* Email address of the user */
+25:ADRSIP, /* SIP address of the user */
+26:ADRPHONE, /* Phone number of the user */
+27:ADRPAGER /* Pager address of the user */
+28:/* , OnCallPlans.ID, OnCallPlanUsers.ID */
+30:INNER JOIN OnCallPlanUsers ON OnCallPlans.ID  = OnCallPlanUsers.OnCallPlanID
+31:FULL OUTER JOIN OnCallPlanShifts ON (OnCallPlanUsers.ID = OnCallPlanShifts.OnCallPlanUserID)
+33:INNER JOIN MMPROFILES ON (OnCallPlanUsers.ProfileID = MMPROFILES.ID)    
+34:CROSS APPLY dbo.fn_OnCallPlanUserGetDuties(OnCallPlans.ID, OnCallPlanUsers.ID, @PeriodStartDate, @PeriodEndDate, (OnCallPlans.Options & 1), OnCallPlans.HandOverTime, 7) as r
+
+=== alert-augmentation ===
+
+=== holidayimport other files ===
+derdack-oncall-holidayimport/basic.ics
+derdack-oncall-holidayimport/README.md
+derdack-oncall-holidayimport/HolidayImport.js
+derdack-oncall-holidayimport/HolidayDeleteAll.js
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && echo "=== WebhookGateway refs ===" && grep -rn "WebhookGateway" leads/ knowledge/ reports/ inventory/ 2>/dev/null | head; echo "=== derdack-integration-SIGNL4 refs ===" && grep -rln "derdack-integration-SIGNL4" leads/ knowledge/ reports/ inventory/ 2>/dev/null | head; echo "=== ioBroker refs in valid-bugs ===" && grep -n "ioBroker" reports/valid-bugs.md
+=== WebhookGateway refs ===
+leads/reposcan-derdack.md:116:asset: `derdack-integration-SIGNL4/js/WebhookGateway.js:41,87`
+leads/reposcan-derdack.md:228:reasoning: Line 40: `this.log.info('config team_secret: ' + this.config.team_secret);` logs the SIGNL4 team secret to ioBroker's info-level log on adapter ready. This is a different repo from the prior finding in `derdack-integration-SIGNL4/js/WebhookGateway.js:41,87` (which logged at DEBUG level). INFO-level logs are typically retained longer and are more accessible than DEBUG logs in production ioBroker installations.
+leads/reposcan-derdack.md:296:[HYP] SIGNL4 Team Secret Logged at DEBUG Level in EA WebhookGateway
+leads/reposcan-derdack.md:298:asset: derdack-integration-SIGNL4/js/WebhookGateway.js:41,87
+leads/reposcan-derdack.md:762:asset: derdack-integration-SIGNL4/js/WebhookGateway.js:41
+leads/lead-bigpickle.md:5733:reasoning: raw-source verified this cycle — registerClient.ps1 azuremonitor:67/110 + azuresentinel:119 print live SP secret (`$spnPwd`, 1y) via Format-List; sentinel:111 grants Azure Sentinel Contributor at subscription scope; User Monitoring.ps1:21 + 2wayREST Main.js (3 handlers) place API key in `?apiKey=` query; SIGNL4 WebhookGateway.js:41/87 LogDebug the decoded team secret. All Derdack-authored, operator-run on customer tenants.
+leads/lead-bigpickle.md:5825:asset: github.com/Derdack/derdack-integration-SIGNL4/js/WebhookGateway.js + README.md
+leads/lead-bigpickle.md:5827:reasoning: README L29-33 instructs operator to Base64-encode the SIGNL4 team secret into the REST source name `SIGNL4_[anyname]_[Base64teamsecret]`; WebhookGateway.js L40-41 `decodeBase64String(arraySrvNameParts[2])` then `LogDebug("Decoded S4 Team Secret: " + strS4TeamSecret)` — plaintext secret echoed into the EA debug log; L94 places the decoded secret in the webhook URL. Team secret is the documented POST /{teamSecret} credential across 15+ integrations (oracle 404-vs-201, KB).
+leads/lead-bigpickle.md:5829:verify_steps: DONE (raw GET README + WebhookGateway.js). Residual deployment-side only.
+reports/hypotheses.md:3304:- [68] github.com/Derdack/derdack-integration-SIGNL4/js/WebhookGateway.js: SIGNL4 team secret stored/decoded/logged in plaintext by Derdack's own EA integration (from art/lead_bigpickle.txt)
+=== derdack-integration-SIGNL4 refs ===
+leads/reposcan-derdack.md
+leads/lead-bigpickle.md
+reports/hypotheses.md
+reports/analyst-bigpickle.log
+=== ioBroker refs in valid-bugs ===
+47:  - | 6 | SIGNL4 secret logged at INFO (ioBroker) | **VALID** | 5.3 | MEDIUM |
+57:  - | 6 | SIGNL4 secret logged at INFO level in ioBroker adapter | VALID | 5.3 | Reported |
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && echo "=== lead-laguna.md ===" && cat leads/lead-laguna.md; echo "=== lead-mimo ==="; cat leads/lead-mimo.md
+=== lead-laguna.md ===
+## 2026-09-03 15:30:27 UTC [target] (model laguna)
+## 2026-09-03 18:51:26 UTC [target] (model laguna)
+## 2026-09-03 21:36:44 UTC [target] (model laguna)
+## 2026-09-03 23:30:15 UTC [target] (model laguna)
+## 2026-09-04 01:19:12 UTC [target] (model laguna)
+## 2026-09-04 05:59:57 UTC [target] (model laguna)
+## 2026-09-04 10:54:38 UTC [target] (model laguna)
+## 2026-09-04 14:37:58 UTC [target] (model laguna)
+## 2026-09-04 17:46:30 UTC [target] (model laguna)
+## 2026-09-04 20:03:32 UTC [target] (model laguna)
+## 2026-09-04 22:22:10 UTC [target] (model laguna)
+## 2026-09-05 00:21:02 UTC [target] (model laguna)
+## 2026-09-05 04:54:08 UTC [target] (model laguna)
+## 2026-09-05 08:43:23 UTC [target] (model laguna)
+## 2026-09-05 12:14:10 UTC [target] (model laguna)
+## 2026-09-05 15:16:44 UTC [target] (model laguna)
+## 2026-09-05 17:22:52 UTC [target] (model laguna)
+## 2026-09-05 19:25:20 UTC [target] (model laguna)
+## 2026-09-05 21:38:43 UTC [target] (model laguna)
+## 2026-09-05 23:15:39 UTC [target] (model laguna)
+## 2026-09-06 01:00:57 UTC [target] (model laguna)
+## 2026-09-06 05:59:10 UTC [target] (model laguna)
+## 2026-09-06 10:27:41 UTC [target] (model laguna)
+## 2026-09-06 13:47:22 UTC [target] (model laguna)
+## 2026-09-06 16:35:06 UTC [target] (model laguna)
+## 2026-09-06 18:36:31 UTC [target] (model laguna)
+## 2026-09-06 20:46:25 UTC [target] (model laguna)
+## 2026-09-06 22:34:37 UTC [target] (model laguna)
+## 2026-09-07 00:18:22 UTC [target] (model laguna)
+## 2026-09-07 04:52:00 UTC [target] (model laguna)
+## 2026-09-07 09:51:17 UTC [target] (model laguna)
+## 2026-09-07 15:23:59 UTC [target] (model laguna)
+## 2026-09-07 19:22:13 UTC [target] (model laguna)
+## 2026-09-07 22:14:50 UTC [target] (model laguna)
+## 2026-09-08 00:26:25 UTC [target] (model laguna)
+## 2026-09-08 05:09:00 UTC [target] (model laguna)
+## 2026-09-08 09:43:45 UTC [target] (model laguna)
+## 2026-09-08 14:00:09 UTC [target] (model laguna)
+## 2026-09-08 17:50:33 UTC [target] (model laguna)
+## 2026-09-08 20:30:40 UTC [target] (model laguna)
+## 2026-09-08 22:56:38 UTC [target] (model laguna)
+## 2026-09-09 00:59:14 UTC [target] (model laguna)
+## 2026-09-09 05:46:42 UTC [target] (model laguna)
+## 2026-09-09 10:26:18 UTC [target] (model laguna)
+## 2026-09-09 14:47:01 UTC [target] (model laguna)
+## 2026-09-09 18:11:41 UTC [target] (model laguna)
+## 2026-09-09 20:57:30 UTC [target] (model laguna)
+## 2026-09-09 22:54:41 UTC [target] (model laguna)
+## 2026-09-10 00:43:34 UTC [target] (model laguna)
+## 2026-09-10 05:27:10 UTC [target] (model laguna)
+## 2026-09-10 10:00:28 UTC [target] (model laguna)
+## 2026-09-10 14:28:42 UTC [target] (model laguna)
+## 2026-09-10 17:49:57 UTC [target] (model laguna)
+## 2026-09-10 20:14:58 UTC [target] (model laguna)
+## 2026-09-10 22:36:35 UTC [target] (model laguna)
+## 2026-09-11 00:30:31 UTC [target] (model laguna)
+## 2026-09-11 05:09:23 UTC [target] (model laguna)
+## 2026-09-11 09:44:35 UTC [target] (model laguna)
+## 2026-09-11 13:57:03 UTC [target] (model laguna)
+## 2026-09-11 17:29:07 UTC [target] (model laguna)
+## 2026-09-11 20:00:20 UTC [target] (model laguna)
+## 2026-09-11 22:21:00 UTC [target] (model laguna)
+## 2026-09-12 00:34:47 UTC [target] (model laguna)
+## 2026-09-12 04:57:25 UTC [target] (model laguna)
+## 2026-09-12 09:00:14 UTC [target] (model laguna)
+## 2026-09-12 12:45:37 UTC [target] (model laguna)
+## 2026-09-12 15:56:13 UTC [target] (model laguna)
+## 2026-09-12 18:01:03 UTC [target] (model laguna)
+## 2026-09-12 20:35:00 UTC [target] (model laguna)
+## 2026-09-12 22:30:47 UTC [target] (model laguna)
+## 2026-09-13 00:14:17 UTC [target] (model laguna)
+## 2026-09-13 04:51:30 UTC [target] (model laguna)
+## 2026-09-13 09:54:11 UTC [target] (model laguna)
+## 2026-09-13 13:59:00 UTC [target] (model laguna)
+## 2026-09-13 17:19:00 UTC [target] (model laguna)
+## 2026-09-13 19:32:07 UTC [target] (model laguna)
+## 2026-09-13 21:38:10 UTC [target] (model laguna)
+## 2026-09-13 23:28:39 UTC [target] (model laguna)
+## 2026-09-14 01:33:57 UTC [target] (model laguna)
+## 2026-09-14 06:59:17 UTC [target] (model laguna)
+## 2026-09-14 13:43:59 UTC [target] (model laguna)
+## 2026-09-14 18:57:34 UTC [target] (model laguna)
+## 2026-09-14 22:15:13 UTC [target] (model laguna)
+## 2026-09-15 00:40:11 UTC [target] (model laguna)
+## 2026-09-15 05:20:26 UTC [target] (model laguna)
+## 2026-09-15 10:23:49 UTC [target] (model laguna)
+## 2026-09-15 15:14:57 UTC [target] (model laguna)
+## 2026-09-15 19:02:03 UTC [target] (model laguna)
+## 2026-09-15 22:15:31 UTC [target] (model laguna)
+## 2026-09-16 00:23:46 UTC [target] (model laguna)
+## 2026-09-16 05:10:28 UTC [target] (model laguna)
+## 2026-09-16 09:59:00 UTC [target] (model laguna)
+## 2026-09-16 14:40:48 UTC [target] (model laguna)
+## 2026-09-16 18:33:59 UTC [target] (model laguna)
+## 2026-09-16 21:39:55 UTC [target] (model laguna)
+## 2026-09-16 23:49:44 UTC [target] (model laguna)
+## 2026-09-17 02:32:15 UTC [target] (model laguna)
+## 2026-09-17 07:57:33 UTC [target] (model laguna)
+## 2026-09-17 13:01:45 UTC [target] (model laguna)
+## 2026-09-17 17:38:36 UTC [target] (model laguna)
+## 2026-09-17 20:32:33 UTC [target] (model laguna)
+## 2026-09-17 23:03:00 UTC [target] (model laguna)
+## 2026-09-18 01:17:48 UTC [target] (model laguna)
+## 2026-09-18 05:59:52 UTC [target] (model laguna)
+## 2026-09-18 10:49:43 UTC [target] (model laguna)
+## 2026-09-18 14:42:23 UTC [target] (model laguna)
+## 2026-09-18 17:58:31 UTC [target] (model laguna)
+## 2026-09-18 20:28:49 UTC [target] (model laguna)
+## 2026-09-18 22:47:22 UTC [target] (model laguna)
+## 2026-09-19 00:48:28 UTC [target] (model laguna)
+## 2026-09-19 05:18:48 UTC [target] (model laguna)
+## 2026-09-19 09:35:23 UTC [target] (model laguna)
+## 2026-09-19 13:22:13 UTC [target] (model laguna)
+## 2026-09-19 16:46:11 UTC [target] (model laguna)
+## 2026-09-19 19:05:32 UTC [target] (model laguna)
+## 2026-09-19 21:28:15 UTC [target] (model laguna)
+## 2026-09-19 23:28:28 UTC [target] (model laguna)
+## 2026-09-20 01:33:28 UTC [target] (model laguna)
+## 2026-09-20 06:55:29 UTC [target] (model laguna)
+## 2026-09-20 11:55:59 UTC [target] (model laguna)
+## 2026-09-20 15:13:18 UTC [target] (model laguna)
+## 2026-09-20 18:12:44 UTC [target] (model laguna)
+## 2026-09-20 20:51:17 UTC [target] (model laguna)
+## 2026-09-20 22:48:12 UTC [target] (model laguna)
+## 2026-09-21 00:40:44 UTC [target] (model laguna)
+## 2026-09-21 05:41:16 UTC [target] (model laguna)
+## 2026-09-21 11:29:52 UTC [target] (model laguna)
+## 2026-09-21 17:10:17 UTC [target] (model laguna)
+## 2026-09-21 21:06:18 UTC [target] (model laguna)
+## 2026-09-22 00:08:46 UTC [target] (model laguna)
+## 2026-09-22 04:59:49 UTC [target] (model laguna)
+## 2026-09-22 09:41:16 UTC [target] (model laguna)
+## 2026-09-22 14:15:34 UTC [target] (model laguna)
+## 2026-09-22 18:07:12 UTC [target] (model laguna)
+## 2026-09-22 21:21:32 UTC [target] (model laguna)
+## 2026-09-22 23:47:12 UTC [target] (model laguna)
+## 2026-09-23 02:30:53 UTC [target] (model laguna)
+## 2026-09-23 07:56:41 UTC [target] (model laguna)
+## 2026-09-23 13:15:23 UTC [target] (model laguna)
+## 2026-09-23 17:51:51 UTC [target] (model laguna)
+## 2026-09-23 20:52:36 UTC [target] (model laguna)
+## 2026-09-23 23:21:24 UTC [target] (model laguna)
+## 2026-09-24 01:37:29 UTC [target] (model laguna)
+## 2026-09-24 06:43:29 UTC [target] (model laguna)
+## 2026-09-24 12:26:17 UTC [target] (model laguna)
+## 2026-09-24 17:31:09 UTC [target] (model laguna)
+## 2026-09-24 20:44:01 UTC [target] (model laguna)
+## 2026-09-24 23:41:29 UTC [target] (model laguna)
+## 2026-09-25 02:36:22 UTC [target] (model laguna)
+## 2026-09-25 08:09:26 UTC [target] (model laguna)
+## 2026-09-25 13:50:20 UTC [target] (model laguna)
+## 2026-09-25 18:09:10 UTC [target] (model laguna)
+## 2026-09-25 21:37:16 UTC [target] (model laguna)
+## 2026-09-26 00:08:00 UTC [target] (model laguna)
+## 2026-09-26 05:01:45 UTC [target] (model laguna)
+## 2026-09-26 09:53:38 UTC [target] (model laguna)
+## 2026-09-26 13:58:02 UTC [target] (model laguna)
+## 2026-09-26 17:36:59 UTC [target] (model laguna)
+## 2026-09-26 20:07:38 UTC [target] (model laguna)
+## 2026-09-26 22:54:17 UTC [target] (model laguna)
+## 2026-09-27 01:01:39 UTC [target] (model laguna)
+## 2026-09-27 06:38:04 UTC [target] (model laguna)
+## 2026-09-27 12:25:06 UTC [target] (model laguna)
+## 2026-09-27 17:14:34 UTC [target] (model laguna)
+## 2026-09-27 20:10:04 UTC [target] (model laguna)
+## 2026-09-27 23:04:49 UTC [target] (model laguna)
+## 2026-09-28 01:41:31 UTC [target] (model laguna)
+## 2026-09-28 07:59:56 UTC [target] (model laguna)
+## 2026-09-28 16:35:41 UTC [target] (model laguna)
+## 2026-09-28 22:15:39 UTC [target] (model laguna)
+## 2026-09-29 02:00:07 UTC [target] (model laguna)
+## 2026-09-29 08:08:23 UTC [target] (model laguna)
+## 2026-09-29 14:52:02 UTC [target] (model laguna)
+## 2026-09-29 19:42:58 UTC [target] (model laguna)
+## 2026-09-29 23:17:23 UTC [target] (model laguna)
+## 2026-09-30 02:09:54 UTC [target] (model laguna)
+## 2026-09-30 08:36:42 UTC [target] (model laguna)
+## 2026-09-30 15:15:23 UTC [target] (model laguna)
+## 2026-09-30 20:03:39 UTC [target] (model laguna)
+## 2026-09-30 23:52:46 UTC [target] (model laguna)
+## 2026-10-01 03:12:38 UTC [target] (model laguna)
+## 2026-10-01 10:11:24 UTC [target] (model laguna)
+## 2026-10-01 17:02:40 UTC [target] (model laguna)
+## 2026-10-01 21:50:33 UTC [target] (model laguna)
+## 2026-10-02 01:12:33 UTC [target] (model laguna)
+## 2026-10-02 07:01:48 UTC [target] (model laguna)
+## 2026-10-02 13:53:21 UTC [target] (model laguna)
+## 2026-10-02 18:49:54 UTC [target] (model laguna)
+## 2026-10-02 22:42:27 UTC [target] (model laguna)
+## 2026-10-03 01:35:02 UTC [target] (model laguna)
+## 2026-10-03 07:03:21 UTC [target] (model laguna)
+## 2026-10-03 12:35:29 UTC [target] (model laguna)
+## 2026-10-03 16:40:32 UTC [target] (model laguna)
+## 2026-10-03 19:36:57 UTC [target] (model laguna)
+## 2026-10-03 22:24:25 UTC [target] (model laguna)
+## 2026-10-04 01:57:50 UTC [target] (model laguna)
+## 2026-10-04 07:46:07 UTC [target] (model laguna)
+## 2026-10-04 13:34:22 UTC [target] (model laguna)
+## 2026-10-04 17:48:31 UTC [target] (model laguna)
+## 2026-10-04 20:39:55 UTC [target] (model laguna)
+## 2026-10-04 23:35:31 UTC [target] (model laguna)
+## 2026-10-05 02:20:38 UTC [target] (model laguna)
+## 2026-10-05 09:34:35 UTC [target] (model laguna)
+## 2026-10-05 18:48:10 UTC [target] (model laguna)
+## 2026-10-06 00:29:49 UTC [target] (model laguna)
+## 2026-10-06 06:48:33 UTC [target] (model laguna)
+## 2026-10-06 13:48:00 UTC [target] (model laguna)
+## 2026-10-06 19:14:29 UTC [target] (model laguna)
+## 2026-10-06 23:04:50 UTC [target] (model laguna)
+## 2026-10-07 02:25:04 UTC [target] (model laguna)
+## 2026-10-07 09:11:39 UTC [target] (model laguna)
+## 2026-10-07 16:31:53 UTC [target] (model laguna)
+## 2026-10-07 21:31:44 UTC [target] (model laguna)
+## 2026-10-08 01:15:44 UTC [target] (model laguna)
+## 2026-10-08 07:27:35 UTC [target] (model laguna)
+## 2026-10-08 14:53:01 UTC [target] (model laguna)
+## 2026-10-08 20:22:36 UTC [target] (model laguna)
+## 2026-10-09 00:36:18 UTC [target] (model laguna)
+## 2026-10-09 06:38:43 UTC [target] (model laguna)
+## 2026-10-09 13:43:26 UTC [target] (model laguna)
+## 2026-10-09 19:09:22 UTC [target] (model laguna)
+## 2026-10-09 23:17:20 UTC [target] (model laguna)
+## 2026-10-10 02:23:46 UTC [target] (model laguna)
+## 2026-10-10 08:55:04 UTC [target] (model laguna)
+## 2026-10-10 14:55:31 UTC [target] (model laguna)
+## 2026-10-10 19:04:31 UTC [target] (model laguna)
+## 2026-10-10 22:35:07 UTC [target] (model laguna)
+## 2026-10-11 01:12:37 UTC [target] (model laguna)
+## 2026-10-11 07:14:41 UTC [target] (model laguna)
+## 2026-10-11 14:04:55 UTC [target] (model laguna)
+## 2026-10-11 18:56:57 UTC [target] (model laguna)
+## 2026-10-11 22:39:05 UTC [target] (model laguna)
+## 2026-10-12 01:45:26 UTC [target] (model laguna)
+## 2026-10-12 08:18:41 UTC [target] (model laguna)
+## 2026-10-12 18:01:03 UTC [target] (model laguna)
+## 2026-10-13 00:43:39 UTC [target] (model laguna)
+## 2026-10-13 07:14:01 UTC [target] (model laguna)
+## 2026-10-13 15:05:07 UTC [target] (model laguna)
+## 2026-10-13 20:42:09 UTC [target] (model laguna)
+## 2026-10-14 00:02:01 UTC [target] (model laguna)
+## 2026-10-14 04:57:03 UTC [target] (model laguna)
+## 2026-10-14 09:53:57 UTC [target] (model laguna)
+=== lead-mimo ===
+# Lead log (seed)
+[0m
+[0m$ [0mcd /tmp/opencode/dorg && echo "=== all files (non-.git) by extension ===" && find . -type f -not -path '*/.git/*' | sed -E 's/.*\.//' | sort | uniq -c | sort -rn; echo; echo "=== suspicious files ===" && find . -type f -not -path '*/.git/*' \( -iname '*.env*' -o -iname '*.pem' -o -iname '*.key' -o -iname '*secret*' -o -iname '*credential*' -o -iname '*config*' -o -iname '*.sql' -o -iname '*.ps1' -o -iname '*.sh' \) | sort
+=== all files (non-.git) by extension ===
+     14 png
+     11 md
+     11 js
+      6 mkp
+      3 ps1
+      3 jpg
+      2 sh
+      2 MD
+      1 zip
+      1 sql
+      1 py
+      1 ics
+      1 cfg
+      1 /derdack-plugin-checkmk/notifications/derdack
+
+=== suspicious files ===
+./User-Monitoring/User Monitoring.ps1
+./derdack-integration-azuremonitor/registerClient.ps1
+./derdack-integration-azuresentinel/registerClient.ps1
+./derdack-oncall-whoisoncallexport/OnCallPlanDuties.sql
+./derdack-plugin-nagios/ea_host_notify.sh
+./derdack-plugin-nagios/ea_service_notify.sh
+[0m
+[0m$ [0mcd /tmp/opencode/dorg && echo "=== private keys ===" && grep -rl "BEGIN .*PRIVATE KEY" . 2>/dev/null | grep -v '/.git/'; echo "=== AKIA/AIza/ghp/sk_live ===" && grep -rnE 'AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|gh[pousr]_[A-Za-z0-9]{36}|sk_live_[0-9a-zA-Z]{20}|---BEGIN' . 2>/dev/null | grep -v '/.git/' | head; echo "=== base64-looking team secret configs ===" && grep -rnE '(team_secret|teamSecret|S4TeamSecret)\s*[:=]' . 2>/dev/null | grep -v '/.git/' | head
+=== private keys ===
+=== AKIA/AIza/ghp/sk_live ===
+=== base64-looking team secret configs ===
+./derdack-integration-SIGNL4/js/WebhookGateway.js:4:    var strS4TeamSecret = "";
+./derdack-integration-SIGNL4/js/WebhookGateway.js:40:        strS4TeamSecret = decodeBase64String(arraySrvNameParts[2]);
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && echo "=== 192.168.88.88 in leads/kb ===" && grep -rn "192.168.88.88" leads/ knowledge/ reports/ 2>/dev/null | head; echo "=== azure registerClient SP secret lead ===" && grep -rln "registerClient" leads/ knowledge/ 2>/dev/null | head; echo "=== 2wayREST README internal IP mention ===" && grep -rn "2wayREST" leads/lead-bigpickle.md | head -3
+=== 192.168.88.88 in leads/kb ===
+leads/reposcan-derdack.md:479:reasoning: Lines 90-94 contain username="cmkadmin", password="CNlydVqZ", serverURL="http://192.168.88.107:8080/cmk/check_mk/api/v0/". Plaintext HTTP to internal Checkmk API. Credentials used in Bearer auth headers at lines 317, 360. The RFC1918 IP 192.168.88.107 matches the pattern used in derdack-2wayREST-samples/README.md:147 (192.168.88.88), confirming this is a Derdack internal network range.
+leads/reposcan-derdack.md:690:reasoning: Internal IPs `192.168.88.88` (5 occurrences in README) and `192.168.88.107` (Main.js:94) leaked in public repo. Reveals internal network topology.
+=== azure registerClient SP secret lead ===
+leads/reposcan-derdack.md
+leads/lead-bigpickle.md
+leads/lead-nemotron3.md
+knowledge/index.md
+=== 2wayREST README internal IP mention ===
+5731:asset: github.com/Derdack/{User-Monitoring,derdack-integration-azuremonitor,derdack-integration-azuresentinel,derdack-integration-SIGNL4,derdack-2wayREST-samples}
+5733:reasoning: raw-source verified this cycle — registerClient.ps1 azuremonitor:67/110 + azuresentinel:119 print live SP secret (`$spnPwd`, 1y) via Format-List; sentinel:111 grants Azure Sentinel Contributor at subscription scope; User Monitoring.ps1:21 + 2wayREST Main.js (3 handlers) place API key in `?apiKey=` query; SIGNL4 WebhookGateway.js:41/87 LogDebug the decoded team secret. All Derdack-authored, operator-run on customer tenants.
+5757:[HYP] 2wayREST samples require live third-party API keys in URL query string
+[0m
+Confirmed: everything from my org scan is already captured in leads. The org scan (Next Move #2) is now definitively complete and yields zero new findings.
+
+Now I'll conclude. The honest state:
+- Next Move #2 (org scan) — DONE, saturated, no new findings.
+- Next Move #1 (submit) — human only.
+- Pipeline issues remain config-level decisions.
+
+I'll report this succinctly and ask the one clarifying question: whether to fix the automation config (scope.yml github_orgs / reposcan TARGET_ORG / triage PROBE_ALLOW + marker), since that's a program-config change.
+
+Let me write the final message. Keep it focused.
+
+I should note I didn't modify any repo files (the clones are in /tmp/opencode). Good.
+
+Let me draft:
+
+---
+Completed the one open automatable thread (org sweep), then stopped at the config decision.
+
+**Org scan (Next Move #2) — done, saturated.**
+Enumerated all 12 `github.com/Derdack` repos, shallow-cloned, scanned for credentials/secrets/private keys/internal hosts/eval. Result: **no new findings** — every hit is already in `leads/`:
+- `derdack-oncall-holidayimport/{HolidayImport,HolidayDeleteAll}.js` — SA creds (known)
+- `derdack-plugin-checkmk/2-way/Main.js:91-94` — Checkmk creds + 192.168.88.107 (known)
+- `derdack-integration-SIGNL4/js/WebhookGateway.js:41,87` — decoded team secret logged (already in reposcan-derdack.md:296)
+- `derdack-2wayREST-samples/README.md` — 192.168.88.88 internal IP (already reposcan-derdack.md:690)
+- azure registerClient.ps1 SP-secret logging (already lead-bigpickle.md:5731)
+- eval() in 4 sample plugins (known, HELD)
+Clean: no live keys, no private keys in the other 8 repos. `reposcan.yml` `TARGET_ORG:""` should be set to `Derdack signl4` to automate this going forward.
+
+**Not automatable:** submission to bugs.olivermaicher.eu (human), and the triager is erroring on every run.
+
+**Decision needed:** two config changes would unblock future cycles, but they alter program automation, so I'd like your call:
+1. `reposcan.yml` TARGET_ORG + `scope.yml` github_orgs → `Derdack signl4`
+2. `triage.yml` PROBE_ALLOW `derdack.com` excludes `signl4.com`/`enterprisealert.com`, and `grep [UNVALIDATED]` matches 0 (leads carry no marker), so triage never sees a lead.
+
+Want me to apply (1) and (2), or leave the config as-is?
+---
+
+That's good. Let me tighten to fewer than ~15 lines? The style says concise but this is analytical. I'll keep the key content.
+
+Actually, I realize I should double check whether `github.com/signl4` is the org (lowercase signl4) vs Derdack. Both exist. The scan summary earlier mentioned signl4 repos. So TARGET_ORG should probably be "Derdack signl4". Good.
+
+Let me finalize.</think>Ran the one open automatable thread (the org sweep), then hit a program-config decision I shouldn't make unilaterally.
+
+**Org scan (Next Move #2) — complete, saturated.** Enumerated all 12 `github.com/Derdack` repos, shallow-cloned, scanned for creds/keys/internal hosts/`eval`. Result: **zero new findings** — every hit already lives in `leads/`:
+- `derdack-oncall-holidayimport/{HolidayImport,HolidayDeleteAll}.js` — SA creds (known)
+- `derdack-plugin-checkmk/2-way/Main.js:91-94` — Checkmk creds + `192.168.88.107` (known)
+- `derdack-integration-SIGNL4/js/WebhookGateway.js:41,87` — decoded team secret logged (already `reposcan-derdack.md:296`)
+- `derdack-2wayREST-samples/README.md` — `192.168.88.88` internal IP (already `reposcan-derdack.md:690`)
+- azure `registerClient.ps1` SP-secret logging (already `lead-bigpickle.md:5731`)
+- `eval()` callback deserialization in 4 sample plugins (known, HELD)
+
+Clean: no live keys, private keys, or new secrets in the other 8 repos.
+
+**Not automatable from here:** submission to bugs.olivermaicher.eu (human action), and the triager (`opencode/mimo-v2.5-free`) errors on every recent run (`err_*` server errors, last 5+ runs empty).
+
+**Decision needed** — two config gaps block any future clean cycle, but they change program automation, so I want your call before touching them:
+1. `reposcan.yml` `TARGET_ORG: ""` + `scope.yml` `github_orgs: none-configured` → set to `Derdack signl4` (reposcan currently self-skips every run).
+2. `triage.yml` `PROBE_ALLOW: "derdack.com"` excludes `signl4.com`/`enterprisealert.com`, and `grep "\[UNVALIDATED\]"` matches 0 (leads carry no such marker) → triage never receives a lead to validate.
+
+Apply (1) and (2), or leave the config as-is? (I made no repo changes; clones are in `/tmp/opencode`.)

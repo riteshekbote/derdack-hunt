@@ -1431,3 +1431,9 @@
 - 2026-10-14 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
 - 2026-10-14 github.com/Derdack org was missed by previous signl4-only scans; must enumerate all orgs in scope.
 - 2026-10-14 Webhook secrets can be live even in vendor docs repos; Content-Length:0 oracle is effective for validation without creating incidents.
+- 2026-10-14 ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: path-family probing of an App-Proxy-fronted known-404 root recovered a live EA sub-app — root-only status is not full-host status.
+- 2026-10-14 REJECTED MISCONFIG @ demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx: the `Handler` value reflects into an attribute but is URL-encoded (`"`→`%22`, `<`→`%3c`) — not XSS.
+- 2026-10-14 ACCEPTED AUTH @ github.com/Derdack: brand-scoped scanning (signl4/* only) produced a false "secrets exhausted" conclusion; org coverage must be enumerated per-org, not per-brand.
+- 2026-10-14 REJECTED AUTH @ connect.signl4.com/api/v2/teams: the 401-vs-405 flip is temporal deploy state, not per-request routing — same-session N-sample testing is required before calling it flapping.
+- 2026-10-14 ACCEPTED AUTH @ github.com/Derdack: Brand-scoped RAG ("53 signl4/* repos") produced false "secrets exhausted" conclusion — sibling `github.com/Derdack` org was never scanned (reposcan: "TARGET_ORG not configured"), and it holds real hardcoded SA/Checkmk credentials; org coverage must be enumerated per-org, not per-brand
+- 2026-10-14 ACCEPTED AUTH @ signl4/docs: Prior "placeholder-only" rejection was false negative — `vbguzfsi` and `96sbq38s` are live team webhook secrets (unsanitized in vendor docs). Webhook secret ≠ REST API key; use Content-Length:0 oracle is effective for validation without creating incidents.
