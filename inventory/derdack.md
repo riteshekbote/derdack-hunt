@@ -2741,3 +2741,27 @@ www.derdack.com
 - CHANGED PASSIVE deliverables re-verified live and byte-stable after 5+ days: webhook oracle vbguzfsi→400/code 4000, fabricated zq7x2k9p→404/code 3004, 96sbq38s→400/code 4000; EA WSDL → 200, 29968 B, sha256 e8
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
 - CHANGED Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); grep "\[UNVALIDATED\]" leads/lead-*.md matches 0 — automated validation broken
+
+## 2026-10-14 10:08:48 UTC
+- NEW GitHub org `github.com/Derdack` (12 public repos) was NEVER reposcanned before this cycle. First full scan confirms hardcoded credentials in two public repos.
+- NEW Hardcoded SQL Server SA credentials (`sa:Derdack!`) found in `derdack-oncall-holidayimport/HolidayImport.js:16` and `HolidayDeleteAll.js:22` (author `rbormann@de.derdack.com`, 2022-12-07, unremediated
+- NEW Hardcoded Checkmk admin credentials (`cmkadmin:CNlydVqZ`) + internal IP `192.168.88.107` found in `derdack-plugin-checkmk/2-way/Main.js:90-94` (author `rons4`, 2024-05-27, unremediated).
+- CHANGED SIGNL4 webhook secrets `vbguzfsi` and `96sbq38s` re-verified live in public `signl4/docs` and integration repos; control proves secrets are live (Content-Length:0 POST → valid 400/4000 vs invalid 404/
+- CHANGED `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl` re-verified: 200, sha256 `e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae` unchanged; exposes internal SOAP address 
+- CHANGED `vps.signl4.com` A-record 72.167.227.27 (GoDaddy secureserver.net) remains dangling (nginx default vhost) — transient TCP-timeout observed in recent probes, DNS unchanged.
+- CHANGED Triage pipeline remains broken: ≥57 consecutive failed Triager runs (2026-09-25→2026-10-06), `reports/valid-bugs.md` running count is unreliable.
+- NEW nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+- CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+- NEW Both passive verifiers scope to `PROBE_ALLOW: derdack.com` (hunt.yml:13, triage.yml:12), so no `signl4.com`/`enterprisealert.com` lead URL is ever re-verified; every `probe-results.md` section since 2
+- CHANGED credential-in-URL item is report-complete: `API_Key_Query` declared in `components.securitySchemes` on V1+V2+V3 (global `security: [{}]` empty on all three), live-confirmed 2026-09-09 (`?x-s4-api-key=
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this i
+- CHANGED No new attack surface locally: `probe-results.md` tail, reposcan (TARGET_ORG unset) and the host map yielded nothing unexamined; queue unchanged — the missing piece was a verified route to a triager, 
+- NEW Hardcoded SQL Server SA credentials found in public Derdack GitHub repos (unremediated since 2022-12-07)
+- CHANGED Triage pipeline broken (>=57 consecutive failures) - need to submit findings to bugs.olivermaicher.eu
+- CHANGED github.com/Derdack org was never scanned before; now fully scanned (12 repos)
+- NEW github.com/Derdack org (12 repos) fully scanned for first time — revealed hardcoded SQL Server SA creds (sa:Derdack! @ sqlserver.derdack-support.local) in derdack-oncall-holidayimport, Checkmk admin c
+- NEW api.signl4.com/api/v2/teams auth-status flipped to route-gated (401 on unauth GET + invalid Bearer) vs prior handler-deferred 405 pattern; temporal flip confirmed by 6 consecutive probes
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS, shared client_id 692A0A56, password grant enabled on staging, account IdP issuer mismatch (claims connect) + plain
+- CHANGED PASSIVE deliverables re-verified live and byte-stable after 5+ days: webhook oracle vbguzfsi→400/code 4000, fabricated zq7x2k9p→404/code 3004, 96sbq38s→400/code 4000; EA WSDL → 200, 29968 B, sha256 e8
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
+- CHANGED Triage pipeline dead: 57 consecutive runs failed (2026-09-25 → 2026-10-06); grep "\[UNVALIDATED\]" leads/lead-*.md matches 0 — automated validation broken

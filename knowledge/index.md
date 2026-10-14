@@ -1422,3 +1422,12 @@
 - 2026-10-14 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
 - 2026-10-14 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
 - 2026-10-14 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+- 2026-10-14 ACCEPTED AUTH @ github.com/Derdack: Brand-scoped RAG ("53 signl4/* repos") produced false "secrets exhausted" conclusion — sibling `github.com/Derdack` org was never scanned and contains real hardcoded credentials. Enumerate orgs per-org, not per-brand.
+- 2026-10-14 ACCEPTED AUTH @ signl4/docs: Prior "placeholder-only" rejection was false negative — `vbguzfsi` and `96sbq38s` are live team webhook secrets (unsanitized in vendor docs). Webhook secret ≠ REST API key; use Content-Length:0 control to avoid creating events.
+- 2026-10-14 ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: Path-family probing of App-Proxy-fronted host recovered live EA sub-app (root-only status ≠ full-host status). Apply to future App-Proxy-fronted/multi-app hosts before declaring inert.
+- 2026-10-14 ACCEPTED OTHER @ GitHub secret hunting: Status codes alone insufficient; hash bodies, use control paths, and read schemas (not just path lists). Query-matched controls prevent false positives when testing query params.
+- 2026-10-14 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+- 2026-10-14 ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+- 2026-10-14 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+- 2026-10-14 github.com/Derdack org was missed by previous signl4-only scans; must enumerate all orgs in scope.
+- 2026-10-14 Webhook secrets can be live even in vendor docs repos; Content-Length:0 oracle is effective for validation without creating incidents.

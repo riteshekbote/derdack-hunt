@@ -6681,3 +6681,40 @@
 - LEARN: REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
 - LEARN: REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files;
 - LEARN: ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across a
+
+## RANKED HYPOTHESES 2026-10-14 10:08:48 UTC
+- [95] github.com/Derdack/derdack-oncall-holidayimport/HolidayImport.js:16: Hardcoded SQL Server SA credentials in public Derdack GitHub repo (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: Submit the 4 findings to bugs.olivermaicher.eu: (1) Derdack-oncall-holidayimport hardcoded SA creds (2) Derdack-plugin-checkmk hardcoded Checkmk creds+in
+- NEXT(hypotheses-nemotron3.txt): RAG: passive sweep of github.com/Derdack org (12 repos) for additional hardcoded credentials, internal hostnames, and eval() patterns beyond the 2 already confi
+- LEARN: ACCEPTED AUTH @ github.com/Derdack: Brand-scoped RAG ("53 signl4/* repos") produced false "secrets exhausted" conclusion — sibling `github.com/Derdack` org was 
+- LEARN: ACCEPTED AUTH @ signl4/docs: Prior "placeholder-only" rejection was false negative — `vbguzfsi` and `96sbq38s` are live team webhook secrets (unsanitized in ven
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: Path-family probing of App-Proxy-fronted host recovered live EA sub-app (root-only status ≠ full-hos
+- LEARN: ACCEPTED OTHER @ GitHub secret hunting: Status codes alone insufficient; hash bodies, use control paths, and read schemas (not just path lists). Query-matched c
+- LEARN: ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+- LEARN: ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+- LEARN: REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+- LEARN: REJECTED OTHER @ Derdack `.mkp`/`.zip` artifacts: Checkmk `EnterpriseAlert-*.mkp` and nagios plugin zip contain only `<api-key>`/`<enterprise alert server>` pla
+- LEARN: REJECTED MISCONFIG @ demo.enterprisealert.com/WebInterface/EnterpriseAlert/*: WSDL-namespace path family returns uniform bare 404 (0 bytes, matches control) — n
+- LEARN: ACCEPTED OTHER @ deliverables: oracle + EA WSDL re-verified with zero drift after 5+ days — submission-ready.
+- LEARN: github.com/Derdack org was missed by previous signl4-only scans; must enumerate all orgs in scope.
+- LEARN: Webhook secrets can be live even in vendor docs repos; Content-Length:0 oracle is effective for validation without creating incidents.
+- LEARN: ACCEPTED AUTH @ github.com/Derdack: a signl4-only org RAG created a false "surface exhausted" conclusion — the sibling Derdack org was never scanned (reposcan: 
+- LEARN: ACCEPTED AUTH @ both credential leaks: "already reported" annotations in valid-bugs.md were model-generated and unverified, yet were real — the signl4 RAG's "ze
+- LEARN: REJECTED OTHER @ mkp/zip archives: Checkmk .mkp and nagios .zip contain only `<api-key>` placeholders — archive content swept negative
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: /WebInterface/ path family (WSDL namespace) uniformly 404 — path-family probe negative
+- LEARN: ACCEPTED AUTH @ github.com/Derdack: brand-scoped RAG ("53 signl4/* repos") produced a false "secrets exhausted" conclusion; the sibling Derdack org was never sc
+- LEARN: ACCEPTED AUTH @ derdack-oncall-holidayimport + derdack-plugin-checkmk: the valid-bugs.md "hardcoded SA/Checkmk creds" entries dismissed as model hallucination w
+- LEARN: REJECTED OTHER @ Derdack `.mkp`/`.zip` artifacts: Checkmk `EnterpriseAlert-*.mkp` and nagios plugin zip contain only `<api-key>`/`<enterprise alert server>` pla
+- LEARN: REJECTED MISCONFIG @ demo.enterprisealert.com/WebInterface/EnterpriseAlert/*: WSDL-namespace path family returns uniform bare 404 (0 bytes) matching control — n
+- LEARN: ACCEPTED OTHER @ deliverables re-verified live this cycle: oracle vbguzfsi→400/4000, fabricated→404/3004, 96sbq38s→400/4000; EA WSDL sha256 e8b753f2... unchange
+- LEARN: REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-
+- LEARN: REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are no
+- LEARN: REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the ver
+- LEARN: REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there 
+- LEARN: REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a tran
+- LEARN: REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is
+- LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier 
+- LEARN: REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control on
+- LEARN: REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+- LEARN: REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files;
+- LEARN: ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across a
