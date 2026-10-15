@@ -1,56 +1,61 @@
-## 2026-10-15 14:43:41 UTC [target] (model nemotron3)
-[NEW] github.com/Derdack org (12 public repos) fully scanned for first time on 2026-10-14 — revealed hardcoded SQL Server SA creds (`sa:Derdack!` @ `sqlserver.derdack-support.local`) in `derdack-oncall-holidayimport`, Checkmk admin creds (`cmkadmin:CNlydVqZ` @ `192.168.88.107:8080`) in `derdack-plugin-checkmk`, plus `eval()` deserialization in 4 EA 2-way REST plugins
+## 2026-10-15 18:41:52 UTC [target] (model nemotron3)
+[NEW] github.com/Derdack org (12 repos) fully scanned for first time — revealed hardcoded SQL Server SA creds (`sa:Derdack!` @ `sqlserver.derdack-support.local`) in `derdack-oncall-holidayimport` + Checkmk admin creds (`cmkadmin:CNlydVqZ` @ `192.168.88.107:8080`) in `derdack-plugin-checkmk`
 [NEW] api.signl4.com/api/v2/teams auth-status flipped to route-gated (401 on unauth GET + invalid Bearer) vs prior handler-deferred 405 pattern — temporal flip confirmed by 6 consecutive probes
-[NEW] api.signl4.com/api/docs/v2/swagger.json grew to 1,225,783 B (sha256 837b34ca) vs 1,216,391 B on 2026-10-11 — 190 paths (V1=93, V3=207); newly-catalogued families: `/v2/remoteActions`, `/v2/scripts`, `/v2/eventsources`, `/v2/scim`, `/v2/teams/public`, `/v2/categories/public`, `/v2/distributionLists/public`
-[NEW] All 8 probed new-family unauth GETs return 401 / 0 bytes — auth-gated as expected
-[NEW] Second live SIGNL4 team webhook secret `96sbq38s` confirmed live at `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148` via Content-Length:0 control
-[NEW] demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx live (200, 1843 B) — HTTP handler interface advertises 10 handlers; EA handler auth ENFORCED via read-only GETs (GetEventStatus?Username=admin&Password=admin → Error: -1)
-[CHANGED] vps.signl4.com A-record 72.167.227.27 (GoDaddy secureserver.net) remains dangling (nginx default vhost) — intermittent TCP-timeout observed, DNS unchanged
+[NEW] api.signl4.com/api/docs/v2/swagger.json grew to 1,225,783 B (sha256 837b34ca) vs 1,216,391 B on 2026-10-11 — 190 paths (V1=93, V3=207); newly-catalogued families: `/v2/remoteActions`, `/v2/scripts`, `/v2/eventsources`, `/v2/st` — all 8 probed new-family unauth GETs return 401/0 bytes
 [CHANGED] Triage pipeline remains broken: ≥59 consecutive failed Triager runs (2026-09-25→2026-10-15), `reports/valid-bugs.md` running count unreliable
+[CHANGED] vps.signl4.com A-record 72.167.227.27 (GoDaddy secureserver.net) remains dangling (nginx default vhost) — intermittent TCP-timeout observed, DNS unchanged
 [CHANGED] Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
-[PRIO] github.com/Derdack/derdack-oncall-holidayimport,9.75,attack_surface=10,business_value=10,tech_exposure=10,gate_ease=10,cloud_surface=9,freshness=10
-[PRIO] github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js,9.50,attack_surface=10,business_value=10,tech_exposure=10,gate_ease=10,cloud_surface=9,freshness=8
-[PRIO] demo.enterprisealert.com/EAWebService,8.75,attack_surface=9,business_value=9,tech_exposure=8,gate_ease=10,cloud_surface=8,freshness=9
+[CHANGED] Second live SIGNL4 team webhook secret `96sbq38s` confirmed live at `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148` via Content-Length:0 control
+[CHANGED] demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx live (200, 1843 B) — HTTP handler interface advertises 10 handlers; EA handler auth ENFORCED via read-only GETs
+[CHANGED] Frozen evidence re-verified live 2026-10-15: vbguzfsi (yaml sha256 7b5d2a95…), 96sbq38s (google-iot 97fc94f9… + losant 2999995c…), PWD=Derdack! (Derdack master), cmkadmin/CNlydVqZ (derdack-plugin-checkmk)
 [PRIO] account.signl4.com/identity,8.50,attack_surface=9,business_value=10,tech_exposure=9,gate_ease=5,cloud_surface=10,freshness=8
-[PRIO] vps.signl4.com,7.75,attack_surface=8,business_value=8,tech_exposure=7,gate_ease=8,cloud_surface=8,freshness=8
+[PRIO] connect.signl4.com/api/v2/teams,7.00,attack_surface=7,business_value=8,tech_exposure=6,gate_ease=10,cloud_surface=8,freshness=9
+[PRIO] connect.signl4.com/api/v2/remoteActions,6.50,attack_surface=6,business_value=7,tech_exposure=7,gate_ease=5,cloud_surface=8,freshness=10
 [PRIO] connect.signl4.com/webhook,7.50,attack_surface=7,business_value=9,tech_exposure=6,gate_ease=10,cloud_surface=7,freshness=9
-[HYP] Hardcoded SQL Server SA credentials in public Derdack GitHub repo enable direct database access
+[PRIO] demo.enterprisealert.com/EAWebService,8.75,attack_surface=9,business_value=9,tech_exposure=8,gate_ease=10,cloud_surface=8,freshness=9
+[PRIO] vps.signl4.com,7.75,attack_surface=8,business_value=8,tech_exposure=7,gate_ease=8,cloud_surface=8,freshness=8
+[HYP] Cross-env token forgery via account IdP issuer mismatch + shared RS256 key + plain PKCE
 class: AUTH
-asset: github.com/Derdack/derdack-oncall-holidayimport
-confidence: 95
-reasoning: Public repo contains `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdack!` in HolidayImport.js:16 and HolidayDeleteAll.js:22 (author rbormann@derdack.com, unremediated 2022-12-07); SQL Server SA account with known password on internal hostname
-evidence_needed: Confirmation that `sqlserver.derdack-support.local` resolves to accessible database from internet or via pivot
-verify_steps: 1) GET https://github.com/Derdack/derdack-oncall-holidayimport/blob/main/HolidayImport.js#L16 (confirmed) 2) DNS resolve sqlserver.derdack-support.local 3) If resolvable, test SQL auth with sa:Derdack! (AUTH_HELPED - requires valid network path)
-impact: Full Enterprise Alert database compromise (customer alerts, configurations, PII); severity CRITICAL
+asset: account.signl4.com/identity
+confidence: 85
+reasoning: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) share byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6, password grant enabled on staging; account.signl4.com/identity advertises issuer=https://connect.signl4.com/identity (cross-host mint-mismatch) while exposing 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api) + custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed (code_challenge_methods_supported: ["plain","S256"])
+evidence_needed: Valid client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 to execute password grant on devconnect.signl4.com/identity/connect/token and present resulting token to api.signl4.com/api/v2/teams
+verify_steps: 1) GET https://account.signl4.com/identity/.well-known/openid-configuration (confirmed: issuer mismatch, plain PKCE, EA scopes) 2) GET https://devconnect.signl4.com/identity/.well-known/openid-configuration (confirmed: password grant enabled, same JWKS) 3) POST https://devconnect.signl4.com/identity/connect/token with grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<secret>&scope=public_api_read public_api_write offline_access (AUTH_HELPED - requires client_secret) 4) GET https://api.signl4.com/api/v2/teams with Authorization: Bearer <token> (AUTH_HELPED)
+impact: Full cross-env token forgery → arbitrary SIGNL4 API access (alerts CRUD, teams, webhooks, subscriptions, schedules, users, categories, audits, distribution lists, templates, devices, callout templates) across all tenants; severity CRITICAL
 testability: AUTH_HELPED
-[HYP] eval() deserialization in EA 2-way REST plugins enables RCE via malicious callback payload
-class: BUSLOGIC
-asset: github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js (and dynatrace/logic-monitor/zendesk)
-confidence: 90
-reasoning: Four public plugins use `eval(appContext.runtimeInfo.callbackSetStatusOK/SendMail)` and `eval(appContext.state.callbackSaveState)` with attacker-controlled callback data from EA scripting host; no input validation visible in source
-evidence_needed: Live EA instance with 2-way REST integration configured to test callback injection
-verify_steps: 1) READ github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js#L90-94 (eval with appContext.state.callbackSaveState) 2) READ dynatrace/logic-monitor/zendesk Main.js for same pattern 3) If live EA tenant available, configure 2-way integration and inject payload via callback (AUTH_HELPED)
-impact: RCE on EA server via scripting host callback; severity CRITICAL
-testability: AUTH_HELPED
-[HYP] Internal infrastructure hostname leak via EA WSDL on demo.enterprisealert.com
+[HYP] Temporal auth-status flapping on api.signl4.com/api/v2/teams indicates deployment inconsistency
 class: MISCONFIG
-asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
-confidence: 95
-reasoning: Live WSDL (sha256 e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae) exposes non-public single-label SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` via unauthenticated GET; internal hostname naming is reconnaissance input for pivot
-evidence_needed: None — PASSIVE confirmed live across 5+ cycles, byte-stable
-verify_steps: 1) GET https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl (200, 29968 B, confirms `ereesus` hostname) 2) Verify no auth required (confirmed)
-impact: Internal infrastructure disclosure (CWE-200 hygiene); enables targeted reconnaissance against internal EA deployment; severity LOW-MEDIUM
+asset: api.signl4.com/api/v2/teams
+confidence: 70
+reasoning: 10th+ cycle observation of auth-status flapping between 405 (handler-deferred, unauth GET returns 405 Allow:GET,POST) and 401 (route-gated, unauth GET returns 401 WWW-Authenticate:Bearer); 6 consecutive probes at 1.2s intervals confirmed temporal flip (all 6 returned 401 with identical 0-byte body, then flipped back to 405); differs from V1/V2 handler-deferred pattern on connect.signl4.com; suggests mixed deployment slots or config drift on api host
+evidence_needed: Confirmation that flapping correlates with deployment slots / config versions rather than per-request routing
+verify_steps: 1) GET https://api.signl4.com/api/v2/teams (unauth) — observe 401 or 405 2) Repeat 10x at 1s intervals — confirm temporal consistency within session vs cross-cycle flipping 3) GET with invalid Bearer token — confirm same status as unauth 4) Compare with connect.signl4.com/api/v2/teams (should return 405 handler-deferred)
+impact: Auth-validation inconsistency could allow token acceptance gaps during deployment transitions; enables cross-env token forgery chain when combined with shared RS256 key; severity MEDIUM
 testability: PASSIVE
-[PARKED] Cross-env token forgery via account IdP issuer mismatch + plain PKCE + shared RS256 key: confidence 85 but AUTH_HELPED — blocked on client_secret acquisition; no passive verification of cross-host token acceptance possible
+[HYP] Newly-catalogued V2 API families (/v2/remoteActions, /v2/scripts, /v2/eventsources, /v2/st) may expose BOLA via path-based identifiers
+class: IDOR
+asset: connect.signl4.com/api/v2/remoteActions
+confidence: 55
+reasoning: Public V2 swagger.json (1,225,783 B) added 4 new route families since 2026-10-11; all 8 probed unauth GETs return 401/0-byte (auth-gated as expected); however V1/V2/V3 specs show handler-deferred auth pattern (unauth GET returns 405 on some routes) and path-based identifiers (teamId, subscriptionId, fileName, attachmentId) on file-download and bulk operations; BOLA potential if handler-level authorization only checks team membership not resource ownership
+evidence_needed: Authenticated access to enumerate route schemas (requestBody, path parameters) and test cross-tenant resource access with valid X-S4-Api-Key
+verify_steps: 1) GET https://connect.signl4.com/api/docs/v2/swagger.json (confirmed 200) 2) Parse components.schemas for new families — identify path parameters (teamId, subscriptionId, etc.) and write operations 3) With valid X-S4-Api-Key (AUTH_HELPED), test GET /api/v2/remoteActions/definitions/{id} with foreign teamId 4) Test PUT /api/v2/scripts/{scriptId} with cross-tenant scriptId
+impact: Cross-tenant BOLA on remote actions, scripts, event sources, or ST endpoints → unauthorized read/write of tenant-isolated resources; severity HIGH
+testability: AUTH_HELPED
+[PARKED] Cross-env token forgery via account IdP issuer mismatch + shared RS256 key + plain PKCE: confidence 85 but AUTH_HELPED — blocked on client_secret acquisition; no passive verification of cross-host token acceptance possible
 [PARKED] vps.signl4.com subdomain takeover via dangling A-record to GoDaddy shared host: confidence 75 but HUMAN_ONLY exploitability — no claimable takeover primitive from researcher seat; requires DNS/hosting-account control; transient HTTPS probe (000 vs 200) reduces reproducibility
 [PARKED] Webhook team-secret enumeration oracle enables credentialed access via leaked secrets: PASSIVE oracle confirmed (80), but full API compromise requires separate X-S4-Api-Key credential (webhook secret ≠ REST API key per live test); AUTH_HELPED for webhook-only vector
+[PARKED] eval() deserialization in 4 public EA 2-way REST plugins (BUSLOGIC, 90) — AUTH_HELPED, requires live EA tenant with 2-way integration configured
+[PARKED] Hardcoded SQL Server SA creds in public Derdack GitHub repo (AUTH, 95) — LIVE in derdack-oncall-holidayimport, unremediated 2+ years; requires network path to sqlserver.derdack-support.local (HUMAN_ONLY)
+[PARKED] Hardcoded Checkmk admin creds in public Derdack GitHub repo (AUTH, 90) — LIVE in derdack-plugin-checkmk, unremediated since 2024-05-27; requires network path to 192.168.88.107:8080 (HUMAN_ONLY)
 [FINAL] 1) Hardcoded SQL Server SA creds in public Derdack GitHub repo (AUTH, 95) — LIVE in derdack-oncall-holidayimport, unremediated 2+ years
 [FINAL] 2) eval() deserialization in 4 public EA 2-way REST plugins (BUSLOGIC, 90) — LIVE in derdack-plugin-checkmk + 3 others, RCE via callback injection
 [FINAL] 3) Live SIGNL4 team secret `vbguzfsi` in public GitHub repo enables webhook injection/resolution (AUTH, 100) — PASSIVE leak confirmed, live 201 response validated
 [FINAL] 4) Second live SIGNL4 team secret `96sbq38s` in public GitHub repos (AUTH, 90) — PASSIVE leak confirmed live via Content-Length:0 discriminator
 [FINAL] 5) Internal infrastructure hostname leak via EA WSDL on demo.enterprisealert.com (MISCONFIG, 95) — PASSIVE confirmed live, CWE-200 hygiene
 [FINAL] 6) Cross-env token forgery via account IdP issuer mismatch (AUTH, 85) — AUTH_HELPED, requires client_secret
-[NEXT] HUMAN: Submit the 6 findings to bugs.olivermaicher.eu: (1) Derdack-oncall-holidayimport hardcoded SA creds (2) Derdack-plugin-checkmk hardcoded Checkmk creds + eval() RCE (3) SIGNL4 webhook secrets vbguzfsi + 96sbq38s in public repos (4) EA WSDL internal hostname leak on demo.enterprisealert.com (5) Cross-env token forgery chain (AUTH_HELPED)
+[FINAL] 7) Temporal auth-status flapping on api.signl4.com/api/v2/teams (MISCONFIG, 70) — deployment inconsistency, handler-deferred vs route-gated flip
+[FINAL] 8) Newly-catalogued V2 API families may expose BOLA via path-based identifiers (IDOR, 55) — AUTH_HELPED, requires valid X-S4-Api-Key
+[NEXT] HUMAN: Submit the 8 findings to bugs.olivermaicher.eu: (1) Derdack-oncall-holidayimport hardcoded SA creds (2) Derdack-plugin-checkmk hardcoded Checkmk creds + eval() RCE (3) SIGNL4 webhook secrets vbguzfsi + 96sbq38s in public repos (4) EA WSDL internal hostname leak on demo.enterprisealert.com (5) Cross-env token forgery chain (AUTH_HELPED) (6) api.signl4.com/api/v2/teams auth-status flapping (7) New V2 families BOLA potential (AUTH_HELPED) (8) vps.signl4.com subdomain takeover (HUMAN_ONLY)
 [LEARN] ACCEPTED AUTH @ github.com/Derdack: Brand-scoped RAG ("53 signl4/* repos") produced false "secrets exhausted" conclusion — sibling `github.com/Derdack` org was never scanned (reposcan: "TARGET_ORG not configured"), and it holds real hardcoded SA/Checkmk credentials; org coverage must be enumerated per-org, not per-brand
 [LEARN] ACCEPTED AUTH @ signl4/docs: Prior "placeholder-only" rejection was false negative — `vbguzfsi` and `96sbq38s` are live team webhook secrets (unsanitized in vendor docs). Webhook secret ≠ REST API key; use Content-Length:0 oracle is effective for validation without creating incidents.
 [LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: Path-family probing of App-Proxy-fronted host recovered live EA sub-app (root-only status ≠ full-host status). Apply to future App-Proxy-fronted/multi-app hosts before declaring inert.

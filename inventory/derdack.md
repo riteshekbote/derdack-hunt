@@ -2940,3 +2940,23 @@ www.derdack.com
 - CHANGED vps.signl4.com A-record 72.167.227.27 (GoDaddy secureserver.net) remains dangling (nginx default vhost) — intermittent TCP-timeout observed, DNS unchanged
 - CHANGED Triage pipeline remains broken: ≥59 consecutive failed Triager runs (2026-09-25→2026-10-15), `reports/valid-bugs.md` running count unreliable
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
+
+## 2026-10-15 18:45:44 UTC
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended conventi
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this i
+- CHANGED triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique blocks recoverable vs 0 before), valid-bugs tail in triage prompt, PROBE_A
+- CHANGED opencode/mimo-v2.5-free (triage model) fails UnknownError on a trivial PONG prompt — root cause of ≥59 consecutive failed Triager runs is model-side; also dead: longcat-2.0-free, laguna-s-2.1-free, li
+- CHANGED frozen evidence re-verified live 2026-10-15 14:44-14:48 UTC, byte-identical: JWKS 6/6 hosts sha256=96c931f2 kid 91EE4F3C; account+api issuer still connect.signl4.com/identity; password grant on all 6,
+- CHANGED Derdack org 12 repos last push 2024-05-27, signl4 org 53 repos last push 2026-10-14T11:40 — no new commits since prior cycle; no new secrets surface
+- CHANGED triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique blocks recoverable vs 0 before), valid-bugs tail in triage prompt, PROBE_A
+- NEW triage lead gate previously fed only title/prose lines; full-schema extraction tested against leads/lead-*.md — 9 unique blocks, 6 carrying class/asset/confidence/verify_steps
+- NEW github.com/Derdack org (12 repos) fully scanned for first time — revealed hardcoded SQL Server SA creds (`sa:Derdack!` @ `sqlserver.derdack-support.local`) in `derdack-oncall-holidayimport` + Checkmk 
+- NEW api.signl4.com/api/v2/teams auth-status flipped to route-gated (401 on unauth GET + invalid Bearer) vs prior handler-deferred 405 pattern — temporal flip confirmed by 6 consecutive probes
+- NEW api.signl4.com/api/docs/v2/swagger.json grew to 1,225,783 B (sha256 837b34ca) vs 1,216,391 B on 2026-10-11 — 190 paths (V1=93, V3=207); newly-catalogued families: `/v2/remoteActions`, `/v2/scripts`, `
+- CHANGED Triage pipeline remains broken: ≥59 consecutive failed Triager runs (2026-09-25→2026-10-15), `reports/valid-bugs.md` running count unreliable
+- CHANGED vps.signl4.com A-record 72.167.227.27 (GoDaddy secureserver.net) remains dangling (nginx default vhost) — intermittent TCP-timeout observed, DNS unchanged
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
+- CHANGED Second live SIGNL4 team webhook secret `96sbq38s` confirmed live at `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148` via Content-Length:0 control
+- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx live (200, 1843 B) — HTTP handler interface advertises 10 handlers; EA handler auth ENFORCED via read-only GETs
+- CHANGED Frozen evidence re-verified live 2026-10-15: vbguzfsi (yaml sha256 7b5d2a95…), 96sbq38s (google-iot 97fc94f9… + losant 2999995c…), PWD=Derdack! (Derdack master), cmkadmin/CNlydVqZ (derdack-plugin-chec

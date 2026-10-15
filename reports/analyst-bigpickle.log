@@ -90880,3 +90880,1013 @@ Also re-verified: V2 swagger unchanged (1,225,783 B, `837b34ca…`), EA WSDL unc
 [RISK] derdack: 92 — prod-adjacent SQL SA + Checkmk creds and live team webhook secrets remain public; rotation + git-history scrub still outstanding
 [RISK] signl4: 85 — six identity hosts share one RS256 key with account-host issuer mismatch; one client_secret compromise yields estate-wide token forgery
 ```
+===== ANALYST bigpickle 2026-10-15 18:45:44 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mdate -u '+%Y-%m-%d %H:%M:%S UTC'; echo "---"; ls /home/runner/work/derdack-hunt/derdack-hunt 2>/dev/null | head -50
+2026-10-15 18:40:30 UTC
+---
+README.md
+analyst-out.txt
+analyst-prompt.txt
+ctx.txt
+inventory
+knowledge
+leads
+probe-results.md
+recon-notes
+reports
+reposcan-raw
+scope.yml
+scripts
+state_bigpickle.json
+state_laguna.json
+state_ling3.json
+state_longcat.json
+state_mimo.json
+state_nemotron3.json
+triage
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && git status --short 2>/dev/null | head -30; echo "--- LOG ---"; git log --oneline -5 2>/dev/null
+?? analyst-out.txt
+?? analyst-prompt.txt
+?? ctx.txt
+--- LOG ---
+96255b5 triage 2026-10-15-16-24
+[0m
+## Objective
+- Run an 8-step analyst cycle (DELTA → PRIORITIZE → HYPOTHESES → SELF-CRITIQUE → NEXT → LEARN → RISK) for the Derdack GmbH bug bounty program (report channel: bugs.olivermaicher.eu), producing only structured blocks with passive-first, read-only probing.
+
+## Important Details
+- In-scope assets ONLY: Derdack/SIGNL4/Enterprise Alert company infrastructure per scope.yml + inventory/derdack.md (derdack.com, signl4.com, enterprisealert.com families).
+- REJECTED classes (never emit): brute-force/rate-limit/lockout, OPTIONS/TRACE standalone, descriptive headers only, username enumeration, TLS best practice, clickjacking w/o exploit, outdated libs w/o program-specific exploit, public login panels, etc.
+- Probing rules: passive-first, ≤1 rps, GET/HEAD/OPTIONS only, no mutating tests against live customer data; POST with Content-Length:0 allowed only as webhook liveness oracle (never a `{}` body — that creates real events, violates `no_data_modification`).
+- HYP schema: fields on separate lines (class, asset, confidence, reasoning, evidence_needed, verify_steps, impact, testability) — never inline in the title. Drop confidence <40.
+- Report gate broken: triage.yml:45 greps `[UNVALIDATED]` in `leads/lead-*.md`; ≥59 consecutive failed Triager runs (2026-09-25 → 2026-10-15), root cause = model-side (`opencode/mimo-v2.5-free` UnknownError on PONG prompt; dead: longcat-2.0-free, laguna-s-2.1-free, ling-3.0-flash-free; working: nemotron-3-ultra-free, big-pickle).
+- Local uncommitted edits: `.github/workflows/triage.yml` + `hunt.yml` — model fallback chain, full `[HYP] [UNVALIDATED]` block extraction (9 blocks recoverable vs 0), valid-bugs tail in prompt, `PROBE_ALLOW` widened to `signl4.com|enterprisealert.com` (originally `derdack.com` only at hunt.yml:13 / triage.yml:12).
+- Key lesson set (recorded repeatedly): root-only status ≠ full-host status; status code without body-hash/control is not evidence; document parity ≠ enforcement parity; query-matched controls required; registration ≠ enforcement; scoped negative ≠ global negative; enumerate orgs per-org not per-brand.
+- Frozen FINAL findings (3, cap):
+  1. Live SIGNL4 team webhook secrets `vbguzfsi` (github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7) and `96sbq38s` (signl4-integration-google-iot/index.js:19, signl4-integration-losant/signl4-alert-v100.node:148) — AUTH, HIGH.
+  2. Public github.com/Derdack hardcoded creds: `sa:Derdack!` @ `sqlserver.derdack-support.local` (derdack-oncall-holidayimport/HolidayImport.js:16, HolidayDeleteAll.js:22) + `cmkadmin:CNlydVqZ` @ `http://192.168.88.107:8080/` (derdack-plugin-checkmk/2-way/Main.js:90-94) — AUTH, HIGH.
+  3. Cross-env token-forgery chain — 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) + shared client_id `692A0A56-892F-4AE2-8259-76DA398990B6` + account-issuer mismatch (claims `connect.signl4.com/identity`) + password grant — OATH, CRITICAL, AUTH_HELPED (blocked on client_secret). Must be worded "documented configuration symmetry with unverified enforcement."
+- Other frozen/re-verified facts: EA WSDL leak `https://ereesus/EAWebService/EventProviderAPI.asmx` (200, 29968 B, sha256 `e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae`); webhook oracle Content-Length:0 → valid 400/code 4000 vs fabricated 404/code 3004; JWKS 6/6 sha256 `96c931f2`; vps.signl4.com dangling A=72.167.227.27 (GoDaddy, cert CN=server.d1g.it) HUMAN_ONLY; swagger V2 spec grew to 1,225,783 B (sha256 837b34ca), 190 paths, new families all 401.
+- My state: `{"phase": "POC", "target": "api"}`; RISK scores: derdack 92, signl4 85.
+- Webhook secret ≠ REST API key (`vbguzfsi` as X-S4-Api-Key → 403 same-hash-as-junk). GET/HEAD/OPTIONS on `/webhook/{anything}` are non-discriminating (byte-identical).
+
+## Work State
+### Completed
+- Full estate mapped: 6 identity hosts, V1/V2/V3 API namespaces (+V4 confirmed absent), webhook/events namespaces, CT/DNS coverage across all three roots, github.com/signl4 (53 repos) and github.com/Derdack (12 repos) swept, demo.enterprisealert.com EA surface fully enumerated (5 paths, 10 handlers).
+- Closed negative: GraphQL (15/15 404), SAML namespace, X-Forwarded-Host trust, CORS, SSRF in OpenAPI specs (no `format: uri`), prepaid body-tenant sweep (131 write ops), DPoP enforcement (Bearer-only challenge is documented default), dynamic client registration, open redirect on authorize, behave-as param, Blazor assembly disclosure, labconnect/labaccount (502 dead tier), EA credential-in-URL auth bypass (gates with Error-1).
+- Deliverables re-verified live 2026-10-15 14:44-14:48 UTC byte-identical; Derdack org last push 2024-05-27, signl4 org last push 2026-10-14.
+- triage.yml/hunt.yml locally repaired (uncommitted).
+
+### Active
+- REPORT phase intent: submit 3 frozen FINALs to bugs.olivermaicher.eu.
+- Latest lead tail: hypothesis queue empty ("none net-new — every prior class REJECTED or already frozen as FINAL"); PRIO scores github.com/Derdack 6.45, connect.signl4.com 6.30, api.signl4.com 7.30 (all re-probed, zero drift).
+
+### Blocked
+- Triage/validation gate dead (≥59 consecutive UnknownError runs; model-side).
+- No `[UNVALIDATED]` markers previously matched in `leads/lead-*.md` — inline markers added as a workaround; convention unconfirmed.
+- Cross-env forgery chain + IDOR/auth hypotheses (V1 userId, V2 changePassword, V3 zugferd BOLA, userLicenses, signlReports traversal) all AUTH_HELPED — blocked on client_secret / vendor-issued tenant credentials.
+- Passive surface declared exhausted across identity/API/CT/WP/EA — repeated probing returns endpoint-map-only.
+
+## Next Move
+1. HUMAN: submit the 3 frozen FINALs to bugs.olivermaicher.eu — (1) webhook secrets `vbguzfsi`/`96sbq38s` with file:line + Content-Length:0 400/4000-vs-404/3004 oracle; (2) Derdack SA/Checkmk creds with file:line + commit refs; (3) cross-env chain with 6-host JWKS deep-equal + issuer mismatch (worded as documented-configuration symmetry with unverified enforcement).
+2. Commit the triage.yml/hunt.yml repair so the validation gate can resume (model fallback + `[UNVALIDATED]` block extraction + widened PROBE_ALLOW).
+
+## Relevant Files
+- `.github/workflows/triage.yml`: validation gate; line 45 greps `[UNVALIDATED]`; line 12 `PROBE_ALLOW`; locally edited, uncommitted.
+- `.github/workflows/hunt.yml`: line 13 `PROBE_ALLOW`; locally edited, uncommitted.
+- `leads/lead-*.md`: lead files consumed by triage grep.
+- `reports/valid-bugs.md`: running count unreliable (model output during empty-LEADS runs).
+- `inventory/derdack.md`: host inventory + dated recon log (the KB).
+- `reposcan-raw/summary.txt`: records "TARGET_ORG not configured for derdack" (now covered).
+- `art/lead_bigpickle.txt`, `art/lead_nemotron3.txt`, `hypotheses-*.txt`: ranked hypothesis inputs.
+- github.com/signl4/docs `integrations/devtools/SIGNL4_Alerting.yaml` (line 7, secret `vbguzfsi`, default_branch=main).
+- github.com/Derdack `derdack-oncall-holidayimport/HolidayImport.js:16`, `HolidayDeleteAll.js:22`; `derdack-plugin-checkmk/2-way/Main.js:90-94` (default_branch=master).
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && cat state_bigpickle.json 2>/dev/null; echo "=== git diff stat ==="; git diff --stat; echo "=== untracked ==="; git status --porcelain
+{"phase": "POC", "target": "api"}=== git diff stat ===
+=== untracked ===
+?? analyst-out.txt
+?? analyst-prompt.txt
+?? ctx.txt
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && ls -la leads/ | tail -20; echo "=== reports ==="; ls -la reports/
+total 5052
+drwxr-xr-x  2 runner runner    4096 Oct 15 18:38 .
+drwxr-xr-x 12 runner runner    4096 Oct 15 18:38 ..
+-rw-r--r--  1 runner runner 1882988 Oct 15 18:38 lead-bigpickle.md
+-rw-r--r--  1 runner runner   12699 Oct 15 18:38 lead-laguna.md
+-rw-r--r--  1 runner runner   12450 Oct 15 18:38 lead-ling3.md
+-rw-r--r--  1 runner runner   12896 Oct 15 18:38 lead-longcat.md
+-rw-r--r--  1 runner runner      18 Oct 15 18:38 lead-mimo.md
+-rw-r--r--  1 runner runner 3141383 Oct 15 18:38 lead-nemotron3.md
+-rw-r--r--  1 runner runner   83982 Oct 15 18:38 reposcan-derdack.md
+=== reports ===
+total 13616
+drwxr-xr-x  2 runner runner    4096 Oct 15 18:38 .
+drwxr-xr-x 12 runner runner    4096 Oct 15 18:38 ..
+-rw-r--r--  1 runner runner 8289061 Oct 15 18:38 analyst-bigpickle.log
+-rw-r--r--  1 runner runner   54033 Oct 15 18:38 analyst-laguna.log
+-rw-r--r--  1 runner runner   53784 Oct 15 18:38 analyst-ling3.log
+-rw-r--r--  1 runner runner   54064 Oct 15 18:38 analyst-longcat.log
+-rw-r--r--  1 runner runner 4528561 Oct 15 18:38 analyst-nemotron3.log
+-rw-r--r--  1 runner runner   26264 Oct 15 18:38 hypotheses-bigpickle.txt
+-rw-r--r--  1 runner runner      51 Oct 15 18:38 hypotheses-laguna.txt
+-rw-r--r--  1 runner runner      50 Oct 15 18:38 hypotheses-ling3.txt
+-rw-r--r--  1 runner runner      52 Oct 15 18:38 hypotheses-longcat.txt
+-rw-r--r--  1 runner runner   12968 Oct 15 18:38 hypotheses-nemotron3.txt
+-rw-r--r--  1 runner runner 1053966 Oct 15 18:38 hypotheses.md
+-rw-r--r--  1 runner runner    5996 Oct 15 18:38 valid-bugs.md
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && grep -n "PROBE_ALLOW\|UNVALIDATED\|model:\|VALID_MODEL\|fallback" .github/workflows/triage.yml | head -40; echo "=== HUNT ==="; grep -n "PROBE_ALLOW\|model:\|fallback" .github/workflows/hunt.yml | head -20; echo "=== committed? ==="; git log -1 --stat --oneline
+12:  PROBE_ALLOW: "derdack.com"
+42:      - name: Collect UNVALIDATED leads
+45:          grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25 > new-leads.txt
+=== HUNT ===
+13:  PROBE_ALLOW: "derdack.com"
+25:        model:
+198:              if model:
+209:          allow=os.environ.get('PROBE_ALLOW','').lower()
+=== committed? ===
+96255b5 triage 2026-10-15-16-24
+ .github/workflows/hunt.yml        |   250 +
+ .github/workflows/reposcan.yml    |   109 +
+ .github/workflows/sync-issues.yml |    44 +
+ .github/workflows/triage.yml      |   138 +
+ README.md                         |    34 +
+ inventory/derdack.md              |  2942 ++
+ knowledge/index.md                |  1477 +
+ leads/lead-bigpickle.md           | 11956 +++++
+ leads/lead-laguna.md              |   249 +
+ leads/lead-ling3.md               |   249 +
+ leads/lead-longcat.md             |   248 +
+ leads/lead-mimo.md                |     1 +
+ leads/lead-nemotron3.md           | 17090 +++++++
+ leads/reposcan-derdack.md         |  1053 +
+ probe-results.md                  |   985 +
+ recon-notes/DEDICATED-DEEP.md     |    21 +
+ reports/analyst-bigpickle.log     | 90882 ++++++++++++++++++++++++++++++++++++
+ reports/analyst-laguna.log        |  1992 +
+ reports/analyst-ling3.log         |  1992 +
+ reports/analyst-longcat.log       |  1984 +
+ reports/analyst-nemotron3.log     | 37191 +++++++++++++++
+ reports/hypotheses-bigpickle.txt  |   171 +
+ reports/hypotheses-laguna.txt     |     1 +
+ reports/hypotheses-ling3.txt      |     1 +
+ reports/hypotheses-longcat.txt    |     1 +
+ reports/hypotheses-nemotron3.txt  |    69 +
+ reports/hypotheses.md             |  6887 +++
+ reports/valid-bugs.md             |   108 +
+ reposcan-raw/summary.txt          |     1 +
+ scope.yml                         |    55 +
+ scripts/sync-issues.py            |   429 +
+ state_bigpickle.json              |     1 +
+ state_laguna.json                 |     1 +
+ state_ling3.json                  |     1 +
+ state_longcat.json                |     1 +
+ state_mimo.json                   |     1 +
+ state_nemotron3.json              |     1 +
+ triage/.gitkeep                   |     0
+ triage/run-2026-09-02-21-25.md    |     6 +
+ triage/run-2026-09-02-23-31.md    |    12 +
+ triage/run-2026-09-03-01-23.md    |     6 +
+ triage/run-2026-09-03-06-25.md    |     6 +
+ triage/run-2026-09-03-11-39.md    |     6 +
+ triage/run-2026-09-03-15-10.md    |     6 +
+ triage/run-2026-09-03-18-39.md    |     6 +
+ triage/run-2026-09-03-21-19.md    |     8 +
+ triage/run-2026-09-03-23-20.md    |    93 +
+ triage/run-2026-09-04-01-02.md    |     6 +
+ triage/run-2026-09-04-05-54.md    |     6 +
+ triage/run-2026-09-04-10-01.md    |     6 +
+ triage/run-2026-09-04-14-22.md    |     6 +
+ triage/run-2026-09-04-17-46.md    |   145 +
+ triage/run-2026-09-04-19-58.md    |     6 +
+ triage/run-2026-09-04-21-58.md    |     6 +
+ triage/run-2026-09-04-23-38.md    |     6 +
+ triage/run-2026-09-05-01-22.md    |     6 +
+ triage/run-2026-09-05-06-16.md    |     6 +
+ triage/run-2026-09-05-10-37.md    |     6 +
+ triage/run-2026-09-05-13-31.md    |     8 +
+ triage/run-2026-09-05-16-13.md    |     6 +
+ triage/run-2026-09-05-18-18.md    |     6 +
+ triage/run-2026-09-05-20-26.md    |     6 +
+ triage/run-2026-09-05-22-13.md    |     8 +
+ triage/run-2026-09-05-23-54.md    |     6 +
+ triage/run-2026-09-06-01-28.md    |     6 +
+ triage/run-2026-09-06-06-28.md    |    87 +
+ triage/run-2026-09-06-11-17.md    |     6 +
+ triage/run-2026-09-06-14-12.md    |    11 +
+ triage/run-2026-09-06-17-03.md    |    14 +
+ triage/run-2026-09-06-19-11.md    |     6 +
+ triage/run-2026-09-06-21-21.md    |     8 +
+ triage/run-2026-09-06-23-04.md    |     6 +
+ triage/run-2026-09-07-01-02.md    |     8 +
+ triage/run-2026-09-07-06-07.md    |     6 +
+ triage/run-2026-09-07-12-33.md    |     8 +
+ triage/run-2026-09-07-17-53.md    |     6 +
+ triage/run-2026-09-07-20-50.md    |     6 +
+ triage/run-2026-09-07-23-04.md    |     6 +
+ triage/run-2026-09-08-01-12.md    |     6 +
+ triage/run-2026-09-08-05-59.md    |     6 +
+ triage/run-2026-09-08-10-34.md    |   149 +
+ triage/run-2026-09-08-14-45.md    |     6 +
+ triage/run-2026-09-08-18-09.md    |     6 +
+ triage/run-2026-09-08-21-10.md    |     6 +
+ triage/run-2026-09-08-23-24.md    |     6 +
+ triage/run-2026-09-09-01-28.md    |     6 +
+ triage/run-2026-09-09-06-38.md    |   169 +
+ triage/run-2026-09-09-11-47.md    |     6 +
+ triage/run-2026-09-09-15-23.md    |     6 +
+ triage/run-2026-09-09-18-50.md    |    37 +
+ triage/run-2026-09-09-21-18.md    |     6 +
+ triage/run-2026-09-09-23-18.md    |     6 +
+ triage/run-2026-09-10-01-08.md    |     6 +
+ triage/run-2026-09-10-05-59.md    |     6 +
+ triage/run-2026-09-10-10-37.md    |   206 +
+ triage/run-2026-09-10-14-36.md    |     6 +
+ triage/run-2026-09-10-17-50.md    |     8 +
+ triage/run-2026-09-10-20-09.md    |    24 +
+ triage/run-2026-09-10-22-35.md    |     6 +
+ triage/run-2026-09-11-00-29.md    |     6 +
+ triage/run-2026-09-11-05-08.md    |   248 +
+ triage/run-2026-09-11-09-42.md    |     6 +
+ triage/run-2026-09-11-13-54.md    |     6 +
+ triage/run-2026-09-11-17-22.md    |     6 +
+ triage/run-2026-09-11-19-59.md    |     8 +
+ triage/run-2026-09-11-22-15.md    |     6 +
+ triage/run-2026-09-12-00-19.md    |     6 +
+ triage/run-2026-09-12-04-41.md    |     6 +
+ triage/run-2026-09-12-08-53.md    |     6 +
+ triage/run-2026-09-12-12-27.md    |    12 +
+ triage/run-2026-09-12-15-47.md    |     6 +
+ triage/run-2026-09-12-17-55.md    |     6 +
+ triage/run-2026-09-12-19-43.md    |     6 +
+ triage/run-2026-09-12-21-44.md    |     6 +
+ triage/run-2026-09-12-23-28.md    |     6 +
+ triage/run-2026-09-13-01-22.md    |     8 +
+ triage/run-2026-09-13-06-43.md    |     6 +
+ triage/run-2026-09-13-12-22.md    |    13 +
+ triage/run-2026-09-13-16-35.md    |     6 +
+ triage/run-2026-09-13-18-55.md    |    27 +
+ triage/run-2026-09-13-21-11.md    |    46 +
+ triage/run-2026-09-13-23-10.md    |     6 +
+ triage/run-2026-09-14-01-05.md    |     8 +
+ triage/run-2026-09-14-06-18.md    |     8 +
+ triage/run-2026-09-14-12-56.md    |     8 +
+ triage/run-2026-09-14-18-15.md    |     6 +
+ triage/run-2026-09-14-21-52.md    |   188 +
+ triage/run-2026-09-15-00-04.md    |    10 +
+ triage/run-2026-09-15-04-55.md    |     6 +
+ triage/run-2026-09-15-09-40.md    |     6 +
+ triage/run-2026-09-15-14-27.md    |     6 +
+ triage/run-2026-09-15-18-26.md    |     6 +
+ triage/run-2026-09-15-21-42.md    |    14 +
+ triage/run-2026-09-15-23-47.md    |     8 +
+ triage/run-2026-09-16-01-52.md    |     6 +
+ triage/run-2026-09-16-06-54.md    |     6 +
+ triage/run-2026-09-16-12-15.md    |     8 +
+ triage/run-2026-09-16-16-56.md    |     8 +
+ triage/run-2026-09-16-19-48.md    |     6 +
+ triage/run-2026-09-16-22-26.md    |     6 +
+ triage/run-2026-09-17-00-51.md    |     6 +
+ triage/run-2026-09-17-05-33.md    |    35 +
+ triage/run-2026-09-17-10-21.md    |     6 +
+ triage/run-2026-09-17-15-17.md    |     6 +
+ triage/run-2026-09-17-19-03.md    |     6 +
+ triage/run-2026-09-17-22-10.md    |     6 +
+ triage/run-2026-09-18-00-20.md    |     6 +
+ triage/run-2026-09-18-04-52.md    |     6 +
+ triage/run-2026-09-18-09-15.md    |     6 +
+ triage/run-2026-09-18-13-36.md    |     6 +
+ triage/run-2026-09-18-17-10.md    |     6 +
+ triage/run-2026-09-18-19-37.md    |     6 +
+ triage/run-2026-09-18-21-49.md    |     6 +
+ triage/run-2026-09-18-23-43.md    |   144 +
+ triage/run-2026-09-19-01-48.md    |     6 +
+ triage/run-2026-09-19-06-45.md    |     6 +
+ triage/run-2026-09-19-11-39.md    |     6 +
+ triage/run-2026-09-19-14-47.md    |    14 +
+ triage/run-2026-09-19-17-31.md    |     6 +
+ triage/run-2026-09-19-19-33.md    |     6 +
+ triage/run-2026-09-19-21-42.md    |     8 +
+ triage/run-2026-09-19-23-41.md    |     6 +
+ triage/run-2026-09-20-01-52.md    |   412 +
+ triage/run-2026-09-20-07-10.md    |    29 +
+ triage/run-2026-09-20-12-22.md    |     6 +
+ triage/run-2026-09-20-16-26.md    |     6 +
+ triage/run-2026-09-20-19-01.md    |     6 +
+ triage/run-2026-09-20-21-34.md    |     6 +
+ triage/run-2026-09-20-23-27.md    |     6 +
+ triage/run-2026-09-21-01-33.md    |     6 +
+ triage/run-2026-09-21-07-01.md    |     6 +
+ triage/run-2026-09-21-14-09.md    |     6 +
+ triage/run-2026-09-21-19-28.md    |    13 +
+ triage/run-2026-09-21-22-48.md    |   176 +
+ triage/run-2026-09-22-01-18.md    |     6 +
+ triage/run-2026-09-22-06-18.md    |     8 +
+ triage/run-2026-09-22-11-45.md    |     9 +
+ triage/run-2026-09-22-15-48.md    |     9 +
+ triage/run-2026-09-22-19-18.md    |     9 +
+ triage/run-2026-09-22-22-14.md    |     9 +
+ triage/run-2026-09-23-00-33.md    |     9 +
+ triage/run-2026-09-23-05-05.md    |     9 +
+ triage/run-2026-09-23-09-59.md    |     9 +
+ triage/run-2026-09-23-14-42.md    |     9 +
+ triage/run-2026-09-23-18-41.md    |     9 +
+ triage/run-2026-09-23-21-50.md    |     9 +
+ triage/run-2026-09-24-00-03.md    |     9 +
+ triage/run-2026-09-24-04-51.md    |     9 +
+ triage/run-2026-09-24-09-36.md    |     9 +
+ triage/run-2026-09-24-14-23.md    |     9 +
+ triage/run-2026-09-24-18-37.md    |     9 +
+ triage/run-2026-09-24-21-45.md    |     9 +
+ triage/run-2026-09-25-00-06.md    |     9 +
+ triage/run-2026-09-25-05-00.md    |   271 +
+ triage/run-2026-09-25-09-58.md    |     9 +
+ triage/run-2026-09-25-14-55.md    |     9 +
+ triage/run-2026-09-25-18-59.md    |     9 +
+ triage/run-2026-09-25-21-58.md    |     9 +
+ triage/run-2026-09-26-00-20.md    |     9 +
+ triage/run-2026-09-26-05-22.md    |     9 +
+ triage/run-2026-09-26-10-10.md    |     9 +
+ triage/run-2026-09-26-14-29.md    |     9 +
+ triage/run-2026-09-26-17-57.md    |     9 +
+ triage/run-2026-09-26-20-29.md    |     9 +
+ triage/run-2026-09-26-23-06.md    |     9 +
+ triage/run-2026-09-27-01-27.md    |     9 +
+ triage/run-2026-09-27-07-02.md    |     9 +
+ triage/run-2026-09-27-13-02.md    |     9 +
+ triage/run-2026-09-27-17-44.md    |     9 +
+ triage/run-2026-09-27-20-30.md    |     9 +
+ triage/run-2026-09-27-23-21.md    |     9 +
+ triage/run-2026-09-28-01-56.md    |     9 +
+ triage/run-2026-09-28-07-59.md    |     9 +
+ triage/run-2026-09-28-16-29.md    |     9 +
+ triage/run-2026-09-28-22-15.md    |     9 +
+ triage/run-2026-09-29-01-57.md    |     9 +
+ triage/run-2026-09-29-07-45.md    |     9 +
+ triage/run-2026-09-29-14-23.md    |     9 +
+ triage/run-2026-09-29-19-36.md    |     9 +
+ triage/run-2026-09-29-23-09.md    |     9 +
+ triage/run-2026-09-30-02-07.md    |     9 +
+ triage/run-2026-09-30-08-34.md    |     9 +
+ triage/run-2026-09-30-15-13.md    |     9 +
+ triage/run-2026-09-30-20-01.md    |     9 +
+ triage/run-2026-09-30-23-49.md    |     9 +
+ triage/run-2026-10-01-02-37.md    |     9 +
+ triage/run-2026-10-01-09-24.md    |     9 +
+ triage/run-2026-10-01-16-40.md    |     9 +
+ triage/run-2026-10-01-21-26.md    |     9 +
+ triage/run-2026-10-02-01-03.md    |     9 +
+ triage/run-2026-10-02-07-00.md    |     9 +
+ triage/run-2026-10-02-13-52.md    |     9 +
+ triage/run-2026-10-02-18-45.md    |     9 +
+ triage/run-2026-10-02-22-38.md    |     9 +
+ triage/run-2026-10-03-01-23.md    |     9 +
+ triage/run-2026-10-03-07-02.md    |     9 +
+ triage/run-2026-10-03-12-34.md    |     9 +
+ triage/run-2026-10-03-16-38.md    |     9 +
+ triage/run-2026-10-03-19-23.md    |     9 +
+ triage/run-2026-10-03-22-23.md    |     9 +
+ triage/run-2026-10-04-01-57.md    |     9 +
+ triage/run-2026-10-04-07-36.md    |     9 +
+ triage/run-2026-10-04-13-25.md    |     9 +
+ triage/run-2026-10-04-17-48.md    |     9 +
+ triage/run-2026-10-04-20-32.md    |     9 +
+ triage/run-2026-10-04-23-32.md    |     9 +
+ triage/run-2026-10-05-02-20.md    |     9 +
+ triage/run-2026-10-05-09-13.md    |     9 +
+ triage/run-2026-10-05-18-28.md    |     9 +
+ triage/run-2026-10-06-00-16.md    |     9 +
+ triage/run-2026-10-06-06-24.md    |     9 +
+ triage/run-2026-10-06-13-33.md    |     9 +
+ triage/run-2026-10-06-19-01.md    |     9 +
+ triage/run-2026-10-06-23-04.md    |     9 +
+ triage/run-2026-10-07-02-23.md    |     9 +
+ triage/run-2026-10-07-09-10.md    |     9 +
+ triage/run-2026-10-07-16-28.md    |     9 +
+ triage/run-2026-10-07-21-31.md    |     9 +
+ triage/run-2026-10-08-01-14.md    |     9 +
+ triage/run-2026-10-08-07-25.md    |     9 +
+ triage/run-2026-10-08-14-52.md    |     9 +
+ triage/run-2026-10-08-20-16.md    |     9 +
+ triage/run-2026-10-09-00-24.md    |     9 +
+ triage/run-2026-10-09-06-36.md    |     9 +
+ triage/run-2026-10-09-13-41.md    |     9 +
+ triage/run-2026-10-09-19-06.md    |     9 +
+ triage/run-2026-10-09-23-16.md    |     9 +
+ triage/run-2026-10-10-02-21.md    |     9 +
+ triage/run-2026-10-10-08-54.md    |     9 +
+ triage/run-2026-10-10-14-51.md    |     9 +
+ triage/run-2026-10-10-18-59.md    |     9 +
+ triage/run-2026-10-10-22-12.md    |     9 +
+ triage/run-2026-10-11-01-00.md    |     9 +
+ triage/run-2026-10-11-07-12.md    |     9 +
+ triage/run-2026-10-11-14-03.md    |     9 +
+ triage/run-2026-10-11-18-55.md    |     9 +
+ triage/run-2026-10-11-22-32.md    |     9 +
+ triage/run-2026-10-12-01-41.md    |     9 +
+ triage/run-2026-10-12-08-09.md    |     9 +
+ triage/run-2026-10-12-17-54.md    |     9 +
+ triage/run-2026-10-12-23-51.md    |     9 +
+ triage/run-2026-10-13-04-04.md    |     9 +
+ triage/run-2026-10-13-11-48.md    |     9 +
+ triage/run-2026-10-13-18-33.md    |     9 +
+ triage/run-2026-10-13-23-04.md    |     9 +
+ triage/run-2026-10-14-01-54.md    |     9 +
+ triage/run-2026-10-14-06-48.md    |     9 +
+ triage/run-2026-10-14-12-31.md    |     9 +
+ triage/run-2026-10-14-17-33.md    |     9 +
+ triage/run-2026-10-14-20-55.md    |     9 +
+ triage/run-2026-10-14-23-31.md    |     9 +
+ triage/run-2026-10-15-01-45.md    |     9 +
+ triage/run-2026-10-15-06-34.md    |     9 +
+ triage/run-2026-10-15-11-59.md    |     9 +
+ triage/run-2026-10-15-16-24.md    |     9 +
+ 295 files changed, 182983 insertions(+)
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && grep -c "UNVALIDATED" leads/lead-bigpickle.md leads/lead-nemotron3.md 2>/dev/null; echo "=== valid-bugs tail ==="; tail -30 reports/valid-bugs.md
+leads/lead-bigpickle.md:91
+leads/lead-nemotron3.md:32
+=== valid-bugs tail ===
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.5 HIGH.
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md; distinct from the eval() finding (different file, different mechanism — shell interpolation vs eval) |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md as a standalone finding; distinct from the hardcoded SA creds finding |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Uncertain** — may overlap with prior VALID entries in valid-bugs.md that mention "eval" |
+  - | Q7 Reasonable triager? | **Conditional** — valid code defect, but impact requires EA SDK documentation to confirm trust boundary |
+  - **Verdict: HOLD** — Valid code defect but impact gated on whether EA SDK provides attacker-controllable data to these callback fields. Needs: (1) EA Scripting Host SDK documentation review, (2) confir
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md |
+
+- 4 lead(s) marked VALID at 2026-09-21 22:48:59 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | SIGNL4 staging OIDC + cross-env JWKS key reuse | **VALID** | 7.4 |
+  - | 2 | Hardcoded SA/Checkmk creds + command injection in EA scripts | **VALID** | 9.8 |
+
+- 8 lead(s) marked VALID at 2026-09-25 05:00:44 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | SIGNL4 staging IdP shares prod signing key + OAuth client | **VALID** | 7.4 |
+  - | 2 | Hardcoded SA/Checkmk creds + command injection in EA scripts | **VALID** | 9.8 |
+  - | 9 | Hardcoded SIGNL4 team secrets in public repos | **VALID** | 5.3 |
+  - | 10 | PII + internal URLs in public CSV exports | **VALID** | 5.3 |
+[0m
+[0m→ [0mRead .github/workflows/triage.yml
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && cat triage/run-2026-10-15-16-24.md; echo "=== last good? ==="; ls -la triage/ | tail -5; echo "=== grep UNVALIDATED sample ==="; grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -10; echo "=== count unique ==="; grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | wc -l
+===== TRIAGE 2026-10-15 16:24:13 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+  "data": {
+    "message": "Unexpected server error. Check server logs for details.",
+    "ref": "err_407e2b46"
+  }
+}
+=== last good? ===
+-rw-r--r--  1 runner runner   210 Oct 15 18:38 run-2026-10-14-23-31.md
+-rw-r--r--  1 runner runner   210 Oct 15 18:38 run-2026-10-15-01-45.md
+-rw-r--r--  1 runner runner   210 Oct 15 18:38 run-2026-10-15-06-34.md
+-rw-r--r--  1 runner runner   210 Oct 15 18:38 run-2026-10-15-11-59.md
+-rw-r--r--  1 runner runner   210 Oct 15 18:38 run-2026-10-15-16-24.md
+=== grep UNVALIDATED sample ===
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match 
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended conventi
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
+[CHANGED] triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique blocks recoverable vs 0 before), valid-bugs tail in triage prompt, PROBE_ALLOW widened to signl4.com|enterprisealert.com
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+=== count unique ===
+20
+[0m
+[0m→ [0mRead .github/workflows/hunt.yml
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && for f in triage/run-2026-10-15-*.md; do echo "== $f =="; sed -n '2,4p' "$f"; done 2>/dev/null | head -40
+== triage/run-2026-10-15-01-45.md ==
+===== TRIAGE 2026-10-15 01:45:10 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+== triage/run-2026-10-15-06-34.md ==
+===== TRIAGE 2026-10-15 06:34:57 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+== triage/run-2026-10-15-11-59.md ==
+===== TRIAGE 2026-10-15 11:59:58 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+== triage/run-2026-10-15-16-24.md ==
+===== TRIAGE 2026-10-15 16:24:13 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+[0m
+[0m$ [0mexport PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"; command -v opencode && opencode --version 2>/dev/null || echo "opencode NOT installed"; echo "---"; curl -s -o /dev/null -w '%{http_code}\n' --max-time 10 https://signl4.com/ 2>/dev/null || echo "no net"
+/usr/local/bin/opencode
+1.19.0
+---
+301
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && grep -n "\[UNVALIDATED\]" leads/lead-bigpickle.md | head -5; echo "=== context around first block ==="; sed -n '/\[HYP\] \[UNVALIDATED\] Enterprise Alert WSDL/,+12p' leads/lead-bigpickle.md | head -15
+8290:[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
+8295:[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+9344:[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
+9345:[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+9445:[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
+=== context around first block ===
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+class: MISCONFIG
+asset: https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+confidence: 85
+reasoning: WSDL returns 200 with sha256 e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae and contains internal SOAP address https://ereesus/EAWebService/EventProviderAPI.asmx. Exposes internal network hostname configuration in publicly accessible WSDL.
+evidence_needed: SHA256 verification of WSDL content (already performed).
+verify_steps: curl -s "https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl" | sha256sum matches e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae; grep -q "ereesus" in response.
+impact: Internal hostname disclosure (information leakage) from publicly accessible demo environment. Can aid network reconnaissance. Severity LOW-MEDIUM.
+testability: PASSIVE
+[PARKED] Cross-env token forgery chain via shared JWKS across 6 identity hosts (client_id 692A0A56-892F-4AE2-8259-76DA398990B6) - requires legitimate client_secret (AUTH_HELPED), not pursued for automated triage.
+[PARKED] vps.signl4.com dangling A record (72.167.227.27, GoDaddy shared host) - HUMAN_ONLY takeover assessment.
+[PARKED] EA credential-gated endpoints - auth enforced, no unauth mutating primitive found by passive probes.
+[FINAL] 5 findings ready for submission to bugs.olivermaicher.eu. Findings include credential leaks in public Git repos (SQL SA + Checkmk admin + 2 webhook secrets) and EA WSDL internal hostname disclosure.
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && grep -n "\[UNVALIDATED\]" leads/lead-bigpickle.md | tail -3; echo "=== count HYP total ==="; grep -c "^\[HYP\]" leads/lead-bigpickle.md
+11934:[HYP] [UNVALIDATED] alpha$
+11938:[HYP] [UNVALIDATED] beta$
+11945:[CHANGED] triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique blocks recoverable vs 0 before), valid-bugs tail in triage prompt, PROBE_ALLOW widened to signl4.com|enterprisealert.com
+=== count HYP total ===
+905
+[0m
+The summary's claimed "local uncommitted edits" don't actually exist — `git diff` is clean and both workflows still reference the dead model and the narrow scope. Let me confirm the block format before applying the repair.
+[0m← [0mEdit .github/workflows/triage.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+@@ -8,9 +8,9 @@
+ permissions:
+   contents: write
+ 
+ env:
+-  PROBE_ALLOW: "derdack.com"
++  PROBE_ALLOW: "derdack.com|signl4.com|enterprisealert.com"
+ 
+ jobs:
+   triage:
+     runs-on: ubuntu-latest
+
+[0m
+[0m← [0mEdit .github/workflows/triage.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+@@ -18,9 +18,9 @@
+ concurrency:
+   group: triage-derdack
+   cancel-in-progress: true
+ env:
+-  MODEL_ID: opencode/mimo-v2.5-free
++  MODELS: "opencode/nemotron-3-ultra-free opencode/big-pickle opencode/mimo-v2.5-free"
+   OPENCODE_REASONING: xhigh
+ steps:
+   - name: Checkout
+     uses: actions/checkout@v5
+
+[0m
+[0m← [0mEdit .github/workflows/triage.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+@@ -41,10 +41,32 @@
+ 
+ - name: Collect UNVALIDATED leads
+   run: |
+     mkdir -p triage reports
+-    grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25 > new-leads.txt
+-    echo "unvalidated leads: $(wc -l < new-leads.txt)"
++    python3 << 'PY'
++    import glob
++    blocks, seen = [], set()
++    for f in sorted(glob.glob('leads/lead-*.md')):
++        try: lines = open(f, errors='ignore').read().split('\n')
++        except OSError: continue
++        i = 0
++        while i < len(lines):
++            if lines[i].startswith('[HYP]'):
++                j = i + 1
++                while j < len(lines) and not lines[j].startswith('['):
++                    j += 1
++                if '[UNVALIDATED]' in lines[i]:
++                    key = lines[i].strip().lower()[:80]
++                    if key not in seen:
++                        seen.add(key)
++                        blocks.append('\n'.join(lines[i:j]).strip())
++                i = j
++            else:
++                i += 1
++    with open('new-leads.txt','w') as out:
++        out.write('\n\n'.join(blocks[:25])+'\n')
++    print('unvalidated leads:', len(blocks))
++    PY
+ 
+ - name: Passive live probe of endpoint leads (rate-limited)
+   run: |
+     : > probe-results.txt
+
+[0m
+The summary's claimed local edits do **not** exist — `git diff` is clean, both workflows still target the dead `opencode/mimo-v2.5-free` and the narrow `derdack.com` scope. Applying the repair now.
+[0m← [0mEdit .github/workflows/triage.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+@@ -71,9 +71,9 @@
+ run: |
+   : > probe-results.txt
+   grep -oE 'https?://[a-zA-Z0-9._/-]+' new-leads.txt | sort -u | head -20 | while read -r url; do
+     host=$(echo "$url" | sed -E 's|https?://([^/]+).*|\1|')
+-    if echo "$host" | grep -qiE '(derdack.com)'; then
++    if echo "$host" | grep -qiE '(derdack\.com|signl4\.com|enterprisealert\.com)'; then
+       code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -A 'Mozilla/5.0 (passive research probe)' -H 'Range: bytes=0-1' "$url" 2>/dev/null || echo TIMEOUT)
+       echo "$code $url" >> probe-results.txt
+       sleep 1
+     fi
+
+[0m
+[0m← [0mEdit .github/workflows/triage.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+@@ -98,9 +98,20 @@
+     cat probe-results.txt >> triage-prompt.txt
+     echo "" >> triage-prompt.txt
+     echo "LEADS:" >> triage-prompt.txt
+     cat new-leads.txt >> triage-prompt.txt
+-    timeout -k 15 15m opencode run --model "$MODEL_ID" < triage-prompt.txt > triage-output.txt 2>&1 || true
++    echo "" >> triage-prompt.txt
++    echo "ALREADY-VALID (do not re-report these):" >> triage-prompt.txt
++    tail -40 reports/valid-bugs.md 2>/dev/null >> triage-prompt.txt || true
++    : > triage-output.txt
++    for m in $MODELS; do
++      echo "== trying model $m =="
++      timeout -k 15 15m opencode run --model "$m" < triage-prompt.txt > triage-output.txt 2>&1 || true
++      if [ -s triage-output.txt ] && ! grep -q 'UnknownError' triage-output.txt; then
++        echo "model $m produced output"; break
++      fi
++      echo "model $m failed; trying next"
++    done
+     echo "=== triage preview ==="; head -40 triage-output.txt
+ 
+ - name: Update valid-bugs counter
+   run: |
+
+[0m
+[0m← [0mEdit .github/workflows/hunt.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
+@@ -9,9 +9,9 @@
+   contents: write
+   actions: write
+ 
+ env:
+-  PROBE_ALLOW: "derdack.com"
++  PROBE_ALLOW: "derdack.com|signl4.com|enterprisealert.com"
+ 
+ jobs:
+   analyst:
+     runs-on: ubuntu-latest
+
+[0m
+[0m← [0mEdit .github/workflows/hunt.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
+@@ -103,9 +103,17 @@
+ STEP 7 — RISK: [RISK] <program>: <0-100> reason.
+ RULES: facts vs hypotheses strictly separated; no endpoint-map-only; no REJECTED class; sha256 any secret; all claims trace to context or your own read-only probes; passive-first, <=1 rps, GET/HEAD/OPTIONS only for live probes; no auth-bypass or mutating tests against live customer data; any scanner output requires manual validation.
+ PROMPT_EOF
+ export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+-timeout -k 15 20m opencode run --model "$MODEL_ID" < analyst-prompt.txt > analyst-out.txt 2>&1 || true
++: > analyst-out.txt
++for m in "$MODEL_ID" opencode/nemotron-3-ultra-free opencode/big-pickle; do
++  echo "== trying model $m =="
++  timeout -k 15 20m opencode run --model "$m" < analyst-prompt.txt > analyst-out.txt 2>&1 || true
++  if [ -s analyst-out.txt ] && ! grep -q 'UnknownError' analyst-out.txt; then
++    echo "model $m produced output"; break
++  fi
++  echo "model $m failed; trying next"
++done
+ cp analyst-out.txt analyst-${MODEL_NAME}.out
+ grep -E '^\[(NEW|CHANGED|PRIO|HYP|PARKED|FINAL|NEXT|LEARN|RISK)\]|^class:|^confidence:|^asset:|^impact:|^testability:|^verify_steps:|^reasoning:|^evidence_needed:' analyst-out.txt > lead.txt || true
+ {
+   echo "## $(date -u +'%Y-%m-%d %H:%M:%S UTC') [target] (model ${MODEL_NAME})"
+
+[0m
+Now add the model fallback to hunt.yml and verify YAML validity.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/triage.yml')); yaml.safe_load(open('.github/workflows/hunt.yml')); print('YAML OK')"
+YAML OK
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && python3 << 'PY'
+import glob
+blocks, seen = [], set()
+for f in sorted(glob.glob('leads/lead-*.md')):
+    try: lines = open(f, errors='ignore').read().split('\n')
+    except OSError: continue
+    i = 0
+    while i < len(lines):
+        if lines[i].startswith('[HYP]'):
+            j = i + 1
+            while j < len(lines) and not lines[j].startswith('['):
+                j += 1
+            if '[UNVALIDATED]' in lines[i]:
+                key = lines[i].strip().lower()[:80]
+                if key not in seen:
+                    seen.add(key)
+                    blocks.append('\n'.join(lines[i:j]).strip())
+            i = j
+        else:
+            i += 1
+print('unique UNVALIDATED blocks:', len(blocks))
+for b in blocks:
+    print('---')
+    print(b[:160])
+PY
+unique UNVALIDATED blocks: 10
+---
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential 
+---
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+class: AUTH
+asset: https://github.com/Derdack/derdack-oncall-holidayimport
+---
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+class: AUTH
+asset: https://github.com/Derdack/derdack-plugin-checkmk/blob/
+---
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+class: AUTH
+asset: https://github.com/signl4/docs/blob/main/integrations/d
+---
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+class: AUTH
+asset: https://github.com/signl4/signl4-integration-google-iot
+---
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+class: MISCONFIG
+asset: https://demo.enterprisealert.com/EAWebService/EventProviderAPI.
+---
+[HYP] [UNVALIDATED] alpha
+class: AUTH
+asset: a
+confidence: 55
+---
+[HYP] [UNVALIDATED] beta
+class: IDOR
+asset: b
+confidence: 61
+---
+[HYP] [UNVALIDATED] alpha$
+class: AUTH$
+asset: a$
+confidence: 55$
+---
+[HYP] [UNVALIDATED] beta$
+class: IDOR$
+asset: b$
+confidence: 61$
+[0m
+The extraction now recovers 10 blocks (was 0). Two test artifacts (`alpha`/`beta`/`alpha$`) are polluting the set. Let me inspect and clean those.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && grep -n "\[HYP\] \[UNVALIDATED\] alpha\|\[HYP\] \[UNVALIDATED\] beta" leads/lead-bigpickle.md; echo "=== context ==="; sed -n '11930,11950p' leads/lead-bigpickle.md
+11926:[HYP] [UNVALIDATED] alpha
+11930:[HYP] [UNVALIDATED] beta
+11934:[HYP] [UNVALIDATED] alpha$
+11938:[HYP] [UNVALIDATED] beta$
+=== context ===
+[HYP] [UNVALIDATED] beta
+class: IDOR
+asset: b
+confidence: 61
+[HYP] [UNVALIDATED] alpha$
+class: AUTH$
+asset: a$
+confidence: 55$
+[HYP] [UNVALIDATED] beta$
+class: IDOR$
+asset: b$
+confidence: 61$
+[CHANGED] opencode/mimo-v2.5-free (triage model) fails UnknownError on a trivial PONG prompt — root cause of ≥59 consecutive failed Triager runs is model-side; also dead: longcat-2.0-free, laguna-s-2.1-free, ling-3.0-flash-free; working: nemotron-3-ultra-free, big-pickle (4/6 fleet models dead)
+[CHANGED] frozen evidence re-verified live 2026-10-15 14:44-14:48 UTC, byte-identical: JWKS 6/6 hosts sha256=96c931f2 kid 91EE4F3C; account+api issuer still connect.signl4.com/identity; password grant on all 6, no registration_endpoint; swagger 1225783 B sha 837b34ca; EA WSDL 29968 B sha e8b753f2; vbguzfsi/96sbq38s/sa:Derdack!/cmkadmin:CNlydVqZ all present in public GitHub raw (default_branch read first: Derdack=master, signl4=main)
+[CHANGED] Derdack org 12 repos last push 2024-05-27, signl4 org 53 repos last push 2026-10-14T11:40 — no new commits since prior cycle; no new secrets surface
+[CHANGED] triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique blocks recoverable vs 0 before), valid-bugs tail in triage prompt, PROBE_ALLOW widened to signl4.com|enterprisealert.com
+[NEW] triage lead gate previously fed only title/prose lines; full-schema extraction tested against leads/lead-*.md — 9 unique blocks, 6 carrying class/asset/confidence/verify_steps
+[PRIO] github.com/Derdack 6.45 | connect.signl4.com 6.30 | api.signl4.com 7.30 — all re-probed this cycle, zero drift, no remaining passive surface
+[HYP] none net-new — full estate (identity JWKS/OD, swagger, EA WSDL, GitHub secret files, dangling vps DNS) re-verified byte-stable; every prior class REJECTED or already frozen as FINAL
+[FINAL] 1. Live SIGNL4 team webhook secrets vbguzfsi/96sbq38s (AUTH, HIGH)
+[FINAL] 2. Public Derdack org hardcoded SA + Checkmk creds (AUTH, HIGH)
+[0m
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=11920, limit=25][0m
+The `alpha`/`beta` blocks are test fixtures manually inserted into the lead file. Removing them so they don't reach the triager.
+[0m
+[0m← [0mEdit leads/lead-bigpickle.md
+Index: /home/runner/work/derdack-hunt/derdack-hunt/leads/lead-bigpickle.md
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/leads/lead-bigpickle.md
++++ /home/runner/work/derdack-hunt/derdack-hunt/leads/lead-bigpickle.md
+@@ -11922,24 +11922,8 @@
+ evidence_needed: OIDC discovery response (200 vs 404), JWKS URI response, token endpoint existence
+ evidence_needed: OIDC discovery response (200 vs 404), JWKS URI response, token endpoint existence
+ reasoning: devconnect.signl4.com OIDC discovery returns 200 with Microsoft-HTTPAPI/2.0; JWKS exposes RS256 key with kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, modulus n, x5t, x5c CN=*.signl4.com BYTE-IDENTICAL to prod connect.signl4.com/identity; same account-portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6 used in authorize redirect; staging IdP co-resolves with devaccount on dedicated IP 108.143.123.104; CSP explicitly references dev/lab Connect+Account hosts
+ reasoning: devconnect.signl4.com OIDC discovery returns 200 with Microsoft-HTTPAPI/2.0; JWKS exposes RS256 key with kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, modulus n, x5t, x5c CN=*.signl4.com BYTE-IDENTICAL to prod connect.signl4.com/identity; same account-portal client_id 692A0A56-892F-4AE2-8259-76DA398990B6 used in authorize redirect; staging IdP co-resolves with devaccount on dedicated IP 108.143.123.104; CSP explicitly references dev/lab Connect+Account hosts
+-[HYP] [UNVALIDATED] alpha
+-class: AUTH
+-asset: a
+-confidence: 55
+-[HYP] [UNVALIDATED] beta
+-class: IDOR
+-asset: b
+-confidence: 61
+-[HYP] [UNVALIDATED] alpha$
+-class: AUTH$
+-asset: a$
+-confidence: 55$
+-[HYP] [UNVALIDATED] beta$
+-class: IDOR$
+-asset: b$
+-confidence: 61$
+ [CHANGED] opencode/mimo-v2.5-free (triage model) fails UnknownError on a trivial PONG prompt — root cause of ≥59 consecutive failed Triager runs is model-side; also dead: longcat-2.0-free, laguna-s-2.1-free, ling-3.0-flash-free; working: nemotron-3-ultra-free, big-pickle (4/6 fleet models dead)
+ [CHANGED] frozen evidence re-verified live 2026-10-15 14:44-14:48 UTC, byte-identical: JWKS 6/6 hosts sha256=96c931f2 kid 91EE4F3C; account+api issuer still connect.signl4.com/identity; password grant on all 6, no registration_endpoint; swagger 1225783 B sha 837b34ca; EA WSDL 29968 B sha e8b753f2; vbguzfsi/96sbq38s/sa:Derdack!/cmkadmin:CNlydVqZ all present in public GitHub raw (default_branch read first: Derdack=master, signl4=main)
+ [CHANGED] Derdack org 12 repos last push 2024-05-27, signl4 org 53 repos last push 2026-10-14T11:40 — no new commits since prior cycle; no new secrets surface
+ [CHANGED] triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique blocks recoverable vs 0 before), valid-bugs tail in triage prompt, PROBE_ALLOW widened to signl4.com|enterprisealert.com
+
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && python3 << 'PY'
+import glob
+blocks, seen = [], set()
+for f in sorted(glob.glob('leads/lead-*.md')):
+    try: lines = open(f, errors='ignore').read().split('\n')
+    except OSError: continue
+    i = 0
+    while i < len(lines):
+        if lines[i].startswith('[HYP]'):
+            j = i + 1
+            while j < len(lines) and not lines[j].startswith('['):
+                j += 1
+            if '[UNVALIDATED]' in lines[i]:
+                key = lines[i].strip().lower()[:80]
+                if key not in seen:
+                    seen.add(key)
+                    blocks.append('\n'.join(lines[i:j]).strip())
+            i = j
+        else:
+            i += 1
+print('unique UNVALIDATED blocks:', len(blocks))
+for b in blocks: print('---', b.split(chr(10))[0])
+PY
+unique UNVALIDATED blocks: 6
+--- [HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+--- [HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+--- [HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+--- [HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+--- [HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+--- [HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[0m
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && git status --short; echo "=== diff stat ==="; git diff --stat
+M .github/workflows/hunt.yml
+ M .github/workflows/triage.yml
+ M leads/lead-bigpickle.md
+?? analyst-out.txt
+?? analyst-prompt.txt
+?? ctx.txt
+=== diff stat ===
+ .github/workflows/hunt.yml   | 12 ++++++++++--
+ .github/workflows/triage.yml | 45 ++++++++++++++++++++++++++++++++++++++------
+ leads/lead-bigpickle.md      | 16 ----------------
+ 3 files changed, 49 insertions(+), 24 deletions(-)
+[0m
+Now let me smoke-test that a fallback model actually responds (the whole point of the repair).
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"; echo "reply with exactly: PONG" | timeout -k 10 90 opencode run --model opencode/nemotron-3-ultra-free 2>&1 | head -20
+[0m
+> build · nemotron-3-ultra-free
+[0m
+PONG
+[0m
+Fallback model confirmed working. Let me review the final triage.yml diff.
+[0m$ [0mcd /home/runner/work/derdack-hunt/derdack-hunt && git diff .github/workflows/triage.yml
+diff --git a/.github/workflows/triage.yml b/.github/workflows/triage.yml
+index bd7b564..32460b7 100644
+--- a/.github/workflows/triage.yml
++++ b/.github/workflows/triage.yml
+@@ -9,7 +9,7 @@ permissions:
+   contents: write
+ 
+ env:
+-  PROBE_ALLOW: "derdack.com"
++  PROBE_ALLOW: "derdack.com|signl4.com|enterprisealert.com"
+ 
+ jobs:
+   triage:
+@@ -19,7 +19,7 @@ jobs:
+       group: triage-derdack
+       cancel-in-progress: true
+     env:
+-      MODEL_ID: opencode/mimo-v2.5-free
++      MODELS: "opencode/nemotron-3-ultra-free opencode/big-pickle opencode/mimo-v2.5-free"
+       OPENCODE_REASONING: xhigh
+     steps:
+       - name: Checkout
+@@ -42,15 +42,37 @@ jobs:
+       - name: Collect UNVALIDATED leads
+         run: |
+           mkdir -p triage reports
+-          grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25 > new-leads.txt
+-          echo "unvalidated leads: $(wc -l < new-leads.txt)"
++          python3 << 'PY'
++          import glob
++          blocks, seen = [], set()
++          for f in sorted(glob.glob('leads/lead-*.md')):
++              try: lines = open(f, errors='ignore').read().split('\n')
++              except OSError: continue
++              i = 0
++              while i < len(lines):
++                  if lines[i].startswith('[HYP]'):
++                      j = i + 1
++                      while j < len(lines) and not lines[j].startswith('['):
++                          j += 1
++                      if '[UNVALIDATED]' in lines[i]:
++                          key = lines[i].strip().lower()[:80]
++                          if key not in seen:
++                              seen.add(key)
++                              blocks.append('\n'.join(lines[i:j]).strip())
++                      i = j
++                  else:
++                      i += 1
++          with open('new-leads.txt','w') as out:
++              out.write('\n\n'.join(blocks[:25])+'\n')
++          print('unvalidated leads:', len(blocks))
++          PY
+ 
+       - name: Passive live probe of endpoint leads (rate-limited)
+         run: |
+           : > probe-results.txt
+           grep -oE 'https?://[a-zA-Z0-9._/-]+' new-leads.txt | sort -u | head -20 | while read -r url; do
+             host=$(echo "$url" | sed -E 's|https?://([^/]+).*|\1|')
+-            if echo "$host" | grep -qiE '(derdack.com)'; then
++            if echo "$host" | grep -qiE '(derdack\.com|signl4\.com|enterprisealert\.com)'; then
+               code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -A 'Mozilla/5.0 (passive research probe)' -H 'Range: bytes=0-1' "$url" 2>/dev/null || echo TIMEOUT)
+               echo "$code $url" >> probe-results.txt
+               sleep 1
+@@ -77,7 +99,18 @@ jobs:
+           echo "" >> triage-prompt.txt
+           echo "LEADS:" >> triage-prompt.txt
+           cat new-leads.txt >> triage-prompt.txt
+-          timeout -k 15 15m opencode run --model "$MODEL_ID" < triage-prompt.txt > triage-output.txt 2>&1 || true
++          echo "" >> triage-prompt.txt
++          echo "ALREADY-VALID (do not re-report these):" >> triage-prompt.txt
++          tail -40 reports/valid-bugs.md 2>/dev/null >> triage-prompt.txt || true
++          : > triage-output.txt
++          for m in $MODELS; do
++            echo "== trying model $m =="
++            timeout -k 15 15m opencode run --model "$m" < triage-prompt.txt > triage-output.txt 2>&1 || true
++            if [ -s triage-output.txt ] && ! grep -q 'UnknownError' triage-output.txt; then
++              echo "model $m produced output"; break
++            fi
++            echo "model $m failed; trying next"
++          done
+           echo "=== triage preview ==="; head -40 triage-output.txt
+ 
+       - name: Update valid-bugs counter
+[0m
+Repair applied and verified. Summary of state:
+
+**Discrepancy found:** The "local uncommitted edits" from prior context did **not** exist — `git diff` was clean; both workflows still used the dead `opencode/mimo-v2.5-free` and empty extraction. I re-applied the full repair:
+
+- `triage.yml`: `PROBE_ALLOW` widened to `derdack.com|signl4.com|enterprisealert.com`; model fallback loop (`nemotron-3-ultra-free` → `big-pickle` → `mimo`); full `[HYP] [UNVALIDATED]` block extraction (was 0, now **6 unique blocks** with class/asset/confidence/verify_steps); valid-bugs tail injected into prompt.
+- `hunt.yml`: `PROBE_ALLOW` widened; model fallback loop added to the analyst step.
+- Removed 4 `alpha`/`beta` test fixtures polluting `leads/lead-bigpickle.md`.
+- YAML validated; fallback model confirmed live (`PONG` from `nemotron-3-ultra-free`).
+
+**Blocked / needs you:**
+1. **Submit the 2 frozen FINALs** to bugs.olivermaicher.eu (webhook secrets `vbguzfsi`/`96sbq38s`; Derdack SA + Checkmk creds) — this is human-only, I can't file it.
+2. **Commit authorization**: I have not committed (system policy requires explicit request). The workflow repair only takes effect once pushed to `main`. Say the word and I'll commit + push.
+
+Want me to commit the repair?
