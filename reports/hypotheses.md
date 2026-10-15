@@ -6852,3 +6852,36 @@
 - LEARN: REJECTED AUTH @ api.signl4.com newly-published V2 families: 8/8 unauth GETs 401/0-byte — spec growth is documentation drift, not an auth gap.
 - LEARN: ACCEPTED OTHER @ raw.githubusercontent fetch: Derdack repos default_branch=master; a 404 on `main` is NOT remediation — always read default_branch via API befor
 - LEARN: ACCEPTED AUTH @ signl4/docs: 2026-10-14 pushes swept (placeholder-only); active maintenance does not imply new exposure.
+
+## RANKED HYPOTHESES 2026-10-15 14:49:02 UTC
+- [95] github.com/Derdack/derdack-oncall-holidayimport: Hardcoded SQL Server SA credentials in public Derdack GitHub repo enable direct database access (from art/lead_nemotron3.txt)
+- [55] <host/endpoint>: <title> (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN — submit the 3 frozen FINALs to `bugs.olivermaicher.eu`: (1) webhook secrets `vbguzfsi`/`96sbq38s` with public file:line + the Content-Length:0 400/4000-v
+- NEXT(hypotheses-nemotron3.txt): HUMAN: Submit the 6 findings to bugs.olivermaicher.eu: (1) Derdack-oncall-holidayimport hardcoded SA creds (2) Derdack-plugin-checkmk hardcoded Checkmk creds + 
+- LEARN: Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`triage.yml:12` set `PROBE_ALLOW:
+- LEARN: REJECTED AUTH @ api.signl4.com newly-published V2 families: 8/8 unauth GETs 401/0-byte — spec growth is documentation drift, not an auth gap.
+- LEARN: ACCEPTED OTHER @ raw.githubusercontent fetch: Derdack repos default_branch=master; a 404 on `main` is NOT remediation — always read default_branch via API befor
+- LEARN: ACCEPTED AUTH @ signl4/docs: 2026-10-14 pushes swept (placeholder-only); active maintenance does not imply new exposure.
+- LEARN: Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`triage.yml:12` set `PROBE_ALLOW:
+- LEARN: Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`triage.yml:12` set `PROBE_ALLOW:
+- LEARN: REJECTED AUTH @ api.signl4.com newly-published V2 families: 8/8 unauth GETs 401/0-byte — spec growth is documentation drift, not an auth gap.
+- LEARN: ACCEPTED OTHER @ raw.githubusercontent fetch: Derdack repos default_branch=master; a 404 on `main` is NOT remediation — always read default_branch via API befor
+- LEARN: ACCEPTED AUTH @ signl4/docs: 2026-10-14 pushes swept (placeholder-only); active maintenance does not imply new exposure.
+- LEARN: Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`triage.yml:12` set `PROBE_ALLOW:
+- LEARN: REJECTED OTHER @ opencode free-model fleet: UnknownError reproduces on a 1-word prompt via `opencode run --model <id>` — isolate model health with a PONG probe 
+- LEARN: ACCEPTED OTHER @ raw.githubusercontent: hash bodies as-is (sha256sum of exact bytes); `$(cat f)` strips the trailing newline and yields a different digest, whic
+- LEARN: ACCEPTED AUTH @ github.com/Derdack: Brand-scoped RAG ("53 signl4/* repos") produced false "secrets exhausted" conclusion — sibling `github.com/Derdack` org was 
+- LEARN: ACCEPTED AUTH @ signl4/docs: Prior "placeholder-only" rejection was false negative — `vbguzfsi` and `96sbq38s` are live team webhook secrets (unsanitized in ven
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: Path-family probing of App-Proxy-fronted host recovered live EA sub-app (root-only status ≠ full-hos
+- LEARN: ACCEPTED OTHER @ GitHub secret hunting: Status codes alone insufficient; hash bodies, use control paths, and read schemas (not just path lists). Query-matched c
+- LEARN: REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-
+- LEARN: REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are no
+- LEARN: REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the ver
+- LEARN: REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there 
+- LEARN: REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a tran
+- LEARN: REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is
+- LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier 
+- LEARN: REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control on
+- LEARN: REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+- LEARN: REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files;
+- LEARN: ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across a

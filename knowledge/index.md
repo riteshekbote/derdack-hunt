@@ -1473,3 +1473,5 @@
 - 2026-10-15 REJECTED AUTH @ api.signl4.com newly-published V2 families: 8/8 unauth GETs 401/0-byte — spec growth is documentation drift, not an auth gap.
 - 2026-10-15 ACCEPTED OTHER @ raw.githubusercontent fetch: Derdack repos default_branch=master; a 404 on `main` is NOT remediation — always read default_branch via API before claiming a file was removed.
 - 2026-10-15 ACCEPTED AUTH @ signl4/docs: 2026-10-14 pushes swept (placeholder-only); active maintenance does not imply new exposure.
+- 2026-10-15 REJECTED OTHER @ opencode free-model fleet: UnknownError reproduces on a 1-word prompt via `opencode run --model <id>` — isolate model health with a PONG probe before blaming prompt/leads when a workflow produces no output
+- 2026-10-15 ACCEPTED OTHER @ raw.githubusercontent: hash bodies as-is (sha256sum of exact bytes); `$(cat f)` strips the trailing newline and yields a different digest, which falsely reads as content drift
