@@ -11503,3 +11503,14 @@ testability: AUTH_HELPED
 [RISK] derdack: 92 — public exposure of production-adjacent SQL SA + Checkmk admin credentials and live team webhook secrets requires immediate rotation and Git-history scrub.
 [RISK] signl4: 85 — six identity hosts share one RS256 signing key while the account host advertises a foreign issuer; a single client credential compromise yields estate-wide token forgery.
 ## 2026-10-14 22:38:50 UTC [target] (model bigpickle)
+## 2026-10-15 00:37:12 UTC [target] (model bigpickle)
+[NEW] none — zero drift; all frozen evidence re-verified byte-identical this cycle.
+[PRIO] api.signl4.com 7.30 | account.signl4.com 6.80 | github.com/Derdack 6.45 | connect.signl4.com 6.30 | demo.enterprisealert.com 5.70 | vps.signl4.com 4.65
+[HYP] none new. Passive route maps exhausted; no unexplored read-only surface on target `api` beyond authenticated 401s.
+[FINAL] 1. Leaked live SIGNL4 team webhook secrets (AUTH, HIGH)
+[FINAL] 2. Public Derdack GitHub org hardcoded credentials (AUTH, HIGH)
+[FINAL] 3. Cross-env token-forgery chain (OATH, CRITICAL, AUTH_HELPED)
+[PARKED] vps.signl4.com dangling A (=72.167.227.27, GoDaddy secureserver.net, nginx default vhost) — HUMAN_ONLY (needs DNS/hosting account). EA WSDL `ereesus` hostname leak — informational only. `eval()` callbacks, `api/v2/teams` flap (temporal), demo EAWebService exposure (config only), dev/us.derdack MultiViews 300, s4dev Azure resource IDs — none reportable under program rules.
+[NEXT] HUMAN — submit the 3 frozen FINALs to `bugs.olivermaicher.eu`: (1) webhook secrets `vbguzfsi`/`96sbq38s` with public file:line + the Content-Length:0 400/4000-vs-404/3004 oracle; (2) `sa:Derdack!` and `cmkadmin:CNlydVqZ` with commit/authors; (3) cross-env token-forgery chain with 6-host JWKS deep-equal + account issuer mismatch. After submission, stop re-probing closed surfaces.
+[LEARN] Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`triage.yml:12` set `PROBE_ALLOW: derdack.com`, so signl4/enterprisealert leads are never re-verified by CI. The GET-vs-POST asymmetry is a trap — webhook liveness is only observable via the empty-body POST oracle, never via GET.
+[RISK] Re-probing `connect.signl4.com/webhook/*` risks tripping the documented per-path rate limit; only the Content-Length:0 discriminator is non-mutating — never send `{}` or JSON bodies to the live secrets (would create real SIGNL4 events on customer teams, out of scope).
