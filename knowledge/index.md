@@ -1461,3 +1461,12 @@
 - 2026-10-15 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
 - 2026-10-15 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
 - 2026-10-15 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+- 2026-10-15 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+- 2026-10-15 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+- 2026-10-15 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+- 2026-10-15 ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+- 2026-10-15 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+- 2026-10-15 ACCEPTED AUTH @ github.com/Derdack: brand-scoped scanning produced a false "secrets exhausted" result; enumerate orgs per-org, not per-brand.
+- 2026-10-15 REJECTED MISCONFIG @ vps.signl4.com: dangling DNS is genuine but takeover is gated on hosting-account control (HUMAN_ONLY) — reproducible volume is not severity.
+- 2026-10-15 ACCEPTED AUTH @ signl4/docs: the prior "placeholder-only" rejection was a false negative; webhook secret ≠ REST API key, and the non-mutating Content-Length:0 oracle validates it without touching customer data.
+- 2026-10-15 ACCEPTED OTHER @ report pipeline: re-verifying frozen findings each cycle has diminishing returns; when the validation gate is dead, the highest-value action is the HUMAN submission path, not re-probing closed surfaces.

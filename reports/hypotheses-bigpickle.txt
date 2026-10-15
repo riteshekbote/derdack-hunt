@@ -1,4 +1,205 @@
-## 2026-10-15 00:37:12 UTC [target] (model bigpickle)
+## 2026-10-15 05:15:30 UTC [target] (model bigpickle)
+[PRIO] signl4.derdack.com,8,7,6,5,6,7
+[PRIO] dev.derdack.com,6,5,8,7,4,8
+[PRIO] signals.derdack.com,5,6,4,5,5,6
+[HYP] SIGNL4 API authentication bypass
+class: AUTH
+asset: signl4.derdack.com
+confidence: 30
+reasoning: SIGNL4 is a SaaS platform with mobile alerting; likely exposes API with OAuth/JWT; auth endpoints common target
+evidence_needed: API documentation, OAuth endpoints, JWT tokens
+verify_steps: GET https://signl4.derdack.com/api/v1/health OR /api/ OR /docs OR /swagger; HEAD https://signl4.derdack.com/.well-known/openid-configuration
+impact: Full account takeover, access to customer alerting data, severity CRITICAL
+testability: AUTH_HELPED
+[HYP] Dev server exposed with debug endpoints
+class: MISCONFIG
+asset: dev.derdack.com
+confidence: 25
+reasoning: Development subdomain often contains staging/test environments with weaker security; debug endpoints may expose internal APIs
+evidence_needed: HTTP status codes, response headers, tech stack identification
+verify_steps: GET https://dev.derdack.com/; OPTIONS https://dev.derdack.com/; GET https://dev.derdack.com/api/ OR /debug OR /test
+impact: Access to internal APIs, test credentials, staging data; severity HIGH
+testability: PASSIVE
+[HYP] SIGNL4 subdomain takeover candidate
+class: MISCONFIG
+asset: signals.derdack.com
+confidence: 20
+reasoning: "signals" subdomain may point to external service (SNS, third-party) but not properly configured; subdomain takeover common on cloud providers
+evidence_needed: DNS CNAME records, HTTP response, cloud provider identification
+verify_steps: dig signals.derdack.com CNAME; GET https://signals.derdack.com/; check if points to AWS/GCP/Azure with dangling CNAME
+impact: Takeover of subdomain for phishing/cookie theft; severity MEDIUM
+testability: PASSIVE
+[PARKED] SIGNL4 API authentication bypass: confidence 30 < 40; no live probing done yet; need to confirm API endpoints exist
+[PARKED] Dev server exposed: confidence 25 < 40; no HTTP status/tech confirmed; speculative
+[PARKED] SIGNL4 subdomain takeover: confidence 20 < 40; no DNS/HTTP evidence; pure speculation
+[FINAL] No hypotheses meet confidence threshold. All require passive probing to validate.
+[NEXT] PROBE: Passive HTTP probing of all 9 inventory hosts to confirm live status, identify technologies, and discover API endpoints. Start with signl4.derdack.com (highest business value) → dev.derdack.com (highest tech exposure) → signals.derdack.com (subdomain takeover check). Exact requests:
+[LEARN] ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+[LEARN] REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+[RISK] derdack: 35 (moderate risk). Limited attack surface confirmed; most hosts unresolved. Primary target (SIGNL4) is SaaS with likely API auth; dev/staging subdomains may expose internal tools. Program scope is broad ("all company-owned infrastructure") but discovery is early. Recommend passive probing before any depth testing.
+[NEW] nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+[CHANGED] Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+[PRIO] signl4.derdack.com,8,9,8,5,7,6
+[PRIO] dev.derdack.com,7,6,8,6,5,5
+[PRIO] signals.derdack.com,5,5,4,7,6,4
+[HYP] SIGNL4 OIDC/JWKS discovery and token endpoint enumeration
+class: AUTH
+asset: signl4.derdack.com
+confidence: 35
+reasoning: SaaS platform with mobile alerting likely uses OAuth2/OIDC for API auth; OIDC discovery endpoint reveals JWKS URI, token endpoint, supported flows; JWKS may expose alg/kid for JWT confusion testing
+evidence_needed: OIDC discovery response (200 vs 404), JWKS URI response, token endpoint existence
+verify_steps: GET https://signl4.derdack.com/.well-known/openid-configuration; GET https://signl4.derdack.com/.well-known/jwks.json; GET https://signl4.derdack.com/oauth/token (HEAD)
+impact: Reveals auth architecture, JWT signing keys/algorithms, enables targeted alg confusion or token forgery; severity HIGH
+testability: PASSIVE
+[HYP] Dev server Spring Boot actuator and Swagger exposure
+class: MISCONFIG
+asset: dev.derdack.com
+confidence: 30
+reasoning: Dev subdomain likely runs Spring Boot (enterprise Java SaaS pattern); actuator endpoints expose env/heapdump/configprops including secrets; swagger-ui exposes full API surface
+evidence_needed: HTTP 200 on actuator or swagger paths, response content-type, specific actuator beans
+verify_steps: GET https://dev.derdack.com/actuator; GET https://dev.derdack.com/actuator/env; GET https://dev.derdack.com/swagger-ui.html; GET https://dev.derdack.com/api/docs
+impact: Credential/config leakage via actuator, full API mapping via swagger; severity HIGH
+testability: PASSIVE
+[HYP] signals.derdack.com dangling CNAME subdomain takeover
+class: MISCONFIG
+asset: signals.derdack.com
+confidence: 25
+reasoning: "signals" suggests external service integration (AWS SNS, third-party alerting); if CNAME points to decommissioned cloud resource without claimed domain, takeover possible
+evidence_needed: CNAME record pointing to cloud provider, HTTP response confirming unclaimed resource
+verify_steps: dig signals.derdack.com CNAME; GET https://signals.derdack.com/; if CNAME exists, check cloud provider ownership status
+impact: Subdomain takeover for phishing/cookie theft/session fixation; severity MEDIUM
+testability: PASSIVE
+[PARKED] SIGNL4 OIDC discovery: confidence 35 < 40; OIDC may not be exposed if using proprietary auth; need GET response to validate
+[PARKED] Dev Spring Boot actuator: confidence 30 < 40; tech stack is inference not confirmed; nemotron3 already targeting same asset
+[PARKED] signals.derdack.com CNAME takeover: confidence 25 < 40; pure DNS speculation, no records checked yet
+[FINAL] No survivors above 40 — all blocked by zero live probing. The nemotron3 JWT alg hypothesis (55) for signl4 is strongest but also needs endpoint confirmation.
+[NEXT] PROBE: Passive HTTP fingerprinting of signl4.derdack.com and signals.derdack.com (nemotron3 covers dev.derdack.com). Exact requests:
+[LEARN] ACCEPTED AUTH @ signl4.derdack.com: SaaS platform likely exposes OIDC/JWKS; passive discovery endpoints cost zero risk
+[LEARN] ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+[LEARN] REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout testing
+[HYP] Hardcoded SIGNL4 Team Secret in Google IoT Integration Sample
+class: SECRET
+asset: signl4/signl4-integration-google-iot/index.js:19
+confidence: 85
+reasoning: SIGNL4 team secret `96sbq38s` is hardcoded directly in the webhook URL `https://connect.signl4.com/webhook/96sbq38s` — not a placeholder (no `<team-secret>` or `YOUR_SECRET` marker). This is a public repo under the signl4 GitHub org (Derdack-owned). The secret is a real alphanumeric string committed to source. No other files in this repo reference this value, suggesting it may be a Derdack-internal demo/test team.
+impact: Medium — If valid, any party can send arbitrary alerts to this SIGNL4 team via the webhook. Could be used for alert flooding, social engineering via fake incident notifications, or to probe the team's response workflows. Impact取决于 whether the team still exists and is active.
+verify_steps: Passive only: (1) Confirm repo ownership at github.com/signl4/signl4-integration-google-iot (2) Check if `connect.signl4.com/webhook/96sbq38s` returns HTTP 201 vs 404 via `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, secret is live — rotate immediately. If 404, team was deleted and finding is historical only.
+[HYP] Hardcoded SIGNL4 Team Secret in Postman Collection & DevTools YAML (same secret, two files)
+class: SECRET
+asset: signl4/code-snippets/SIGNL4.postman_collection.json:42 + signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7
+confidence: 80
+reasoning: Team secret `vbguzfsi` appears in two public repos: (1) Postman collection path array `[webhook, vbguzfsi]` while the `raw` field shows `--team-secret--` placeholder — the path array was not sanitized before commit; (2) DevTools YAML `url: https://connect.signl4.com/webhook/vbguzfsi` hardcoded directly. Both are under signl4 GitHub org. Same secret reused across two sample repos suggests a Derdack employee's real team secret used during development.
+impact: Medium — Same as above: unauthorized alert injection, alert flooding, potential social engineering via fake incidents. Two repos expose the same secret, increasing the blast radius.
+verify_steps: Passive only: (1) Confirm repo ownership (2) `curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Type: application/json' -d '{"Title":"test"}'` (3) If 201, rotate immediately.
+[HYP] Commented-Out Pipedream Debug Webhook in Zabbix Integration
+class: OTHER
+asset: signl4/signl4-integration-zabbix/signl4-mediatype.yaml:103
+confidence: 70
+reasoning: Line contains commented-out debug endpoint: `//endpoint = 'https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net';` — a Pipedream request inspection URL. This is a developer debug/test artifact left in production Zabbix media type export. While commented out, it reveals an internal testing endpoint and confirms Pipedream was used for webhook debugging. The UUID `b58aee12b873eae71b5db8b4fdc77d78` is a real Pipedream endpoint ID.
+impact: Low — Commented-out code is not executed. However, it leaks a historical debug endpoint that could be investigated for further information. If someone uncomments it, all Zabbix alerts would be sent to a third-party service (Pipedream) instead of SIGNL4.
+verify_steps: Passive only: (1) Check if the Pipedream endpoint is still active: `curl -s -o /dev/null -w '%{http_code}' https://b58aee12b873eae71b5db8b4fdc77d78.m.pipedream.net` (2) If active, confirms debug artifact was real (not just a test UUID).
+class: OTHER  
+asset: N/A  
+confidence: 100  
+reasoning: The org has zero configured public GitHub repositories. All source code is private.  
+impact: None (audit cannot proceed without public repo candidates)  
+verify_steps: Confirm via `https://github.com/derdack` or `https://github.com/derdack-hq` — both should be checked for any public repos that may have been recently opened, though the scope file explicitly shows none configured.
+class: OTHER
+asset: N/A
+confidence: 100
+reasoning: The provided candidate list contains no Derdack repositories to audit. No source code or assets were supplied for analysis.
+impact: N/A
+verify_steps: N/A
+class: SECRET
+asset: `derdack-plugin-checkmk/2-way/Main.js:90-94`
+confidence: 95
+reasoning: Hardcoded `username = "cmkadmin"`, `password = "CNlydVqZ"`, and `serverURL = "http://192.168.88.107:8080/cmk/check_mk/api/v0/"` with an internal RFC1918 IP. Credentials are used in Bearer auth headers at lines 317, 360. This is a sample/template but exposes a real internal hostname pattern and valid credential format.
+impact: HIGH — if deployed as-is, exposes Checkmk monitoring admin account; internal IP leaks network topology.
+verify_steps: Check if `192.168.88.107:8080` is reachable from any Derdack-internal network; attempt Checkmk API auth with the listed creds.
+class: SECRET
+asset: `derdack-oncall-holidayimport/HolidayImport.js:16`, `derdack-oncall-holidayimport/HolidayDeleteAll.js:22`
+confidence: 95
+reasoning: `STRING_DB_CONNECTION` contains `Server=sqlserver.derdack-support.local;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017`. The `sa` account with password `Derdack!` is a sysadmin-level DB credential. This is in sample scripts but references an internal hostname (`derdack-support.local`).
+impact: CRITICAL — SA account grants full SQL Server control; `derdack-support.local` is an internal Derdack asset.
+verify_steps: DNS-resolve `sqlserver.derdack-support.local`; check if Enterprise Alert deployments use these scripts with these exact credentials.
+class: MISCONFIG
+asset: `derdack-oncall-holidayimport/HolidayImport.js:65,86,105`, `derdack-oncall-holidayimport/HolidayDeleteAll.js:71,92,111`, `derdack-events-snmp/SNMP-MIB-Importer.js:153,161,169`, `derdack-alert-forwarding/Alert2Team.js:28,72`
+confidence: 90
+reasoning: All SQL queries are built via direct string concatenation with unsanitized variables (e.g., `"SELECT ID FROM OnCallPlanHolidays WHERE OnCallPlanID=" + iTeamId`). The `sTeams` variable in HolidayImport.js line 86 is split from user-controlled `STRING_TEAMS` and injected directly into `IN (...)` clauses. Alert2Team.js line 28 concatenates `sExecutor` into a SQL query without escaping.
+impact: HIGH — allows SQL injection if any parameter originates from user/external input; Enterprise Alert database compromise.
+verify_steps: Trace whether `STRING_TEAMS`, `sExecutor`, or MIB file contents can be influenced by external input in production deployments.
+class: MISCONFIG
+asset: `derdack-alert-augmentation/html-to-text/ps.js:40`
+confidence: 85
+reasoning: `ExecutePowershell()` constructs a shell command by directly interpolating `htmlString` (from an event parameter) into a `powershell.exe` invocation string at line 40: `"powershell.exe \"node.exe '" + SCRIPTING_HOST_DIR + "html_text.js' '" + htmlString + "'\""`. An attacker who controls the `text` event parameter can inject arbitrary OS commands.
+impact: CRITICAL — remote code execution on the Enterprise Alert scripting host.
+verify_steps: Confirm the script is deployed in production ScriptingHost; test with a malicious `text` parameter payload like `'; rm -rf / #`.
+class: MISCONFIG
+asset: `derdack-plugin-checkmk/2-way/Main.js:94`
+confidence: 80
+reasoning: `serverURL = "http://192.168.88.107:8080/cmk/check_mk/api/v0/"` — plaintext HTTP to an internal Checkmk API. Credentials (line 90-91) are sent as Bearer tokens over this unencrypted channel (line 317).
+impact: MEDIUM — credential interception on internal network via passive sniffing; MITM on monitoring API.
+verify_steps: Verify whether production deployments use HTTP or HTTPS for the Checkmk API endpoint.
+class: MISCONFIG
+asset: `derdack-integration-SIGNL4/js/WebhookGateway.js:41,87`
+confidence: 75
+reasoning: The decoded SIGNL4 team secret is written to debug logs at lines 41 and 87: `EAScriptHost.LogDebug("Decoded S4 Team Secret: " + strS4TeamSecret)`. This exposes the secret in EA log files. The secret is also appended to the webhook URL at line 94.
+impact: MEDIUM — team secret exposure in log files; allows unauthorized SIGNL4 webhook calls.
+verify_steps: Check EA log retention and access controls; verify if debug logging is enabled in production.
+class: OTHER
+asset: `derdack-plugin-checkmk/2-way/Main.js:52-68`, `derdack-2wayREST-samples/Dynatrace/Main.js:53-69`, `derdack-2wayREST-samples/Logic Monitor/Main.js:52-68`, `derdack-2wayREST-samples/zendesk/Main.js:52-68`
+confidence: 70
+reasoning: `eval()` is called on `appContext.state.callbackSaveState`, `appContext.runtimeInfo.callbackSetStatusError`, etc. If the EA runtime provides attacker-controllable data in these fields, it enables arbitrary code execution. This appears to be an EA SDK pattern but remains risky.
+impact: MEDIUM — potential code injection if EA context data is tainted.
+verify_steps: Review EA Scripting Host SDK to determine if context fields are sanitized before delivery.
+[PRIO] account.signl4.com, 6.80, a7/b10/t9/g2/c7/f2
+[PRIO] github.com/Derdack, 6.45, a6/b8/t5/g10/c3/f4
+[PRIO] demo.enterprisealert.com, 5.70, a6/b7/t7/g4/c5/f3
+[PRIO] vps.signl4.com, 4.65, a3/b5/t3/g10/c2/f5
+[HYP] Live SIGNL4 team webhook secrets leaked in public vendor repos enable unauthorized alert manipulation
+class: AUTH
+asset: https://connect.signl4.com/webhook/vbguzfsi (+ https://connect.signl4.com/webhook/96sbq38s)
+confidence: 95
+reasoning: `vbguzfsi` at github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7 (staff `rons4`, pushed 2026-10-08); `96sbq38s` at signl4-integration-google-iot/index.js:19 and signl4-integration-losant/signl4-alert-v100.node:148. Same files use `xxxx`/`YOUR_TEAM_SECRET` placeholders for siblings, proving non-example. Non-mutating differential: Content-Length:0 POST to valid secret → 400 code 4000 ("event null or empty"); fabricated → 404 code 3004. Same secret accepted on connect/account/api (shared webhook registry).
+evidence_needed: the 400/4000-vs-404/3004 control proves the secret is live without creating an event; no event injection required.
+verify_steps: (already established, non-mutating) `POST /webhook/vbguzfsi` with Content-Length:0 → expect 400/code 4000 vs control `POST /webhook/zq7x2k9p` Content-Length:0 → 404/code 3004. GET/HEAD are non-discriminating (byte-identical bodies). Do NOT submit a JSON body (`{}` is accepted → 201, mutating/out-of-scope).
+impact: any holder of the public secret can raise/ack/resolve/close alerts for the team — manipulation of safety-critical alerting. HIGH.
+testability: PASSIVE
+[HYP] Public Derdack GitHub org exposes hardcoded SQL Server SA and Checkmk admin credentials
+class: AUTH
+asset: github.com/Derdack/derdack-oncall-holidayimport + github.com/Derdack/derdack-plugin-checkmk
+confidence: 90
+reasoning: `HolidayImport.js:16` and `HolidayDeleteAll.js:22` contain `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017` (author rbormann@de.derdack.com, 2022-12-07). `derdack-plugin-checkmk/2-way/Main.js:90-94` contains `username="cmkadmin"`, `password="CNlydVqZ"`, `serverURL="http://192.168.88.107:8080/cmk/check_mk/api/v0/"` (author rons4, 2024-05-27). Both repos public; both hosts internal-only (NXDOMAIN externally).
+evidence_needed: public-indexed exposure is sufficient; internal reachability is not verifiable from an internet seat.
+verify_steps: `GET https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/main/HolidayImport.js` → 200 containing `UID=sa;PWD=Derdack!`; `GET https://raw.githubusercontent.com/Derdack/derdack-plugin-checkmk/main/2-way/Main.js` → 200 containing `cmkadmin`/`CNlydVqZ`.
+impact: DB sysadmin (sa) credentials → full read/write of EnterpriseAlert2017 if the internal host is reachable; Checkmk admin → internal monitoring host. HIGH (exposure); exploitation gated on network position.
+testability: PASSIVE
+[HYP] Cross-environment token acceptance via shared RS256 signing key + account-host issuer mismatch
+class: OATH
+asset: https://account.signl4.com/identity/.well-known/openid-configuration
+confidence: 50
+reasoning: six identity hosts (connect/devconnect/api/devapi/account/devaccount) serve byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) and identical discovery parameterics; account advertises `issuer=https://connect.signl4.com/identity` (host/issuer mismatch); client_id `692A0A56-892F-4AE2-8259-76DA398990B6` shared dev↔prod; devconnect lists password/device/CIBA/token-exchange grants. Document + route parity proven; enforcement at the token endpoint is NOT proven.
+evidence_needed: a token minted at one host accepted by another — requires a legitimate client credential.
+verify_steps: (read-only) `GET` both `/.well-known/openid-configuration` and diff `issuer`/`jwks_uri`; `GET` both `/identity/.well-known/openid-configuration/jwks` and confirm byte-identical.
+impact: if enforced cross-environment, token forgery → full SIGNL4 API access. CRITICAL but unverified.
+testability: AUTH_HELPED
+[PARKED] vps.signl4.com dangling A-record: real dangling DNS but takeover is gated on DNS/hosting-account control (HUMAN_ONLY); no researcher-attachable endpoint → not a claimable primitive.
+[PARKED] EA WSDL internal SOAP hostname (`ereesus`) leak: single-label CWE-200 hygiene, no exploit path → not reportable alone.
+[PARKED] eval() callback deserialization in 4 public 2-way REST plugins: client-side connector code, requires MITM/compromised EA server → no program-specific exploit.
+[PARKED] api.signl4.com/api/v2/teams 401↔405: temporal deploy state, no security differential (6/6 identical in-session).
+[PARKED] demo.enterprisealert.com/EAWebService exposure: all credential paths gate (Error:-1/401); config-level only.
+[PARKED] dev.derdack.com + us.derdack.com MultiViews 300: fabricated-path control proves static namespace echo, no real files.
+[PARKED] s4dev1..8 Azure resource IDs: descriptive-headers-only, program-rejected class.
+[FINAL] 1. Leaked live webhook secrets `vbguzfsi`/`96sbq38s` — AUTH, HIGH.
+[FINAL] 2. Public GitHub org credential exposure (SA + Checkmk) — AUTH, HIGH.
+[FINAL] 3. Cross-env token-forgery chain (6-host JWKS + issuer mismatch) — OATH, CRITICAL (AUTH_HELPED).
+[NEXT] HUMAN: Submit the frozen findings to bugs.olivermaicher.eu — (1) live webhook secrets `vbguzfsi`/`96sbq38s` with public file/line and the non-mutating Content-Length:0 400/4000-vs-404/3004 oracle; (2) `sa:Derdack!` (derdack-oncall-holidayimport) and `cmkadmin:CNlydVqZ` (derdack-plugin-checkmk) with commit/authors; (3) cross-env token-forgery chain with the 6-host JWKS deep-equal and account issuer mismatch.
+[LEARN] ACCEPTED AUTH @ github.com/Derdack: brand-scoped scanning produced a false "secrets exhausted" result; enumerate orgs per-org, not per-brand.
+[LEARN] REJECTED MISCONFIG @ vps.signl4.com: dangling DNS is genuine but takeover is gated on hosting-account control (HUMAN_ONLY) — reproducible volume is not severity.
+[LEARN] ACCEPTED AUTH @ signl4/docs: the prior "placeholder-only" rejection was a false negative; webhook secret ≠ REST API key, and the non-mutating Content-Length:0 oracle validates it without touching customer data.
+[LEARN] ACCEPTED OTHER @ report pipeline: re-verifying frozen findings each cycle has diminishing returns; when the validation gate is dead, the highest-value action is the HUMAN submission path, not re-probing closed surfaces.
+[RISK] derdack: 92 — public exposure of production-adjacent SQL SA + Checkmk admin credentials and live team webhook secrets requires immediate rotation and Git-history scrub.
+[RISK] signl4: 85 — six identity hosts share one RS256 signing key while the account host advertises a foreign issuer; a single client credential compromise yields estate-wide token forgery.
 [NEW] none — zero drift; all frozen evidence re-verified byte-identical this cycle.
 [PRIO] api.signl4.com 7.30 | account.signl4.com 6.80 | github.com/Derdack 6.45 | connect.signl4.com 6.30 | demo.enterprisealert.com 5.70 | vps.signl4.com 4.65
 [HYP] none new. Passive route maps exhausted; no unexplored read-only surface on target `api` beyond authenticated 401s.
