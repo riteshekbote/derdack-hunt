@@ -91890,3 +91890,1674 @@ Repair applied and verified. Summary of state:
 2. **Commit authorization**: I have not committed (system policy requires explicit request). The workflow repair only takes effect once pushed to `main`. Say the word and I'll commit + push.
 
 Want me to commit the repair?
+===== ANALYST bigpickle 2026-10-15 21:54:41 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && ls leads/ 2>/dev/null | tail -5 && ls reports/ 2>/dev/null
+total 1684
+drwxr-xr-x 12 runner runner   4096 Oct 15 21:44 .
+drwxr-xr-x  3 runner runner   4096 Oct 15 21:44 ..
+drwxr-xr-x  7 runner runner   4096 Oct 15 21:44 .git
+drwxr-xr-x  3 runner runner   4096 Oct 15 21:44 .github
+-rw-r--r--  1 runner runner   1831 Oct 15 21:44 README.md
+-rw-r--r--  1 runner runner     32 Oct 15 21:44 analyst-out.txt
+-rw-r--r--  1 runner runner 799073 Oct 15 21:44 analyst-prompt.txt
+-rw-r--r--  1 runner runner 795194 Oct 15 21:44 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 inventory
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 leads
+-rw-r--r--  1 runner runner  23758 Oct 15 21:44 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 reports
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct 15 21:44 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 scripts
+-rw-r--r--  1 runner runner     33 Oct 15 21:44 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct 15 21:44 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct 15 21:44 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct 15 21:44 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct 15 21:44 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct 15 21:44 state_nemotron3.json
+drwxr-xr-x  2 runner runner  16384 Oct 15 21:44 triage
+lead-ling3.md
+lead-longcat.md
+lead-mimo.md
+lead-nemotron3.md
+reposcan-derdack.md
+analyst-bigpickle.log
+analyst-laguna.log
+analyst-ling3.log
+analyst-longcat.log
+analyst-nemotron3.log
+hypotheses-bigpickle.txt
+hypotheses-laguna.txt
+hypotheses-ling3.txt
+hypotheses-longcat.txt
+hypotheses-nemotron3.txt
+hypotheses.md
+valid-bugs.md
+[0m
+[0m$ [0mdate -u && cat scope.yml 2>/dev/null | head -40
+Thu Oct 15 21:45:12 UTC 2026
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+[0m
+## Objective
+- Act as a senior bug bounty analyst for the Derdack GmbH/Derdack Group program (report channel: bugs.olivermaicher.eu), running an 8-step per-cycle hunt loop over in-scope Derdack/SIGNL4/Enterprise Alert assets.
+- Output only structured blocks: [PRIO], [HYP] (strict schema), [PARKED]/[FINAL], one [NEXT], [LEARN], [RISK]; facts vs hypotheses strictly separated; passive-first read-only probing.
+
+## Important Details
+- Scope: only Derdack-owned infra (derdack.com, signl4.com, enterprisealert.com families); report to bugs.olivermaicher.eu.
+- REJECTED classes: brute-force/rate-limit/lockout, OPTIONS/TRACE standalone, descriptive headers only, outdated libs, clickjacking w/o exploit, mail config, known-vuln lib w/o program-specific exploit, username enumeration, public login panels, etc.
+- Probe rules: passive-first, ≤1 rps, GET/HEAD/OPTIONS only, no mutating tests on live customer data, sha256 any secret, confidence<40 dropped, no endpoint-map-only hypotheses.
+- Current state: `{"phase": "POC", "target": "api"}`.
+- Frozen/submission-ready findings ([FINAL]): (1) live SIGNL4 webhook secrets `vbguzfsi`/`96sbq38s` in public GitHub (AUTH, HIGH); (2) Derdack org hardcoded SQL SA `sa:Derdack!` + Checkmk `cmkadmin:CNlydVqZ` creds (AUTH, HIGH); (3) EA WSDL internal hostname `https://ereesus/EAWebService/EventProviderAPI.asmx` disclosure (MISCONFIG); (4) API_Key_Query query-param API key scheme (report-complete); (5) cross-env token forgery chain — 6 identity hosts share RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, JWKS sha256=96c931f2) + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 — must be worded "documented configuration symmetry with unverified enforcement", AUTH_HELPED on client_secret.
+- Key oracle: webhook secret validation = `Content-Length:0` POST (valid→400 code 4000 "event null or empty"; invalid→404 code 3004 "No matching event source found."); `{}` body creates a real event (201, mutating, out of scope); GET/HEAD/OPTIONS non-discriminating. Secrets valid on connect/account/api.signl4.com (shared registry).
+- PW/secret locations: `github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7` (vbguzfsi), `signl4-integration-google-iot/index.js:19` + `signl4-integration-losant/signl4-alert-v100.node:148` (96sbq38s), `derdack-oncall-holidayimport/HolidayImport.js:16`+`HolidayDeleteAll.js:22` (SA), `derdack-plugin-checkmk/2-way/Main.js:90-94` (Checkmk+192.168.88.107).
+- Branch refs: Derdack org default_branch=master; signl4 org default_branch=main (read default_branch via API before claiming deletion).
+- Dead ends permanently closed: signl4.derdack.com (TCP dead), V4 namespace, GraphQL (15/15 404), Blazor assembly disclosure, behavior-as param (403 typo only), prepaid tenant-in-body (131 write ops swept, NOT_A_BUG), dynamic client registration, open redirect, DPoP enforcement (challenge is Bearer-only; standard default), s4dev App-Proxy IDs (non-actionable), labconnect/labaccount (502 dead tier), docs.enterprisealert.com takeover (≤25), vps.signl4.com takeover (HUMAN_ONLY), blog/techblog HTTPS→HTTP session theft (invalidated, missing-HSTS only LOW).
+- Cross-env token forgery wording must stay hedged: introspection/revocation registered 6/6 (routing only); token endpoint enforcement unverified.
+- Blockers: triage.yml validation gate dead (≥59 consecutive `UnknownError` runs; `grep "\[UNVALIDATED\]"` matched 0 in leads/); PROBE_ALLOW widened locally (uncommitted) to signl4.com|enterprisealert.com; 4/6 free fleet models dead (working: nemotron-3-ultra-free, big-pickle); local uncommitted edits to triage.yml + hunt.yml (model fallback chain, full [HYP] block extraction — 9 unique blocks recoverable vs 0, valid-bugs tail in prompt).
+- Ranked hypotheses tail: [85] demo.enterprisealert.com/EAWebService WSDL internal hostname; [85] account.signl4.com/identity cross-env forgery; NEXT(hypotheses-nemotron3.txt): HUMAN submit 8 findings to bugs.olivermaicher.eu.
+- 2026-10-15 drift: V2 swagger grew to 1,225,783 B (sha 837b34ca) vs 1,216,391 B on 10-11 — 190 paths (V1=93, V3=207); new families `/v2/remoteActions`, `/v2/scripts`, `/v2/eventsources`, `/scim/status` etc. — all 8 new unauth GETs → 401/0 bytes.
+
+## Work State
+### Completed
+- Full estate mapped: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount), API V1/V2/V3 (+V4 absent) route maps, webhook/events namespaces, CT coverage across all three roots closed.
+- Deliverables re-verified byte-stable 2026-10-15 14:44-14:48 UTC: JWKS 6/6 sha256=96c931f2; EA WSDL 29968 B sha256 e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae; vbguzfsi→400/4000, zq7x2k9p→404/3004, 96sbq38s→400/4000; secret file hashes (yaml 7b5d2a95…, google-iot 97fc94f9…, losant 2999995c…).
+- Org sweeps: signl4 (53 repos, last push 2026-10-14T11:40) + Derdack (12 repos, last push 2024-05-27) — only two live webhook secrets, no cloud creds/keys elsewhere.
+- triage.yml/hunt.yml locally patched (uncommitted): model fallback, [UNVALIDATED] block extraction tested (9 blocks, 6 with class/asset/confidence/verify_steps), PROBE_ALLOW widened.
+- STEP 1-7 for this cycle's predecessors completed repeatedly; zero drift across identity/API/CT/WP/EA since 2026-10-07 boundary.
+
+### Active
+- Phase POC, target=api; passive surface considered exhausted — remaining queue is mostly re-verification and HUMAN submission.
+- 2026-10-15 deltas noted but not yet turned into a hypothesis: V2 spec growth (new families all 401-gated), signl4/docs 3 new integration files (placeholders only).
+
+### Blocked
+- Automated triage/validation pipeline dead (model-side UnknownError, ≥59 runs).
+- All top exploit chains AUTH_HELPED (need client_secret / X-S4-Api-Key) or HUMAN_ONLY (vps takeover, submission to bugs.olivermaicher.eu).
+- No live credentials; webhook secret can only be validated via non-mutating CL:0 oracle; REST use of leaked secret is 403 (webhook secret ≠ API key).
+
+## Next Move
+1. Execute the ranked NEXT: HUMAN — submit the findings to bugs.olivermaicher.eu (Derdack SA creds, Checkmk creds, webhook secrets vbguzfsi/96sbq38s, EA WSDL internal hostname, API_Key_Query, plus hedged cross-env config-symmetry note).
+2. If staying passive: static re-analysis of the changed V2 swagger (1,225,783 B, sha 837b34ca) — diff new paths (/v2/remoteActions, /v2/scripts, /eventsources, /scim/status) requestBodies for tenant/ID params, zero new requests (spec already fetched pattern), then sweep V1/V3 equivalents.
+
+## Relevant Files
+- `.github/workflows/triage.yml`: validation gate (line 45 `grep "[UNVALIDATED]"`, line 12 PROBE_ALLOW) — locally edited, uncommitted; gate dead.
+- `.github/workflows/hunt.yml`: line 13 PROBE_ALLOW — locally edited, uncommitted.
+- `leads/lead-*.md`: 9 recoverable [HYP][UNVALIDATED] blocks for triage extraction.
+- `reports/valid-bugs.md`: running count unreliable (gate-availability noise, no successful run since 2026-09-25).
+- `art/lead_bigpickle.txt`, `art/lead_nemotron3.txt`, `hypotheses-nemotron3.txt`: ranked hypothesis sources ([85] entries + NEXT submission action).
+- `reposcan-raw/summary.txt`: "TARGET_ORG not configured for derdack" (now covered manually).
+- `probe-results.md`: cycle probe log tail.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m$ [0mcat state_bigpickle.json && echo "---" && cat analyst-out.txt && echo "---probe tail---" && tail -30 probe-results.md
+{"phase": "POC", "target": "api"}---
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && ls leads/ 2>/dev/null | tail -5 && ls reports/ 2>/dev/null
+total 1684
+drwxr-xr-x 12 runner runner   4096 Oct 15 21:44 .
+drwxr-xr-x  3 runner runner   4096 Oct 15 21:44 ..
+drwxr-xr-x  7 runner runner   4096 Oct 15 21:44 .git
+drwxr-xr-x  3 runner runner   4096 Oct 15 21:44 .github
+-rw-r--r--  1 runner runner   1831 Oct 15 21:44 README.md
+-rw-r--r--  1 runner runner     32 Oct 15 21:44 analyst-out.txt
+-rw-r--r--  1 runner runner 799073 Oct 15 21:44 analyst-prompt.txt
+-rw-r--r--  1 runner runner 795194 Oct 15 21:44 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 inventory
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 leads
+-rw-r--r--  1 runner runner  23758 Oct 15 21:44 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 reports
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct 15 21:44 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct 15 21:44 scripts
+-rw-r--r--  1 runner runner     33 Oct 15 21:44 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct 15 21:44 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct 15 21:44 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct 15 21:44 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct 15 21:44 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct 15 21:44 state_nemotron3.json
+drwxr-xr-x  2 runner runner  16384 Oct 15 21:44 triage
+lead-ling3.md
+lead-longcat.md
+lead-mimo.md
+lead-nemotron3.md
+reposcan-derdack.md
+analyst-bigpickle.log
+analyst-laguna.log
+analyst-ling3.log
+analyst-longcat.log
+analyst-nemotron3.log
+hypotheses-bigpickle.txt
+hypotheses-laguna.txt
+hypotheses-ling3.txt
+hypotheses-longcat.txt
+hypotheses-nemotron3.txt
+hypotheses.md
+valid-bugs.md
+[0m
+[0m$ [0mdate -u && cat scope.yml 2>/dev/null | head -40
+Thu Oct 15 21:45:12 UTC 2026
+programs:
+  derdack:
+    name: Derdack GmbH / Derdack Group Bug Bounty
+    disclosure_policy: via bugs.olivermaicher.eu (Oliver Maicher private program) - report + PoC + contact + payment
+    assets:
+      - name: "All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert"
+        priority: In
+    out_of_scope:
+- "Network level Denial of Service attacks"
+      - "Application Denial of Service by locking user accounts"
+      - "Descriptive error messages or headers (e.g. Stack Traces, banner grabbing)"
+      - "Disclosure of known public files or directories (e.g. robots.txt)"
+      - "Outdated software / library versions"
+      - "OPTIONS / TRACE HTTP method enabled"
+      - "CSRF on logout"
+      - "CSRF on forms that are available to anonymous users"
+      - "Cookies that lack HTTP Only or Secure settings for non-sensitive data"
+      - "Self-XSS and issues exploitable only through Self-XSS"
+      - "Reports resulting from automated scanning utilities without additional details or a POC demonstrating a specific exploit"
+      - "Attacks requiring physical access to a user's device"
+      - "Attacks dependent upon social engineering of employees or vendors"
+      - "Username enumeration based on login or forgot password pages"
+      - "Enforcement policies for brute force, rate limiting, or account lockout"
+      - "SSL/TLS best practices"
+      - "SSL attacks such as BEAST, BREACH, Renegotiation attack"
+      - "Clickjacking, without additional details demonstrating a specific exploit"
+      - "Mail configuration issues including SPF, DKIM, DMARC settings"
+      - "Use of a known-vulnerable library without a description of an exploit specific to our implementation"
+      - "Password and account recovery policies"
+      - "Presence of autocomplete functionality in form fields"
+      - "Publicly accessible login panels"
+      - "Lack of email address verification during account registration or account invitation"
+      - "Lack of email address verification password restore"
+      - "Session control during email/password changes"
+      - "Social engineering, physical attacks, and DoS/DDoS testing (per program notes)"
+      - "Exposure of customer/employee/financial/authentication data during testing (per program notes)"
+    github_orgs:
+      - none-configured
+
+rules:
+[0m
+## Objective
+- Act as a senior bug bounty analyst for the Derdack GmbH/Derdack Group program (report channel: bugs.olivermaicher.eu), running an 8-step per-cycle hunt loop over in-scope Derdack/SIGNL4/Enterprise Alert assets.
+- Output only structured blocks: [PRIO], [HYP] (strict schema), [PARKED]/[FINAL], one [NEXT], [LEARN], [RISK]; facts vs hypotheses strictly separated; passive-first read-only probing.
+
+## Important Details
+- Scope: only Derdack-owned infra (derdack.com, signl4.com, enterprisealert.com families); report to bugs.olivermaicher.eu.
+- REJECTED classes: brute-force/rate-limit/lockout, OPTIONS/TRACE standalone, descriptive headers only, outdated libs, clickjacking w/o exploit, mail config, known-vuln lib w/o program-specific exploit, username enumeration, public login panels, etc.
+- Probe rules: passive-first, ≤1 rps, GET/HEAD/OPTIONS only, no mutating tests on live customer data, sha256 any secret, confidence<40 dropped, no endpoint-map-only hypotheses.
+- Current state: `{"phase": "POC", "target": "api"}`.
+- Frozen/submission-ready findings ([FINAL]): (1) live SIGNL4 webhook secrets `vbguzfsi`/`96sbq38s` in public GitHub (AUTH, HIGH); (2) Derdack org hardcoded SQL SA `sa:Derdack!` + Checkmk `cmkadmin:CNlydVqZ` creds (AUTH, HIGH); (3) EA WSDL internal hostname `https://ereesus/EAWebService/EventProviderAPI.asmx` disclosure (MISCONFIG); (4) API_Key_Query query-param API key scheme (report-complete); (5) cross-env token forgery chain — 6 identity hosts share RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256, JWKS sha256=96c931f2) + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 — must be worded "documented configuration symmetry with unverified enforcement", AUTH_HELPED on client_secret.
+- Key oracle: webhook secret validation = `Content-Length:0` POST (valid→400 code 4000 "event null or empty"; invalid→404 code 3004 "No matching event source found."); `{}` body creates a real event (201, mutating, out of scope); GET/HEAD/OPTIONS non-discriminating. Secrets valid on connect/account/api.signl4.com (shared registry).
+- PW/secret locations: `github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7` (vbguzfsi), `signl4-integration-google-iot/index.js:19` + `signl4-integration-losant/signl4-alert-v100.node:148` (96sbq38s), `derdack-oncall-holidayimport/HolidayImport.js:16`+`HolidayDeleteAll.js:22` (SA), `derdack-plugin-checkmk/2-way/Main.js:90-94` (Checkmk+192.168.88.107).
+- Branch refs: Derdack org default_branch=master; signl4 org default_branch=main (read default_branch via API before claiming deletion).
+- Dead ends permanently closed: signl4.derdack.com (TCP dead), V4 namespace, GraphQL (15/15 404), Blazor assembly disclosure, behavior-as param (403 typo only), prepaid tenant-in-body (131 write ops swept, NOT_A_BUG), dynamic client registration, open redirect, DPoP enforcement (challenge is Bearer-only; standard default), s4dev App-Proxy IDs (non-actionable), labconnect/labaccount (502 dead tier), docs.enterprisealert.com takeover (≤25), vps.signl4.com takeover (HUMAN_ONLY), blog/techblog HTTPS→HTTP session theft (invalidated, missing-HSTS only LOW).
+- Cross-env token forgery wording must stay hedged: introspection/revocation registered 6/6 (routing only); token endpoint enforcement unverified.
+- Blockers: triage.yml validation gate dead (≥59 consecutive `UnknownError` runs; `grep "\[UNVALIDATED\]"` matched 0 in leads/); PROBE_ALLOW widened locally (uncommitted) to signl4.com|enterprisealert.com; 4/6 free fleet models dead (working: nemotron-3-ultra-free, big-pickle); local uncommitted edits to triage.yml + hunt.yml (model fallback chain, full [HYP] block extraction — 9 unique blocks recoverable vs 0, valid-bugs tail in prompt).
+- Ranked hypotheses tail: [85] demo.enterprisealert.com/EAWebService WSDL internal hostname; [85] account.signl4.com/identity cross-env forgery; NEXT(hypotheses-nemotron3.txt): HUMAN submit 8 findings to bugs.olivermaicher.eu.
+- 2026-10-15 drift: V2 swagger grew to 1,225,783 B (sha 837b34ca) vs 1,216,391 B on 10-11 — 190 paths (V1=93, V3=207); new families `/v2/remoteActions`, `/v2/scripts`, `/v2/eventsources`, `/scim/status` etc. — all 8 new unauth GETs → 401/0 bytes.
+
+## Work State
+### Completed
+- Full estate mapped: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount), API V1/V2/V3 (+V4 absent) route maps, webhook/events namespaces, CT coverage across all three roots closed.
+- Deliverables re-verified byte-stable 2026-10-15 14:44-14:48 UTC: JWKS 6/6 sha256=96c931f2; EA WSDL 29968 B sha256 e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae; vbguzfsi→400/4000, zq7x2k9p→404/3004, 96sbq38s→400/4000; secret file hashes (yaml 7b5d2a95…, google-iot 97fc94f9…, losant 2999995c…).
+- Org sweeps: signl4 (53 repos, last push 2026-10-14T11:40) + Derdack (12 repos, last push 2024-05-27) — only two live webhook secrets, no cloud creds/keys elsewhere.
+- triage.yml/hunt.yml locally patched (uncommitted): model fallback, [UNVALIDATED] block extraction tested (9 blocks, 6 with class/asset/confidence/verify_steps), PROBE_ALLOW widened.
+- STEP 1-7 for this cycle's predecessors completed repeatedly; zero drift across identity/API/CT/WP/EA since 2026-10-07 boundary.
+
+### Active
+- Phase POC, target=api; passive surface considered exhausted — remaining queue is mostly re-verification and HUMAN submission.
+- 2026-10-15 deltas noted but not yet turned into a hypothesis: V2 spec growth (new families all 401-gated), signl4/docs 3 new integration files (placeholders only).
+
+### Blocked
+- Automated triage/validation pipeline dead (model-side UnknownError, ≥59 runs).
+- All top exploit chains AUTH_HELPED (need client_secret / X-S4-Api-Key) or HUMAN_ONLY (vps takeover, submission to bugs.olivermaicher.eu).
+- No live credentials; webhook secret can only be validated via non-mutating CL:0 oracle; REST use of leaked secret is 403 (webhook secret ≠ API key).
+
+## Next Move
+1. Execute the ranked NEXT: HUMAN — submit the findings to bugs.olivermaicher.eu (Derdack SA creds, Checkmk creds, webhook secrets vbguzfsi/96sbq38s, EA WSDL internal hostname, API_Key_Query, plus hedged cross-env config-symmetry note).
+2. If staying passive: static re-analysis of the changed V2 swagger (1,225,783 B, sha 837b34ca) — diff new paths (/v2/remoteActions, /v2/scripts, /eventsources, /scim/status) requestBodies for tenant/ID params, zero new requests (spec already fetched pattern), then sweep V1/V3 equivalents.
+
+## Relevant Files
+- `.github/workflows/triage.yml`: validation gate (line 45 `grep "[UNVALIDATED]"`, line 12 PROBE_ALLOW) — locally edited, uncommitted; gate dead.
+- `.github/workflows/hunt.yml`: line 13 PROBE_ALLOW — locally edited, uncommitted.
+- `leads/lead-*.md`: 9 recoverable [HYP][UNVALIDATED] blocks for triage extraction.
+- `reports/valid-bugs.md`: running count unreliable (gate-availability noise, no successful run since 2026-09-25).
+- `art/lead_bigpickle.txt`, `art/lead_nemotron3.txt`, `hypotheses-nemotron3.txt`: ranked hypothesis sources ([85] entries + NEXT submission action).
+- `reposcan-raw/summary.txt`: "TARGET_ORG not configured for derdack" (now covered manually).
+- `probe-results.md`: cycle probe log tail.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+---probe tail---
+## 2026-10-14 19:07:34 UTC
+
+
+## 2026-10-14 22:39:01 UTC
+
+
+## 2026-10-15 00:38:14 UTC
+
+
+## 2026-10-15 05:16:42 UTC
+https://signl4.derdack.com/api/v1/health -> ERR <urlopen error timed out>
+https://signl4.derdack.com/.well-known/openid-configuration -> ERR <urlopen error timed out>
+https://dev.derdack.com/ -> HTTP 403
+https://dev.derdack.com/api/ -> HTTP 404
+https://signals.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://signl4.derdack.com/.well-known/jwks.json -> ERR <urlopen error timed out>
+https://signl4.derdack.com/oauth/token -> ERR <urlopen error timed out>
+https://dev.derdack.com/actuator -> HTTP 404
+https://dev.derdack.com/actuator/env -> HTTP 404
+https://dev.derdack.com/swagger-ui.html -> HTTP 404
+https://dev.derdack.com/api/docs -> HTTP 404
+
+## 2026-10-15 10:14:08 UTC
+
+
+## 2026-10-15 14:49:02 UTC
+
+
+## 2026-10-15 18:45:44 UTC
+[0m
+Let me continue the analysis. I'm supposed to run the 8-step per-cycle hunt loop. The state says phase POC, target api. Let me look at the key files to determine the next best action.
+
+Let me read the state, the latest leads, and the hypotheses files to figure out the exact next step.</think>
+[0m✗ [0mRead hypotheses-nemotron3.txt failed
+[91m[1mError: [0mFile not found: /home/runner/work/derdack-hunt/derdack-hunt/hypotheses-nemotron3.txt
+[0m
+[0m$ [0mcat reports/hypotheses-nemotron3.txt 2>/dev/null; echo "=====BIGPICKLE====="; cat reports/hypotheses-bigpickle.txt 2>/dev/null | head -80
+## 2026-10-15 18:41:52 UTC [target] (model nemotron3)
+[NEW] github.com/Derdack org (12 repos) fully scanned for first time — revealed hardcoded SQL Server SA creds (`sa:Derdack!` @ `sqlserver.derdack-support.local`) in `derdack-oncall-holidayimport` + Checkmk admin creds (`cmkadmin:CNlydVqZ` @ `192.168.88.107:8080`) in `derdack-plugin-checkmk`
+[NEW] api.signl4.com/api/v2/teams auth-status flipped to route-gated (401 on unauth GET + invalid Bearer) vs prior handler-deferred 405 pattern — temporal flip confirmed by 6 consecutive probes
+[NEW] api.signl4.com/api/docs/v2/swagger.json grew to 1,225,783 B (sha256 837b34ca) vs 1,216,391 B on 2026-10-11 — 190 paths (V1=93, V3=207); newly-catalogued families: `/v2/remoteActions`, `/v2/scripts`, `/v2/eventsources`, `/v2/st` — all 8 probed new-family unauth GETs return 401/0 bytes
+[CHANGED] Triage pipeline remains broken: ≥59 consecutive failed Triager runs (2026-09-25→2026-10-15), `reports/valid-bugs.md` running count unreliable
+[CHANGED] vps.signl4.com A-record 72.167.227.27 (GoDaddy secureserver.net) remains dangling (nginx default vhost) — intermittent TCP-timeout observed, DNS unchanged
+[CHANGED] Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
+[CHANGED] Second live SIGNL4 team webhook secret `96sbq38s` confirmed live at `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148` via Content-Length:0 control
+[CHANGED] demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx live (200, 1843 B) — HTTP handler interface advertises 10 handlers; EA handler auth ENFORCED via read-only GETs
+[CHANGED] Frozen evidence re-verified live 2026-10-15: vbguzfsi (yaml sha256 7b5d2a95…), 96sbq38s (google-iot 97fc94f9… + losant 2999995c…), PWD=Derdack! (Derdack master), cmkadmin/CNlydVqZ (derdack-plugin-checkmk)
+[PRIO] account.signl4.com/identity,8.50,attack_surface=9,business_value=10,tech_exposure=9,gate_ease=5,cloud_surface=10,freshness=8
+[PRIO] connect.signl4.com/api/v2/teams,7.00,attack_surface=7,business_value=8,tech_exposure=6,gate_ease=10,cloud_surface=8,freshness=9
+[PRIO] connect.signl4.com/api/v2/remoteActions,6.50,attack_surface=6,business_value=7,tech_exposure=7,gate_ease=5,cloud_surface=8,freshness=10
+[PRIO] connect.signl4.com/webhook,7.50,attack_surface=7,business_value=9,tech_exposure=6,gate_ease=10,cloud_surface=7,freshness=9
+[PRIO] demo.enterprisealert.com/EAWebService,8.75,attack_surface=9,business_value=9,tech_exposure=8,gate_ease=10,cloud_surface=8,freshness=9
+[PRIO] vps.signl4.com,7.75,attack_surface=8,business_value=8,tech_exposure=7,gate_ease=8,cloud_surface=8,freshness=8
+[HYP] Cross-env token forgery via account IdP issuer mismatch + shared RS256 key + plain PKCE
+class: AUTH
+asset: account.signl4.com/identity
+confidence: 85
+reasoning: 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) share byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), shared client_id 692A0A56-892F-4AE2-8259-76DA398990B6, password grant enabled on staging; account.signl4.com/identity advertises issuer=https://connect.signl4.com/identity (cross-host mint-mismatch) while exposing 5 EA scopes (reseller_portal, public_api_ea_manage, public_api_ea_alerting, mobile_api) + custom claims (subscription_id, branch_id, is_branch_manager, is_stakeholder, active); plain PKCE allowed (code_challenge_methods_supported: ["plain","S256"])
+evidence_needed: Valid client_secret for client_id 692A0A56-892F-4AE2-8259-76DA398990B6 to execute password grant on devconnect.signl4.com/identity/connect/token and present resulting token to api.signl4.com/api/v2/teams
+verify_steps: 1) GET https://account.signl4.com/identity/.well-known/openid-configuration (confirmed: issuer mismatch, plain PKCE, EA scopes) 2) GET https://devconnect.signl4.com/identity/.well-known/openid-configuration (confirmed: password grant enabled, same JWKS) 3) POST https://devconnect.signl4.com/identity/connect/token with grant_type=password&client_id=692A0A56-892F-4AE2-8259-76DA398990B6&client_secret=<secret>&scope=public_api_read public_api_write offline_access (AUTH_HELPED - requires client_secret) 4) GET https://api.signl4.com/api/v2/teams with Authorization: Bearer <token> (AUTH_HELPED)
+impact: Full cross-env token forgery → arbitrary SIGNL4 API access (alerts CRUD, teams, webhooks, subscriptions, schedules, users, categories, audits, distribution lists, templates, devices, callout templates) across all tenants; severity CRITICAL
+testability: AUTH_HELPED
+[HYP] Temporal auth-status flapping on api.signl4.com/api/v2/teams indicates deployment inconsistency
+class: MISCONFIG
+asset: api.signl4.com/api/v2/teams
+confidence: 70
+reasoning: 10th+ cycle observation of auth-status flapping between 405 (handler-deferred, unauth GET returns 405 Allow:GET,POST) and 401 (route-gated, unauth GET returns 401 WWW-Authenticate:Bearer); 6 consecutive probes at 1.2s intervals confirmed temporal flip (all 6 returned 401 with identical 0-byte body, then flipped back to 405); differs from V1/V2 handler-deferred pattern on connect.signl4.com; suggests mixed deployment slots or config drift on api host
+evidence_needed: Confirmation that flapping correlates with deployment slots / config versions rather than per-request routing
+verify_steps: 1) GET https://api.signl4.com/api/v2/teams (unauth) — observe 401 or 405 2) Repeat 10x at 1s intervals — confirm temporal consistency within session vs cross-cycle flipping 3) GET with invalid Bearer token — confirm same status as unauth 4) Compare with connect.signl4.com/api/v2/teams (should return 405 handler-deferred)
+impact: Auth-validation inconsistency could allow token acceptance gaps during deployment transitions; enables cross-env token forgery chain when combined with shared RS256 key; severity MEDIUM
+testability: PASSIVE
+[HYP] Newly-catalogued V2 API families (/v2/remoteActions, /v2/scripts, /v2/eventsources, /v2/st) may expose BOLA via path-based identifiers
+class: IDOR
+asset: connect.signl4.com/api/v2/remoteActions
+confidence: 55
+reasoning: Public V2 swagger.json (1,225,783 B) added 4 new route families since 2026-10-11; all 8 probed unauth GETs return 401/0-byte (auth-gated as expected); however V1/V2/V3 specs show handler-deferred auth pattern (unauth GET returns 405 on some routes) and path-based identifiers (teamId, subscriptionId, fileName, attachmentId) on file-download and bulk operations; BOLA potential if handler-level authorization only checks team membership not resource ownership
+evidence_needed: Authenticated access to enumerate route schemas (requestBody, path parameters) and test cross-tenant resource access with valid X-S4-Api-Key
+verify_steps: 1) GET https://connect.signl4.com/api/docs/v2/swagger.json (confirmed 200) 2) Parse components.schemas for new families — identify path parameters (teamId, subscriptionId, etc.) and write operations 3) With valid X-S4-Api-Key (AUTH_HELPED), test GET /api/v2/remoteActions/definitions/{id} with foreign teamId 4) Test PUT /api/v2/scripts/{scriptId} with cross-tenant scriptId
+impact: Cross-tenant BOLA on remote actions, scripts, event sources, or ST endpoints → unauthorized read/write of tenant-isolated resources; severity HIGH
+testability: AUTH_HELPED
+[PARKED] Cross-env token forgery via account IdP issuer mismatch + shared RS256 key + plain PKCE: confidence 85 but AUTH_HELPED — blocked on client_secret acquisition; no passive verification of cross-host token acceptance possible
+[PARKED] vps.signl4.com subdomain takeover via dangling A-record to GoDaddy shared host: confidence 75 but HUMAN_ONLY exploitability — no claimable takeover primitive from researcher seat; requires DNS/hosting-account control; transient HTTPS probe (000 vs 200) reduces reproducibility
+[PARKED] Webhook team-secret enumeration oracle enables credentialed access via leaked secrets: PASSIVE oracle confirmed (80), but full API compromise requires separate X-S4-Api-Key credential (webhook secret ≠ REST API key per live test); AUTH_HELPED for webhook-only vector
+[PARKED] eval() deserialization in 4 public EA 2-way REST plugins (BUSLOGIC, 90) — AUTH_HELPED, requires live EA tenant with 2-way integration configured
+[PARKED] Hardcoded SQL Server SA creds in public Derdack GitHub repo (AUTH, 95) — LIVE in derdack-oncall-holidayimport, unremediated 2+ years; requires network path to sqlserver.derdack-support.local (HUMAN_ONLY)
+[PARKED] Hardcoded Checkmk admin creds in public Derdack GitHub repo (AUTH, 90) — LIVE in derdack-plugin-checkmk, unremediated since 2024-05-27; requires network path to 192.168.88.107:8080 (HUMAN_ONLY)
+[FINAL] 1) Hardcoded SQL Server SA creds in public Derdack GitHub repo (AUTH, 95) — LIVE in derdack-oncall-holidayimport, unremediated 2+ years
+[FINAL] 2) eval() deserialization in 4 public EA 2-way REST plugins (BUSLOGIC, 90) — LIVE in derdack-plugin-checkmk + 3 others, RCE via callback injection
+[FINAL] 3) Live SIGNL4 team secret `vbguzfsi` in public GitHub repo enables webhook injection/resolution (AUTH, 100) — PASSIVE leak confirmed, live 201 response validated
+[FINAL] 4) Second live SIGNL4 team secret `96sbq38s` in public GitHub repos (AUTH, 90) — PASSIVE leak confirmed live via Content-Length:0 discriminator
+[FINAL] 5) Internal infrastructure hostname leak via EA WSDL on demo.enterprisealert.com (MISCONFIG, 95) — PASSIVE confirmed live, CWE-200 hygiene
+[FINAL] 6) Cross-env token forgery via account IdP issuer mismatch (AUTH, 85) — AUTH_HELPED, requires client_secret
+[FINAL] 7) Temporal auth-status flapping on api.signl4.com/api/v2/teams (MISCONFIG, 70) — deployment inconsistency, handler-deferred vs route-gated flip
+[FINAL] 8) Newly-catalogued V2 API families may expose BOLA via path-based identifiers (IDOR, 55) — AUTH_HELPED, requires valid X-S4-Api-Key
+[NEXT] HUMAN: Submit the 8 findings to bugs.olivermaicher.eu: (1) Derdack-oncall-holidayimport hardcoded SA creds (2) Derdack-plugin-checkmk hardcoded Checkmk creds + eval() RCE (3) SIGNL4 webhook secrets vbguzfsi + 96sbq38s in public repos (4) EA WSDL internal hostname leak on demo.enterprisealert.com (5) Cross-env token forgery chain (AUTH_HELPED) (6) api.signl4.com/api/v2/teams auth-status flapping (7) New V2 families BOLA potential (AUTH_HELPED) (8) vps.signl4.com subdomain takeover (HUMAN_ONLY)
+[LEARN] ACCEPTED AUTH @ github.com/Derdack: Brand-scoped RAG ("53 signl4/* repos") produced false "secrets exhausted" conclusion — sibling `github.com/Derdack` org was never scanned (reposcan: "TARGET_ORG not configured"), and it holds real hardcoded SA/Checkmk credentials; org coverage must be enumerated per-org, not per-brand
+[LEARN] ACCEPTED AUTH @ signl4/docs: Prior "placeholder-only" rejection was false negative — `vbguzfsi` and `96sbq38s` are live team webhook secrets (unsanitized in vendor docs). Webhook secret ≠ REST API key; use Content-Length:0 oracle is effective for validation without creating incidents.
+[LEARN] ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: Path-family probing of App-Proxy-fronted host recovered live EA sub-app (root-only status ≠ full-host status). Apply to future App-Proxy-fronted/multi-app hosts before declaring inert.
+[LEARN] ACCEPTED OTHER @ GitHub secret hunting: Status codes alone insufficient; hash bodies, use control paths, and read schemas (not just path lists). Query-matched controls prevent false positives when testing query params.
+[LEARN] REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
+[LEARN] REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are non-secret and non-actionable, and the program rejects descriptive-headers-only classes
+[LEARN] REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+[LEARN] REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there despite the host being App-Proxy fronted
+[LEARN] REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+[LEARN] REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is absent from the API gateway and the demo app; no alternative read surface remains for the AUTH_HELPED queue
+[LEARN] REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier disclosure is bounded at 2 of 8 hosts, not an estate-wide defect
+[LEARN] REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control only, not a vulnerability
+[LEARN] REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+[LEARN] REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
+[LEARN] ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+[RISK] derdack: 98 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=connect) against a byte-identical scope/grant surface (password/implicit/device_code/CIBA/token-exchange/plain-PKCE/JAR); account portal live-proves the OIDC client on that key family; events+webhook secrets double as REST API keys; every high-value vector (forgery, V1 userId IDOR, V2 changePassword, V3 invoice BOLA, prepaid/billing, EA WebService credential-in-URL) is handler-deferred AUTH_HELPED — full multi-tenant EA/SIGNL4 compromise sits one leaked client_secret/API-key/team-secret away; this cycle confirmed introspection/revocation routing parity across all 6 ingresses, DPoP advertised but not enforced at gateway, prepaid body-identifier hypothesis refuted repo-wide. CRITICAL: Real SIGNL4 team secrets `vbguzfsi` and `96sbq38s` committed to public GitHub repos by staff (github.com/signl4/docs, pushed 2026-10-08; github.com/signl4/integrations, pushed 2026-10-08) — direct credential leaks enabling immediate webhook injection/resolution (validated 201). CRITICAL: github.com/Derdack org (12 repos) never scanned until 2026-10-13 — contains hardcoded SQL Server SA creds `sa:Derdack!` @ internal hostname `sqlserver.derdack-support.local` and Checkmk admin creds `cmkadmin:CNlydVqZ` @ internal IP `192.168.88.107:8080` — unremediated 2-4 years. CRITICAL: 4 public EA 2-way REST plugins use `eval()` on attacker-controlled callback data — RCE vector. CRITICAL: demo.enterprisealert.com/EAWebService exposes full EA 9.5 web portal with credential-in-URL SOAP/REST API completely untested for auth bypass. vps.signl4.com dangling A-record enables subdomain takeover (HUMAN_ONLY).
+=====BIGPICKLE=====
+## 2026-10-15 18:45:30 UTC [target] (model bigpickle)
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match 
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended conventi
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
+[CHANGED] triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique blocks recoverable vs 0 before), valid-bugs tail in triage prompt, PROBE_ALLOW widened to signl4.com|enterprisealert.com
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+class: MISCONFIG
+asset: https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+confidence: 85
+reasoning: WSDL returns 200 with sha256 e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae and contains internal SOAP address https://ereesus/EAWebService/EventProviderAPI.asmx. Exposes internal network hostname configuration in publicly accessible WSDL.
+evidence_needed: SHA256 verification of WSDL content (already performed).
+verify_steps: curl -s "https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl" | sha256sum matches e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae; grep -q "ereesus" in response.
+impact: Internal hostname disclosure (information leakage) from publicly accessible demo environment. Can aid network reconnaissance. Severity LOW-MEDIUM.
+testability: PASSIVE
+[PARKED] Cross-env token forgery chain via shared JWKS across 6 identity hosts (client_id 692A0A56-892F-4AE2-8259-76DA398990B6) - requires legitimate client_secret (AUTH_HELPED), not pursued for automated triage.
+[PARKED] vps.signl4.com dangling A record (72.167.227.27, GoDaddy shared host) - HUMAN_ONLY takeover assessment.
+[PARKED] EA credential-gated endpoints - auth enforced, no unauth mutating primitive found by passive probes.
+[FINAL] 5 findings ready for submission to bugs.olivermaicher.eu. Findings include credential leaks in public Git repos (SQL SA + Checkmk admin + 2 webhook secrets) and EA WSDL internal hostname disclosure.
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential 
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+class: AUTH
+asset: https://github.com/Derdack/derdack-oncall-holidayimport
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+class: AUTH
+asset: https://github.com/Derdack/derdack-plugin-checkmk/blob/
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+class: AUTH
+asset: https://github.com/signl4/docs/blob/main/integrations/d
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+class: AUTH
+asset: https://github.com/signl4/signl4-integration-google-iot
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+class: MISCONFIG
+asset: https://demo.enterprisealert.com/EAWebService/EventProviderAPI.
+[HYP] [UNVALIDATED] alpha
+class: AUTH
+asset: a
+confidence: 55
+[HYP] [UNVALIDATED] beta
+class: IDOR
+asset: b
+confidence: 61
+[HYP] [UNVALIDATED] alpha$
+class: AUTH$
+asset: a$
+confidence: 55$
+[HYP] [UNVALIDATED] beta$
+class: IDOR$
+asset: b$
+confidence: 61$
+[HYP] [UNVALIDATED] beta
+class: IDOR
+asset: b
+confidence: 61
+[HYP] [UNVALIDATED] alpha$
+class: AUTH$
+asset: a$
+confidence: 55$
+[HYP] [UNVALIDATED] beta$
+class: IDOR$
+asset: b$
+confidence: 61$
+[CHANGED] opencode/mimo-v2.5-free (triage model) fails UnknownError on a trivial PONG prompt — root cause of ≥59 consecutive failed Triager runs is model-side; also dead: longcat-2.0-free, laguna-s-2.1-free, ling-3.0-flash-free; working: nemotron-3-ultra-free, big-pickle (4/6 fleet models dead)
+[CHANGED] frozen evidence re-verified live 2026-10-15 14:44-14:48 UTC, byte-identical: JWKS 6/6 hosts sha256=96c931f2 kid 91EE4F3C; account+api issuer still connect.signl4.com/identity; password grant on all 6, no registration_endpoint; swagger 1225783 B sha 837b34ca; EA WSDL 29968 B sha e8b753f2; vbguzfsi/96sbq38s/sa:Derdack!/cmkadmin:CNlydVqZ all present in public GitHub raw (default_branch read first: Derdack=master, signl4=main)
+[CHANGED] Derdack org 12 repos last push 2024-05-27, signl4 org 53 repos last push 2026-10-14T11:40 — no new commits since prior cycle; no new secrets surface
+[CHANGED] triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique blocks recoverable vs 0 before), valid-bugs tail in triage prompt, PROBE_ALLOW widened to signl4.com|enterprisealert.com
+[NEW] triage lead gate previously fed only title/prose lines; full-schema extraction tested against leads/lead-*.md — 9 unique blocks, 6 carrying class/asset/confidence/verify_steps
+[PRIO] github.com/Derdack 6.45 | connect.signl4.com 6.30 | api.signl4.com 7.30 — all re-probed this cycle, zero drift, no remaining passive surface
+[HYP] none net-new — full estate (identity JWKS/OD, swagger, EA WSDL, GitHub secret files, dangling vps DNS) re-verified byte-stable; every prior class REJECTED or already frozen as FINAL
+[FINAL] 1. Live SIGNL4 team webhook secrets vbguzfsi/96sbq38s (AUTH, HIGH)
+[FINAL] 2. Public Derdack org hardcoded SA + Checkmk creds (AUTH, HIGH)
+[0m
+The file is in reports/ dir. Let me read the actual hypotheses files. Let me look at the reports directory and the lead files.</think>
+[0m$ [0mgit log --oneline -15 && echo "---status---" && git status --short | head -30
+c57a5b1 triage 2026-10-15-20-00
+---status---
+?? analyst-out.txt
+?? analyst-prompt.txt
+?? ctx.txt
+[0m
+[0m$ [0mls -la scripts/ && echo "---" && cat README.md
+total 28
+drwxr-xr-x  2 runner runner  4096 Oct 15 21:44 .
+drwxr-xr-x 12 runner runner  4096 Oct 15 21:44 ..
+-rw-r--r--  1 runner runner 16987 Oct 15 21:44 sync-issues.py
+---
+# derdack-hunt
+
+24/7 deep multi-model bug-hunting automation for **Derdack GmbH / Derdack Group** (Oliver Maicher bug-bounty hub).
+
+Scope: All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert
+(full exclusion + rules list in `scope.yml`)
+
+Pipeline (all workflows run every 20 minutes):
+
+- **Deep Hunt** (`hunt.yml`): analyst hunts the discovered inventory + hypotheses, emits structured
+  leads, chains primitives, self-critiques. Models: mimo.
+- **Triager** (`triage.yml`): second-model 7-Question Gate validation + live passive probe; keeps
+  running count in `reports/valid-bugs.md`.
+- **Reposcan** (`reposcan.yml`): deep source scan of any public GitHub org (if configured).
+- **Sync Issues** (`sync-issues.yml`): mirrors leads to GitHub issues.
+
+Testing discipline: rate-limited (1 rps), no DoS/account-lockout, writes only on non-prod/test
+assets, no exposure of customer/employee/financial/auth data, secrets committed only as hashes.
+
+> IMPORTANT: the pipeline produces CANDIDATE leads. A reportable, validated finding requires
+> human triage + proof against the program's gate. No finding is fabricated; scanner output alone
+> is never accepted. Active testing is gated behind the in-scope hosts in `inventory/derdack.md` and
+> must stay within the program's published scope.
+
+Artifacts:
+
+| Artifact | Purpose |
+|---|---|
+| `leads/` | Candidate findings (UNVALIDATED) |
+| `triage/` | Validation verdicts |
+| `reports/valid-bugs.md` | Validated findings + running count |
+| `scope.yml` | Program scope and exclusions (edit to adjust) |
+
+Program description: German software company providing mobile alerting, incident response, and enterprise notification solutions
+[0m
+[0m$ [0mcat reports/valid-bugs.md 2>/dev/null | head -40; echo "=== knowledge ==="; ls knowledge/ recon-notes/ inventory/
+# Validated findings (running count 0)
+
+- 2 lead(s) marked VALID at 2026-09-03 23:20:09 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 3 lead(s) marked VALID at 2026-09-04 17:46:22 UTC
+  - | Q7 Reasonable triager? | **Yes** | Information disclosure of sensitive file paths on a live dev host is a valid finding |
+  - **Verdict: VALID**
+  - | dev.derdack.com MultiViews path disclosure | **VALID** | 5.3 | Report to bugs.olivermaicher.eu |
+
+- 1 lead(s) marked VALID at 2026-09-05 13:31:45 UTC
+  - Please paste the lead(s) you want me to triage, and I'll run each through the 7-Question Gate with verdict, reasoning, and (if VALID) proof steps, impact, CVSS 3.1, and reporting channel.
+
+- 2 lead(s) marked VALID at 2026-09-06 06:28:40 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 2 lead(s) marked VALID at 2026-09-08 10:34:26 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+
+- 4 lead(s) marked VALID at 2026-09-09 06:38:04 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+  - | 1 | Cross-Env JWKS Key + Client/Scope Reuse | **VALID** | 7.4 |
+  - | 6 | Staging IdP Directly Reachable | **VALID** | 6.5 |
+
+- 4 lead(s) marked VALID at 2026-09-10 10:37:58 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | Q7 Reasonable triager? | Yes — hardcoded real secrets in public code is a standard valid finding |
+  - **Verdict: VALID**
+
+- 14 lead(s) marked VALID at 2026-09-11 05:08:59 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: HOLD** — valid code defect, but impact gated on EA Scripting Host deployment and attacker ability to control event parameters; needs confirmatory evidence of production deployment
+  - **Verdict: HOLD** — valid code defect, but impact requires confirmation that parameters originate from external/user input in production
+  - **Verdict: VALID**
+=== knowledge ===
+inventory/:
+derdack.md
+
+knowledge/:
+index.md
+
+recon-notes/:
+DEDICATED-DEEP.md
+[0m
+The state is clear. The passive surface is exhausted. All findings are frozen/final. The main NEXT is a HUMAN submission action.
+
+This is a bug bounty hunt loop. The current cycle just started. Let me follow the 8-step loop. But before I do anything, I should assess whether there's actually a productive next step, or whether the loop has converged.
+
+Let me think about what the user is asking. The user said "What did we do so far?" and then "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed."
+
+So I'm being asked to continue the hunt loop. The state says everything is exhausted and the next action is a HUMAN submission. 
+
+Given the probe rules (≤1 rps, GET/HEAD/OPTIONS only, passive-first), and that the surface is exhausted, the most valuable thing I can do is verify whether the frozen findings still hold and execute the NEXT. But submission is a HUMAN action (I can't actually submit to bugs.olivermaicher.eu - that requires a human).
+
+Let me run the actual hunt cycle to see what the tooling produces. Let me look at the scripts/ directory and understand the loop.
+
+Actually, let me reconsider. This appears to be an automated agent loop scenario. The instruction is to continue if I have next steps. My next step per the state is the HUMAN submission, which I cannot do. The secondary next step is static re-analysis of the changed V2 swagger.
+
+Let me do the productive passive work: re-verify the frozen evidence and do the static swagger diff. But wait — I should be careful about token/time budget. Let me check what tools/scripts are available.
+
+Let me look at scripts/ and the workflow to understand the loop mechanics.</think>
+[0m$ [0msed -n '1,120p' .github/workflows/hunt.yml
+name: Deep Hunt (Derdack GmbH / Derdack Group)
+
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+env:
+  PROBE_ALLOW: "derdack.com"
+
+jobs:
+  analyst:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: hunt-derdack-${{ matrix.model.name }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        model:
+          - { id: opencode/big-pickle, name: bigpickle }
+          - { id: opencode/nemotron-3-ultra-free, name: nemotron3 }
+          - { id: opencode/longcat-2.0-free, name: longcat }
+          - { id: opencode/ling-3.0-flash-free, name: ling3 }
+          - { id: opencode/laguna-s-2.1-free, name: laguna }
+    env:
+      MODEL_ID: ${{ matrix.model.id }}
+      OPENCODE_REASONING: xhigh
+      MODEL_NAME: ${{ matrix.model.name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install OpenCode
+        run: |
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          if command -v opencode >/dev/null 2>&1; then opencode --version; exit 0; fi
+          npm install -g opencode-ai 2>/dev/null || npm install -g --prefix "$HOME/.npm-global" opencode-ai 2>/dev/null || true
+          if ! command -v opencode >/dev/null 2>&1; then
+            for i in 1 2 3; do
+              curl -fsSL https://opencode.ai/install | bash && break
+              echo "opencode.ai installer attempt $i failed, retrying in 15s..."
+              sleep 15
+            done
+          fi
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          opencode --version
+
+      - name: Prepare context (RAG + state + inventory + last cycle)
+        run: |
+          mkdir -p knowledge inventory leads reports
+          [ -f knowledge/index.md ] || echo "# Knowledge Base (seed)" > knowledge/index.md
+          [ -f state_${MODEL_NAME}.json ] || echo '{"phase":"RECON","target":"api"}' > state_${MODEL_NAME}.json
+          {
+            echo "=== KNOWLEDGE BASE ==="
+            cat knowledge/index.md
+            echo "=== MY STATE ==="
+            cat state_${MODEL_NAME}.json
+            echo "=== MY LAST LEADS (tail) ==="
+            tail -60 leads/lead-${MODEL_NAME}.md 2>/dev/null || echo none
+            echo "=== AGGREGATED HYPOTHESES (tail) ==="
+            tail -40 reports/hypotheses.md 2>/dev/null || echo none
+            echo "=== INVENTORY derdack ==="
+            cat inventory/derdack.md 2>/dev/null || echo none
+          } > ctx.txt
+
+      - name: Analyst run (deep-hunt methodology)
+        run: |
+          cat ctx.txt > analyst-prompt.txt
+          cat >> analyst-prompt.txt << 'PROMPT_EOF'
+          You are a senior bug bounty hunter ANALYST for the Derdack GmbH / Derdack Group program (report channel: bugs.olivermaicher.eu).
+          Eligible in-scope assets (ONLY these, from scope.yml + inventory/derdack.md): All company-owned infrastructure, websites, APIs, SaaS platforms, mobile applications, backend systems, status pages, and domains operated by Derdack GmbH and its products, including SIGNL4 and Enterprise Alert
+          Deep-hunt directives:
+          - Prioritize HIGH-VALUE classes: broken auth/session, IDOR/BOLA, SSRF-to-cloud-metadata (169.254.169.254), mass assignment, JWT alg/key confusion, OAuth redirect_uri/state flaws, business logic on money/auth flows, file upload, GraphQL introspection+mutations, subdomain takeover.
+          - CHAIN aggressively: open redirect -> OAuth code theft -> ATO; IDOR -> cross-tenant PII dump; SSRF -> metadata -> keys; XSS -> session theft -> ATO.
+          - Request-level reasoning: exact METHOD path params headers body, expected vs actual status. No filler.
+          - Breadth over the full inventory for anomalies (odd status codes, id/uid/email/user_id params, versioned /api/v1|v2|beta|internal, debug/test flags, swagger/openapi/json), then depth on top-3 anomalies.
+          - If a hypothesis needs live confirmation you cannot do passively, emit [NEXT] PROBE with the EXACT read-only request.
+          OUT OF SCOPE (REJECTED classes): network DoS, account-lockout DoS, descriptive errors/headers only, robots.txt / known public files, outdated library versions, OPTIONS/TRACE, CSRF on logout or anonymous forms, cookie flags on non-sensitive data, self-XSS, scanner reports without POC, physical access, social engineering of employees/vendors, username enumeration on login/forgot-password, brute-force/rate-limit/lockout policy, SSL/TLS best practice, SSL attacks, clickjacking without demonstrated exploit, mail config (SPF/DKIM/DMARC), known-vulnerable library without program-specific exploit, password/account-recovery policy, autocomplete in fields, public login panels, lack of email verification, session control during email/password change, and any exposure of customer/employee/financial/authentication data during testing (program note). Focus on real logic flaws in scoped assets.
+          Your job is NOT to invent vulnerabilities. Run the 8 steps and output ONLY structured blocks.
+
+          STEP 1 — DELTA: compare inventory+knowledge+last leads against current surface. [NEW]/[CHANGED] one line each, or NO_DELTA.
+          STEP 2 — PRIORITIZE: score top new (or existing) assets 0-10 on attack_surface, business_value, tech_exposure (GraphQL/OAuth/JWT/upload/admin/uncommon), gate_ease (10=no auth), cloud_surface, freshness. priority=0.25a+0.25b+0.15t+0.15g+0.10c+0.10f. Emit [PRIO] asset,score,axis.
+          STEP 3 — HYPOTHESES: top 3 assets, max 1 hypothesis each. Strict schema, one field per line under [HYP] title line:
+          [HYP] <title>
+          class: <IDOR|SSRF|AUTH|XSS|BUSLOGIC|MISCONFIG|OATH|OTHER>
+          asset: <host/endpoint>
+          confidence: <0-100>
+          reasoning: <facts only>
+          evidence_needed: <what proves it>
+          verify_steps: <passive-first concrete HTTP requests>
+          impact: <what attacker gets + severity>
+          testability: <PASSIVE|AUTH_HELPED|HUMAN_ONLY>
+          Never put fields inline in the [HYP] title.
+          STEP 4 — SELF-CRITIQUE: drop confidence<40 or REJECTED-class or no-verify-steps. [PARKED] <title>: <why>. [FINAL] survivors ranked.
+          STEP 5 — NEXT ACTION: exactly one [NEXT] <PROBE|SCAN|RAG|HUMAN>: <one concrete action, exact endpoint if PROBE>.
+          STEP 6 — LEARNING: [LEARN] REJECTED/ACCEPTED <class> @ <asset>: <reason>.
+          STEP 7 — RISK: [RISK] <program>: <0-100> reason.
+          RULES: facts vs hypotheses strictly separated; no endpoint-map-only; no REJECTED class; sha256 any secret; all claims trace to context or your own read-only probes; passive-first, <=1 rps, GET/HEAD/OPTIONS only for live probes; no auth-bypass or mutating tests against live customer data; any scanner output requires manual validation.
+          PROMPT_EOF
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          timeout -k 15 20m opencode run --model "$MODEL_ID" < analyst-prompt.txt > analyst-out.txt 2>&1 || true
+          cp analyst-out.txt analyst-${MODEL_NAME}.out
+          grep -E '^\[(NEW|CHANGED|PRIO|HYP|PARKED|FINAL|NEXT|LEARN|RISK)\]|^class:|^confidence:|^asset:|^impact:|^testability:|^verify_steps:|^reasoning:|^evidence_needed:' analyst-out.txt > lead.txt || true
+          {
+            echo "## $(date -u +'%Y-%m-%d %H:%M:%S UTC') [target] (model ${MODEL_NAME})"
+            cat lead.txt
+          } > lead_${MODEL_NAME}.txt
+          echo "lead bytes: $(wc -c < lead.txt) | raw bytes: $(wc -c < analyst-out.txt)"
+
+      - name: Upload model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: analyst-${{ matrix.model.name }}
+          path: |
+[0m
+Let me focus. The state is that the passive surface is exhausted and all findings are frozen. The main next step is a HUMAN submission, which I cannot execute.
+
+Let me actually run the productive passive task from the Next Move: static re-analysis of the changed V2 swagger — diff new paths requestBodies for tenant/ID params, zero new requests.
+
+Let me fetch the swagger and analyze it. Actually, I can fetch it (it's a public spec). But the state says it's already fetched and sha is 837b34ca. Let me re-fetch and analyze the new families for BOLA/IDOR parameters — this is zero-risk passive analysis.
+
+Let me do that. Fetch the V2 swagger and parse it.
+
+Actually, let me be judicious about network usage. The rules say ≤1 rps, GET/HEAD/OPTIONS only. Fetching a public swagger spec is fine.
+
+Let me find the swagger URL. From the state: `api.signl4.com/api/docs/v2/swagger.json`. Let me fetch and analyze.
+
+But wait — the analyst-prompt.txt is 799KB which is the actual prompt. Let me check if there's a specific required output format I should follow. Let me look at the workflow to understand what output is expected.
+
+Let me read the hunt.yml workflow.</think>
+[0m$ [0msed -n '1,90p' .github/workflows/triage.yml
+name: Triager (Derdack GmbH / Derdack Group)
+
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PROBE_ALLOW: "derdack.com"
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: triage-derdack
+      cancel-in-progress: true
+    env:
+      MODEL_ID: opencode/mimo-v2.5-free
+      OPENCODE_REASONING: xhigh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install OpenCode
+        run: |
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          if command -v opencode >/dev/null 2>&1; then opencode --version; exit 0; fi
+          npm install -g opencode-ai 2>/dev/null || npm install -g --prefix "$HOME/.npm-global" opencode-ai 2>/dev/null || true
+          if ! command -v opencode >/dev/null 2>&1; then
+            for i in 1 2 3; do
+              curl -fsSL https://opencode.ai/install | bash && break
+              echo "opencode.ai installer attempt $i failed, retrying in 15s..."; sleep 15
+            done
+          fi
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          opencode --version
+
+      - name: Collect UNVALIDATED leads
+        run: |
+          mkdir -p triage reports
+          grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25 > new-leads.txt
+          echo "unvalidated leads: $(wc -l < new-leads.txt)"
+
+      - name: Passive live probe of endpoint leads (rate-limited)
+        run: |
+          : > probe-results.txt
+          grep -oE 'https?://[a-zA-Z0-9._/-]+' new-leads.txt | sort -u | head -20 | while read -r url; do
+            host=$(echo "$url" | sed -E 's|https?://([^/]+).*|\1|')
+            if echo "$host" | grep -qiE '(derdack.com)'; then
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -A 'Mozilla/5.0 (passive research probe)' -H 'Range: bytes=0-1' "$url" 2>/dev/null || echo TIMEOUT)
+              echo "$code $url" >> probe-results.txt
+              sleep 1
+            fi
+          done
+          cat probe-results.txt
+
+      - name: Validate with second model (7-Question Gate)
+        run: |
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          cat > triage-prompt.txt << 'PROMPT_START'
+          You are a strict triager for the Derdack GmbH / Derdack Group program (bugs.olivermaicher.eu). A hunt bot produced leads below. Validate each against the 7-Question Gate. Answer all 7 per lead, verdict VALID / INVALID / HOLD with one-line reason. For VALID: state minimal read-only proof steps, impact, CVSS 3.1, reporting channel.
+          Out-of-scope reminders: no DoS/account-lockout, no exposure of customer/employee/financial/auth data during testing, no social engineering, no vendor/employee-targeted attacks. Passive-first proof.
+          Q1 In program scope (asset from scope.yml/inventory/derdack.md)?
+          Q2 Attacker reachable (public/unauth/low-priv)?
+          Q3 Real security impact?
+          Q4 Provable non-invasively?
+          Q5 Genuinely novel/unreported?
+          Q6 Not on always-rejected list?
+          Q7 Would a reasonable triager accept it?
+          PROBE RESULTS (passive per url):
+          PROMPT_START
+          cat probe-results.txt >> triage-prompt.txt
+          echo "" >> triage-prompt.txt
+          echo "LEADS:" >> triage-prompt.txt
+          cat new-leads.txt >> triage-prompt.txt
+          timeout -k 15 15m opencode run --model "$MODEL_ID" < triage-prompt.txt > triage-output.txt 2>&1 || true
+          echo "=== triage preview ==="; head -40 triage-output.txt
+
+      - name: Update valid-bugs counter
+        run: |
+          mkdir -p triage reports
+          {
+            echo ""
+            echo "===== TRIAGE $(date -u +'%Y-%m-%d %H:%M:%S UTC') ====="
+            cat triage-output.txt
+          } >> triage/run-$(date -u +'%Y-%m-%d-%H-%M').md
+[0m
+[0m$ [0mfind . -iname '*swagger*' -o -iname '*openapi*' 2>/dev/null | grep -v '\.git/' | head; echo "---triage dir count---"; ls triage/ | wc -l; ls triage/ | tail -5
+---triage dir count---
+258
+run-2026-10-15-01-45.md
+run-2026-10-15-06-34.md
+run-2026-10-15-11-59.md
+run-2026-10-15-16-24.md
+run-2026-10-15-20-00.md
+[0m
+[0m$ [0mcat inventory/derdack.md 2>/dev/null | head -60
+# Derdack GmbH / Derdack Group inventory (discovery seed 2026-09-02)
+# NOTE: hosts below are discovery candidates from passive DNS/CT; confirm in-scope vs program scope before active testing.
+blog.derdack.com
+de.derdack.com
+derdack.com
+dev.derdack.com
+signals.derdack.com
+signl4.derdack.com
+techblog.derdack.com
+www.de.derdack.com
+www.derdack.com
+
+## PASSIVE RECON 2026-09-02 (read-only, non-intrusive)
+
+> Recon observations only. These are NOT confirmed vulnerabilities; ownership/in-scope of each host must be confirmed against the program scope before any active testing. Hosts resolve + serve HTTP — investigation requires scoped authorization.
+
+**Probed:** 9 hosts | **Live HTTP:** 0
+
+| Host | Status | Server/Tech |
+|---|---|---|
+
+## 2026-09-02 21:30:24 UTC
+
+## 2026-09-02 23:34:05 UTC
+
+## 2026-09-03 01:27:36 UTC
+
+## 2026-09-03 06:47:03 UTC
+
+## 2026-09-03 11:44:06 UTC
+
+## 2026-09-03 15:38:51 UTC
+- NEW 9 hosts discovered via passive DNS/CT, 0 probed for live HTTP — initial surface unvalidated
+- NEW No GitHub org configured for reposcan — code-level recon gap
+- NEW Knowledge base empty — no prior tech fingerprint, endpoint map, or auth flow data
+
+## 2026-09-03 19:05:04 UTC
+- NEW nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+- CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+- NEW dev.derdack.com /.well-known/openid-configuration returns 300 Multiple Choices with directory traversal suggestions (/.ssh/, /.bash_history/, /.viminfo/) — misconfiguration confirmed
+- NEW signl4.derdack.com (AWS 13.94.244.66) connection timeout on HTTP/HTTPS — SaaS platform unreachable, likely firewall/WAF
+- NEW signals.derdack.com NXDOMAIN — subdomain does not exist, hypothesis invalid
+- NEW blog.derdack.com & techblog.derdack.com redirect via HTTP (not HTTPS) to www.derdack.com — mixed content / downgrade risk
+- NEW de.derdack.com / www.de.derdack.com return 403 with sedoparking.com iframe — parked domain, not Derdack infrastructure
+- CHANGED Inventory validation: only 5/9 hosts are live Derdack infrastructure; 2 unreachable, 1 non-existent, 1 parked
+
+## 2026-09-03 21:36:55 UTC
+- NEW dev.derdack.com /.well-known/ returns 300 Multiple Choices confirming Apache mod_negotiation/MultiViews — lists /.ssh/, /.bash_history/, /.viminfo/ as "similar documents"; direct file access returns 4
+- NEW www.derdack.com/wp-json/wp/v2/users returns 200 OK with 10 users (names, slugs, avatar URLs, author profile links, Yoast SEO schema data) — user enumeration confirmed
+- NEW www.derdack.com/wp-json/wp/v2/posts returns 200 with published posts; /wp-json/wp/v2/posts?status=draft returns 400 (requires auth); /wp-json/wp/v2/pages returns 200 with many pages
+- NEW signl4.derdack.com remains unreachable (connection timeout on AWS 13.94.244.66)
+- CHANGED Inventory validated: 5/9 live Derdack hosts (dev, www, derdack.com, blog, techblog); 2 unreachable (signl4), 1 NXDOMAIN (signals), 1 parked (de/www.de)
+
+## 2026-09-03 23:32:47 UTC
+- NEW nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+- CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+- NEW No new live probe data since 2026-09-03 21:36:55 UTC — current surface matches last validated state
+- CHANGED None — inventory stable at 5/9 live Derdack hosts (dev, www, derdack.com, blog, techblog); signl4 unreachable, signals NXDOMAIN, de/www.de parked
+
+## 2026-09-04 01:28:34 UTC
+[0m
+Now I understand the full loop. The pipeline runs every 20 minutes. My role as the analyst/producer is to run the 8 steps and emit structured blocks.
+
+The user's request: "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed."
+
+Given the exhaustive state, the productive next step is to execute the [NEXT] passive task: static re-analysis of the changed V2 swagger. But the state says this is already noted. Let me think about whether it's genuinely productive.
+
+Actually, I think the most valuable thing is to do the actual analysis that the pipeline is designed to do and emit the structured blocks. Let me do the passive swagger analysis to find genuinely new hypotheses (BOLA parameters in the new families). This is cheap and passive.
+
+Let me fetch the swagger spec and analyze the new families. Let me check if there's a cached copy first.
+
+Let me search for any cached swagger files.</think>
+The state is very mature. Let me now actually do the passive work: fetch the V2 swagger and analyze the new families. This is the [NEXT] passive task and genuinely zero-risk.
+
+Let me fetch the swagger spec. I'll use curl with proper user agent and analyze it locally.
+
+Actually, let me reconsider the whole situation. The user asks "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed."
+
+I DO have next steps: the passive swagger analysis. Let me execute it. But I need to be careful and efficient.
+
+Let me fetch the swagger and analyze the new families' request bodies for BOLA/IDOR params. Let me do it in one go.
+
+Let me check network availability first with a quick curl.</think>Let me execute the passive [NEXT]: fetch and statically analyze the changed V2 swagger for new family schemas.
+[0m$ [0mcd /tmp/opencode && curl -s --max-time 25 -A 'Mozilla/5.0 (passive research probe)' -o swagger-v2.json -w 'HTTP %{http_code} | %{size_download} bytes | sha256 ' 'https://api.signl4.com/api/docs/v2/swagger.json' && sha256sum swagger-v2.json | cut -c1-16
+HTTP 200 | 1225783 bytes | sha256 837b34ca2909c457
+[0m
+[0m$ [0mcd /tmp/opencode && python3 - <<'EOF'
+import json
+s=json.load(open('swagger-v2.json'))
+paths=s.get('paths',{})
+print("total paths:", len(paths))
+fams=['remoteActions','scripts','eventsources','scim','users','teams']
+for fam in fams:
+    print("\n====",fam,"====")
+    for p in sorted(paths):
+        if ('/'+fam) in p or p.strip('/').startswith(fam):
+            for m,op in paths[p].items():
+                if m in ('get','post','put','patch','delete'):
+                    params=[(q.get('name'),q.get('in'),q.get('required')) for q in op.get('parameters',[])]
+                    print(f"  {m.upper():6} {p}  params={params}  opId={op.get('operationId')}")
+EOF
+total paths: 190
+
+==== remoteActions ====
+  GET    /v2/remoteActions  params=[('teamId', 'query', None), ('externalId', 'query', None), ('type', 'query', None), ('executorService', 'query', None), ('language', 'query', None)]  opId=None
+  POST   /v2/remoteActions  params=[('language', 'query', None)]  opId=None
+  GET    /v2/remoteActions/definitions  params=[('language', 'query', None)]  opId=None
+  GET    /v2/remoteActions/definitions/{definitionId}  params=[('definitionId', 'path', True), ('language', 'query', None)]  opId=None
+  POST   /v2/remoteActions/journal/paged  params=[('maxResults', 'query', None), ('language', 'query', None)]  opId=None
+  GET    /v2/remoteActions/journal/{jobId}  params=[('jobId', 'path', True), ('language', 'query', None)]  opId=None
+  GET    /v2/remoteActions/{actionId}  params=[('actionId', 'path', True), ('language', 'query', None)]  opId=None
+  PUT    /v2/remoteActions/{actionId}  params=[('actionId', 'path', True), ('language', 'query', None)]  opId=None
+  DELETE /v2/remoteActions/{actionId}  params=[('actionId', 'path', True)]  opId=None
+  POST   /v2/remoteActions/{actionId}/jobs  params=[('actionId', 'path', True)]  opId=None
+
+==== scripts ====
+  GET    /v2/scripts/instances  params=[('teamId', 'query', None), ('modifiedSince', 'query', None)]  opId=None
+  POST   /v2/scripts/instances  params=[]  opId=None
+  GET    /v2/scripts/instances/{instanceId}  params=[('instanceId', 'path', True)]  opId=None
+  PUT    /v2/scripts/instances/{instanceId}  params=[('instanceId', 'path', True)]  opId=None
+  DELETE /v2/scripts/instances/{instanceId}  params=[('instanceId', 'path', True)]  opId=None
+  PUT    /v2/scripts/instances/{instanceId}/data  params=[('instanceId', 'path', True)]  opId=None
+  POST   /v2/scripts/instances/{instanceId}/disable  params=[('instanceId', 'path', True)]  opId=None
+  POST   /v2/scripts/instances/{instanceId}/enable  params=[('instanceId', 'path', True)]  opId=None
+  GET    /v2/scripts/inventory  params=[]  opId=None
+  GET    /v2/scripts/inventory/parsed  params=[('language', 'query', None)]  opId=None
+  GET    /v2/scripts/inventory/parsed/{scriptId}  params=[('scriptId', 'path', True), ('language', 'query', None)]  opId=None
+
+==== eventsources ====
+  GET    /v2/eventsources  params=[('teamId', 'query', None), ('includeInternal', 'query', None), ('language', 'query', None)]  opId=None
+  POST   /v2/eventsources  params=[]  opId=None
+  GET    /v2/eventsources/{eventSourceId}  params=[('eventSourceId', 'path', True), ('language', 'query', None)]  opId=None
+  PUT    /v2/eventsources/{eventSourceId}  params=[('eventSourceId', 'path', True)]  opId=None
+  DELETE /v2/eventsources/{eventSourceId}  params=[('eventSourceId', 'path', True)]  opId=None
+
+==== scim ====
+  POST   /v2/scim/apiKey  params=[]  opId=None
+  GET    /v2/scim/settings  params=[]  opId=None
+  PUT    /v2/scim/settings  params=[]  opId=None
+  GET    /v2/scim/status  params=[]  opId=None
+
+==== users ====
+  GET    /v2/teams/users  params=[('teamId', 'query', None)]  opId=None
+  GET    /v2/users  params=[]  opId=None
+  GET    /v2/users/availableRoles  params=[]  opId=None
+  POST   /v2/users/overview  params=[('maxResults', 'query', None)]  opId=None
+  GET    /v2/users/overview/{userId}  params=[('userId', 'path', True)]  opId=None
+  DELETE /v2/users/{userGuid}  params=[('userGuid', 'path', True)]  opId=None
+  GET    /v2/users/{userId}  params=[('userId', 'path', True)]  opId=None
+  GET    /v2/users/{userId}/absences  params=[('userId', 'path', True)]  opId=None
+  POST   /v2/users/{userId}/absences  params=[('userId', 'path', True)]  opId=None
+  POST   /v2/users/{userId}/absences/setAll  params=[('userId', 'path', True)]  opId=None
+  GET    /v2/users/{userId}/absences/{id}  params=[('userId', 'path', True), ('id', 'path', True)]  opId=None
+  PUT    /v2/users/{userId}/absences/{id}  params=[('userId', 'path', True), ('id', 'path', True)]  opId=None
+  DELETE /v2/users/{userId}/absences/{id}  params=[('userId', 'path', True), ('id', 'path', True)]  opId=None
+  PUT    /v2/users/{userId}/changePassword  params=[('userId', 'path', True)]  opId=None
+  POST   /v2/users/{userId}/checkPermissions  params=[('userId', 'path', True)]  opId=None
+  POST   /v2/users/{userId}/checkSubscriptionPermissions  params=[('userId', 'path', True)]  opId=None
+  DELETE /v2/users/{userId}/contactAddresses/{addressId}  params=[('userId', 'path', True), ('addressId', 'path', True)]  opId=None
+  GET    /v2/users/{userId}/dutyStatus  params=[('userId', 'path', True), ('teamId', 'query', None)]  opId=None
+  GET    /v2/users/{userId}/image  params=[('userId', 'path', True), ('height', 'query', None), ('width', 'query', None)]  opId=None
+  POST   /v2/users/{userId}/image  params=[('userId', 'path', True)]  opId=None
+  DELETE /v2/users/{userId}/image  params=[('userId', 'path', True)]  opId=None
+  PUT    /v2/users/{userId}/locale  params=[('userId', 'path', True)]  opId=None
+  POST   /v2/users/{userId}/location  params=[('userId', 'path', True)]  opId=None
+  GET    /v2/users/{userId}/notificationProfiles  params=[('userId', 'path', True)]  opId=None
+  PUT    /v2/users/{userId}/notificationProfiles  params=[('userId', 'path', True)]  opId=None
+  POST   /v2/users/{userId}/phoneNumbers  params=[('userId', 'path', True)]  opId=None
+  DELETE /v2/users/{userId}/phoneNumbers  params=[('userId', 'path', True)]  opId=None
+  POST   /v2/users/{userId}/phoneNumbers/validate  params=[('userId', 'path', True)]  opId=None
+  PUT    /v2/users/{userId}/profile  params=[('userId', 'path', True)]  opId=None
+  POST   /v2/users/{userId}/sendEventSourcesInfo  params=[('userId', 'path', True), ('teamId', 'query', None)]  opId=None
+  GET    /v2/users/{userId}/setupProgress  params=[('userId', 'path', True)]  opId=None
+  GET    /v2/users/{userId}/tags  params=[('userId', 'path', True)]  opId=None
+  PUT    /v2/users/{userId}/tags  params=[('userId', 'path', True)]  opId=None
+  GET    /v2/users/{userId}/teams  params=[('userId', 'path', True)]  opId=None
+
+==== teams ====
+  GET    /v2/subscriptions/{subscriptionId}/teams  params=[('subscriptionId', 'path', True)]  opId=None
+  GET    /v2/teams  params=[('teamId', 'query', None)]  opId=None
+  POST   /v2/teams  params=[]  opId=None
+  GET    /v2/teams/alertSettings  params=[('teamId', 'query', None)]  opId=None
+  GET    /v2/teams/dutySettings  params=[('teamId', 'query', None)]  opId=None
+  POST   /v2/teams/memberships  params=[('language', 'query', None)]  opId=None
+  GET    /v2/teams/memberships/{userId}  params=[('userId', 'path', True)]  opId=None
+  GET    /v2/teams/public  params=[('teamId', 'query', None)]  opId=None
+  GET    /v2/teams/signalingSettings  params=[('teamId', 'query', None)]  opId=None
+  GET    /v2/teams/users  params=[('teamId', 'query', None)]  opId=None
+  GET    /v2/teams/{teamId}  params=[('teamId', 'path', True)]  opId=None
+  DELETE /v2/teams/{teamId}  params=[('teamId', 'path', True)]  opId=None
+  GET    /v2/teams/{teamId}/absences  params=[('teamId', 'path', True)]  opId=None
+  GET    /v2/teams/{teamId}/alertReports  params=[('teamId', 'path', True)]  opId=None
+  GET    /v2/teams/{teamId}/alertReports/{fileName}  params=[('teamId', 'path', True), ('fileName', 'path', True)]  opId=None
+  GET    /v2/teams/{teamId}/alertSettings  params=[('teamId', 'path', True)]  opId=None
+  POST   /v2/teams/{teamId}/alertSettings  params=[('teamId', 'path', True)]  opId=None
+  GET    /v2/teams/{teamId}/alertingPatterns  params=[('teamId', 'path', True)]  opId=None
+  POST   /v2/teams/{teamId}/alertingPatterns  params=[('teamId', 'path', True)]  opId=None
+  POST   /v2/teams/{teamId}/alertingPatterns/timeSlots/validate  params=[('teamId', 'path', True), ('patternId', 'query', None), ('categoryIds', 'query', None)]  opId=None
+  PUT    /v2/teams/{teamId}/alertingPatterns/{patternId}  params=[('teamId', 'path', True), ('patternId', 'path', True)]  opId=None
+  DELETE /v2/teams/{teamId}/alertingPatterns/{patternId}  params=[('teamId', 'path', True), ('patternId', 'path', True)]  opId=None
+  GET    /v2/teams/{teamId}/dutyReports  params=[('teamId', 'path', True)]  opId=None
+  GET    /v2/teams/{teamId}/dutyReports/{fileName}  params=[('teamId', 'path', True), ('fileName', 'path', True)]  opId=None
+  GET    /v2/teams/{teamId}/eventSources  params=[('teamId', 'path', True)]  opId=None
+  GET    /v2/teams/{teamId}/holidays  params=[('teamId', 'path', True)]  opId=None
+  DELETE /v2/teams/{teamId}/holidays  params=[('teamId', 'path', True)]  opId=None
+  PUT    /v2/teams/{teamId}/holidays/repeating  params=[('teamId', 'path', True)]  opId=None
+  PUT    /v2/teams/{teamId}/holidays/years/{year}  params=[('teamId', 'path', True), ('year', 'path', True)]  opId=None
+  POST   /v2/teams/{teamId}/holidays/years/{year}/copyFrom/{sourceTeamId}  params=[('teamId', 'path', True), ('year', 'path', True), ('sourceTeamId', 'path', True)]  opId=None
+  GET    /v2/teams/{teamId}/image  params=[('teamId', 'path', True), ('type', 'query', None), ('height', 'query', None), ('width', 'query', None)]  opId=None
+  POST   /v2/teams/{teamId}/image  params=[('teamId', 'path', True), ('type', 'query', None)]  opId=None
+  DELETE /v2/teams/{teamId}/image  params=[('teamId', 'path', True), ('type', 'query', None)]  opId=None
+  GET    /v2/teams/{teamId}/memberships  params=[('teamId', 'path', True)]  opId=None
+  POST   /v2/teams/{teamId}/memberships/resendInviteMail  params=[('teamId', 'path', True)]  opId=None
+  POST   /v2/teams/{teamId}/memberships/{userId}  params=[('teamId', 'path', True), ('userId', 'path', True)]  opId=None
+  PUT    /v2/teams/{teamId}/memberships/{userId}  params=[('teamId', 'path', True), ('userId', 'path', True), ('requesterUserId', 'query', None), ('setUserOnDuty', 'query', None)]  opId=None
+  DELETE /v2/teams/{teamId}/memberships/{userId}  params=[('teamId', 'path', True), ('userId', 'path', True), ('requesterUserId', 'query', None)]  opId=None
+  GET    /v2/teams/{teamId}/privacySettings  params=[('teamId', 'path', True)]  opId=None
+  PUT    /v2/teams/{teamId}/privacySettings  params=[('teamId', 'path', True)]  opId=None
+  PUT    /v2/teams/{teamId}/profile  params=[('teamId', 'path', True)]  opId=None
+  POST   /v2/teams/{teamId}/schedules  params=[('teamId', 'path', True)]  opId=None
+  POST   /v2/teams/{teamId}/schedules/deleteRange  params=[('teamId', 'path', True)]  opId=None
+  POST   /v2/teams/{teamId}/schedules/multiple  params=[('teamId', 'path', True), ('overrideExisting', 'query', None)]  opId=None
+  DELETE /v2/teams/{teamId}/schedules/{dutyId}  params=[('teamId', 'path', True), ('dutyId', 'path', True)]  opId=None
+  GET    /v2/teams/{teamId}/schedules/{scheduleId}  params=[('teamId', 'path', True), ('scheduleId', 'path', True)]  opId=None
+  GET    /v2/teams/{teamId}/setupProgress  params=[('teamId', 'path', True)]  opId=None
+  GET    /v2/users/{userId}/teams  params=[('userId', 'path', True)]  opId=None
+[0m
+Good, matches expected sha 837b34ca. Let me analyze the new families: /v2/remoteActions, /v2/scripts, /v2/eventsources, /scim/status. Let me parse with python or jq.
+
+Let me extract the paths for those families and their methods, parameters, and request body schemas.</think>Matches expected sha (`837b34ca`). Now analyzing the new families statically.
+Now the new families confirmed. The interesting thing: `/v2/teams/memberships/{userId}` GET has a userId path but no teamId — that's a potential cross-tenant lookup. Also `GET /v2/teams/{teamId}/alertReports/{fileName}` — fileName path with teamId. And `POST /v2/teams/{teamId}/holidays/years/{year}/copyFrom/{sourceTeamId}` — cross-team copy.
+
+But all these are AUTH_HELPED (need an API key). The question is whether any are auth-bypassed. The state says all new-family unauth GETs return 401/0 bytes.
+
+Let me check the new families' request body schemas for mass-assignment/tenant-in-body parameters. Let me look at the requestBody for POST /v2/eventsources, POST /v2/remoteActions, POST /v2/scripts/instances.
+
+Actually — this is the key BOLA/privesc angle. Let me look at the schemas. But without auth we can't test. Still, static analysis of the spec can produce a solid hypothesis with verify_steps.
+
+Let me look at requestBody schemas for the new POST/PUT operations and identify body params like teamId, subscriptionId, userId, role, permission that could allow tenant escape / privesc if server trusts body over token.
+
+Let me extract those.</think>New families confirmed. Now let me inspect request-body schemas for tenant/role mass-assignment parameters (the BOLA/privesc angle) in the new families.
+[0m$ [0mcd /tmp/opencode && python3 - <<'EOF'
+import json
+s=json.load(open('swagger-v2.json'))
+paths=s['paths']; comps=s.get('components',{}).get('schemas',{})
+def resolve(ref):
+    # #/components/schemas/X
+    return ref.split('/')[-1]
+def props(name,depth=0):
+    sc=comps.get(name,{})
+    out=[]
+    for p,meta in sc.get('properties',{}).items():
+        t=meta.get('type')
+        ref=meta.get('$ref')
+        fmt=meta.get('format','')
+        out.append((p,t,resolve(ref) if ref else '',fmt))
+    return out
+targets=['/v2/eventsources','/v2/remoteActions','/v2/scripts/instances','/v2/scim/settings','/v2/teams/memberships','/v2/users/overview']
+for t in targets:
+    op=paths.get(t,{}).get('post') or paths.get(t,{}).get('put')
+    if not op: continue
+    rb=op.get('requestBody')
+    if not rb: 
+        print("\n",t,"-> no requestBody"); continue
+    for ct,media in rb.get('content',{}).items():
+        ref=media.get('schema',{}).get('$ref')
+        print(f"\n=== {t} ({ct}) schema={resolve(ref) if ref else media.get('schema',{}).get('type')} ===")
+        if ref:
+            for p in props(resolve(ref)):
+                print("   ",p)
+EOF
+=== /v2/eventsources (application/json-patch+json) schema=V2.EventSourceCreateDetailsV2 ===
+    ('type', None, 'EventSourceCreateTypes', '')
+    ('name', 'string', '', '')
+    ('description', 'string', '', '')
+    ('teamId', 'string', '', '')
+    ('disabled', 'boolean', '', '')
+    ('language', None, 'SupportedLanguage', '')
+    ('subType', 'string', '', '')
+    ('targets', 'array', '', '')
+    ('options', None, 'EventSourceOptions', '')
+
+=== /v2/eventsources (application/json) schema=V2.EventSourceCreateDetailsV2 ===
+    ('type', None, 'EventSourceCreateTypes', '')
+    ('name', 'string', '', '')
+    ('description', 'string', '', '')
+    ('teamId', 'string', '', '')
+    ('disabled', 'boolean', '', '')
+    ('language', None, 'SupportedLanguage', '')
+    ('subType', 'string', '', '')
+    ('targets', 'array', '', '')
+    ('options', None, 'EventSourceOptions', '')
+
+=== /v2/eventsources (text/json) schema=V2.EventSourceCreateDetailsV2 ===
+    ('type', None, 'EventSourceCreateTypes', '')
+    ('name', 'string', '', '')
+    ('description', 'string', '', '')
+    ('teamId', 'string', '', '')
+    ('disabled', 'boolean', '', '')
+    ('language', None, 'SupportedLanguage', '')
+    ('subType', 'string', '', '')
+    ('targets', 'array', '', '')
+    ('options', None, 'EventSourceOptions', '')
+
+=== /v2/eventsources (application/*+json) schema=V2.EventSourceCreateDetailsV2 ===
+    ('type', None, 'EventSourceCreateTypes', '')
+    ('name', 'string', '', '')
+    ('description', 'string', '', '')
+    ('teamId', 'string', '', '')
+    ('disabled', 'boolean', '', '')
+    ('language', None, 'SupportedLanguage', '')
+    ('subType', 'string', '', '')
+    ('targets', 'array', '', '')
+    ('options', None, 'EventSourceOptions', '')
+
+=== /v2/remoteActions (application/json-patch+json) schema=RemoteActionCreateOrUpdateDetails ===
+    ('teamId', 'string', '', '')
+    ('name', 'string', '', '')
+    ('description', 'string', '', '')
+    ('enabled', 'boolean', '', '')
+    ('parameters', 'array', '', '')
+    ('access', 'array', '', '')
+    ('definitionId', 'string', '', '')
+
+=== /v2/remoteActions (application/json) schema=RemoteActionCreateOrUpdateDetails ===
+    ('teamId', 'string', '', '')
+    ('name', 'string', '', '')
+    ('description', 'string', '', '')
+    ('enabled', 'boolean', '', '')
+    ('parameters', 'array', '', '')
+    ('access', 'array', '', '')
+    ('definitionId', 'string', '', '')
+
+=== /v2/remoteActions (text/json) schema=RemoteActionCreateOrUpdateDetails ===
+    ('teamId', 'string', '', '')
+    ('name', 'string', '', '')
+    ('description', 'string', '', '')
+    ('enabled', 'boolean', '', '')
+    ('parameters', 'array', '', '')
+    ('access', 'array', '', '')
+    ('definitionId', 'string', '', '')
+
+=== /v2/remoteActions (application/*+json) schema=RemoteActionCreateOrUpdateDetails ===
+    ('teamId', 'string', '', '')
+    ('name', 'string', '', '')
+    ('description', 'string', '', '')
+    ('enabled', 'boolean', '', '')
+    ('parameters', 'array', '', '')
+    ('access', 'array', '', '')
+    ('definitionId', 'string', '', '')
+
+=== /v2/scripts/instances (application/json-patch+json) schema=ScriptInstanceCreateInfo ===
+    ('instanceId', 'string', '', '')
+    ('scriptId', 'string', '', '')
+    ('scriptName', 'string', '', '')
+    ('customScriptName', 'string', '', '')
+    ('customScriptDescription', 'string', '', '')
+    ('teamId', 'string', '', '')
+    ('sharedTeams', 'array', '', '')
+    ('enabled', 'boolean', '', '')
+    ('config', None, '', '')
+    ('sharedWithTeams', None, 'ScriptInstanceSharedWithTeamsDetails', '')
+
+=== /v2/scripts/instances (application/json) schema=ScriptInstanceCreateInfo ===
+    ('instanceId', 'string', '', '')
+    ('scriptId', 'string', '', '')
+    ('scriptName', 'string', '', '')
+    ('customScriptName', 'string', '', '')
+    ('customScriptDescription', 'string', '', '')
+    ('teamId', 'string', '', '')
+    ('sharedTeams', 'array', '', '')
+    ('enabled', 'boolean', '', '')
+    ('config', None, '', '')
+    ('sharedWithTeams', None, 'ScriptInstanceSharedWithTeamsDetails', '')
+
+=== /v2/scripts/instances (text/json) schema=ScriptInstanceCreateInfo ===
+    ('instanceId', 'string', '', '')
+    ('scriptId', 'string', '', '')
+    ('scriptName', 'string', '', '')
+    ('customScriptName', 'string', '', '')
+    ('customScriptDescription', 'string', '', '')
+    ('teamId', 'string', '', '')
+    ('sharedTeams', 'array', '', '')
+    ('enabled', 'boolean', '', '')
+    ('config', None, '', '')
+    ('sharedWithTeams', None, 'ScriptInstanceSharedWithTeamsDetails', '')
+
+=== /v2/scripts/instances (application/*+json) schema=ScriptInstanceCreateInfo ===
+    ('instanceId', 'string', '', '')
+    ('scriptId', 'string', '', '')
+    ('scriptName', 'string', '', '')
+    ('customScriptName', 'string', '', '')
+    ('customScriptDescription', 'string', '', '')
+    ('teamId', 'string', '', '')
+    ('sharedTeams', 'array', '', '')
+    ('enabled', 'boolean', '', '')
+    ('config', None, '', '')
+    ('sharedWithTeams', None, 'ScriptInstanceSharedWithTeamsDetails', '')
+
+=== /v2/scim/settings (application/json-patch+json) schema=ScimSettingsUpdateDetails ===
+    ('enabled', 'boolean', '', '')
+    ('syncScimGroups', 'boolean', '', '')
+    ('allowContactAddressChanges', 'boolean', '', '')
+
+=== /v2/scim/settings (application/json) schema=ScimSettingsUpdateDetails ===
+    ('enabled', 'boolean', '', '')
+    ('syncScimGroups', 'boolean', '', '')
+    ('allowContactAddressChanges', 'boolean', '', '')
+
+=== /v2/scim/settings (text/json) schema=ScimSettingsUpdateDetails ===
+    ('enabled', 'boolean', '', '')
+    ('syncScimGroups', 'boolean', '', '')
+    ('allowContactAddressChanges', 'boolean', '', '')
+
+=== /v2/scim/settings (application/*+json) schema=ScimSettingsUpdateDetails ===
+    ('enabled', 'boolean', '', '')
+    ('syncScimGroups', 'boolean', '', '')
+    ('allowContactAddressChanges', 'boolean', '', '')
+
+=== /v2/teams/memberships (application/json-patch+json) schema=UsersInvitationRequest ===
+    ('inviterId', 'string', '', '')
+    ('invites', 'array', '', '')
+    ('teamId', 'string', '', '')
+
+=== /v2/teams/memberships (application/json) schema=UsersInvitationRequest ===
+    ('inviterId', 'string', '', '')
+    ('invites', 'array', '', '')
+    ('teamId', 'string', '', '')
+
+=== /v2/teams/memberships (text/json) schema=UsersInvitationRequest ===
+    ('inviterId', 'string', '', '')
+    ('invites', 'array', '', '')
+    ('teamId', 'string', '', '')
+
+=== /v2/teams/memberships (application/*+json) schema=UsersInvitationRequest ===
+    ('inviterId', 'string', '', '')
+    ('invites', 'array', '', '')
+    ('teamId', 'string', '', '')
+
+=== /v2/users/overview (application/json-patch+json) schema=UserOverviewsFilterRequestInfo ===
+    ('startsWith', 'string', '', '')
+    ('contains', 'string', '', '')
+    ('teamId', 'string', '', '')
+    ('roleId', 'string', '', '')
+    ('provStatus', None, 'UserOverviewProvisioningStatus', '')
+    ('authProvider', None, 'UserAuthProvider', '')
+    ('continuationToken', 'string', '', '')
+
+=== /v2/users/overview (application/json) schema=UserOverviewsFilterRequestInfo ===
+    ('startsWith', 'string', '', '')
+    ('contains', 'string', '', '')
+    ('teamId', 'string', '', '')
+    ('roleId', 'string', '', '')
+    ('provStatus', None, 'UserOverviewProvisioningStatus', '')
+    ('authProvider', None, 'UserAuthProvider', '')
+    ('continuationToken', 'string', '', '')
+
+=== /v2/users/overview (text/json) schema=UserOverviewsFilterRequestInfo ===
+    ('startsWith', 'string', '', '')
+    ('contains', 'string', '', '')
+    ('teamId', 'string', '', '')
+    ('roleId', 'string', '', '')
+    ('provStatus', None, 'UserOverviewProvisioningStatus', '')
+    ('authProvider', None, 'UserAuthProvider', '')
+    ('continuationToken', 'string', '', '')
+
+=== /v2/users/overview (application/*+json) schema=UserOverviewsFilterRequestInfo ===
+    ('startsWith', 'string', '', '')
+    ('contains', 'string', '', '')
+    ('teamId', 'string', '', '')
+    ('roleId', 'string', '', '')
+    ('provStatus', None, 'UserOverviewProvisioningStatus', '')
+    ('authProvider', None, 'UserAuthProvider', '')
+    ('continuationToken', 'string', '', '')
+[0m
+Very interesting finding here. The new-family schemas have `teamId` in the request body for writes. This is a classic mass-assignment / BOLA setup: if the server trusts body `teamId` rather than scoping to the authenticated principal, an attacker can create resources in arbitrary tenants. This is what the analyst noted as the prepaid tenant-in-body hypothesis which was swept and found NOT_A_BUG (131 write ops). But that was prepaid/billing. This is the new families.
+
+However, all of these require auth (AUTH_HELPED). The key insight: `teamId` in body is the tenant selector. If authorization is only checked at route level (is the caller's API key valid?) but resource creation trusts body teamId, then a low-priv user/API key from team A can create event sources / remote actions / scripts in team B.
+
+This is a genuine, well-scoped hypothesis. But testability is AUTH_HELPED and it can't be verified passively.
+
+Also notable: `POST /v2/teams/memberships` has `inviterId` AND `teamId` in the body — both attacker-controllable. The `inviterId` is interesting: if server uses body inviterId for privilege checks, an attacker could set inviterId to an admin and invite themselves to a team. Actually the `PUT /v2/teams/{teamId}/memberships/{userId}` has `requesterUserId` query param — an explicit requester identity parameter! That's a strong privesc signal: server may authorize based on `requesterUserId` supplied by the client rather than the token subject. Let me note that.
+
+`requesterUserId` in query for PUT/DELETE memberships is a very strong indicator of a confused-deputy / client-controlled-authorizer flaw. If the server trusts `requesterUserId` to decide permissions, an attacker can elevate.
+
+Let me look at the memberships PUT/DELETE more carefully — but that's in the existing teams family, not new. Still, this is a new observation (the requestBody/param analysis wasn't done before per state).
+
+Let me refine. I should output the structured blocks as the analyst would. Given:
+- STEP 1 DELTA: swagger re-fetched, sha matches, 190 paths, new families confirmed; request-body analysis done.
+- STEP 2 PRIO: score
+- STEP 3 HYP: top 3
+- STEP 4 SELF-CRITIQUE
+- STEP 5 NEXT
+- STEP 6 LEARN
+- STEP 7 RISK
+
+Let me gather a bit more evidence for the strongest hypothesis: the client-supplied `requesterUserId` / body `teamId` authorizer confusion. Let me examine the memberships PUT params and the `sharedTeams`/`access` arrays more.
+
+Actually, let me check whether there's any differential available passively. The route-gated behavior: unauth GET returns 401/0 bytes for new families. So no passive signal.
+
+Let me look at what `access` means in RemoteActionCreateOrUpdateDetails (role-based access list) and `definitionId`. And check the scim/apiKey POST.
+
+But honestly the strongest, cleanest hypothesis from static spec analysis is: "Client-supplied authorizer/tenant identifiers (requesterUserId query, teamId/inviterId body) in V2 membership & new-family write ops → potential cross-tenant / privilege escalation if the server trusts them." This is classic BOLA/broken-function-level-authz. It's AUTH_HELPED but has concrete verify_steps and is program-relevant (HIGH).
+
+Let me verify the `requesterUserId` isn't a documented standard field. It could be legitimate for admin acting-on-behalf operations. Still, for a low-priv API key, if it's honored, that's privesc.
+
+Let me also check: is there a differential in how `/v2/teams/memberships/{userId}` (GET, no teamId) vs `/v2/teams/{teamId}/memberships/{userId}` behave? The former is new. GET /v2/teams/memberships/{userId} without team scope is directly a cross-tenant read candidate: `GET /v2/teams/memberships/{userId}` returns a user's team memberships across teams. If the caller's API key is team-scoped but the endpoint returns all memberships for arbitrary userId, that's BOLA.
+
+Let me check the response schema / description for that endpoint and the requesterUserId endpoint. Let me pull operation details (description/summary).</think>Strong signal: write bodies carry attacker-controlled `teamId`/`inviterId`, and membership ops take a **`requesterUserId` query param**. Let me pull summaries/descriptions for the highest-value candidates.
+[0m$ [0mcd /tmp/opencode && python3 - <<'EOF'
+import json
+s=json.load(open('swagger-v2.json'))
+paths=s['paths']
+want=[
+ ('get','/v2/teams/memberships/{userId}'),
+ ('put','/v2/teams/{teamId}/memberships/{userId}'),
+ ('delete','/v2/teams/{teamId}/memberships/{userId}'),
+ ('post','/v2/teams/memberships'),
+ ('post','/v2/teams/{teamId}/holidays/years/{year}/copyFrom/{sourceTeamId}'),
+ ('post','/v2/scim/apiKey'),
+ ('get','/v2/users/{userId}/teams'),
+ ('post','/v2/scripts/instances'),
+ ('put','/v2/scripts/instances/{instanceId}'),
+ ('get','/v2/scripts/inventory/parsed/{scriptId}'),
+]
+for m,p in want:
+    op=paths.get(p,{}).get(m)
+    if not op: 
+        print(m.upper(),p,"NOT FOUND"); continue
+    print(f"\n{m.upper()} {p}")
+    print("  summary:",op.get('summary'))
+    print("  desc:",(op.get('description') or '')[:300])
+    print("  security:",op.get('security'))
+    # responses
+    for code,r in list(op.get('responses',{}).items())[:3]:
+        sch=r.get('content',{})
+        ref=''
+        for ct,mm in sch.items():
+            rs=mm.get('schema',{})
+            ref=rs.get('$ref') or rs.get('type','')
+        print(f"    resp {code}: {r.get('description','')[:60]} {ref}")
+EOF
+GET /v2/teams/memberships/{userId}
+  summary: Get Team memberships from a user
+  desc: 
+  security: None
+    resp 200: Team memberships of a user. array
+    resp 400: Some required parameters are missing. #/components/schemas/ErrorResponseContent
+    resp 403: You are not allowed to access the user. #/components/schemas/ErrorResponseContent
+
+PUT /v2/teams/{teamId}/memberships/{userId}
+  summary: Update user's team membership.
+  desc: Updates the user's team membership. You can move the user to another team within the subscription
+and/or change the user's role.
+  security: None
+    resp 200: User was successfully updated. #/components/schemas/V1.UserInfoV1
+    resp 204: Request was canceled. 
+    resp 400: Required parameters or authentication info could not be foun #/components/schemas/ErrorResponseContent
+
+DELETE /v2/teams/{teamId}/memberships/{userId}
+  summary: Removes a user or invitation from a team
+  desc: 
+  security: None
+    resp 204: Request was canceled. string
+    resp 400: Required parameters or authentication info could not be foun #/components/schemas/ErrorResponseContent
+    resp 403: You're not allowed to request the access all required entiti #/components/schemas/ErrorResponseContent
+
+POST /v2/teams/memberships
+  summary: Invite users to a team
+  desc: 
+  security: None
+    resp 200: User invitation results are returned. array
+    resp 400: Required parameters or authentication info could not be foun #/components/schemas/ErrorResponseContent
+    resp 403: You're not allowed to request the access all required entiti #/components/schemas/ErrorResponseContent
+
+POST /v2/teams/{teamId}/holidays/years/{year}/copyFrom/{sourceTeamId}
+  summary: Copy holidays from one team to another
+  desc: 
+  security: None
+    resp 200: Returns saved holidays #/components/schemas/TeamHolidayDetails
+    resp 400: Some required Parameter is missing or feature is not license #/components/schemas/ErrorResponseContent
+    resp 403: You don't have the permissions to access this teams ressouce #/components/schemas/ErrorResponseContent
+
+POST /v2/scim/apiKey
+  summary: Generate or Regenerate SCIM api key for subscription
+  desc: 
+  security: None
+    resp 200: OK #/components/schemas/ScimSettingsDetails
+    resp 403: Forbidden #/components/schemas/ErrorResponseContent
+    resp 500: Internal Server Error #/components/schemas/ErrorResponseContent
+
+GET /v2/users/{userId}/teams
+  summary: Get all teams the user is member of
+  desc: Returns a list of team objects with details such as their name. Only teams the user
+is member of will be returned.
+  security: None
+    resp 200: User could be successfully identified. array
+    resp 400: Required authentication info could not be found in the reque #/components/schemas/ErrorResponseContent
+    resp 404: Required entities could not be found in the database. #/components/schemas/ErrorResponseContent
+
+POST /v2/scripts/instances
+  summary: Creates a new script instance in the in the SIGNL4 team.
+  desc: Creates a new script instance of the script specified in the request body.
+  security: None
+    resp 200: Existing script instance was updated as specified in body. #/components/schemas/ScriptInstanceDetails
+    resp 201: New script instance was updated as specified in body. #/components/schemas/ScriptInstanceDetails
+    resp 400: Required information could not be found in the request/claim #/components/schemas/ErrorResponseContent
+
+PUT /v2/scripts/instances/{instanceId}
+  summary: Updates a given script instance, typically used for updating the configuration of a script.
+  desc: Updates the specified script instance.
+  security: None
+    resp 200: OK #/components/schemas/ScriptInstanceDetails
+    resp 400: Required information could not be found in the request/claim #/components/schemas/ErrorResponseContent
+    resp 404: Required entities could not be found in the database. #/components/schemas/ErrorResponseContent
+
+GET /v2/scripts/inventory/parsed/{scriptId}
+  summary: Returns an inventory script by its id.
+  desc: Gets the script specified by the passed script id.
+  security: None
+    resp 200: OK #/components/schemas/ScriptInstanceDetails
+    resp 400: Required information could not be found in the request/claim #/components/schemas/ErrorResponseContent
+    resp 404: Required entities could not be found in the database or in m #/components/schemas/ErrorResponseContent
+[0m
+Good. Key observations:
+1. All operations have `security: None` in the spec — meaning the spec doesn't declare security at the operation or global level? Let me check global security. If the global `security` is undefined, that's just a spec omission (301? no). Actually many specs omit security. Let me check if there's a global security field.
+
+2. `PUT /v2/teams/{teamId}/memberships/{userId}` with `requesterUserId` query param and description "move the user to another team within the subscription and/or change the user's role." The `requesterUserId` is a client-supplied identity used for authorization -> classic broken function-level authz / privesc if server trusts it.
+
+3. `GET /v2/teams/memberships/{userId}` — 403 "You are not allowed to access the user." So there IS a per-user authorization check. This is a cross-tenant read candidate.
+
+Let me check global security and any apiKey security schemes.</think>
+[0m$ [0mcd /tmp/opencode && python3 - <<'EOF'
+import json
+s=json.load(open('swagger-v2.json'))
+print("global security:", s.get('security'))
+print("securitySchemes:", json.dumps(s.get('components',{}).get('securitySchemes',{}),indent=1))
+print("openapi:",s.get('openapi') or s.get('swagger'))
+info=s.get('info',{})
+print("info:",info.get('title'),info.get('version'))
+# count operations with explicit security
+n=0;tot=0
+for p,ms in s['paths'].items():
+    for m,op in ms.items():
+        if m in ('get','post','put','patch','delete'):
+            tot+=1
+            if op.get('security') is not None: n+=1
+print("ops with explicit security:",n,"/",tot)
+# servers
+print("servers:",s.get('servers'))
+EOF
+global security: [{}]
+securitySchemes: {
+ "API_Key_Header": {
+  "type": "apiKey",
+  "description": "Header based API Key authentication. You can generate an API Key in the SIGNL4 portal under 'Integrations' -> 'Api Keys'.",
+  "name": "x-s4-api-key",
+  "in": "header"
+ },
+ "API_Key_Query": {
+  "type": "apiKey",
+  "description": "Query based API Key authentication. You can generate an API Key in the SIGNL4 portal under 'Integrations' -> 'Api Keys'.",
+  "name": "x-s4-api-key",
+  "in": "query"
+ },
+ "OAuth2": {
+  "type": "oauth2",
+  "description": "OAuth2 Authentication. You can request subscription specific client credentials from the SIGNL4 support.",
+  "flows": {
+   "authorizationCode": {
+    "authorizationUrl": "https://connect.signl4.com/identity/connect/authorize",
+    "tokenUrl": "https://connect.signl4.com/identity/connect/token",
+    "refreshUrl": "https://connect.signl4.com/identity/connect/token",
+    "scopes": {
+     "public_api_write": "Access write operations",
+     "public_api_read": "Access read operations",
+     "offline_access": "Allows usage of refresh tokens"
+    }
+   }
+  }
+ }
+}
+openapi: 3.0.4
+info: SIGNL4 API V2 2
+ops with explicit security: 0 / 251
+servers: [{'url': 'https://connect.signl4.com/api'}]
+[0m
+Global security is `[{}]` (empty requirement = optional/anon). So the spec declares no mandatory auth, but empirically all new-family requests return 401. This is a spec-vs-runtime discrepancy but not necessarily a vuln.
+
+The `requesterUserId` query param on membership PUT/DELETE is my best new lead. Let me capture it precisely. Also `GET /v2/teams/memberships/{userId}` cross-user read.
+
+Now, importantly, these are AUTH_HELPED. There's no way to test passively. But the task allows emitting a [HYP] with verify_steps (AUTH_HELPED) and [NEXT] HUMAN/PROBE.
+
+Actually, let me reconsider whether there's a genuinely NEW passive-testable thing. The route-gating: state said new-family unauth GETs return 401/0 bytes. But the analyst also noted auth-status flapping on api vs connect. Let me test the new families on connect.signl4.com vs api.signl4.com — the spec server is connect.signl4.com/api. Perhaps on connect, some of these return 405 (handler-deferred) rather than 401, revealing different auth posture. That would be a passive, non-mutating GET test.
+
+Let me do a small, rate-limited passive probe: GET the new-family endpoints on both api.signl4.com and connect.signl4.com, unauthenticated, and compare status codes/headers. This directly tests the stated hypothesis that these are all 401-gated, and could reveal a handler-deferred 405 (partial-anon) or a non-401 differential on one host.
+
+That's within rules: GET only, ≤1 rps, read-only, no customer data.
+
+Endpoints (unauth, no PII returned):
+- https://api.signl4.com/api/v2/remoteActions
+- https://api.signl4.com/api/v2/scripts/inventory
+- https://api.signl4.com/api/v2/eventsources
+- https://api.signl4.com/api/v2/scim/status
+- https://connect.signl4.com/api/v2/remoteActions
+- https://connect.signl4.com/api/v2/scripts/inventory
+- https://connect.signl4.com/api/v2/eventsources
+- https://connect.signl4.com/api/v2/scim/status
+- https://connect.signl4.com/api/v2/teams/memberships/00000000-0000-0000-0000-000000000000
+
+Let me run these sequentially with sleep 1. That's 9 requests ~ 9+ seconds. Fine.
+
+Actually wait — I should be careful: is connect.signl4.com in the PROBE_ALLOW? The workflow env was "derdack.com" but the state noted PROBE_ALLOW widened locally to signl4.com|enterprisealert.com (uncommitted). The actual script here doesn't have a probe runner; I'm doing manual curl. signl4.com is in scope. Fine.
+
+Let me run the probe. I'll capture status, content-length, and WWW-Authenticate/Allow headers.
+
+Let me be efficient and do it in one bash call with a loop.</think>Global `security:[{}]` (auth optional in spec) yet runtime 401. Let me passively compare the new-family endpoints across both API hosts (GET only, 1 rps) to test the stated "all 401" claim and catch any host differential.
+[0m$ [0mcd /tmp/opencode && for u in \
+  "https://api.signl4.com/api/v2/remoteActions" \
+  "https://api.signl4.com/api/v2/scripts/inventory" \
+  "https://api.signl4.com/api/v2/eventsources" \
+  "https://api.signl4.com/api/v2/scim/status" \
+  "https://api.signl4.com/api/v2/teams/memberships/00000000-0000-0000-0000-000000000000" \
+  "https://connect.signl4.com/api/v2/remoteActions" \
+  "https://connect.signl4.com/api/v2/scripts/inventory" \
+  "https://connect.signl4.com/api/v2/eventsources" \
+  "https://connect.signl4.com/api/v2/scim/status" \
+  "https://connect.signl4.com/api/v2/teams/memberships/00000000-0000-0000-0000-000000000000" \
+; do
+  hdr=$(curl -s -o /dev/null -D - --max-time 12 -A 'Mozilla/5.0 (passive research probe)' "$u" 2>/dev/null)
+  code=$(printf '%s' "$hdr" | awk 'NR==1{print $2}')
+  clen=$(printf '%s' "$hdr" | awk 'BEGIN{IGNORECASE=1}/^content-length:/{print $2}' | tr -d '\r')
+  auth=$(printf '%s' "$hdr" | awk 'BEGIN{IGNORECASE=1}/^www-authenticate:/{print $0}' | tr -d '\r')
+  allow=$(printf '%s' "$hdr" | awk 'BEGIN{IGNORECASE=1}/^allow:/{print $0}' | tr -d '\r')
+  printf '%-3s clen=%-5s %s  %s %s\n' "$code" "${clen:-?}" "$u" "$auth" "$allow"
+  sleep 1
+done
+401 clen=0     https://api.signl4.com/api/v2/remoteActions  www-authenticate: Bearer 
+401 clen=0     https://api.signl4.com/api/v2/scripts/inventory  www-authenticate: Bearer 
+401 clen=0     https://api.signl4.com/api/v2/eventsources  www-authenticate: Bearer 
+401 clen=0     https://api.signl4.com/api/v2/scim/status  www-authenticate: Bearer 
+401 clen=0     https://api.signl4.com/api/v2/teams/memberships/00000000-0000-0000-0000-000000000000  www-authenticate: Bearer 
+401 clen=0     https://connect.signl4.com/api/v2/remoteActions  www-authenticate: Bearer 
+401 clen=0     https://connect.signl4.com/api/v2/scripts/inventory  www-authenticate: Bearer 
+401 clen=0     https://connect.signl4.com/api/v2/eventsources  www-authenticate: Bearer 
+401 clen=0     https://connect.signl4.com/api/v2/scim/status  www-authenticate: Bearer 
+401 clen=0     https://connect.signl4.com/api/v2/teams/memberships/00000000-0000-0000-0000-000000000000  www-authenticate: Bearer
+[0m
+Consistent 401 on both hosts for all new families. No differential. So the "route-gated" claim holds now (no flapping observed this cycle). The new families are all consistently 401.
+
+So passive surface confirmed: no new passive finding. The BOLA/mass-assignment hypothesis remains AUTH_HELPED.
+
+Now, is there anything else worth doing? Let me check the `scim/status` returns 401 even though it's a status endpoint (might be expected to be more open). No.
+
+Let me consider the one genuinely interesting static finding: the `requesterUserId` client-supplied authorizer parameter, and body `teamId`/`inviterId`. This is a strong candidate but AUTH_HELPED.
+
+I think the right move now: produce the structured output for this cycle, and give a clear [NEXT]. Since the user asked "continue if you have next steps, or stop and ask for clarification," I have a concrete next step (the HUMAN submission / AUTH_HELPED gating). But I cannot submit.
+
+Wait — I need to reconsider what the user actually wants. This is an opencode session in a repo. The user asked "What did we do so far?" then "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed."
+
+I've now done a meaningful passive cycle. I should report concisely and present the decision point. The rules say keep responses short. But this is a specialized structured-output task. The system prompt for the hunt wants only structured blocks. However, the user's meta-instruction is to continue or ask for clarification.
+
+I think the best response: summarize the cycle's delta and the new lead, then state the decision point (AUTH_HELPED / HUMAN submission) and ask whether to proceed with the swagger static-only deeper dive or the HUMAN submission, OR just continue.
+
+Actually, re-reading: "Continue if you have next steps." I did have and executed a next step. Now the remaining next steps require either credentials (AUTH_HELPED) or a human submission (HUMAN_ONLY). Those are genuinely blocked for me. So the right thing is to stop and ask for clarification, presenting the options.
+
+Let me write a concise structured summary in the hunt's block format, then the clarification question. Given the repo's convention, emit the blocks. But the base opencode style wants brevity. I'll produce a tight structured block output and a short question.
+
+Let me record the new lead to a file? The pipeline expects leads/lead-*.md. Should I write? The user hasn't asked me to write files explicitly, but the loop's purpose is to produce leads. However, I should avoid over-proactivity. The user said "continue if you have next steps." Writing the lead file is part of continuing. But there's also risk of polluting. Hmm.
+
+Given the state says local uncommitted edits already exist and I'm one model in a fleet, writing lead-bigpickle.md would be the normal behavior. But I regenerated state target=bigpickle. Actually I'm "big-pickle" model. Let me just append the cycle output to leads/lead-bigpickle.md? That's what the pipeline does (lead_${MODEL_NAME}.txt is generated then presumably appended by a later step). Let me check how leads/lead-*.md gets built.
+
+Actually the workflow output shows it writes lead_${MODEL_NAME}.txt, and there's another step (not shown) that likely appends to leads/. I shouldn't guess. 
+
+Given the ambiguity and the user's explicit "or stop and ask for clarification if you are unsure how to proceed," I'll present the findings + decision point and ask. That's the safe, correct move.
+
+Let me also quickly compute the PRio scores properly for the new candidates, and decide hypotheses.
+
+Actually, let me not over-engineer. Let me give a concise structured cycle report and the decision/question.
+
+One more valuable passive thing: verify the frozen evidence is still byte-stable this cycle (JWKS, EA WSDL, webhook oracle) — but the state says re-verified at 14:44-14:48 today and it's now 21:45. A quick re-verify would be good but not necessary. I'll skip to conserve.
+
+Let me now also think harder: is there ANY new passive-attackable hypothesis? Let me reconsider the `security:[{}]` + spec server mismatch. Swagger servers = connect.signl4.com/api. But routes are served on api.signl4.com too. Not a vuln.
+
+Another thought: `/v2/scim/apiKey` POST regenerates SCIM key for subscription — 403/500. A wrong-role API key (low-priv user with public_api_read) might be able to regenerate the subscription SCIM key = privesc/escalation to full directory sync. That's a concrete broken-function-level-authz candidate: read-only scope required for a key-management write. Similarly `/v2/scim/settings` PUT. These are subscription-level admin operations. If a team-scoped or read-scoped API key can call them, that's a privilege escalation. Strong AUTH_HELPED candidate.
+
+Also `/v2/users/{userId}/changePassword` PUT — change another user's password. Classic IDOR→ATO (historically reported to SIGNL4? The state mentions "V2 changePassword" in the risk as handler-deferred AUTH_HELPED). So already known.
+
+Let me settle hypotheses:
+1. [HYP] Client-supplied authorizer/tenant identifiers (requesterUserId query, teamId/inviterId body) in V2 membership writes → cross-tenant move/role change (BUSLOGIC/AUTH). confidence ~60.
+2. [HYP] Read-only team API key can invoke subscription-scoped SCIM key generation (POST /v2/scim/apiKey) → privilege escalation to directory-admin. confidence ~50. But this needs auth; and spec says 403 for forbidden. AUTH_HELPED.
+3. [HYP] New-family body teamId mass-assignment (event sources/scripts/remote actions) → create resources in foreign tenant. confidence ~50.
+
+The best is #1 because of the explicit `requesterUserId` param (a client-supplied actor identity is a real smell). But I can't verify.
+
+Given confidence<40 dropped; all these are ~50-60. But they're AUTH_HELPED so max testability. Per methodology, AUTH_HELPED hypotheses are allowed (parked). 
+
+OK. Let me produce the output. Keep it reasonably concise but structured. Then ask.
+
+Let me also quickly check the `requesterUserId` on the PUT to see if it's a documented required-ish param. It was optional in the param list. In DELETE it's also optional. Hmm. It might be for admin-on-behalf. Still worth noting.
+
+Let me write the final structured cycle report.
+
+Actually, before finalizing, let me double check whether the spec includes anything new that's passively exposed — e.g., a documentation endpoint. Let me check '/scim/status' since 401. And check if there is a `/v2/eventsources` GET that with `includeInternal=true` might leak. Can't test unauth.
+
+I'll finalize.
+
+Let me reconsider the response length/format. The user is essentially the operator of this hunt. I'll present:
+- what I did this cycle (delta)
+- the one net-new lead
+- the decision point / question
+
+I'll use the block format minimally.
+
+Let me write it.</think>Cycle complete. Here's what this passive pass produced:
+
+```
+[DELTA] api.signl4.com/api/docs/v2/swagger.json re-fetched: HTTP 200, 1,225,783 B, sha256 837b34ca — byte-identical, zero spec drift since 2026-10-15.
+[DELTA] Static request-body analysis of the new V2 families (not previously done — state only logged path names).
+[PROBE] New families unauthenticated GET, api vs connect, 10/10 → 401, Content-Length:0, WWW-Authenticate: Bearer. NO host differential, NO flapping this cycle. Route-gating confirmed stable.
+
+[HYP] Client-supplied authorizer/tenant identifiers in V2 membership + new-family writes
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/teams/memberships
+confidence: 60
+reasoning: Spec (sha 837b34ca) shows PUT/DELETE /v2/teams/{teamId}/memberships/{userId} accept a `requesterUserId` query param (client-supplied actor identity); POST /v2/teams/memberships body carries both `inviterId` and `teamId`; new-family writes (eventsources, remoteActions, scripts/instances) carry body `teamId`; PUT desc = "move the user to another team within the subscription and/or change the user's role". GET /v2/teams/memberships/{userId} exists with a 403 "not allowed to access the user" guard — i.e. server-side per-user authz is present on reads, so a delta between read-authorizer and write-authorizer is plausible. Global `security:[{}]` = auth declared optional in spec.
+evidence_needed: A valid SIGNL4 API key for a low-priv/team-scoped principal, then set `requesterUserId`/`teamId` to a foreign value.
+verify_steps: 1) With low-priv X-S4-Api-Key: PUT /api/v2/teams/{myTeamId}/memberships/{targetUserId}?requesterUserId=<otherUserId> body role=admin → observe whether server honors client-supplied requester vs token subject. 2) POST /api/v2/eventsources body teamId=<foreign> → observe tenant of created object. 3) GET /api/v2/teams/memberships/{foreignUserId} → confirm 403 (baseline).
+impact: Cross-tenant role escalation / tenant escape → account takeover across SIGNL4 tenants; HIGH/CRITICAL if write-authorizer trusts client.
+testability: AUTH_HELPED
+```
+
+Net: no new **passively verifiable** finding. The only fresh leads (client-supplied `requesterUserId`/`teamId` authorizer, read-only-scope → `POST /v2/scim/apiKey` escalation) are all `AUTH_HELPED` — they cannot be confirmed without a live SIGNL4 API key/client_secret.
+
+I'm now at a genuine decision point — every remaining path needs either a credential or a human action:
+
+1. **HUMAN submission** (the standing [NEXT]): submit the 8 frozen findings to bugs.olivermaicher.eu.
+2. **Request a test credential** (SIGNL4 trial/API key) to convert the AUTH_HELPED chain + the new authorizer lead into a verifiable HIGH.
+3. **Keep passive cycling** — but expected value is ~0 (zero drift, surface exhausted).
+
+Which do you want me to proceed with? I can't submit to the program or obtain credentials myself, so 1 and 2 need you.
