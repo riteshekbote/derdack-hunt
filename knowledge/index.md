@@ -1470,3 +1470,6 @@
 - 2026-10-15 REJECTED MISCONFIG @ vps.signl4.com: dangling DNS is genuine but takeover is gated on hosting-account control (HUMAN_ONLY) — reproducible volume is not severity.
 - 2026-10-15 ACCEPTED AUTH @ signl4/docs: the prior "placeholder-only" rejection was a false negative; webhook secret ≠ REST API key, and the non-mutating Content-Length:0 oracle validates it without touching customer data.
 - 2026-10-15 ACCEPTED OTHER @ report pipeline: re-verifying frozen findings each cycle has diminishing returns; when the validation gate is dead, the highest-value action is the HUMAN submission path, not re-probing closed surfaces.
+- 2026-10-15 REJECTED AUTH @ api.signl4.com newly-published V2 families: 8/8 unauth GETs 401/0-byte — spec growth is documentation drift, not an auth gap.
+- 2026-10-15 ACCEPTED OTHER @ raw.githubusercontent fetch: Derdack repos default_branch=master; a 404 on `main` is NOT remediation — always read default_branch via API before claiming a file was removed.
+- 2026-10-15 ACCEPTED AUTH @ signl4/docs: 2026-10-14 pushes swept (placeholder-only); active maintenance does not imply new exposure.

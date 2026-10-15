@@ -2826,3 +2826,36 @@ www.derdack.com
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
 - NEW Second live SIGNL4 team webhook secret `96sbq38s` confirmed live at `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148` via Content-Length:0 control
 - NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx live (200, 1843 B) — HTTP handler interface advertises 10 handlers; EA handler auth ENFORCED via read-only GETs (GetEventStatus?Username=adm
+
+## 2026-10-15 10:14:07 UTC
+- NEW www.derdack.com `/de/` and `/ea/` are separate WordPress Multisite installations (uploads/sites/5, sites/6) — completely unprobed until this cycle; namespaces include complianz/v1, wordpress-popular-p
+- NEW www.derdack.com `/de/xmlrpc.php` returns 200 with full method list (pingback.ping, system.multicall, wp.getUsers, wp.uploadFile, mt.*) — root xmlrpc.php is 503-blocked but /de/ install is fully expose
+- NEW www.derdack.com `/de/xmlrpc.php` returns 200 with full method list including pingback.ping — root xmlrpc is 503-blocked but /de/ is fully exposed
+- NEW www.derdack.com `/ea/` media exposes Whitepaper_test.pdf (3MB, 2017) — likely test artifact in public media library
+- NEW www.derdack.com `/ea/` media exposes Whitepaper_test.pdf (3MB, 2017) — public test artifact
+- NEW www.derdack.com `/ea/` xmlrpc.php returns 405 (blocked) — /de/ is the odd one out
+- NEW www.derdack.com `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated)
+- NEW www.derdack.com `/wp-json/wp/v2/media` returns 200 with 108 media items (65+43 across 2 pages); publicly accessible, mostly stock images + 1 MP3 podcast file; no sensitive internal docs/PDFs/backups f
+- NEW www.derdack.com `/wp-json/wp/v2/posts/5945/revisions` and `/autosaves` return 401 (auth-gated, no IDOR)
+- NEW www.derdack.com `/wp-json/wp/v2/users/2` returns 404 (user ID 2 not found) — user enumeration via collection works but individual IDs may be sparse/gapped
+- NEW www.derdack.com `/yoast/v1/` admin endpoints (file_size, statistics, workouts, semrush, configuration) all return 401; only `get_head?url=` public
+- NEW www.derdack.com `xmlrpc.php` returns 503 (blocked at LB level)
+- NEW www.derdack.com/de/ and /ea/ media libraries contain only images (jpeg/png) — no PDF whitepapers or sensitive docs found (Whitepaper_test.pdf not present)
+- NEW www.derdack.com/de/xmlrpc.php & /ea/xmlrpc.php wp.uploadFile/metaWeblog.newMediaObject both return faultCode 403 "incorrect username/password" — XML-RPC exposed but mutating methods auth-gated
+- NEW www.derdack.com/de/xmlrpc.php POST returns full method list (pingback.ping, system.multicall, wp.getUsers, wp.uploadFile, metaWeblog.newMediaObject, mt.*, blogger.*) — unauthenticated XML-RPC fully ex
+- NEW www.derdack.com/de/xmlrpc.php returns 405 Allow:POST with `x-ws-origin: available` + `x-ws-ratelimit-*` headers — XML-RPC POST endpoint exposed on /de/ multisite while root blocked at LB
+- NEW www.derdack.com/ea/xmlrpc.php POST also returns full method list — both /de/ and /ea/ multisite installs have exposed XML-RPC (previous report of 405 was for GET only)
+- NEW www.derdack.com/wp-json/wp/v2/media returns 2170 items across 217 pages — all public marketing assets (images, logos, 1 MP3 podcast), no sensitive docs/PDFs/backups
+- NEW www.derdack.com/wp-json/wp/v2/posts returns 200 with published posts; /wp-json/wp/v2/posts?status=draft returns 400 (requires auth); /wp-json/wp/v2/pages returns 200 with many pages
+- NEW www.derdack.com/wp-json/wp/v2/users returns 200 OK with 10 users (names, slugs, avatar URLs, author profile links, Yoast SEO schema data) — user enumeration confirmed
+- NEW www.derdack.com/wp-login.php sets `wordpress_test_cookie` with `secure` flag and NO `Domain` attribute → host-only scoped, contradicting prior parent-domain cookie-scope assumption
+- NEW www.signl4.com = Network Solutions WPaaS (160.153.0.44) with WPML ate/proxy, wpaas, divitorque, two-factor plugins exposed in REST schema
+- NEW www.signl4.com = Network Solutions WPaaS (160.153.0.44), REST schema exposes WPML /wpml/ate/v1/ate/proxy, /wpml/v1/wpml-ph-make-external-request, /wpml/tm/v1 xliff paths, wpaas/v1, two-factor, divitor
+- NEW www.signl4.com/wp-json/two-factor/user-info → 401 rest_forbidden (gate active); two-factor/user/1 + wpaas/v1/domain + wpaas/v1/siteinfo → 404
+- NEW www.vps.signl4.com — NXDOMAIN (CT cert token only, no DNS record).
+- NEW signl4/docs received 3 new integration files 2026-10-14 (fortinet, zscaler, ciq-cloud) by rons4 — swept: only `YOUR...` placeholders; no new live secrets; `vbguzfsi` still at SIGNL4_Alerting.yaml:7
+- CHANGED api.signl4.com/api/docs/v2/swagger.json now 1,225,783 B (sha256 837b34ca…) vs 1,216,391 B recorded 2026-10-11 — public V2 spec changed; 190 paths (V1=93, V3=207). Newly-catalogued families: /v2/remote
+- NEW all 8 probed new-family unauth GETs return 401 / 0 bytes (/teams/public, /categories/public, /distributionLists/public, /remoteActions/definitions, /scim/status, /scripts/inventory, /eventsources, /st
+- CHANGED frozen evidence re-verified live 2026-10-15: vbguzfsi (yaml sha256 7b5d2a95…), 96sbq38s (google-iot 97fc94f9… + losant 2999995c…), PWD=Derdack! (Derdack master), cmkadmin/CNlydVqZ (derdack-plugin-chec
+- CHANGED api /api/v2/teams → 401 (3/3, route-gated deploy state)
+- CHANGED triage run-2026-10-15-06-34 still UnknownError (≥59 consecutive failed runs)

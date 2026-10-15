@@ -6844,3 +6844,11 @@
 - LEARN: REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
 - LEARN: REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files;
 - LEARN: ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across a
+
+## RANKED HYPOTHESES 2026-10-15 10:14:07 UTC
+- [0] <host/endpoint>: <title> (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN — submit the 3 frozen FINALs to `bugs.olivermaicher.eu`: (1) webhook secrets `vbguzfsi`/`96sbq38s` with public file:line + the Content-Length:0 400/4000-v
+- LEARN: Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`triage.yml:12` set `PROBE_ALLOW:
+- LEARN: REJECTED AUTH @ api.signl4.com newly-published V2 families: 8/8 unauth GETs 401/0-byte — spec growth is documentation drift, not an auth gap.
+- LEARN: ACCEPTED OTHER @ raw.githubusercontent fetch: Derdack repos default_branch=master; a 404 on `main` is NOT remediation — always read default_branch via API befor
+- LEARN: ACCEPTED AUTH @ signl4/docs: 2026-10-14 pushes swept (placeholder-only); active maintenance does not imply new exposure.

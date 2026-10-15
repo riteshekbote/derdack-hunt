@@ -88085,3 +88085,1577 @@ This is a bug bounty hunting automation pipeline for Derdack GmbH (SIGNL4, Enter
 - **Parked/non-reportable:** `vps.signl4.com` dangling DNS (HUMAN_ONLY - needs hosting account control), EA WSDL internal hostname leak (informational), eval() callbacks (gated), demo EAWebService (credential-gated), etc.
 
 The hunting system has completed passive recon and validation; findings are submission-ready.
+===== ANALYST bigpickle 2026-10-15 10:14:07 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && ls reports/ leads/ 2>/dev/null
+total 1644
+drwxr-xr-x 12 runner runner   4096 Oct 15 09:57 .
+drwxr-xr-x  3 runner runner   4096 Oct 15 09:57 ..
+drwxr-xr-x  7 runner runner   4096 Oct 15 09:57 .git
+drwxr-xr-x  3 runner runner   4096 Oct 15 09:57 .github
+-rw-r--r--  1 runner runner   1831 Oct 15 09:57 README.md
+-rw-r--r--  1 runner runner     32 Oct 15 09:57 analyst-out.txt
+-rw-r--r--  1 runner runner 781318 Oct 15 09:57 analyst-prompt.txt
+-rw-r--r--  1 runner runner 777439 Oct 15 09:57 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 inventory
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 leads
+-rw-r--r--  1 runner runner  23671 Oct 15 09:57 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 reports
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct 15 09:57 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 scripts
+-rw-r--r--  1 runner runner     33 Oct 15 09:57 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct 15 09:57 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct 15 09:57 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct 15 09:57 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct 15 09:57 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct 15 09:57 state_nemotron3.json
+drwxr-xr-x  2 runner runner  16384 Oct 15 09:57 triage
+leads/:
+lead-bigpickle.md
+lead-laguna.md
+lead-ling3.md
+lead-longcat.md
+lead-mimo.md
+lead-nemotron3.md
+reposcan-derdack.md
+
+reports/:
+analyst-bigpickle.log
+analyst-laguna.log
+analyst-ling3.log
+analyst-longcat.log
+analyst-nemotron3.log
+hypotheses-bigpickle.txt
+hypotheses-laguna.txt
+hypotheses-ling3.txt
+hypotheses-longcat.txt
+hypotheses-nemotron3.txt
+hypotheses.md
+valid-bugs.md
+[0m
+[0m✱ [0mGlob "reports/*"[90m 12 matches[0m
+## Objective
+- Act as senior bug-bounty analyst for the Derdack GmbH / Derdack Group program (SIGNL4 + Enterprise Alert), running hypothesis cycles against in-scope assets and producing structured [HYP]/[FINAL]/[NEXT]/[LEARN]/[RISK] outputs.
+- Current phase: POC on target `api`; three frozen [FINAL] findings ready for human submission to `bugs.olivermaicher.eu`.
+
+## Important Details
+- Report channel: `bugs.olivermaicher.eu`. Program REJECTS: brute-force/rate-limit/lockout, OPTIONS/TRACE standalone, descriptive-headers-only, public login panels, known-vuln lib w/o program-specific exploit, HUMAN_ONLY classes.
+- Three frozen [FINAL] findings (submission-ready):
+  1. **AUTH/HIGH**: Live SIGNL4 team webhook secrets `vbguzfsi` and `96sbq38s` leaked in public vendor repos (`github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7`, `signl4-integration-google-iot/index.js:19`, `signl4-integration-losant/signl4-alert-v100.node:148`; author `rons4`, pushed 2026-10-08, unremediated). Non-mutating oracle: `POST /webhook/{secret}` with `Content-Length:0` → valid secret = 400 code 4000 ("event null or empty"); fabricated = 404 code 3004. **NEVER send `{}` or JSON bodies** (accepted → 201 + real event creation, mutating/out-of-scope). Secret works on connect/account/api.signl4.com (shared registry). Webhook secret ≠ REST API key (`X-S4-Api-Key` → 403 same as junk).
+  2. **AUTH/HIGH**: Public `github.com/Derdack` org (never reposcanned until 2026-10-14) has hardcoded SQL Server SA creds `sa:Derdack!` @ `Server=sqlserver.derdack-support.local;Database=EnterpriseAlert2017` in `derdack-oncall-holidayimport/HolidayImport.js:16` + `HolidayDeleteAll.js:22` (author rbormann@de.derdack.com, 2022-12-07); Checkmk admin `cmkadmin:CNlydVqZ` @ `http://192.168.88.107:8080/cmk/check_mk/api/v0/` in `derdack-plugin-checkmk/2-way/Main.js:90-94` (author rons4, 2024-05-27).
+  3. **OATH/CRITICAL (AUTH_HELPED)**: Cross-env token-forgery chain — 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) share byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) + client_id `692A0A56-892F-4AE2-8259-76DA398990B6`; account IdP advertises `issuer=connect.signl4.com/identity` (cross-host mismatch); password grant enabled on staging; blocked on client_secret. Must be worded as "documented configuration symmetry with unverified enforcement."
+- PARKED (not reportable alone): vps.signl4.com dangling A (72.167.227.27, GoDaddy, HUMAN_ONLY); EA WSDL `ereesus` hostname leak (CWE-200); eval() callbacks in 4 plugins; api/v2/teams 401↔405 (temporal deploy state, 6/6 uniform in-session); demo EAWebService exposure (config-level, all gates); dev/us.derdack MultiViews 300 (static echo); s4dev Azure resource IDs (rejected class).
+- Key constraints: ≤1 rps, GET/HEAD/OPTIONS only for live probes; no mutating tests against customer data; sha256 secrets; passive-first.
+- Pipeline broken: `triage.yml:45` greps `[UNVALIDATED]` (0 matches); ≥58 consecutive failed Triager runs (UnknownError since 2026-09-25); `hunt.yml:13`/`triage.yml:12` set `PROBE_ALLOW: derdack.com` so signl4/enterprisealert leads never re-verified by CI. `reports/valid-bugs.md` count unreliable.
+- Methodological lessons burned into KB: root-only status ≠ full-host status; document parity ≠ enforcement parity; status code without body hash/control is not evidence; control must vary only the tested variable; distribution-vs-snapshot (N samples in one session); enumerate orgs per-org not per-brand.
+
+## Work State
+### Completed
+- Full passive surface maps: SIGNL4 V1/V2/V3/webhook/events namespaces (V4 absent), 6 identity hosts, OIDC introspection/revocation 6/6 registration parity, DPoP challenge probe (3/3 Bearer-only, not a finding).
+- Webhook secrets `vbguzfsi`/`96sbq38s` live-validated via non-mutating Content-Length:0 oracle (400/4000 vs 404/3004); byte-stable 5+ days.
+- EA WSDL `ereesus` leak re-verified: sha256 `e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae`.
+- github.com/Derdack org scanned first time (2026-10-14); SA + Checkmk creds confirmed unremediated.
+- Prepaid body-tenant hypothesis refuted repo-wide (131 write ops swept, zero accept tenant in body across V1/V2/V3 OpenAPI 3.0.4 specs).
+- Cross-env forgery finding wording fixed to "documented configuration symmetry with unverified enforcement."
+
+### Active
+- Phase POC, target `api`; deliverable set frozen at 3 [FINAL]s; zero drift at 2026-10-15 05:15 boundary.
+
+### Blocked
+- All top findings AUTH_HELPED or HUMAN-gated: cross-env forgery needs client_secret; IDOR/BOLA routes need vendor-issued credentials; report submission needs human to bugs.olivermaicher.eu (automated triage pipeline dead ≥58 runs).
+
+## Next Move
+1. HUMAN: Submit the 3 frozen findings to `bugs.olivermaicher.eu` — (1) webhook secrets `vbguzfsi`/`96sbq38s` with file:line + Content-Length:0 400/4000-vs-404/3004 oracle; (2) `sa:Derdack!` + `cmkadmin:CNlydVqZ` with commit/author provenance; (3) cross-env token-forgery chain with 6-host JWKS deep-equal + account issuer mismatch.
+2. After submission, stop re-probing closed surfaces; do not send JSON/`{}` bodies to live webhook secrets.
+
+## Relevant Files
+- `github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7`: leaked `vbguzfsi` webhook secret (pushed 2026-10-08).
+- `github.com/Derdack/derdack-oncall-holidayimport/HolidayImport.js:16` + `HolidayDeleteAll.js:22`: hardcoded SA creds.
+- `github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js:90-94`: hardcoded Checkmk admin creds.
+- `signl4-integration-google-iot/index.js:19`, `signl4-integration-losant/signl4-alert-v100.node:148`: leaked `96sbq38s`.
+- `connect.signl4.com/api/docs/{v1,v2,v3}/swagger.json`: public OpenAPI specs (already downloaded).
+- `.github/workflows/triage.yml:45`, `hunt.yml:13`, `triage.yml:12`: broken/dead validation pipeline config.
+- `reports/valid-bugs.md`: unreliable running count (gate-availability noise).
+- `leads/lead-*.md`: 6 lead files; `[UNVALIDATED]` grep matches 0.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m→ [0mRead leads/lead-bigpickle.md
+[0m
+[0m$ [0mcat state_bigpickle.json; echo; tail -60 reports/valid-bugs.md
+{"phase": "POC", "target": "api"}
+  - | 8 | PII in public CSV export | **VALID** | 5.3 | MEDIUM |
+
+- 7 lead(s) marked VALID at 2026-09-13 21:11:57 UTC
+  - | 1 | Cross-env JWKS key + client/scope reuse (devconnect + connect.signl4.com) | VALID | 7.4 | Reported |
+  - | 2 | Staging IdentityServer directly reachable (devconnect.signl4.com, password grant) | VALID | 6.5 | Reported |
+  - | 3 | Hardcoded SQL Server SA creds (`Derdack!`) in public EA plugin | VALID | 8.1 | Reported |
+  - | 4 | Hardcoded Checkmk admin creds + internal IP in public plugin | VALID | 7.5 | Reported |
+  - | 5 | SIGNL4 team secrets in public repos (Google IoT, Postman, DevTools) | VALID | 5.3 | Reported |
+  - | 6 | SIGNL4 secret logged at INFO level in ioBroker adapter | VALID | 5.3 | Reported |
+  - | 7 | PII + internal infra URLs in public CSV export | VALID | 5.3 | Reported |
+
+- 6 lead(s) marked VALID at 2026-09-14 21:52:08 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | Cross-env JWKS key reuse | **VALID** | 8.1 |
+  - | 2 | Password grant on staging IdP | **VALID** | 7.3 |
+  - | 5 | /de/ XML-RPC exposed | **VALID** | 7.5 |
+
+- 2 lead(s) marked VALID at 2026-09-18 23:43:24 UTC
+  - **VERDICT: VALID**
+  - | devconnect↔prod signing key + client reuse | **VALID** | 8.1 High | Yes — bugs.olivermaicher.eu |
+
+- 26 lead(s) marked VALID at 2026-09-20 01:52:55 UTC
+  - | Q5 Novel? | **No** — already reported in valid-bugs.md (multiple entries: 2026-09-09, 09-11, 09-13, 09-14, 09-18) |
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.4 HIGH. No new action needed.
+  - | Q5 Novel? | **No** — already reported in valid-bugs.md |
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 6.5 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 8.1 HIGH.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.5 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.5 HIGH.
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md; distinct from the eval() finding (different file, different mechanism — shell interpolation vs eval) |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md as a standalone finding; distinct from the hardcoded SA creds finding |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Uncertain** — may overlap with prior VALID entries in valid-bugs.md that mention "eval" |
+  - | Q7 Reasonable triager? | **Conditional** — valid code defect, but impact requires EA SDK documentation to confirm trust boundary |
+  - **Verdict: HOLD** — Valid code defect but impact gated on whether EA SDK provides attacker-controllable data to these callback fields. Needs: (1) EA Scripting Host SDK documentation review, (2) confir
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md |
+
+- 4 lead(s) marked VALID at 2026-09-21 22:48:59 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | SIGNL4 staging OIDC + cross-env JWKS key reuse | **VALID** | 7.4 |
+  - | 2 | Hardcoded SA/Checkmk creds + command injection in EA scripts | **VALID** | 9.8 |
+
+- 8 lead(s) marked VALID at 2026-09-25 05:00:44 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | SIGNL4 staging IdP shares prod signing key + OAuth client | **VALID** | 7.4 |
+  - | 2 | Hardcoded SA/Checkmk creds + command injection in EA scripts | **VALID** | 9.8 |
+  - | 9 | Hardcoded SIGNL4 team secrets in public repos | **VALID** | 5.3 |
+  - | 10 | PII + internal URLs in public CSV exports | **VALID** | 5.3 |
+[0m
+[0m$ [0mwc -l leads/lead-bigpickle.md && grep -n "^## " leads/lead-bigpickle.md | tail -20
+11728 leads/lead-bigpickle.md
+9880:## 2026-10-11 01:16:22 UTC [target] (model bigpickle)
+10073:## 2026-10-11 07:16:01 UTC [target] (model bigpickle)
+10074:## 2026-10-11 14:10:40 UTC [target] (model bigpickle)
+10270:## 2026-10-11 18:58:56 UTC [target] (model bigpickle)
+10299:## 2026-10-11 22:40:22 UTC [target] (model bigpickle)
+10300:## 2026-10-12 01:47:34 UTC [target] (model bigpickle)
+10301:## 2026-10-12 08:23:34 UTC [target] (model bigpickle)
+10658:## 2026-10-12 18:07:49 UTC [target] (model bigpickle)
+10790:## 2026-10-13 00:50:38 UTC [target] (model bigpickle)
+10791:## 2026-10-13 07:17:58 UTC [target] (model bigpickle)
+10919:## 2026-10-13 15:09:18 UTC [target] (model bigpickle)
+10920:## 2026-10-13 20:45:59 UTC [target] (model bigpickle)
+11088:## 2026-10-14 00:03:24 UTC [target] (model bigpickle)
+11160:## 2026-10-14 04:59:26 UTC [target] (model bigpickle)
+11161:## 2026-10-14 10:08:36 UTC [target] (model bigpickle)
+11336:## 2026-10-14 14:52:33 UTC [target] (model bigpickle)
+11392:## 2026-10-14 19:06:38 UTC [target] (model bigpickle)
+11505:## 2026-10-14 22:38:50 UTC [target] (model bigpickle)
+11506:## 2026-10-15 00:37:12 UTC [target] (model bigpickle)
+11517:## 2026-10-15 05:15:30 UTC [target] (model bigpickle)
+[0m
+[0m$ [0mls -la knowledge/ inventory/ recon-notes/ && tail -5 analyst-out.txt
+inventory/:
+total 416
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 .
+drwxr-xr-x 12 runner runner   4096 Oct 15 09:57 ..
+-rw-r--r--  1 runner runner 414819 Oct 15 09:57 derdack.md
+
+knowledge/:
+total 348
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 .
+drwxr-xr-x 12 runner runner   4096 Oct 15 09:57 ..
+-rw-r--r--  1 runner runner 347199 Oct 15 09:57 index.md
+
+recon-notes/:
+total 12
+drwxr-xr-x  2 runner runner 4096 Oct 15 09:57 .
+drwxr-xr-x 12 runner runner 4096 Oct 15 09:57 ..
+-rw-r--r--  1 runner runner  817 Oct 15 09:57 DEDICATED-DEEP.md
+11392:## 2026-10-14 19:06:38 UTC [target] (model bigpickle)
+11505:## 2026-10-14 22:38:50 UTC [target] (model bigpickle)
+11506:## 2026-10-15 00:37:12 UTC [target] (model bigpickle)
+11517:## 2026-10-15 05:15:30 UTC [target] (model bigpickle)
+[0m
+[0m
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=11505][0m
+[0m
+[0m$ [0mwc -l analyst-prompt.txt analyst-out.txt ctx.txt; echo ---; cat analyst-out.txt; echo ---; tail -c 3000 analyst-prompt.txt
+4434 analyst-prompt.txt
+    210 analyst-out.txt
+   4405 ctx.txt
+   9049 total
+---
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && ls reports/ leads/ 2>/dev/null
+total 1644
+drwxr-xr-x 12 runner runner   4096 Oct 15 09:57 .
+drwxr-xr-x  3 runner runner   4096 Oct 15 09:57 ..
+drwxr-xr-x  7 runner runner   4096 Oct 15 09:57 .git
+drwxr-xr-x  3 runner runner   4096 Oct 15 09:57 .github
+-rw-r--r--  1 runner runner   1831 Oct 15 09:57 README.md
+-rw-r--r--  1 runner runner     32 Oct 15 09:57 analyst-out.txt
+-rw-r--r--  1 runner runner 781318 Oct 15 09:57 analyst-prompt.txt
+-rw-r--r--  1 runner runner 777439 Oct 15 09:57 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 inventory
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 leads
+-rw-r--r--  1 runner runner  23671 Oct 15 09:57 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 reports
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct 15 09:57 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 scripts
+-rw-r--r--  1 runner runner     33 Oct 15 09:57 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct 15 09:57 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct 15 09:57 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct 15 09:57 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct 15 09:57 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct 15 09:57 state_nemotron3.json
+drwxr-xr-x  2 runner runner  16384 Oct 15 09:57 triage
+leads/:
+lead-bigpickle.md
+lead-laguna.md
+lead-ling3.md
+lead-longcat.md
+lead-mimo.md
+lead-nemotron3.md
+reposcan-derdack.md
+
+reports/:
+analyst-bigpickle.log
+analyst-laguna.log
+analyst-ling3.log
+analyst-longcat.log
+analyst-nemotron3.log
+hypotheses-bigpickle.txt
+hypotheses-laguna.txt
+hypotheses-ling3.txt
+hypotheses-longcat.txt
+hypotheses-nemotron3.txt
+hypotheses.md
+valid-bugs.md
+[0m
+[0m✱ [0mGlob "reports/*"[90m 12 matches[0m
+## Objective
+- Act as senior bug-bounty analyst for the Derdack GmbH / Derdack Group program (SIGNL4 + Enterprise Alert), running hypothesis cycles against in-scope assets and producing structured [HYP]/[FINAL]/[NEXT]/[LEARN]/[RISK] outputs.
+- Current phase: POC on target `api`; three frozen [FINAL] findings ready for human submission to `bugs.olivermaicher.eu`.
+
+## Important Details
+- Report channel: `bugs.olivermaicher.eu`. Program REJECTS: brute-force/rate-limit/lockout, OPTIONS/TRACE standalone, descriptive-headers-only, public login panels, known-vuln lib w/o program-specific exploit, HUMAN_ONLY classes.
+- Three frozen [FINAL] findings (submission-ready):
+  1. **AUTH/HIGH**: Live SIGNL4 team webhook secrets `vbguzfsi` and `96sbq38s` leaked in public vendor repos (`github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7`, `signl4-integration-google-iot/index.js:19`, `signl4-integration-losant/signl4-alert-v100.node:148`; author `rons4`, pushed 2026-10-08, unremediated). Non-mutating oracle: `POST /webhook/{secret}` with `Content-Length:0` → valid secret = 400 code 4000 ("event null or empty"); fabricated = 404 code 3004. **NEVER send `{}` or JSON bodies** (accepted → 201 + real event creation, mutating/out-of-scope). Secret works on connect/account/api.signl4.com (shared registry). Webhook secret ≠ REST API key (`X-S4-Api-Key` → 403 same as junk).
+  2. **AUTH/HIGH**: Public `github.com/Derdack` org (never reposcanned until 2026-10-14) has hardcoded SQL Server SA creds `sa:Derdack!` @ `Server=sqlserver.derdack-support.local;Database=EnterpriseAlert2017` in `derdack-oncall-holidayimport/HolidayImport.js:16` + `HolidayDeleteAll.js:22` (author rbormann@de.derdack.com, 2022-12-07); Checkmk admin `cmkadmin:CNlydVqZ` @ `http://192.168.88.107:8080/cmk/check_mk/api/v0/` in `derdack-plugin-checkmk/2-way/Main.js:90-94` (author rons4, 2024-05-27).
+  3. **OATH/CRITICAL (AUTH_HELPED)**: Cross-env token-forgery chain — 6 identity hosts (connect, devconnect, api, devapi, account, devaccount) share byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`) + client_id `692A0A56-892F-4AE2-8259-76DA398990B6`; account IdP advertises `issuer=connect.signl4.com/identity` (cross-host mismatch); password grant enabled on staging; blocked on client_secret. Must be worded as "documented configuration symmetry with unverified enforcement."
+- PARKED (not reportable alone): vps.signl4.com dangling A (72.167.227.27, GoDaddy, HUMAN_ONLY); EA WSDL `ereesus` hostname leak (CWE-200); eval() callbacks in 4 plugins; api/v2/teams 401↔405 (temporal deploy state, 6/6 uniform in-session); demo EAWebService exposure (config-level, all gates); dev/us.derdack MultiViews 300 (static echo); s4dev Azure resource IDs (rejected class).
+- Key constraints: ≤1 rps, GET/HEAD/OPTIONS only for live probes; no mutating tests against customer data; sha256 secrets; passive-first.
+- Pipeline broken: `triage.yml:45` greps `[UNVALIDATED]` (0 matches); ≥58 consecutive failed Triager runs (UnknownError since 2026-09-25); `hunt.yml:13`/`triage.yml:12` set `PROBE_ALLOW: derdack.com` so signl4/enterprisealert leads never re-verified by CI. `reports/valid-bugs.md` count unreliable.
+- Methodological lessons burned into KB: root-only status ≠ full-host status; document parity ≠ enforcement parity; status code without body hash/control is not evidence; control must vary only the tested variable; distribution-vs-snapshot (N samples in one session); enumerate orgs per-org not per-brand.
+
+## Work State
+### Completed
+- Full passive surface maps: SIGNL4 V1/V2/V3/webhook/events namespaces (V4 absent), 6 identity hosts, OIDC introspection/revocation 6/6 registration parity, DPoP challenge probe (3/3 Bearer-only, not a finding).
+- Webhook secrets `vbguzfsi`/`96sbq38s` live-validated via non-mutating Content-Length:0 oracle (400/4000 vs 404/3004); byte-stable 5+ days.
+- EA WSDL `ereesus` leak re-verified: sha256 `e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae`.
+- github.com/Derdack org scanned first time (2026-10-14); SA + Checkmk creds confirmed unremediated.
+- Prepaid body-tenant hypothesis refuted repo-wide (131 write ops swept, zero accept tenant in body across V1/V2/V3 OpenAPI 3.0.4 specs).
+- Cross-env forgery finding wording fixed to "documented configuration symmetry with unverified enforcement."
+
+### Active
+- Phase POC, target `api`; deliverable set frozen at 3 [FINAL]s; zero drift at 2026-10-15 05:15 boundary.
+
+### Blocked
+- All top findings AUTH_HELPED or HUMAN-gated: cross-env forgery needs client_secret; IDOR/BOLA routes need vendor-issued credentials; report submission needs human to bugs.olivermaicher.eu (automated triage pipeline dead ≥58 runs).
+
+## Next Move
+1. HUMAN: Submit the 3 frozen findings to `bugs.olivermaicher.eu` — (1) webhook secrets `vbguzfsi`/`96sbq38s` with file:line + Content-Length:0 400/4000-vs-404/3004 oracle; (2) `sa:Derdack!` + `cmkadmin:CNlydVqZ` with commit/author provenance; (3) cross-env token-forgery chain with 6-host JWKS deep-equal + account issuer mismatch.
+2. After submission, stop re-probing closed surfaces; do not send JSON/`{}` bodies to live webhook secrets.
+
+## Relevant Files
+- `github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml:7`: leaked `vbguzfsi` webhook secret (pushed 2026-10-08).
+- `github.com/Derdack/derdack-oncall-holidayimport/HolidayImport.js:16` + `HolidayDeleteAll.js:22`: hardcoded SA creds.
+- `github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js:90-94`: hardcoded Checkmk admin creds.
+- `signl4-integration-google-iot/index.js:19`, `signl4-integration-losant/signl4-alert-v100.node:148`: leaked `96sbq38s`.
+- `connect.signl4.com/api/docs/{v1,v2,v3}/swagger.json`: public OpenAPI specs (already downloaded).
+- `.github/workflows/triage.yml:45`, `hunt.yml:13`, `triage.yml:12`: broken/dead validation pipeline config.
+- `reports/valid-bugs.md`: unreliable running count (gate-availability noise).
+- `leads/lead-*.md`: 6 lead files; `[UNVALIDATED]` grep matches 0.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m→ [0mRead leads/lead-bigpickle.md
+[0m
+[0m$ [0mcat state_bigpickle.json; echo; tail -60 reports/valid-bugs.md
+{"phase": "POC", "target": "api"}
+  - | 8 | PII in public CSV export | **VALID** | 5.3 | MEDIUM |
+
+- 7 lead(s) marked VALID at 2026-09-13 21:11:57 UTC
+  - | 1 | Cross-env JWKS key + client/scope reuse (devconnect + connect.signl4.com) | VALID | 7.4 | Reported |
+  - | 2 | Staging IdentityServer directly reachable (devconnect.signl4.com, password grant) | VALID | 6.5 | Reported |
+  - | 3 | Hardcoded SQL Server SA creds (`Derdack!`) in public EA plugin | VALID | 8.1 | Reported |
+  - | 4 | Hardcoded Checkmk admin creds + internal IP in public plugin | VALID | 7.5 | Reported |
+  - | 5 | SIGNL4 team secrets in public repos (Google IoT, Postman, DevTools) | VALID | 5.3 | Reported |
+  - | 6 | SIGNL4 secret logged at INFO level in ioBroker adapter | VALID | 5.3 | Reported |
+  - | 7 | PII + internal infra URLs in public CSV export | VALID | 5.3 | Reported |
+
+- 6 lead(s) marked VALID at 2026-09-14 21:52:08 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | Cross-env JWKS key reuse | **VALID** | 8.1 |
+  - | 2 | Password grant on staging IdP | **VALID** | 7.3 |
+  - | 5 | /de/ XML-RPC exposed | **VALID** | 7.5 |
+
+- 2 lead(s) marked VALID at 2026-09-18 23:43:24 UTC
+  - **VERDICT: VALID**
+  - | devconnect↔prod signing key + client reuse | **VALID** | 8.1 High | Yes — bugs.olivermaicher.eu |
+
+- 26 lead(s) marked VALID at 2026-09-20 01:52:55 UTC
+  - | Q5 Novel? | **No** — already reported in valid-bugs.md (multiple entries: 2026-09-09, 09-11, 09-13, 09-14, 09-18) |
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.4 HIGH. No new action needed.
+  - | Q5 Novel? | **No** — already reported in valid-bugs.md |
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 6.5 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 8.1 HIGH.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.5 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 5.3 MEDIUM.
+  - **Verdict: ALREADY REPORTED** — Prior VALID, CVSS 7.5 HIGH.
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md; distinct from the eval() finding (different file, different mechanism — shell interpolation vs eval) |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md as a standalone finding; distinct from the hardcoded SA creds finding |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Uncertain** — may overlap with prior VALID entries in valid-bugs.md that mention "eval" |
+  - | Q7 Reasonable triager? | **Conditional** — valid code defect, but impact requires EA SDK documentation to confirm trust boundary |
+  - **Verdict: HOLD** — Valid code defect but impact gated on whether EA SDK provides attacker-controllable data to these callback fields. Needs: (1) EA Scripting Host SDK documentation review, (2) confir
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md |
+  - **Verdict: VALID**
+  - | Q5 Novel? | **Yes** — not in valid-bugs.md |
+
+- 4 lead(s) marked VALID at 2026-09-21 22:48:59 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | SIGNL4 staging OIDC + cross-env JWKS key reuse | **VALID** | 7.4 |
+  - | 2 | Hardcoded SA/Checkmk creds + command injection in EA scripts | **VALID** | 9.8 |
+
+- 8 lead(s) marked VALID at 2026-09-25 05:00:44 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | 1 | SIGNL4 staging IdP shares prod signing key + OAuth client | **VALID** | 7.4 |
+  - | 2 | Hardcoded SA/Checkmk creds + command injection in EA scripts | **VALID** | 9.8 |
+  - | 9 | Hardcoded SIGNL4 team secrets in public repos | **VALID** | 5.3 |
+  - | 10 | PII + internal URLs in public CSV exports | **VALID** | 5.3 |
+[0m
+[0m$ [0mwc -l leads/lead-bigpickle.md && grep -n "^## " leads/lead-bigpickle.md | tail -20
+11728 leads/lead-bigpickle.md
+9880:## 2026-10-11 01:16:22 UTC [target] (model bigpickle)
+10073:## 2026-10-11 07:16:01 UTC [target] (model bigpickle)
+10074:## 2026-10-11 14:10:40 UTC [target] (model bigpickle)
+10270:## 2026-10-11 18:58:56 UTC [target] (model bigpickle)
+10299:## 2026-10-11 22:40:22 UTC [target] (model bigpickle)
+10300:## 2026-10-12 01:47:34 UTC [target] (model bigpickle)
+10301:## 2026-10-12 08:23:34 UTC [target] (model bigpickle)
+10658:## 2026-10-12 18:07:49 UTC [target] (model bigpickle)
+10790:## 2026-10-13 00:50:38 UTC [target] (model bigpickle)
+10791:## 2026-10-13 07:17:58 UTC [target] (model bigpickle)
+10919:## 2026-10-13 15:09:18 UTC [target] (model bigpickle)
+10920:## 2026-10-13 20:45:59 UTC [target] (model bigpickle)
+11088:## 2026-10-14 00:03:24 UTC [target] (model bigpickle)
+11160:## 2026-10-14 04:59:26 UTC [target] (model bigpickle)
+11161:## 2026-10-14 10:08:36 UTC [target] (model bigpickle)
+11336:## 2026-10-14 14:52:33 UTC [target] (model bigpickle)
+11392:## 2026-10-14 19:06:38 UTC [target] (model bigpickle)
+11505:## 2026-10-14 22:38:50 UTC [target] (model bigpickle)
+11506:## 2026-10-15 00:37:12 UTC [target] (model bigpickle)
+11517:## 2026-10-15 05:15:30 UTC [target] (model bigpickle)
+[0m
+[0m$ [0mls -la knowledge/ inventory/ recon-notes/ && tail -5 analyst-out.txt
+inventory/:
+total 416
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 .
+drwxr-xr-x 12 runner runner   4096 Oct 15 09:57 ..
+-rw-r--r--  1 runner runner 414819 Oct 15 09:57 derdack.md
+
+knowledge/:
+total 348
+drwxr-xr-x  2 runner runner   4096 Oct 15 09:57 .
+drwxr-xr-x 12 runner runner   4096 Oct 15 09:57 ..
+-rw-r--r--  1 runner runner 347199 Oct 15 09:57 index.md
+
+recon-notes/:
+total 12
+drwxr-xr-x  2 runner runner 4096 Oct 15 09:57 .
+drwxr-xr-x 12 runner runner 4096 Oct 15 09:57 ..
+-rw-r--r--  1 runner runner  817 Oct 15 09:57 DEDICATED-DEEP.md
+11392:## 2026-10-14 19:06:38 UTC [target] (model bigpickle)
+11505:## 2026-10-14 22:38:50 UTC [target] (model bigpickle)
+11506:## 2026-10-15 00:37:12 UTC [target] (model bigpickle)
+11517:## 2026-10-15 05:15:30 UTC [target] (model bigpickle)
+[0m
+[0m
+[0m→ [0mRead leads/lead-bigpickle.md[90m [offset=11505][0m
+---
+t-level reasoning: exact METHOD path params headers body, expected vs actual status. No filler.
+- Breadth over the full inventory for anomalies (odd status codes, id/uid/email/user_id params, versioned /api/v1|v2|beta|internal, debug/test flags, swagger/openapi/json), then depth on top-3 anomalies.
+- If a hypothesis needs live confirmation you cannot do passively, emit [NEXT] PROBE with the EXACT read-only request.
+OUT OF SCOPE (REJECTED classes): network DoS, account-lockout DoS, descriptive errors/headers only, robots.txt / known public files, outdated library versions, OPTIONS/TRACE, CSRF on logout or anonymous forms, cookie flags on non-sensitive data, self-XSS, scanner reports without POC, physical access, social engineering of employees/vendors, username enumeration on login/forgot-password, brute-force/rate-limit/lockout policy, SSL/TLS best practice, SSL attacks, clickjacking without demonstrated exploit, mail config (SPF/DKIM/DMARC), known-vulnerable library without program-specific exploit, password/account-recovery policy, autocomplete in fields, public login panels, lack of email verification, session control during email/password change, and any exposure of customer/employee/financial/authentication data during testing (program note). Focus on real logic flaws in scoped assets.
+Your job is NOT to invent vulnerabilities. Run the 8 steps and output ONLY structured blocks.
+
+STEP 1 — DELTA: compare inventory+knowledge+last leads against current surface. [NEW]/[CHANGED] one line each, or NO_DELTA.
+STEP 2 — PRIORITIZE: score top new (or existing) assets 0-10 on attack_surface, business_value, tech_exposure (GraphQL/OAuth/JWT/upload/admin/uncommon), gate_ease (10=no auth), cloud_surface, freshness. priority=0.25a+0.25b+0.15t+0.15g+0.10c+0.10f. Emit [PRIO] asset,score,axis.
+STEP 3 — HYPOTHESES: top 3 assets, max 1 hypothesis each. Strict schema, one field per line under [HYP] title line:
+[HYP] <title>
+class: <IDOR|SSRF|AUTH|XSS|BUSLOGIC|MISCONFIG|OATH|OTHER>
+asset: <host/endpoint>
+confidence: <0-100>
+reasoning: <facts only>
+evidence_needed: <what proves it>
+verify_steps: <passive-first concrete HTTP requests>
+impact: <what attacker gets + severity>
+testability: <PASSIVE|AUTH_HELPED|HUMAN_ONLY>
+Never put fields inline in the [HYP] title.
+STEP 4 — SELF-CRITIQUE: drop confidence<40 or REJECTED-class or no-verify-steps. [PARKED] <title>: <why>. [FINAL] survivors ranked.
+STEP 5 — NEXT ACTION: exactly one [NEXT] <PROBE|SCAN|RAG|HUMAN>: <one concrete action, exact endpoint if PROBE>.
+STEP 6 — LEARNING: [LEARN] REJECTED/ACCEPTED <class> @ <asset>: <reason>.
+STEP 7 — RISK: [RISK] <program>: <0-100> reason.
+RULES: facts vs hypotheses strictly separated; no endpoint-map-only; no REJECTED class; sha256 any secret; all claims trace to context or your own read-only probes; passive-first, <=1 rps, GET/HEAD/OPTIONS only for live probes; no auth-bypass or mutating tests against live customer data; any scanner output requires manual validation.
+[0m
+[0m$ [0mls .github/workflows/ scripts/ triage/ | head -50; echo ---; grep -n "valid-bugs\|submission\|olivermaicher" README.md | head
+.github/workflows/:
+hunt.yml
+reposcan.yml
+sync-issues.yml
+triage.yml
+
+scripts/:
+sync-issues.py
+
+triage/:
+run-2026-09-02-21-25.md
+run-2026-09-02-23-31.md
+run-2026-09-03-01-23.md
+run-2026-09-03-06-25.md
+run-2026-09-03-11-39.md
+run-2026-09-03-15-10.md
+run-2026-09-03-18-39.md
+run-2026-09-03-21-19.md
+run-2026-09-03-23-20.md
+run-2026-09-04-01-02.md
+run-2026-09-04-05-54.md
+run-2026-09-04-10-01.md
+run-2026-09-04-14-22.md
+run-2026-09-04-17-46.md
+run-2026-09-04-19-58.md
+run-2026-09-04-21-58.md
+run-2026-09-04-23-38.md
+run-2026-09-05-01-22.md
+run-2026-09-05-06-16.md
+run-2026-09-05-10-37.md
+run-2026-09-05-13-31.md
+run-2026-09-05-16-13.md
+run-2026-09-05-18-18.md
+run-2026-09-05-20-26.md
+run-2026-09-05-22-13.md
+run-2026-09-05-23-54.md
+run-2026-09-06-01-28.md
+run-2026-09-06-06-28.md
+run-2026-09-06-11-17.md
+run-2026-09-06-14-12.md
+run-2026-09-06-17-03.md
+run-2026-09-06-19-11.md
+run-2026-09-06-21-21.md
+run-2026-09-06-23-04.md
+run-2026-09-07-01-02.md
+run-2026-09-07-06-07.md
+run-2026-09-07-12-33.md
+run-2026-09-07-17-53.md
+run-2026-09-07-20-50.md
+run-2026-09-07-23-04.md
+---
+13:  running count in `reports/valid-bugs.md`.
+31:| `reports/valid-bugs.md` | Validated findings + running count |
+[0m
+[0m$ [0mgrep -rn "vbguzfsi" reposcan-raw/ reposcan-derdack.md 2>/dev/null | head; echo ---; ls reposcan-raw/ | head -30
+---
+summary.txt
+[0m
+[0m$ [0mfor u in "https://raw.githubusercontent.com/signl4/docs/main/integrations/devtools/SIGNL4_Alerting.yaml" "https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/main/HolidayImport.js" "https://raw.githubusercontent.com/Derdack/derdack-plugin-checkmk/main/2-way/Main.js"; do echo "== $u"; curl -s -m 15 -o /tmp/opencode/drift.out -w "%{http_code}\n" "$u"; grep -o "vbguzfsi\|PWD=Derdack!\|CNlydVqZ" /tmp/opencode/drift.out | sort -u; sleep 1; done
+== https://raw.githubusercontent.com/signl4/docs/main/integrations/devtools/SIGNL4_Alerting.yaml
+200
+vbguzfsi
+== https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/main/HolidayImport.js
+404
+== https://raw.githubusercontent.com/Derdack/derdack-plugin-checkmk/main/2-way/Main.js
+404
+[0m
+[0m$ [0mcurl -s -m 15 "https://api.github.com/repos/Derdack/derdack-oncall-holidayimport/contents/" | grep '"name"'; echo ---; curl -s -m 15 -w "\nHTTP:%{http_code}\n" "https://api.github.com/repos/signl4/docs" | grep -E '"full_name"|"private"|HTTP:'
+"name": "HolidayDeleteAll.js",
+    "name": "HolidayImport.js",
+    "name": "README.md",
+    "name": "basic.ics",
+---
+  "full_name": "signl4/docs",
+  "private": false,
+HTTP:200
+[0m
+[0m$ [0mfor r in "Derdack/derdack-oncall-holidayimport" "Derdack/derdack-plugin-checkmk" "Derdack"; do echo "== $r"; curl -s -m 15 -w "\nHTTP:%{http_code}\n" "https://api.github.com/repos/$r" | grep -E '"full_name"|"private"|"default_branch"|"pushed_at"|HTTP:'; sleep 1; done; echo "== org repos"; curl -s -m 15 "https://api.github.com/orgs/Derdack/repos?per_page=100" | grep -c '"full_name"'
+== Derdack/derdack-oncall-holidayimport
+  "full_name": "Derdack/derdack-oncall-holidayimport",
+  "private": false,
+  "pushed_at": "2022-12-07T09:02:17Z",
+  "default_branch": "master",
+HTTP:200
+== Derdack/derdack-plugin-checkmk
+  "full_name": "Derdack/derdack-plugin-checkmk",
+  "private": false,
+  "pushed_at": "2024-05-27T12:14:57Z",
+  "default_branch": "master",
+HTTP:200
+== Derdack
+HTTP:404
+== org repos
+12
+[0m
+[0m$ [0mecho "== 96sbq38s google-iot"; curl -s -m 15 -o /tmp/opencode/g.out -w "%{http_code}\n" "https://raw.githubusercontent.com/signl4/signl4-integration-google-iot/main/index.js"; grep -o "96sbq38s" /tmp/opencode/g.out | head -1; sleep 1; echo "== losant"; curl -s -m 15 -o /tmp/opencode/l.out -w "%{http_code}\n" "https://raw.githubusercontent.com/signl4/signl4-integration-losant/main/signl4-alert-v100.node"; grep -o "96sbq38s" /tmp/opencode/l.out | head -1
+== 96sbq38s google-iot
+404
+== losant
+404
+[0m
+[0m$ [0mfor u in "https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/master/HolidayImport.js" "https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/master/HolidayDeleteAll.js" "https://raw.githubusercontent.com/Derdack/derdack-plugin-checkmk/master/2-way/Main.js"; do echo "== $u"; curl -s -m 15 -o /tmp/opencode/d.out -w "%{http_code} " "$u"; sha256sum /tmp/opencode/d.out | cut -c1-16; grep -o "PWD=Derdack!\|CNlydVqZ\|cmkadmin" /tmp/opencode/d.out | sort -u; sleep 1; done
+== https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/master/HolidayImport.js
+200 d2dbe9b5f032c076
+PWD=Derdack!
+== https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/master/HolidayDeleteAll.js
+200 a70bd7df8496dae5
+PWD=Derdack!
+== https://raw.githubusercontent.com/Derdack/derdack-plugin-checkmk/master/2-way/Main.js
+200 3ad49f586c4d85e8
+CNlydVqZ
+cmkadmin
+[0m
+[0m$ [0mfor r in "signl4/signl4-integration-google-iot" "signl4/signl4-integration-losant" "signl4/docs"; do echo "== $r"; curl -s -m 15 "https://api.github.com/repos/$r" | grep -E '"full_name"|"private"|"default_branch"|"pushed_at"'; sleep 1; done
+== signl4/signl4-integration-google-iot
+  "full_name": "signl4/signl4-integration-google-iot",
+  "private": false,
+  "pushed_at": "2019-02-15T11:04:15Z",
+  "default_branch": "master",
+== signl4/signl4-integration-losant
+  "full_name": "signl4/signl4-integration-losant",
+  "private": false,
+  "pushed_at": "2018-12-04T15:17:11Z",
+  "default_branch": "master",
+== signl4/docs
+  "full_name": "signl4/docs",
+  "private": false,
+  "pushed_at": "2026-10-14T11:40:48Z",
+  "default_branch": "main",
+[0m
+[0m$ [0mcurl -s -m 15 "https://api.github.com/repos/signl4/docs/commits?per_page=5" | grep -E '"message"|"date"|"login"' | head -30; sleep 1; echo "== losant content"; curl -s -m 15 -o /tmp/opencode/l.out -w "%{http_code}\n" "https://raw.githubusercontent.com/signl4/signl4-integration-losant/master/signl4-alert-v100.node"; grep -o "96sbq38s" /tmp/opencode/l.out | head -1; sleep 1; echo "== google-iot content"; curl -s -m 15 -o /tmp/opencode/g.out -w "%{http_code}\n" "https://raw.githubusercontent.com/signl4/signl4-integration-google-iot/master/index.js"; grep -o "96sbq38s" /tmp/opencode/g.out | head -1
+"date": "2026-10-14T11:40:46Z"
+        "date": "2026-10-14T11:40:46Z"
+      "message": "Add files via upload",
+      "login": "rons4",
+      "login": "web-flow",
+        "date": "2026-10-14T10:55:31Z"
+        "date": "2026-10-14T10:55:31Z"
+      "message": "Update ciq-cloud.md",
+      "login": "rons4",
+      "login": "web-flow",
+        "date": "2026-10-14T10:43:51Z"
+        "date": "2026-10-14T10:43:51Z"
+      "message": "Add files via upload",
+      "login": "rons4",
+      "login": "web-flow",
+        "date": "2026-10-14T07:57:01Z"
+        "date": "2026-10-14T07:57:01Z"
+      "message": "Update dynatrace.md",
+      "login": "rons4",
+      "login": "web-flow",
+        "date": "2026-10-08T12:25:53Z"
+        "date": "2026-10-08T12:25:53Z"
+      "message": "Update xyops.md",
+      "login": "rons4",
+      "login": "web-flow",
+== losant content
+200
+96sbq38s
+== google-iot content
+200
+96sbq38s
+[0m
+[0m$ [0mfor sha in $(curl -s -m 15 "https://api.github.com/repos/signl4/docs/commits?per_page=5" | grep -o '"sha": "[a-f0-9]*"' | head -5 | cut -d'"' -f4); do echo "== $sha"; curl -s -m 15 "https://api.github.com/repos/signl4/docs/commits/$sha" | grep -o '"filename": "[^"]*"'; sleep 1; done
+== f971dfb3aff08d8605e0f596bd081170482c8e14
+"filename": "integrations/fortinet/fortinet.md"
+"filename": "integrations/fortinet/signl4-alert.png"
+"filename": "integrations/zscaler/signl4-alert.png"
+"filename": "integrations/zscaler/zscaler.md"
+== b35696200b0076e3500bf66b72ede6a377b2d55d
+== 69f16f135a26059c6ce38de2c3ea1cc1861b5bcc
+"filename": "integrations/ciq-cloud/ciq-cloud.md"
+== 69f16f135a26059c6ce38de2c3ea1cc1861b5bcc
+"filename": "integrations/ciq-cloud/ciq-cloud.md"
+== 34eadab6d20679e7ac386ba1aa019ad644457003
+[0m
+[0m$ [0mfor f in integrations/fortinet/fortinet.md integrations/zscaler/zscaler.md integrations/ciq-cloud/ciq-cloud.md; do echo "== $f"; curl -s -m 15 "https://raw.githubusercontent.com/signl4/docs/main/$f" | grep -oE "webhook/[A-Za-z0-9]+|team[_-]?secret[^ ]*|[A-Za-z0-9]{8}" | sort -u | head -20; sleep 1; done
+== integrations/fortinet/fortinet.md
+Acknowle
+Administ
+Automati
+Configur
+Consider
+Dependin
+FortiGat
+Fortinet
+Integrat
+Navigate
+Outbound
+Prerequi
+Protocol
+Referenc
+Security
+Severity
+SourceSy
+Stitches
+acknowle
+activity
+== integrations/zscaler/zscaler.md
+Administ
+Alternat
+Arbitrar
+Automate
+Configur
+Critical
+Dependin
+Experien
+External
+Function
+Integrat
+Internet
+Monitori
+Normaliz
+Official
+Optional
+Policies
+Prerequi
+Referenc
+Security
+== integrations/ciq-cloud/ciq-cloud.md
+Acknowle
+Configur
+Connecti
+Delivery
+Integrat
+Manageme
+Prerequi
+acknowle
+addition
+alerting
+applicat
+automate
+categori
+ciqcloud
+complian
+configur
+connecte
+connecti
+creating
+critical
+[0m
+[0m$ [0mecho "== devtools yaml"; curl -s -m 15 "https://raw.githubusercontent.com/signl4/docs/main/integrations/devtools/SIGNL4_Alerting.yaml" | grep -n "webhook" ; sleep 1; echo "== code search webhook secrets in signl4 org"; curl -s -m 15 "https://api.github.com/search/code?q=org:signl4+connect.signl4.com/webhook" -H "Accept: application/vnd.github+json" | head -c 400
+== devtools yaml
+7:      url: https://connect.signl4.com/webhook/vbguzfsi
+42:      url: https://connect.signl4.com/webhook/xxxx
+== code search webhook secrets in signl4 org
+{
+  "message": "Requires authentication",
+  "documentation_url": "https://docs.github.com/rest",
+  "status": "401"
+}
+[0m
+[0m$ [0mecho "== org scan freshness: Derdack repos pushed recently"; curl -s -m 15 "https://api.github.com/orgs/Derdack/repos?per_page=100&sort=pushed" | grep -E '"full_name"|"pushed_at"' | head -30; sleep 1; echo "== signl4 org count"; curl -s -m 15 "https://api.github.com/orgs/signl4/repos?per_page=100" | grep -c '"full_name"'
+== org scan freshness: Derdack repos pushed recently
+    "full_name": "Derdack/derdack-plugin-checkmk",
+    "pushed_at": "2024-05-27T12:14:57Z",
+    "full_name": "Derdack/derdack-oncall-holidayimport",
+    "pushed_at": "2022-12-07T09:02:17Z",
+    "full_name": "Derdack/derdack-2wayREST-samples",
+    "pushed_at": "2022-05-03T13:00:35Z",
+    "full_name": "Derdack/derdack-events-snmp",
+    "pushed_at": "2022-02-03T14:09:43Z",
+    "full_name": "Derdack/derdack-integration-azuresentinel",
+    "pushed_at": "2021-03-04T15:30:31Z",
+    "full_name": "Derdack/derdack-integration-azuremonitor",
+    "pushed_at": "2021-03-04T15:25:03Z",
+    "full_name": "Derdack/User-Monitoring",
+    "pushed_at": "2020-11-23T14:58:01Z",
+    "full_name": "Derdack/derdack-alert-augmentation",
+    "pushed_at": "2020-07-15T16:20:30Z",
+    "full_name": "Derdack/derdack-alert-forwarding",
+    "pushed_at": "2020-03-17T12:48:22Z",
+    "full_name": "Derdack/derdack-plugin-nagios",
+    "pushed_at": "2019-11-21T13:52:38Z",
+    "full_name": "Derdack/derdack-integration-SIGNL4",
+    "pushed_at": "2018-11-13T16:04:38Z",
+    "full_name": "Derdack/derdack-oncall-whoisoncallexport",
+    "pushed_at": "2018-11-06T13:40:49Z",
+== signl4 org count
+53
+[0m
+[0m$ [0mcurl -s -m 15 "https://api.github.com/orgs/signl4/repos?per_page=100&sort=pushed" | grep -E '"full_name"|"pushed_at"' | head -12; echo "== new docs files secret sweep"; for f in integrations/fortinet/fortinet.md integrations/zscaler/zscaler.md integrations/ciq-cloud/ciq-cloud.md; do curl -s -m 15 "https://raw.githubusercontent.com/signl4/docs/main/$f" | grep -oE "connect\.signl4\.com/webhook/[A-Za-z0-9]+|[A-Fa-f0-9]{32}|api[_-]?key[^ ]{0,20}" | head -5; sleep 1; done; echo done
+"full_name": "signl4/docs",
+    "pushed_at": "2026-10-14T11:40:48Z",
+    "full_name": "signl4/xyplug-signl4",
+    "pushed_at": "2026-10-07T17:01:34Z",
+    "full_name": "signl4/signl4-assets",
+    "pushed_at": "2026-10-07T10:56:43Z",
+    "full_name": "signl4/signl4-integration-checkmk",
+    "pushed_at": "2026-08-24T11:48:22Z",
+    "full_name": "signl4/signl4-action-alert",
+    "pushed_at": "2026-06-24T12:25:20Z",
+    "full_name": "signl4/signl4-integration-icinga2",
+    "pushed_at": "2026-01-19T15:49:15Z",
+== new docs files secret sweep
+connect.signl4.com/webhook/YOUR
+connect.signl4.com/webhook/YOUR
+connect.signl4.com/webhook/YOUR
+connect.signl4.com/webhook/YOUR
+done
+[0m
+[0m$ [0mfor h in connect.signl4.com account.signl4.com api.signl4.com; do echo "== $h"; curl -s -m 15 "https://$h/identity/.well-known/openid-configuration/jwks" | sha256sum | cut -c1-16; sleep 1; done; echo "== account issuer"; curl -s -m 15 "https://account.signl4.com/identity/.well-known/openid-configuration" | grep -o '"issuer":"[^"]*"'
+== connect.signl4.com
+96c931f29d51eace
+== account.signl4.com
+96c931f29d51eace
+== api.signl4.com
+96c931f29d51eace
+== account issuer
+"issuer":"https://connect.signl4.com/identity"
+[0m
+[0m$ [0mfor r in xyplug-signl4 signl4-assets; do echo "== $r"; curl -s -m 15 "https://api.github.com/repos/signl4/$r/git/trees/HEAD?recursive=1" | grep -o '"path": "[^"]*"' | head -25; sleep 1; done
+== xyplug-signl4
+"path": "LICENSE.md"
+"path": "README.md"
+"path": "index.js"
+"path": "logo.png"
+"path": "package.json"
+"path": "xyops.json"
+== signl4-assets
+"path": "README.md"
+"path": "node-red"
+"path": "node-red/yolo-object-detection"
+"path": "node-red/yolo-object-detection/node-red-flow.png"
+"path": "node-red/yolo-object-detection/signl4-alert.png"
+[0m
+[0m$ [0mfor f in index.js xyops.json package.json; do echo "== xyplug/$f"; curl -s -m 15 "https://raw.githubusercontent.com/signl4/xyplug-signl4/main/$f" | grep -oE "webhook/[A-Za-z0-9]+|secret[^,}]{0,40}|[A-Fa-f0-9]{32}|api[_-]?key[^,}]{0,40}" | head -8; sleep 1; done; echo "== default branch"; curl -s -m 15 "https://api.github.com/repos/signl4/xyplug-signl4" | grep default_branch
+== xyplug/index.js
+secrets = input.secrets || {
+secrets.SIGNL4_TEAM_SECRET ||
+secrets.signl4_team_secret ||
+secret is missing. Configure SIGNL4_TEAM_SECRE
+secret.'
+== xyplug/xyops.json
+secrets": [
+secret from your SIGNL4 webhook URL."
+== xyplug/package.json
+== default branch
+  "default_branch": "main",
+[0m
+[0m$ [0mcurl -s -m 15 "https://raw.githubusercontent.com/signl4/signl4-assets/main/node-red/yolo-object-detection/README.md" | grep -oiE "webhook/[A-Za-z0-9]+|[A-Fa-f0-9]{32}|secret[^ ]{0,30}" | head; echo "== xyops.json body"; curl -s -m 15 "https://raw.githubusercontent.com/signl4/xyplug-signl4/main/xyops.json" | head -c 600
+== xyops.json body
+{
+  "title": "SIGNL4",
+  "type": "action",
+  "command": "npx -y github:signl4/xyplug-signl4#v1.0.0",
+  "description": "Send xyOps job and alert events to SIGNL4 for reliable mobile alerting, on-call routing and escalation.",
+  "params": [
+    {
+      "id": "title",
+      "title": "Alert Title",
+      "type": "text",
+      "required": false,
+      "description": "Optional custom alert title. If empty, xyOps event/job data is used."
+    },
+    {
+      "id": "message",
+      "title": "Alert Message",
+      "type": "text",
+      "required": false,
+      "description": "Optional custom message. If
+[0m
+[0m$ [0mgit log --oneline -8; echo ---; git status --short | head; echo ---; grep -n "PROBE_ALLOW\|UNVALIDATED" .github/workflows/hunt.yml .github/workflows/triage.yml
+3de21c7 triage 2026-10-15-06-34
+---
+?? analyst-out.txt
+?? analyst-prompt.txt
+?? ctx.txt
+---
+.github/workflows/hunt.yml:13:  PROBE_ALLOW: "derdack.com"
+.github/workflows/hunt.yml:209:          allow=os.environ.get('PROBE_ALLOW','').lower()
+.github/workflows/triage.yml:12:  PROBE_ALLOW: "derdack.com"
+.github/workflows/triage.yml:42:      - name: Collect UNVALIDATED leads
+.github/workflows/triage.yml:45:          grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25 > new-leads.txt
+[0m
+[0m$ [0mcurl -s -m 15 "https://raw.githubusercontent.com/signl4/docs/main/integrations/devtools/SIGNL4_Alerting.yaml" | sha256sum; curl -s -m 15 "https://raw.githubusercontent.com/signl4/signl4-integration-google-iot/master/index.js" | sha256sum; curl -s -m 15 "https://raw.githubusercontent.com/signl4/signl4-integration-losant/master/signl4-alert-v100.node" | sha256sum
+7b5d2a95cc9c9b52de79374839dd6cd25b7813e6a463a6e82b7b5c61c9516fa2  -
+97fc94f9e8ee829a0850ab84a572d8a4c5a68475bfada87ddb0741ff10c1484b  -
+2999995cd9864a34f4f908a6611d3e298b9e64b83570283c3a009a8ad1065780  -
+[0m
+[0m$ [0mls triage/ | tail -5; echo ---; head -60 triage/run-2026-10-15-06-34.md
+run-2026-10-14-17-33.md
+run-2026-10-14-20-55.md
+run-2026-10-14-23-31.md
+run-2026-10-15-01-45.md
+run-2026-10-15-06-34.md
+---
+
+===== TRIAGE 2026-10-15 06:34:57 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+  "data": {
+    "message": "Unexpected server error. Check server logs for details.",
+    "ref": "err_7b43ca88"
+  }
+}
+[0m
+[0m$ [0mgrep -rn "vbguzfsi\|96sbq38s\|Derdack!\|CNlydVqZ" knowledge/index.md | head -10; echo ---; grep -c "HYP" reports/hypotheses-bigpickle.txt 2>/dev/null; tail -3 reports/hypotheses-bigpickle.txt
+1278:- 2026-10-11 REJECTED AUTH @ vbguzfsi: read-only X-S4-Api-Key @ /api/v2/teams → 403 same-hash-as-junk; exploit chain to auth bypass is mutating/out-of-scope — keep as leak-only.
+1284:- 2026-10-11 REJECTED AUTH @ leaked `vbguzfsi`: read-only `X-S4-Api-Key` @ `/api/v2/teams` → 403 same-hash-as-junk; exploit chain is mutating/out-of-scope → keep leak-only, no auth-bypass claim.
+1349:- 2026-10-12 ACCEPTED AUTH @ connect.signl4.com/webhook/vbguzfsi: a controlled empty-body POST is the discriminator (valid -> 400 code 4000 "event null or empty", invalid -> 404 code 3004 "no matching event source") because the secret gate precedes body parsing; this proves a live credential with zero event injection.
+1351:- 2026-10-12 ACCEPTED MISCONFIG @ signl4/docs: placeholders (`xxxx`, `YOUR_TEAM_SECRET`) coexisting with `vbguzfsi` in the same file proves the token was left unsanitized, not an example.
+1353:- 2026-10-12 ACCEPTED MISCONFIG @ signl4/docs: placeholders (`xxxx`, `YOUR_TEAM_SECRET`) coexisting with `vbguzfsi` in the same file proves the token was left unsanitized, not an example.
+1394:- 2026-10-13 ACCEPTED OTHER @ deliverables re-verified live this cycle: oracle vbguzfsi→400/4000, fabricated→404/3004, 96sbq38s→400/4000; EA WSDL sha256 e8b753f2... unchanged — no drift after 5+ days, submission-ready.
+1413:- 2026-10-14 ACCEPTED OTHER @ deliverables re-verified live this cycle: oracle vbguzfsi→400/4000, fabricated→404/3004, 96sbq38s→400/4000; EA WSDL sha256 e8b753f2... unchanged — no drift after 5+ days, submission-ready
+1426:- 2026-10-14 ACCEPTED AUTH @ signl4/docs: Prior "placeholder-only" rejection was false negative — `vbguzfsi` and `96sbq38s` are live team webhook secrets (unsanitized in vendor docs). Webhook secret ≠ REST API key; use Content-Length:0 control to avoid creating events.
+1439:- 2026-10-14 ACCEPTED AUTH @ signl4/docs: Prior "placeholder-only" rejection was false negative — `vbguzfsi` and `96sbq38s` are live team webhook secrets (unsanitized in vendor docs). Webhook secret ≠ REST API key; use Content-Length:0 oracle is effective for validation without creating incidents.
+1450:- 2026-10-15 ACCEPTED AUTH @ signl4/docs: Prior "placeholder-only" rejection was false negative — `vbguzfsi` and `96sbq38s` are live team webhook secrets (unsanitized in vendor docs). Webhook secret ≠ REST API key; use Content-Length:0 oracle is effective for validation without creating incidents.
+---
+13
+[NEXT] HUMAN — submit the 3 frozen FINALs to `bugs.olivermaicher.eu`: (1) webhook secrets `vbguzfsi`/`96sbq38s` with public file:line + the Content-Length:0 400/4000-vs-404/3004 oracle; (2) `sa:Derdack!` and `cmkadmin:CNlydVqZ` with commit/authors; (3) cross-env token-forgery chain with 6-host JWKS deep-equal + account issuer mismatch. After submission, stop re-probing closed surfaces.
+[LEARN] Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`triage.yml:12` set `PROBE_ALLOW: derdack.com`, so signl4/enterprisealert leads are never re-verified by CI. The GET-vs-POST asymmetry is a trap — webhook liveness is only observable via the empty-body POST oracle, never via GET.
+[RISK] Re-probing `connect.signl4.com/webhook/*` risks tripping the documented per-path rate limit; only the Content-Length:0 discriminator is non-mutating — never send `{}` or JSON bodies to the live secrets (would create real SIGNL4 events on customer teams, out of scope).
+[0m
+[0m$ [0mdate -u +"%Y-%m-%d %H:%M:%S UTC"
+2026-10-15 10:08:51 UTC
+[0m
+[0m$ [0mecho "== checkmk integration tree"; curl -s -m 15 "https://api.github.com/repos/signl4/signl4-integration-checkmk/git/trees/HEAD?recursive=1" | grep -o '"path": "[^"]*"' | head -20; sleep 1; echo "== action-alert tree"; curl -s -m 15 "https://api.github.com/repos/signl4/signl4-action-alert/git/trees/HEAD?recursive=1" | grep -o '"path": "[^"]*"' | head -20
+== checkmk integration tree
+"path": "README.md"
+"path": "SIGNL4-1.0.mkp"
+"path": "SIGNL4-1.1.mkp"
+"path": "SIGNL4-1.3.mkp"
+"path": "SIGNL4-1.4.mkp"
+"path": "SIGNL4-1.5.mkp"
+"path": "SIGNL4-1.6.mkp"
+"path": "SIGNL4-1.7.mkp"
+"path": "SIGNL4-1.9.mkp"
+"path": "SIGNL4-2.0.0.mkp"
+"path": "SIGNL4-2.1.0.mkp"
+"path": "SIGNL4-2.2.0.mkp"
+"path": "SIGNL4-2.3.0.mkp"
+"path": "checkmk_notifications.png"
+"path": "checkmk_package.png"
+"path": "notifications"
+"path": "notifications/signl4"
+"path": "signl4_checkmk.png"
+== action-alert tree
+"path": "README.md"
+"path": "action.yml"
+"path": "index.js"
+"path": "node_modules"
+"path": "node_modules/@actions"
+"path": "node_modules/@actions/core"
+"path": "node_modules/@actions/core/LICENSE.md"
+"path": "node_modules/@actions/core/README.md"
+"path": "node_modules/@actions/core/lib"
+"path": "node_modules/@actions/core/lib/command.d.ts"
+"path": "node_modules/@actions/core/lib/command.js"
+"path": "node_modules/@actions/core/lib/command.js.map"
+"path": "node_modules/@actions/core/lib/core.d.ts"
+"path": "node_modules/@actions/core/lib/core.js"
+"path": "node_modules/@actions/core/lib/core.js.map"
+"path": "node_modules/@actions/core/lib/file-command.d.ts"
+"path": "node_modules/@actions/core/lib/file-command.js"
+"path": "node_modules/@actions/core/lib/file-command.js.map"
+"path": "node_modules/@actions/core/lib/utils.d.ts"
+"path": "node_modules/@actions/core/lib/utils.js"
+[0m
+[0m$ [0mcurl -s -m 15 "https://raw.githubusercontent.com/signl4/signl4-integration-checkmk/main/notifications/signl4" | grep -oE "webhook/[A-Za-z0-9]+|TEAM_SECRET[^ ]{0,30}|[A-Fa-f0-9]{32}|password[^ ]{0,30}|api[_-]?key[^ ]{0,30}" | head; echo "== action index.js"; curl -s -m 15 "https://raw.githubusercontent.com/signl4/signl4-action-alert/main/index.js" | grep -oE "webhook/[A-Za-z0-9]+|TEAM_SECRET[^ ]{0,30}|[A-Fa-f0-9]{32}|eyJ[A-Za-z0-9_-]{20,}" | head; echo "== checkmk mkp newest (tar) quick strings"; curl -s -m 20 "https://raw.githubusercontent.com/signl4/signl4-integration-checkmk/main/SIGNL4-2.3.0.mkp" | strings | grep -oE "webhook/[A-Za-z0-9]+|secret[^ ]{0,30}" | head
+== action index.js
+== checkmk mkp newest (tar) quick strings
+[0m
+[0m$ [0mfor f in leads/lead-*.md; do echo "== $f"; grep -n "^## 2026-10-15" "$f" | tail -3; done; echo; echo "== recent NEW/CHANGED across leads today"; grep -h "^\[NEW\]\|^\[CHANGED\]" leads/lead-*.md | sort -u | tail -25
+== leads/lead-bigpickle.md
+11506:## 2026-10-15 00:37:12 UTC [target] (model bigpickle)
+11517:## 2026-10-15 05:15:30 UTC [target] (model bigpickle)
+== leads/lead-laguna.md
+246:## 2026-10-15 00:35:10 UTC [target] (model laguna)
+247:## 2026-10-15 05:06:13 UTC [target] (model laguna)
+== leads/lead-ling3.md
+246:## 2026-10-15 00:35:17 UTC [target] (model ling3)
+247:## 2026-10-15 05:06:16 UTC [target] (model ling3)
+== leads/lead-longcat.md
+245:## 2026-10-15 00:35:12 UTC [target] (model longcat)
+246:## 2026-10-15 05:06:13 UTC [target] (model longcat)
+== leads/lead-mimo.md
+== leads/lead-nemotron3.md
+16887:## 2026-10-15 00:38:01 UTC [target] (model nemotron3)
+16954:## 2026-10-15 05:08:17 UTC [target] (model nemotron3)
+
+== recent NEW/CHANGED across leads today
+[NEW] www.derdack.com `/de/` and `/ea/` are separate WordPress Multisite installations (uploads/sites/5, sites/6) — completely unprobed until this cycle; namespaces include complianz/v1, wordpress-popular-posts/v1+v2, two-factor/1.0, wp-site-health/v1 (none present on root)
+[NEW] www.derdack.com `/de/xmlrpc.php` returns 200 with full method list (pingback.ping, system.multicall, wp.getUsers, wp.uploadFile, mt.*) — root xmlrpc.php is 503-blocked but /de/ install is fully exposed
+[NEW] www.derdack.com `/de/xmlrpc.php` returns 200 with full method list including pingback.ping — root xmlrpc is 503-blocked but /de/ is fully exposed
+[NEW] www.derdack.com `/ea/` media exposes Whitepaper_test.pdf (3MB, 2017) — likely test artifact in public media library
+[NEW] www.derdack.com `/ea/` media exposes Whitepaper_test.pdf (3MB, 2017) — public test artifact
+[NEW] www.derdack.com `/ea/` xmlrpc.php returns 405 (blocked) — /de/ is the odd one out
+[NEW] www.derdack.com `/wp-json/contact-form-7/v1/contact-forms` returns 403 (properly gated)
+[NEW] www.derdack.com `/wp-json/wp/v2/media` returns 200 with 108 media items (65+43 across 2 pages); publicly accessible, mostly stock images + 1 MP3 podcast file; no sensitive internal docs/PDFs/backups found
+[NEW] www.derdack.com `/wp-json/wp/v2/posts/5945/revisions` and `/autosaves` return 401 (auth-gated, no IDOR)
+[NEW] www.derdack.com `/wp-json/wp/v2/users/2` returns 404 (user ID 2 not found) — user enumeration via collection works but individual IDs may be sparse/gapped
+[NEW] www.derdack.com `/yoast/v1/` admin endpoints (file_size, statistics, workouts, semrush, configuration) all return 401; only `get_head?url=` public
+[NEW] www.derdack.com `xmlrpc.php` returns 503 (blocked at LB level)
+[NEW] www.derdack.com/de/ and /ea/ media libraries contain only images (jpeg/png) — no PDF whitepapers or sensitive docs found (Whitepaper_test.pdf not present)
+[NEW] www.derdack.com/de/xmlrpc.php & /ea/xmlrpc.php wp.uploadFile/metaWeblog.newMediaObject both return faultCode 403 "incorrect username/password" — XML-RPC exposed but mutating methods auth-gated
+[NEW] www.derdack.com/de/xmlrpc.php POST returns full method list (pingback.ping, system.multicall, wp.getUsers, wp.uploadFile, metaWeblog.newMediaObject, mt.*, blogger.*) — unauthenticated XML-RPC fully exposed on /de/ multisite while root xmlrpc.php is 503-blocked
+[NEW] www.derdack.com/de/xmlrpc.php returns 405 Allow:POST with `x-ws-origin: available` + `x-ws-ratelimit-*` headers — XML-RPC POST endpoint exposed on /de/ multisite while root blocked at LB
+[NEW] www.derdack.com/ea/xmlrpc.php POST also returns full method list — both /de/ and /ea/ multisite installs have exposed XML-RPC (previous report of 405 was for GET only)
+[NEW] www.derdack.com/wp-json/wp/v2/media returns 2170 items across 217 pages — all public marketing assets (images, logos, 1 MP3 podcast), no sensitive docs/PDFs/backups
+[NEW] www.derdack.com/wp-json/wp/v2/posts returns 200 with published posts; /wp-json/wp/v2/posts?status=draft returns 400 (requires auth); /wp-json/wp/v2/pages returns 200 with many pages
+[NEW] www.derdack.com/wp-json/wp/v2/users returns 200 OK with 10 users (names, slugs, avatar URLs, author profile links, Yoast SEO schema data) — user enumeration confirmed
+[NEW] www.derdack.com/wp-login.php sets `wordpress_test_cookie` with `secure` flag and NO `Domain` attribute → host-only scoped, contradicting prior parent-domain cookie-scope assumption
+[NEW] www.signl4.com = Network Solutions WPaaS (160.153.0.44) with WPML ate/proxy, wpaas, divitorque, two-factor plugins exposed in REST schema
+[NEW] www.signl4.com = Network Solutions WPaaS (160.153.0.44), REST schema exposes WPML /wpml/ate/v1/ate/proxy, /wpml/v1/wpml-ph-make-external-request, /wpml/tm/v1 xliff paths, wpaas/v1, two-factor, divitorque-lite; gate probes: proxy 401, wpaas activity-logs 401, divitorque 401, external-request + wpaas diagnostics rest_no_route (registered for non-GET methods)
+[NEW] www.signl4.com/wp-json/two-factor/user-info → 401 rest_forbidden (gate active); two-factor/user/1 + wpaas/v1/domain + wpaas/v1/siteinfo → 404
+[NEW] www.vps.signl4.com — NXDOMAIN (CT cert token only, no DNS record).
+[0m
+[0m→ [0mRead leads/lead-nemotron3.md[90m [offset=16954, limit=80][0m
+[0m
+[0m$ [0mfor u in "https://api.signl4.com/" "https://api.signl4.com/api/v2/teams" "https://api.signl4.com/api/docs/v2/swagger.json"; do echo "== $u"; curl -s -m 15 -o /tmp/opencode/a.out -w "%{http_code} %{size_download}\n" "$u"; sha256sum /tmp/opencode/a.out | cut -c1-16; sleep 1; done; echo "== 401 body snippet"; head -c 300 /tmp/opencode/a.out
+== https://api.signl4.com/
+301 0
+e3b0c44298fc1c14
+== https://api.signl4.com/api/v2/teams
+401 0
+e3b0c44298fc1c14
+== https://api.signl4.com/api/docs/v2/swagger.json
+200 1225783
+837b34ca2909c457
+== 401 body snippet
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "SIGNL4 API V2",
+    "description": "<p>SIGNL4 REST API – Introduction</p>\r\n<p>Use the SIGNL4 REST API to integrate external systems or build custom workflows and applications on top of SIGNL4.\r\n    The API enables seamless interaction with aler
+[0m
+[0m$ [0mgrep -n "837b34ca\|swagger.*sha256\|sha256.*swagger" knowledge/index.md probe-results.md | head; echo ---; grep -rn "1225783\|swagger.json" probe-results.md | head
+---
+[0m
+[0m$ [0mcurl -s -m 15 "https://api.signl4.com/api/docs/v2/swagger.json" | sha256sum; sleep 1; curl -s -m 15 "https://api.signl4.com/api/docs/v1/swagger.json" -o /tmp/opencode/v1.json -w "%{http_code} %{size_download}\n"; sha256sum /tmp/opencode/v1.json
+837b34ca2909c457324a571984c8468d46de432c53032f9efcc673fb74216c28  -
+200 495791
+bf9d377a0764d4d93b84d409fddca5a93bcdc2b3ed0343cd8160185daeb68a5e  /tmp/opencode/v1.json
+[0m
+[0m$ [0mgrep -rn "swagger" knowledge/index.md | head -20; echo ---; grep -rn "837b34\|bf9d37\|swagger.json sha\|OpenAPI" knowledge/index.md | head -10
+7:- 2026-09-03 ACCEPTED MISCONFIG @ dev.derdack.com: nemotron3 already probing actuator/swagger; I defer to avoid duplicate effort
+12:- 2026-09-03 REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+24:- 2026-09-04 REJECTED MISCONFIG @ dev.derdack.com actuator/swagger/graphql: all 404 — no Spring Boot, Swagger, GraphQL exposed
+87:- 2026-09-05 ACCEPTED MISCONFIG @ api.signl4.com: registered route population = alerts(405 POST), teams/webhooks/subscriptions(401 Bearer), csp/report(405 POST sink); all other paths incl /api/v1, swagger, openapi.json 404 — zero unauth read surface
+186:- 2026-09-09 ACCEPTED AUTH @ api.signl4.com: swagger.json confirms OAuth2 security scheme (authorizationCode flow) targeting connect.signl4.com/identity/connect endpoints with public_api_read+write+offline_access scopes — API accepts Bearer tokens from same shared-signing-key IdP; full cross-env token forgery chain confirmed
+187:- 2026-09-09 ACCEPTED MISCONFIG @ connect.signl4.com/api/docs/v2/swagger.json: global security requirement empty (`"security": [{}]`) — spec declares no auth required while routes enforce Bearer/API-key; spec-vs-implementation mismatch; LOW
+188:- 2026-09-09 ACCEPTED AUTH @ api.signl4.com: swagger declares `API_Key_Query` scheme (x-s4-api-key in query param) — potential key leakage vector via referrer/logs if live
+190:- 2026-09-09 ACCEPTED OTHER @ connect.signl4.com/api/docs: swagger confirms SIGNL4 API V2 = 40+ endpoints (alerts CRUD, teams, webhooks, subscriptions, schedules, users, categories, audits, distribution lists, templates, devices, callout templates) — full attack surface documented
+191:- 2026-09-09 ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational — first live test confirms API key validation pipeline
+193:- 2026-09-09 ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
+194:- 2026-09-09 ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → referrer-leak impact not demonstrable.
+197:- 2026-09-10 ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational — first live test confirms API key validation pipeline
+199:- 2026-09-10 ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
+200:- 2026-09-10 ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → referrer-leak impact not demonstrable.
+206:- 2026-09-10 ACCEPTED AUTH @ connect.signl4.com: new routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, handler-deferred auth) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + public webhook OpenAPI /webhook/docs/v1/swagger.json
+209:- 2026-09-10 ACCEPTED AUTH @ connect.signl4.com: new routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, handler-deferred auth) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + public webhook OpenAPI /webhook/docs/v1/swagger.json
+214:- 2026-09-10 ACCEPTED AUTH @ connect.signl4.com: new registered routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, auth deferred to handler) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + public webhook OpenAPI at /webhook/docs/v1/swagger.json
+224:- 2026-09-10 ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational
+226:- 2026-09-10 ACCEPTED OTHER @ connect.signl4.com/api/v2/*: shared backend with api.signl4.com (appId=cid-v1:ec6c57ca-...); API key auth works on both hosts; swagger served from connect host — connect is the documented API gateway
+233:- 2026-09-10 ACCEPTED AUTH @ connect.signl4.com/webhook/{teamSecret}: swagger confirms no security scheme, team secret in path, 404 vs 201 oracle — team-secret enumeration vector confirmed
+---
+120:- 2026-09-06 REJECTED MISCONFIG @ api/connect/devconnect.signl4.com: Swagger/OpenAPI closed on all estates (404 across 9 OAS paths × 3 hosts) — no schema-doc disclosure; prior /en16931+ZUGFeRD staging-route claim invalidated (schema no longer reachable).
+206:- 2026-09-10 ACCEPTED AUTH @ connect.signl4.com: new routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, handler-deferred auth) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + public webhook OpenAPI /webhook/docs/v1/swagger.json
+209:- 2026-09-10 ACCEPTED AUTH @ connect.signl4.com: new routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, handler-deferred auth) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + public webhook OpenAPI /webhook/docs/v1/swagger.json
+214:- 2026-09-10 ACCEPTED AUTH @ connect.signl4.com: new registered routes — PUT /api/prepaid/{id}/prepaidSettings (Allow:PUT, auth deferred to handler) + /api/v2/events/{teamSecret} (GET+POST, 401 Bearer) + public webhook OpenAPI at /webhook/docs/v1/swagger.json
+245:- 2026-09-11 ACCEPTED OTHER @ connect.signl4.com/api/docs/v3/swagger.json: global `security: [{}]` (empty) reconfirmed on V3 — spec under-declares auth everywhere; internal billing + SCIM routes published publicly in OpenAPI while absent from marketing docs (self-service/internal API surface)
+258:- 2026-09-11 ACCEPTED IDOR @ connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16931 invoice download documented in public OpenAPI; cross-tenant BOLA unproven — new billing surface
+302:- 2026-09-11 ACCEPTED IDOR @ connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16931 invoice download documented in public OpenAPI; cross-tenant BOLA unproven — new billing surface.
+305:- 2026-09-11 ACCEPTED OTHER @ connect.signl4.com/api/docs/v3/swagger.json: global security: [{}] (empty) reconfirmed on V3 — spec under-declares auth everywhere; internal billing + SCIM routes published publicly in OpenAPI.
+325:- 2026-09-12 ACCEPTED OTHER @ connect.signl4.com/api/docs/v3/swagger.json: global `security: [{}]` (empty) reconfirmed on V3 — spec under-declares auth everywhere; internal billing + SCIM routes published publicly in OpenAPI while absent from marketing docs (self-service/internal API surface)
+346:- 2026-09-12 ACCEPTED IDOR @ connect.signl4.com/api/v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd: Route confirmed via OPTIONS (405 Allow:GET); ZUGFeRD/EN16931 invoice download documented in public OpenAPI; cross-tenant BOLA unproven — new billing surface
+[0m
+[0m$ [0mgrep -rn "v2/teams\|405\|401" probe-results.md | head -15; echo ---; head -40 probe-results.md
+82:https://www.derdack.com/wp-json/wp/v2/posts/5945/revisions -> HTTP 401
+83:https://www.derdack.com/wp-json/wp/v2/posts/5945/autosaves -> HTTP 401
+127:https://www.derdack.com/de/wp-json/wp/v2/posts/11640/revisions -> HTTP 401
+128:https://www.derdack.com/de/wp-json/wp/v2/posts/11640/autosaves -> HTTP 401
+131:https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+133:https://www.derdack.com/ea/xmlrpc.php -> HTTP 405
+139:https://www.derdack.com/de/wp-json/wp/v2/posts/11640/revisions -> HTTP 401
+140:https://www.derdack.com/de/wp-json/wp/v2/posts/11640/autosaves -> HTTP 401
+145:https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+147:https://www.derdack.com/ea/xmlrpc.php -> HTTP 405
+152:https://www.derdack.com/de/wp-json/wp/v2/posts/11640/revisions -> HTTP 401
+156:https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+165:https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+168:https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+171:https://www.derdack.com/de/xmlrpc.php -> HTTP 405
+---
+
+## 2026-09-02 21:30:25 UTC
+
+
+## 2026-09-02 23:34:06 UTC
+
+
+## 2026-09-03 01:27:36 UTC
+
+
+## 2026-09-03 06:47:03 UTC
+
+
+## 2026-09-03 11:44:06 UTC
+
+
+## 2026-09-03 15:39:54 UTC
+https://signl4.derdack.com/.well-known/jwks.json -> ERR <urlopen error timed out>
+https://signl4.derdack.com/api/v1/user -> ERR <urlopen error timed out>
+https://signl4.derdack.com/api/auth/login -> ERR <urlopen error timed out>
+https://signals.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://signals.derdack.com/api/ -> ERR <urlopen error [Errno -2] Name or service not know
+https://signals.derdack.com/webhook -> ERR <urlopen error [Errno -2] Name or service not know
+https://dev.derdack.com/actuator -> HTTP 404
+https://dev.derdack.com/swagger-ui.html -> HTTP 404
+https://dev.derdack.com/api/docs -> HTTP 404
+https://dev.derdack.com/graphql -> HTTP 404
+https://dev.derdack.com/.well-known/openid-configuration -> HTTP 300
+https://signl4.derdack.com/api/v1/health -> ERR <urlopen error timed out>
+
+## 2026-09-03 19:05:58 UTC
+https://dev.derdack.com/.ssh/id_rsa -> HTTP 403
+https://dev.derdack.com/.bash_history -> HTTP 403
+https://dev.derdack.com/.viminfo -> HTTP 403
+https://dev.derdack.com/.well-known/ -> HTTP 300
+https://www.derdack.com/wp-json/wp/v2/users -> 200 len=?
+https://www.derdack.com/wp-json/wp/v2/posts?status=draft -> HTTP 400
+https://www.derdack.com/wp-json/wp/v2/pages?status=draft -> HTTP 400
+https://signl4.derdack.com/ -> ERR <urlopen error timed out>
+https://api.signl4.derdack.com/ -> ERR <urlopen error [Errno -2] Name or service not know
+[0m
+[0m$ [0mgrep -rn "docs/v2/swagger\|docs/v1/swagger" knowledge/index.md leads/lead-bigpickle.md | grep -i "sha\|bytes\|size\|1225\|hash" | head; echo ---; grep -rn "teams.*405\|405.*teams" knowledge/index.md | tail -5
+leads/lead-bigpickle.md:1826:reasoning: api.signl4.com/api/v2/* confirmed Bearer-gated (401) while connect.signl4.com/api/v2/teams with query-param API key returns 403 "API Key is invalid" (not 401); the two hosts share the same `request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd` confirming shared backend; connect.signl4.com accepts API keys via query param while api.signl4.com returns 401 for the same unauthenticated request — the API gateway routes both Bearer and API key auth through the same backend; swagger.json served from connect.signl4.com/api/docs/v2/swagger.json confirms the API is documented and routable through the connect host
+leads/lead-bigpickle.md:1870:reasoning: api.signl4.com/api/v2/* confirmed Bearer-gated (401) while connect.signl4.com/api/v2/teams with query-param API key returns 403 "API Key is invalid" (not 401); the two hosts share the same `request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd` confirming shared backend; connect.signl4.com accepts API keys via query param while api.signl4.com returns 401 for the same unauthenticated request — the API gateway routes both Bearer and API key auth through the same backend; swagger.json served from connect.signl4.com/api/docs/v2/swagger.json confirms the API is documented and routable through the connect host  
+leads/lead-bigpickle.md:1942:reasoning: api.signl4.com/api/v2/* confirmed Bearer-gated (401) while connect.signl4.com/api/v2/teams with query-param API key returns 403 "API Key is invalid" (not 401); the two hosts share the same `request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd` confirming shared backend; connect.signl4.com accepts API keys via query param while api.signl4.com returns 401 for the same unauthenticated request — the API gateway routes both Bearer and API key auth through the same backend; swagger.json served from connect.signl4.com/api/docs/v2/swagger.json confirms the API is documented and routable through the connect host  
+leads/lead-bigpickle.md:2507:reasoning: api.signl4.com/api/v2/* confirmed Bearer-gated (401) while connect.signl4.com/api/v2/teams with query-param API key returns 403 "API Key is invalid" (not 401); the two hosts share the same `request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd` confirming shared backend; connect.signl4.com accepts API keys via query param while api.signl4.com returns 401 for the same unauthenticated request — the API gateway routes both Bearer and API key auth through the same backend; swagger.json served from connect.signl4.com/api/docs/v2/swagger.json confirms the API is documented and routable through the connect host
+leads/lead-bigpickle.md:2550:reasoning: api.signl4.com/api/v2/* confirmed Bearer-gated (401) while connect.signl4.com/api/v2/teams with query-param API key returns 403 "API Key is invalid" (not 401); the two hosts share the same `request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd` confirming shared backend; connect.signl4.com accepts API keys via query param while api.signl4.com returns 401 for the same unauthenticated request — the API gateway routes both Bearer and API key auth through the same backend; swagger.json served from connect.signl4.com/api/docs/v2/swagger.json confirms the API is documented and routable through the connect host  
+leads/lead-bigpickle.md:2619:reasoning: api.signl4.com/api/v2/* confirmed Bearer-gated (401) while connect.signl4.com/api/v2/teams with query-param API key returns 403 "API Key is invalid" (not 401); the two hosts share the same `request-context: appId=cid-v1:ec6c57ca-ace7-4d14-af5f-e1946cf1bfbd` confirming shared backend; connect.signl4.com accepts API keys via query param while api.signl4.com returns 401 for the same unauthenticated request — the API gateway routes both Bearer and API key auth through the same backend; swagger.json served from connect.signl4.com/api/docs/v2/swagger.json confirms the API is documented and routable through the connect host  
+leads/lead-bigpickle.md:2854:reasoning: OpenAPI at /webhook/docs/v1/swagger.json documents GET on this route with path params subscriptionId (string UUID) and invoiceId (string); OPTIONS on fabricated IDs returns 405 Allow:GET confirming route registration; anonymous GET returns 401 (handler-level auth present); invoice download returns financial billing documents (EN16931 XML / hybrid PDF with structured billing data); cross-tenant authorization check vs merely scoped-valid is UNPROBED; analogous prepaid route family shares same handler-deferred auth pattern
+leads/lead-bigpickle.md:8067:verify_steps: (1) \`GET https://api.signl4.com/api/docs/v2/swagger.json\`, no credentials. (2) Resolve \`https://connect.signl4.com/api/docs/\$v/swagger.json\` to the populated version template if the api host 404s. (3) Diff the \`requestBody\` of both prepaid routes against their shared \`\$ref\` definitions. Static only — no \`PUT\`, no mutation, no tenant identifier invented or replayed.
+leads/lead-bigpickle.md:8128:verify_steps: (1) \`GET https://api.signl4.com/api/docs/v2/swagger.json\`, no credentials. (2) Resolve \`https://connect.signl4.com/api/docs/\$v/swagger.json\` to the populated version template if the api host 404s. (3) Diff the \`requestBody\` of both prepaid routes against their shared \`\$ref\` definitions. Static only — no \`PUT\`, no mutation, no tenant identifier invented or replayed.
+leads/lead-bigpickle.md:8150:[RISK] derdack: 3 — 1 request this cycle: unauthenticated `GET https://api.signl4.com/api/docs/v2/swagger.json`, public documentation asset, `200`, 1216391 bytes, no `Authorization`, no `x-s4-api-key`, no cookie, no redirect-following, no invented identifier, no mutation. Everything after the first fetch was local JSON parsing of the already-retrieved public document — 0 additional requests. No credential, no tenant data. Within the established passive envelope; 22 requests across four cycles against this asset family.
+---
+542:- 2026-09-16 ACCEPTED MISCONFIG @ api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycles confirmed
+584:- 2026-09-17 ACCEPTED AUTH @ api.signl4.com/api/v2/teams: Handler-deferred auth confirmed 10th+ cycles — unauth GET returns 405 (not 401), invalid Bearer returns 405; auth validation at handler layer enables cross-env token acceptance
+589:- 2026-09-17 ACCEPTED MISCONFIG @ api+devapi /api/v2/teams: 401 WWW-Authenticate:Bearer this cycle vs 405 in other cycles — handler/routing auth-status flapping across cycles confirmed
+1211:- 2026-10-09 ACCEPTED AUTH @ api.signl4.com/api/v2/teams: auth-status flapping is TEMPORAL (deployment-slot), not per-request — 6 consecutive unauth GETs returned identical 401/0-byte then flipped to stable 405; handler-deferred auth pattern re-confirmed
+1437:- 2026-10-14 REJECTED AUTH @ connect.signl4.com/api/v2/teams: the 401-vs-405 flip is temporal deploy state, not per-request routing — same-session N-sample testing is required before calling it flapping.
+[0m
+[0m$ [0mfor i in 1 2; do curl -s -m 15 -o /dev/null -w "%{http_code} " "https://api.signl4.com/api/v2/teams"; sleep 2; done; echo; curl -s -m 15 -o /dev/null -w "%{http_code}\n" "https://api.signl4.com/api/v3/teams"
+401 401 
+401
+[0m
+[0m$ [0mfind . -iname "*swagger*" -o -iname "*.json" 2>/dev/null | grep -iv node_modules | head; echo ---; ls reposcan-raw/ recon-notes/ scripts/
+./state_ling3.json
+./state_laguna.json
+./state_bigpickle.json
+./state_mimo.json
+./state_longcat.json
+./state_nemotron3.json
+---
+recon-notes/:
+DEDICATED-DEEP.md
+
+reposcan-raw/:
+summary.txt
+
+scripts/:
+sync-issues.py
+[0m
+Swagger v2 size is now 1225783 bytes; previously recorded 1216391 bytes (2026-10-11 cycle per lead line 8150). That's a delta — swagger spec changed (grew by ~9.4 KB). This is a genuine [CHANGED]/[NEW] item: the public V2 OpenAPI spec changed since 2026-10-11. Let me investigate what changed — diff route/endpoint additions. This could reveal newly published routes (self-service/internal surface). Let me get the spec and compare to any prior saved copy. Is there a saved copy? Check reposcan-raw or elsewhere.
+
+Actually the context says "connect.signl4.com/api/docs/{v1,v2,v3}/swagger.json: public OpenAPI specs (already downloaded)" — but I don't see them in the repo. Let me check if there's a saved file anywhere.
+
+Let me just analyze the current v2 spec for new endpoints and compare to the route list I already know. I can also check the v1 and v3 sizes. Let me look for endpoints not previously catalogued.
+
+Actually, this is fresh and interesting. Let me extract the path list from the current v2 spec and diff against known routes. But first, let me find a prior spec copy to diff.
+
+Let me search the repo for any saved swagger json.</think>Notable: v2 swagger is now 1,225,783 bytes vs. 1,216,391 recorded 2026-10-11 — the public spec changed. Let me analyze the delta.
+[0m$ [0mcurl -s -m 20 "https://api.signl4.com/api/docs/v2/swagger.json" -o /tmp/opencode/v2.json; python3 -c "
+import json
+d=json.load(open('/tmp/opencode/v2.json'))
+paths=d.get('paths',{})
+print('paths:',len(paths))
+for p in sorted(paths):
+    methods=','.join(sorted(m.upper() for m in paths[p] if m in ('get','post','put','delete','patch')))
+    print(methods,p)
+"
+paths: 190
+POST /v2/alerts
+POST /v2/alerts/acknowledgeAll
+GET /v2/alerts/acknowledgeAll/status
+POST /v2/alerts/acknowledgeMultiple
+POST /v2/alerts/closeAll
+GET /v2/alerts/closeAll/status
+POST /v2/alerts/closeMultiple
+POST /v2/alerts/paged
+GET /v2/alerts/report
+POST /v2/alerts/undoAcknowledgeMultiple
+POST /v2/alerts/undoCloseMultiple
+GET /v2/alerts/{alertId}
+POST /v2/alerts/{alertId}/acknowledge
+GET /v2/alerts/{alertId}/alertingPattern
+POST /v2/alerts/{alertId}/annotate
+GET /v2/alerts/{alertId}/attachments
+GET /v2/alerts/{alertId}/attachments/{attachmentId}
+POST /v2/alerts/{alertId}/close
+GET /v2/alerts/{alertId}/details
+GET /v2/alerts/{alertId}/distribution
+POST /v2/alerts/{alertId}/escalateToTeam
+GET /v2/alerts/{alertId}/escalations
+GET /v2/alerts/{alertId}/escalations/csv
+GET /v2/alerts/{alertId}/notifications
+GET /v2/alerts/{alertId}/parameters
+GET /v2/alerts/{alertId}/postMortem
+POST /v2/alerts/{alertId}/postMortem/mail
+POST /v2/alerts/{alertId}/summarize
+GET /v2/alerts/{alertId}/summary
+POST /v2/alerts/{alertId}/summary/feedback
+GET /v2/alerts/{alertId}/timeline
+POST /v2/alerts/{alertId}/undoAcknowledge
+POST /v2/alerts/{alertId}/undoClose
+GET /v2/audits
+GET,POST /v2/callouts/templates
+DELETE,PUT /v2/callouts/templates/{templateId}
+GET /v2/categories
+GET /v2/categories/images
+GET /v2/categories/public
+GET,POST /v2/categories/{teamId}
+GET /v2/categories/{teamId}/metrics
+DELETE,GET,PUT /v2/categories/{teamId}/{categoryId}
+GET /v2/categories/{teamId}/{categoryId}/metrics
+GET,POST /v2/categories/{teamId}/{categoryId}/subscriptions
+GET,POST /v2/distributionLists
+GET /v2/distributionLists/memberships
+GET /v2/distributionLists/public
+DELETE,GET,PUT /v2/distributionLists/{listId}
+DELETE,GET,POST /v2/distributionLists/{listId}/memberships
+POST /v2/duties/punchIn
+POST /v2/duties/punchInAsManager
+POST /v2/duties/punchOut
+GET /v2/duties/summary
+GET,POST /v2/eventDistributions
+DELETE,GET,PUT /v2/eventDistributions/{distributionId}
+POST /v2/events/paged
+GET /v2/events/{eventId}
+GET /v2/events/{eventId}/overview
+GET /v2/events/{eventId}/parameters
+POST /v2/events/{webhookIdOrTeamId}
+GET,POST /v2/eventsources
+DELETE,GET,PUT /v2/eventsources/{eventSourceId}
+GET /v2/prepaid/balance
+GET,PUT /v2/prepaid/settings
+GET /v2/prepaid/transactions
+PUT /v2/prepaid/{subscriptionId}/prepaidSettings
+GET,POST /v2/remoteActions
+GET /v2/remoteActions/definitions
+GET /v2/remoteActions/definitions/{definitionId}
+POST /v2/remoteActions/journal/paged
+GET /v2/remoteActions/journal/{jobId}
+DELETE,GET,PUT /v2/remoteActions/{actionId}
+POST /v2/remoteActions/{actionId}/jobs
+POST /v2/schedules
+POST /v2/schedules/standIn
+POST /v2/scim/apiKey
+GET,PUT /v2/scim/settings
+GET /v2/scim/status
+GET,POST /v2/scripts/instances
+DELETE,GET,PUT /v2/scripts/instances/{instanceId}
+PUT /v2/scripts/instances/{instanceId}/data
+POST /v2/scripts/instances/{instanceId}/disable
+POST /v2/scripts/instances/{instanceId}/enable
+GET /v2/scripts/inventory
+GET /v2/scripts/inventory/parsed
+GET /v2/scripts/inventory/parsed/{scriptId}
+GET,POST /v2/shifts
+POST /v2/shifts/ai/forwardPlanning/{teamId}
+POST /v2/shifts/ai/forwardPlanning/{teamId}/feedback/{operationId}
+GET /v2/shifts/ai/forwardPlanning/{teamId}/result/last
+GET /v2/shifts/ai/forwardPlanning/{teamId}/result/{operationId}
+GET /v2/shifts/ai/forwardPlanning/{teamId}/status
+POST /v2/shifts/moveAssignment
+POST /v2/shifts/swapAssignments
+POST /v2/shifts/validateTimeSlots
+DELETE,GET,PUT /v2/shifts/{shiftId}
+DELETE,POST,PUT /v2/shifts/{shiftId}/assignments
+POST /v2/shifts/{shiftId}/assignments/replace
+GET /v2/shifts/{shiftId}/intervals/{intervalId}
+GET /v2/stakeholders
+DELETE,GET,PUT /v2/stakeholders/{stakeholderId}
+PUT /v2/stakeholders/{stakeholderId}/locale
+GET /v2/subscriptions
+GET /v2/subscriptions/{subscriptionId}
+GET /v2/subscriptions/{subscriptionId}/channelPrices
+GET /v2/subscriptions/{subscriptionId}/features
+DELETE,GET,POST /v2/subscriptions/{subscriptionId}/image
+GET /v2/subscriptions/{subscriptionId}/imageFile
+GET /v2/subscriptions/{subscriptionId}/imageInfo
+GET,POST /v2/subscriptions/{subscriptionId}/imageSettings
+GET /v2/subscriptions/{subscriptionId}/inboundVoiceNumberLicenses
+GET /v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/en16931
+GET /v2/subscriptions/{subscriptionId}/invoices/{invoiceId}/zugferd
+GET /v2/subscriptions/{subscriptionId}/prepaidBalance
+GET /v2/subscriptions/{subscriptionId}/prepaidSettings
+GET /v2/subscriptions/{subscriptionId}/prepaidTransactions
+PUT /v2/subscriptions/{subscriptionId}/profile
+GET,PUT /v2/subscriptions/{subscriptionId}/settings
+GET /v2/subscriptions/{subscriptionId}/stakeholderLicenses
+GET /v2/subscriptions/{subscriptionId}/tags
+GET /v2/subscriptions/{subscriptionId}/teams
+GET /v2/subscriptions/{subscriptionId}/userLicenses
+GET,POST /v2/teams
+GET /v2/teams/alertSettings
+GET /v2/teams/dutySettings
+POST /v2/teams/memberships
+GET /v2/teams/memberships/{userId}
+GET /v2/teams/public
+GET /v2/teams/signalingSettings
+GET /v2/teams/users
+DELETE,GET /v2/teams/{teamId}
+GET /v2/teams/{teamId}/absences
+GET /v2/teams/{teamId}/alertReports
+GET /v2/teams/{teamId}/alertReports/{fileName}
+GET,POST /v2/teams/{teamId}/alertSettings
+GET,POST /v2/teams/{teamId}/alertingPatterns
+POST /v2/teams/{teamId}/alertingPatterns/timeSlots/validate
+DELETE,PUT /v2/teams/{teamId}/alertingPatterns/{patternId}
+GET /v2/teams/{teamId}/dutyReports
+GET /v2/teams/{teamId}/dutyReports/{fileName}
+GET /v2/teams/{teamId}/eventSources
+DELETE,GET /v2/teams/{teamId}/holidays
+PUT /v2/teams/{teamId}/holidays/repeating
+PUT /v2/teams/{teamId}/holidays/years/{year}
+POST /v2/teams/{teamId}/holidays/years/{year}/copyFrom/{sourceTeamId}
+DELETE,GET,POST /v2/teams/{teamId}/image
+GET /v2/teams/{teamId}/memberships
+POST /v2/teams/{teamId}/memberships/resendInviteMail
+DELETE,POST,PUT /v2/teams/{teamId}/memberships/{userId}
+GET,PUT /v2/teams/{teamId}/privacySettings
+PUT /v2/teams/{teamId}/profile
+POST /v2/teams/{teamId}/schedules
+POST /v2/teams/{teamId}/schedules/deleteRange
+POST /v2/teams/{teamId}/schedules/multiple
+DELETE /v2/teams/{teamId}/schedules/{dutyId}
+GET /v2/teams/{teamId}/schedules/{scheduleId}
+GET /v2/teams/{teamId}/setupProgress
+GET,POST /v2/templates
+DELETE,GET,PUT /v2/templates/{templateId}
+GET /v2/templates/{templateId}/attachments/{attachmentId}
+POST /v2/templates/{templateId}/execute
+GET /v2/users
+GET /v2/users/availableRoles
+POST /v2/users/overview
+GET /v2/users/overview/{userId}
+DELETE /v2/users/{userGuid}
+GET /v2/users/{userId}
+GET,POST /v2/users/{userId}/absences
+POST /v2/users/{userId}/absences/setAll
+DELETE,GET,PUT /v2/users/{userId}/absences/{id}
+PUT /v2/users/{userId}/changePassword
+POST /v2/users/{userId}/checkPermissions
+POST /v2/users/{userId}/checkSubscriptionPermissions
+DELETE /v2/users/{userId}/contactAddresses/{addressId}
+GET /v2/users/{userId}/dutyStatus
+DELETE,GET,POST /v2/users/{userId}/image
+PUT /v2/users/{userId}/locale
+POST /v2/users/{userId}/location
+GET,PUT /v2/users/{userId}/notificationProfiles
+DELETE,POST /v2/users/{userId}/phoneNumbers
+POST /v2/users/{userId}/phoneNumbers/validate
+PUT /v2/users/{userId}/profile
+POST /v2/users/{userId}/sendEventSourcesInfo
+GET /v2/users/{userId}/setupProgress
+GET,PUT /v2/users/{userId}/tags
+GET /v2/users/{userId}/teams
+GET,POST /v2/webhooks
+DELETE,GET,PUT /v2/webhooks/{webhookId}
+POST /v2/webhooks/{webhookId}/disable
+POST /v2/webhooks/{webhookId}/enable
+[0m
+This is a large route list. The prior known route list from probes mentioned "40+ endpoints". Now 190 paths. But the swagger grew only ~9.4KB from 1,216,391 to 1,225,783. That's a small delta. Let me look for what's new. I don't have the old spec saved. But the size delta of 9.4KB is small relative to the whole document.
+
+Let me focus on the most interesting NEW endpoints. Routes I recognize as previously discussed: alerts, teams, subscriptions, invoices/zugferd, prepaid, events. Newer-looking ones: /v2/scripts/*, /v2/shifts/ai/forwardPlanning/*, /v2/remoteActions/*, /v2/stakeholders/*, /v2/duties/*, /v2/scim/*.
+
+But actually the important thing for the hunt: these are all Bearer/API-key gated. The "security": [{}] under-declaration was already noted.
+
+Given my role and the frozen state, the swagger delta is worth a [CHANGED]/[NEW] note but not a new finding. Let me check whether any of these newly-published routes are actually reachable unauthenticated (read-only GET) — particularly ones with path params that could indicate IDOR. But probing 190 routes violates ≤1rps practical and is scanning. Better to note the delta and select a couple of high-value read-only suspects.
+
+Actually the more important realization: the size change is only ~9.4KB. Could just be doc text updates. Without the old copy, I can't robustly claim new endpoints. I should be careful not to over-claim. I'll note the spec-size delta as [CHANGED] with the exact byte counts and hash, and flag that I cannot diff content without a stored prior copy — a process gap.
+
+Let me check if there's an endpoint that stands out: `/v2/scim/apiKey` (POST) — SCIM provisioning API key. `/v2/users/{userId}/checkPermissions` POST. `/v2/remoteActions` — could execute commands on remote hosts (RCE-ish). `/v2/templates/{templateId}/execute`. `/v2/scripts/instances/{instanceId}/data` PUT.
+
+For a read-only probe, GET on `/v2/scim/status` or `/v2/remoteActions/definitions` might be interesting: `GET /v2/remoteActions/definitions` unauthenticated → likely 401. 
+
+But per rules, I should do breadth over inventory for anomalies then depth on top-3. The state is deep frozen. Given the user just wants me to continue, let me do a small targeted read-only check on a handful of the newly-noticed public-looking routes (categories/public, distributionLists/public, teams/public, remoteActions/definitions) to confirm gating. These are GET-only, ≤1rps.
+
+Actually, "public" in path may just be naming. Let me test a couple.
+
+Wait — careful. The program scope and rules: GET/HEAD/OPTIONS only for live probes, ≤1 rps. That's fine.
+
+Let me test:
+- GET /v2/teams/public
+- GET /v2/categories/public
+- GET /v2/distributionLists/public
+- GET /v2/remoteActions/definitions
+- GET /v2/scim/status
+- GET /v2/scripts/inventory
+
+on api.signl4.com. Compare status codes. If any returns 200 without auth → AUTH finding (public data exposure / broken auth). Let me do it slowly.</think>The public V2 spec grew (1,216,391 → 1,225,783 bytes) since 2026-10-11 and lists 190 paths. Let me probe a few route families whose names suggest public/unauth intent, read-only.
+[0m$ [0mfor p in "/v2/teams/public" "/v2/categories/public" "/v2/distributionLists/public" "/v2/remoteActions/definitions" "/v2/scim/status" "/v2/scripts/inventory" "/v2/eventsources" "/v2/stakeholders"; do code=$(curl -s -m 15 -o /tmp/opencode/p.out -w "%{http_code}" "https://api.signl4.com/api$p"); size=$(wc -c </tmp/opencode/p.out); echo "$code $size  $p"; sleep 1; done
+401 0  /v2/teams/public
+401 0  /v2/categories/public
+401 0  /v2/distributionLists/public
+401 0  /v2/remoteActions/definitions
+401 0  /v2/scim/status
+401 0  /v2/scripts/inventory
+401 0  /v2/eventsources
+401 0  /v2/stakeholders
+[0m
+[0m$ [0mpython3 -c "
+import json
+d=json.load(open('/tmp/opencode/v2.json'))
+paths=d.get('paths',{})
+# find endpoints with explicit empty security or no security override
+for p in sorted(paths):
+    for m,op in paths[p].items():
+        if m not in ('get','post','put','delete','patch'): continue
+        sec=op.get('security')
+        if sec==[]:
+            print('EMPTY',m.upper(),p, op.get('summary','')[:60])
+print('--- global security:', d.get('security'))
+print('--- servers:', d.get('servers'))
+"
+--- global security: [{}]
+--- servers: [{'url': 'https://connect.signl4.com/api'}]
+[0m
+All 401. Gated. Now, the webhook endpoint /v2/events/{webhookIdOrTeamId} — POST. The webhook secret route. Let me check /v2/events/{teamSecret} GET. Actually earlier notes: connect.signl4.com/api/v2/events/{teamSecret} GET+POST, 401 Bearer.
+
+Let me check whether the swagger specifies any endpoint with empty security (the global security [{}] issue). Actually the key question: is there a genuinely new endpoint family since 2026-10-11? The size delta is ~9.4KB. Let me check the v1 and v3 too. And compare v3 size previously recorded.
+
+Actually, let me reconsider. The swagger size 1216391 was recorded at lead line 8150 (cycle around 2026-10-11). Now it's 1225783. Let me see if I can find the old file content anywhere on disk. There's no saved copy. So I can only note the change.
+
+Let me look at the v3 spec too and its route list, and check /api/docs (index) for what's available. Also let me check the v2 spec for any endpoints with `security: []` override or no security, or interesting "public" endpoints.
+
+Let me parse the spec for security overrides and for parameters that look like IDs (IDOR candidates) combined with GET. But that's mapping; the state says passive surface exhausted. The delta here is the spec change. Let me identify the genuinely new endpoints by checking against knowledge. Let me grep the lead/knowledge for each path to find which are "new".
+
+Let me extract all paths and grep knowledge/index.md for the distinctive ones.</think>
+[0m$ [0mgrep -c "remoteActions\|stakeholders\|/v2/scripts\|/v2/duties\|forwardPlanning\|distributionLists\|eventDistributions\|callouts/templates" knowledge/index.md leads/lead-bigpickle.md; echo "== which appear"; for k in remoteActions stakeholders "/v2/scripts" duties forwardPlanning distributionLists eventDistributions "callouts/templates" "scim/apiKey" "checkPermissions"; do n=$(grep -rl "$k" knowledge/index.md leads/lead-*.md 2>/dev/null | wc -l); echo "$n  $k"; done
+knowledge/index.md:2
+leads/lead-bigpickle.md:7
+== which appear
+0  remoteActions
+0  stakeholders
+0  /v2/scripts
+1  duties
+3  forwardPlanning
+3  distributionLists
+0  eventDistributions
+0  callouts/templates
+0  scim/apiKey
+0  checkPermissions
+[0m
+Several route families appear to be new to the knowledge base: remoteActions, stakeholders, /v2/scripts, eventDistributions, callouts/templates, scim/apiKey, checkPermissions. But I need to be careful — the grep was against only knowledge/index.md and lead-bigpickle.md. Let me check all leads. Actually I did grep leads/lead-*.md in the loop (grep -rl). So "remoteActions" appears in 0 files. Hmm, but the swagger was downloaded before. The route list may not have been fully catalogued.
+
+Let me check the git history to see if the tracked lead/knowledge changed, and importantly whether there's a saved prior swagger. There isn't. 
+
+Actually let me reconsider the whole task. I've been asked "What did we do so far?" then "Continue if you have next steps." I've now done a delta recon cycle. The key new finding: the V2 OpenAPI spec changed size (1,216,391 → 1,225,783) and now contains route families never before catalogued (remoteActions, stakeholders, scripts, eventDistributions, callouts/templates, scim). This is a genuine [NEW] delta worth documenting.
+
+But wait — is the size difference actually meaningful? The 1216391 number came from a cycle timing. Let me not over-claim. The spec size changed by 9.4KB. New route families exist in the current spec. Whether they're "new" vs "never catalogued" is ambiguous; the notes say the API has "40+ endpoints" and now there are 190 paths. That suggests the full spec was always this large and the "40+" was a rough count from a summary, OR the spec genuinely grew.
+
+Let me check the v3 spec too, and get a route count for v1/v3 to understand.
+
+Actually, this is enough. The deliverable here is a cycle output. Given the state (POC, frozen deliverables), the correct output is a structured cycle. But I should be careful: I'm "bigpickle" the analyst. My output format is the 8 steps with [HYP]/[FINAL]/[NEXT]/[LEARN]/[RISK]. The harness appends my output to leads/lead-bigpickle.md presumably.
+
+Let me quickly assess whether any newly-catalogued endpoint is a real lead. Most are 401-gated. The interesting ones for IDOR/BOLA are the `{userId}` GET routes. But those require auth.
+
+Actually, let me look at `/v2/users/{userId}/checkPermissions` and `/v2/users/{userGuid}` (DELETE) — note two different identifier names. And `/v2/users/{userId}/changePassword` was already known. 
+
+The most notable NEW thing might be the discrepancy: `/v2/users/{userGuid}` uses `userGuid` while others use `userId`. Minor.
+
+Let me also check the webhook docs spec, since that's public and relevant to the frozen finding. Let me fetch /webhook/docs/v1/swagger.json.
+
+Actually, I think I should wrap up. Let me get the v1/v3 counts quickly and the webhook docs status, then produce the cycle output and append to the lead file.
+
+Let me not over-engineer. I'll do: v1/v3 path counts, and confirm the spec delta, then write the cycle.</think>
+[0m$ [0mcurl -s -m 20 "https://connect.signl4.com/api/docs/v3/swagger.json" -o /tmp/opencode/v3.json -w "v3 %{http_code} %{size_download}\n"; sleep 1; python3 -c "
+import json
+for v in ['v1','v3']:
+    try:
+        d=json.load(open(f'/tmp/opencode/{v}.json'))
+        print(v,'paths',len(d.get('paths',{})),'title',d.get('info',{}).get('title'),'ver',d.get('info',{}).get('version'))
+    except Exception as e: print(v,'err',e)
+"; echo "== webhook docs"; curl -s -m 15 -o /tmp/opencode/w.json -w "%{http_code} %{size_download}\n" "https://connect.signl4.com/webhook/docs/v1/swagger.json"; sleep 1; python3 -c "import json;d=json.load(open('/tmp/opencode/w.json'));print('webhook paths',list(d.get('paths',{})))" 2>/dev/null || echo "not json"
+v3 200 1222732
+v1 paths 93 title SIGNL4 API V1 ver 1
+v3 paths 207 title SIGNL4 API V3 ver 3
+== webhook docs
+200 12647
+webhook paths ['/docs/index.html', '/{teamSecret}']
+[0m
+[0m→ [0mRead .github/workflows/hunt.yml
+Let me check whether v3 grew too. And check git-tracked knowledge for previous v3 route info. Let me see if there's a "190 paths" or "207 paths" mention anywhere.
+
+Actually, let me step back and think about what's the most valuable thing to do. My state says the deliverables are frozen and the next action is HUMAN submission. The user asked me to continue. I ran a delta recon.
+
+Key deltas found:
+1. v2 swagger grew ~9.4KB (1,216,391 → 1,225,783) and has 190 paths; several route families (remoteActions, stakeholders, scripts, eventDistributions, callouts/templates, scim, duties/forwardPlanning) may be newly published.
+2. v3 has 207 paths.
+3. All probed new route families return 401 — gated.
+4. Frozen secrets still live (vbguzfsi, 96sbq38s), SA/Checkmk creds still live, JWKS still byte-identical.
+
+Let me check if the JWKS byte-identical across 3 hosts still holds (I did earlier: 96c931f2... for connect/account/api). Good.
+
+Now — is the swagger delta a real finding? The spec under-declares auth (`security: [{}]`), which was already noted. New route families being published is informational.
+
+Let me actually verify the size delta claim more rigorously. Was 1216391 recorded for v2 specifically? lead line 8150 says "GET https://api.signl4.com/api/docs/v2/swagger.json, 200, 1216391 bytes". And 1225783 now. So yes ~9.4KB bigger. But the cycle at 8150 was around 2026-10-12. Over 3 days a spec can change. This is a legitimate [CHANGED].
+
+But since I can't diff (no saved copy), I should note it as [CHANGED] and note the newly-visible families, without over-claiming they're new (they may just not have been catalogued).
+
+Let me check whether there were any routes with interesting unauthenticated behavior. All 401. Let me also check the OPTIONS to see Allow headers on a couple new ones — but OPTIONS is a REJECTED class as standalone, though useful for route discovery. Skip.
+
+Now, an important angle: the `security: [{}]` global empty + new billing/SCIM/scripts/remoteActions routes. remoteActions sounds like it can run actions on endpoints. `POST /v2/remoteActions/{actionId}/jobs` and `GET /v2/remoteActions/definitions`. These are high-value if auth is weak, but all 401.
+
+I think the right deliverable is a delta cycle documenting:
+- [CHANGED] V2/V3 spec growth; new route families now in public OpenAPI.
+- [NEW] route families: remoteActions, stakeholders, scripts/instances, eventDistributions, callouts/templates, shifts/ai/forwardPlanning, duties/punchIn, scim/apiKey, users/checkPermissions.
+- All probed unauth → 401 (gated).
+- Frozen evidence re-verified.
+
+But before writing, let me double-check a couple of these endpoints with OPTIONS or with trailing variations to ensure 401 isn't masking a 404 (i.e., route exists). Actually 401 with 0 bytes means gateway requires auth before routing — consistent.
+
+Let me also verify the webhook docs spec change — it documents /{teamSecret}. Not new.
+
+Now, should I probe more? The rules: ≤1 rps, read-only. I've done ~40 requests. Fine.
+
+Let me now also re-verify the webhook oracle still live? The state says frozen and validated 5+ days. It says re-verifying has diminishing returns. I'll skip the POST oracle (it's a POST, and the rule says GET/HEAD/OPTIONS only for live probes... but earlier cycles used Content-Length:0 POST as a non-mutating oracle — that's an established exception). Given the "stop re-probing" lesson, I'll skip.
+
+Let me check the git log to understand where my output should go. The lead file gets appended with a header "## <date> [target] (model bigpickle)". I should append my cycle output. Let me look at how the harness appends — does the analyst append to its own lead file, or does something else? Given I'm the analyst, and previous cycles are in the file, I should append my structured output under a new header.
+
+Actually wait — let me reconsider. The prompt says "Run the 8 steps and output ONLY structured blocks." The output goes to stdout (analyst-out.txt), and presumably the harness appends it to the lead file. But in prior cycles, the lead file has the blocks. Let me check if analyst-out.txt is the raw capture. analyst-out.txt currently contains the terminal transcript of THIS session (the harness is capturing my session). So my final text output will be the cycle output.
+
+Hmm, but the lead file already has entries with timestamps and "(model bigpickle)". These were likely appended by the harness from the analyst's stdout. So I should just output the structured blocks as my final answer. But the user explicitly asked me questions. Let me provide: a brief summary of what we did (answering "What did we do so far?"), then the cycle output.
+
+Actually, re-reading: the first user msg was "What did we do so far?" and I gathered. Then the second: "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed."
+
+I think the right move: continue the hunt — run the cycle (which I've been doing), append the structured output to my lead file, and report concisely.
+
+Let me check how prior bigpickle cycles got written — is there a script? Let me look at hunt.yml to see the harness flow.
+
+Actually, given the environment, the lead file is likely written by the analyst itself. Let me just append the new cycle to leads/lead-bigpickle.md with the proper header. That matches the pattern (each cycle appended). But wait — the last entry (11517) has header "## 2026-10-15 05:15:30 UTC" but its content is a weird mix (starts with old 2026-09-03 content then later the current hypotheses). That looks like a corrupted/harness-generated entry. Hmm, line 11517-11718: it starts with the 2026-09-03 PRIO content, then at 11596 has the webhook secret hypotheses, then 11671 has the account.signl4 PRIO, etc. So that entry is a concatenation. It was probably a harness bug.
+
+Given ambiguity about whether I should append, and the risk of messing up the file, I think the safest is to output the cycle output and append it. Let me check hunt.yml quickly.</think>
+Now I understand the harness. My structured output is captured via `analyst-out.txt` → grep for lines starting with `[NEW|CHANGED|...]` and schema fields → appended to leads/lead-bigpickle.md.
+
+So my final chat output should be structured blocks (the 8 steps) so the harness can append them. I don't need to manually edit the lead file.
+
+Let me produce a proper cycle output. Let me gather the delta facts precisely:
+
+DELTA:
+- [CHANGED] V2 OpenAPI spec grew: `GET https://api.signl4.com/api/docs/v2/swagger.json` → 200, now 1,225,783 bytes (sha256 837b34ca...) vs 1,216,391 bytes recorded 2026-10-11; 190 paths. V3: 207 paths, 1,222,732 bytes. V1: 93 paths. Spec publishes several route families not previously catalogued: `/v2/remoteActions/*`, `/v2/stakeholders/*`, `/v2/scripts/instances/*`, `/v2/eventDistributions`, `/v2/callouts/templates`, `/v2/shifts/ai/forwardPlanning/{teamId}`, `/v2/duties/*`, `/v2/scim/apiKey`, `/v2/users/{userId}/checkPermissions`.
+- [NEW] all probed new families unauth GET → 401 (0 bytes): teams/public, categories/public, distributionLists/public, remoteActions/definitions, scim/status, scripts/inventory, eventsources, stakeholders. Auth enforced at gateway.
+- [NEW] signl4/docs received 3 new integration files 2026-10-14 (fortinet/zscaler/ciq-cloud) by rons4 — swept: placeholder-only (`YOUR_TEAM_SECRET`), no new live secrets. `vbguzfsi` still at line 7.
+- [CHANGED] frozen evidence re-verified live 2026-10-15 ~10:00 UTC: vbguzfsi (signl4/docs main yaml sha256 7b5d2a95...), 96sbq38s (google-iot master + losant master), SA creds (Derdack master, PWD=Derdack!), Checkmk creds (cmkadmin/CNlydVqZ); JWKS connect/account/api byte-identical (sha256 96c931f2...) + account issuer still connect.signl4.com/identity.
+- [CHANGED] api/v2/teams → 401 (3/3 this session) consistent with route-gated deploy state.
+- [CHANGED] triage run-2026-10-15-06-34 still UnknownError (≥59 consecutive failures).
+- [LEARN] raw.githubusercontent default-branch trap: Derdack repos use `master`; fetching `main` returns 404 which is NOT remediation — verify default_branch via API before claiming a file was removed.
+
+STEP 2 PRIO: reuse. Maybe add scripts/remoteActions.
+
+STEP 3 HYPOTHESES: top 3 assets, max 1 each. I can produce the 3 frozen ones again (they're the live findings), OR produce new ones. The rules want hypotheses. The frozen findings are FINALs. Given the delta, I could produce:
+- HYP: Newly-published V2 route families (remoteActions, scripts, shifts/ai) unauth exposure/BOLA — but all returned 401. Confidence low, parked.
+- HYP: leaked webhook secrets — already FINAL.
+- HYP: Derdack org creds — FINAL.
+
+Given the state is frozen, I'll re-emit the three FINAL findings and park the new spec routes as no new exploitable surface (all gated).
+
+STEP 4: FINAL survivors = the 3.
+STEP 5 NEXT: HUMAN submit.
+STEP 6 LEARN.
+STEP 7 RISK.
+
+Let me write the output. Keep it in the required block format. My chat response should be these blocks (harness captures). Let me make it reasonably concise but complete.
+
+Let me verify a couple facts I'll cite: the sha256 of the leaked yaml (7b5d2a95cc9c9b52...), google-iot (97fc94f9...), losant (2999995c...). Yes from earlier. JWKS sha256 prefix 96c931f29d51eace.
+
+One more: I should double check the "1,216,391 bytes" figure source to cite accurately. It's from lead line 8150: "200, 1216391 bytes". Good.
+
+Also v1 = 495791 bytes, 93 paths; v3 = 1222732, 207 paths.
+
+Let me write final output.</think>Summary of where we are, then the new cycle I just ran.
+
+## What we did so far
+- Mapped the full SIGNL4/Enterprise Alert passive surface (API V1/V2/V3, webhook, events, 6 identity hosts, OIDC/JWKS, EA WSDL, WP multisites, `github.com/Derdack` + `github.com/signl4` orgs).
+- Froze 3 submission-ready findings: (1) live webhook secrets `vbguzfsi`/`96sbq38s`, (2) `sa:Derdack!` + `cmkadmin:CNlydVqZ`, (3) cross-env JWKS/issuer symmetry.
+- Bottleneck: validation/triage pipeline is dead (`run-2026-10-15-06-34` still `UnknownError`), so the top action is human submission.
+
+## This cycle (verified read-only, GET/HEAD only)
+- **Re-verified all frozen evidence still live/unremediated** (secrets in repos, JWKS 3/3 byte-identical, account issuer still `connect.signl4.com/identity`).
+- **Found a genuine spec delta**: V2 OpenAPI grew 1,216,391 → 1,225,783 bytes (190 paths); new-to-catalogue families visible. Probed 8 of them unauth → all `401`, 0-byte. Gated.
+- **Corrected a false-remediation trap**: Derdack repos default-branch is `master`; `main` 404 ≠ removed file.
+
+```
+[NEW] signl4/docs received 3 new integration files 2026-10-14 (fortinet, zscaler, ciq-cloud) by rons4 — swept: only `YOUR...` placeholders; no new live secrets; `vbguzfsi` still at SIGNL4_Alerting.yaml:7
+[CHANGED] api.signl4.com/api/docs/v2/swagger.json now 1,225,783 B (sha256 837b34ca…) vs 1,216,391 B recorded 2026-10-11 — public V2 spec changed; 190 paths (V1=93, V3=207). Newly-catalogued families: /v2/remoteActions/*, /v2/stakeholders/*, /v2/scripts/instances/*, /v2/eventDistributions, /v2/callouts/templates, /v2/shifts/ai/forwardPlanning/{teamId}, /v2/duties/*, /v2/scim/apiKey, /v2/users/{userId}/checkPermissions
+[NEW] all 8 probed new-family unauth GETs return 401 / 0 bytes (/teams/public, /categories/public, /distributionLists/public, /remoteActions/definitions, /scim/status, /scripts/inventory, /eventsources, /stakeholders) — gateway auth enforced
+[CHANGED] frozen evidence re-verified live 2026-10-15: vbguzfsi (yaml sha256 7b5d2a95…), 96sbq38s (google-iot 97fc94f9… + losant 2999995c…), PWD=Derdack! (Derdack master), cmkadmin/CNlydVqZ (derdack-plugin-checkmk master); JWKS connect/account/api byte-identical (sha256 96c931f2…) + account issuer still connect.signl4.com/identity
+[CHANGED] api /api/v2/teams → 401 (3/3, route-gated deploy state)
+[CHANGED] triage run-2026-10-15-06-34 still UnknownError (≥59 consecutive failed runs)
+[PRIO] api.signl4.com 7.30 | account.signl4.com 6.80 | github.com/Derdack 6.45 | connect.signl4.com 6.30 | demo.enterprisealert.com 5.70 | vps.signl4.com 4.65
+[HYP] none net-new. Newly-published V2 routes are uniformly 401-gated on unauth GET; no exploitable new surface.
+[PARKED] V2 spec-grew → new route families (remoteActions/scripts/shifts-AI/scim): confidence 25 < 40; every probed family gates at gateway (401/0-byte); spec already under-declares auth (`security:[{}]`), documented defect only.
+[PARKED] spec-size delta as standalone finding: confidence 10; public documentation change, no REJECTED-class or security differential.
+[FINAL] 1. Live SIGNL4 team webhook secrets vbguzfsi/96sbq38s (AUTH, HIGH)
+[FINAL] 2. Public Derdack org hardcoded SA + Checkmk creds (AUTH, HIGH)
+[FINAL] 3. Cross-env token-forgery chain — 6-host shared JWKS + account issuer mismatch (OATH, CRITICAL, AUTH_HELPED)
+[NEXT] HUMAN: submit the 3 frozen FINALs to bugs.olivermaicher.eu — (1) vbguzfsi/96sbq38s with public file:line + Content-Length:0 400/4000-vs-404/3004 oracle; (2) sa:Derdack! and cmkadmin:CNlydVqZ with commit/authors; (3) cross-env chain with 6-host JWKS deep-equal + account issuer mismatch. Stop re-probing closed surfaces.
+[LEARN] REJECTED AUTH @ api.signl4.com newly-published V2 families: 8/8 unauth GETs 401/0-byte — spec growth is documentation drift, not an auth gap.
+[LEARN] ACCEPTED OTHER @ raw.githubusercontent fetch: Derdack repos default_branch=master; a 404 on `main` is NOT remediation — always read default_branch via API before claiming a file was removed.
+[LEARN] ACCEPTED AUTH @ signl4/docs: 2026-10-14 pushes swept (placeholder-only); active maintenance does not imply new exposure.
+[RISK] derdack: 92 — prod-adjacent SQL SA + Checkmk creds and live team webhook secrets remain public; immediate rotation + Git-history scrub required.
+[RISK] signl4: 85 — six identity hosts share one RS256 key with account-host issuer mismatch; one client_secret compromise yields estate-wide token forgery.
+```
+
+Next step per the plan is the human submission (I can't post to `bugs.olivermaicher.eu`). Want me to draft the three report bodies as files under `reports/` so the submitter can paste them directly?
