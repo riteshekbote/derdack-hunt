@@ -12634,3 +12634,4 @@ testability: PASSIVE
 [NEXT] STOP PROBING unauthenticated surface. Obtain valid X-S4-Api-Key or OAuth token via program channel to test: (1) one single-route impersonation test on `/api/v3/signls/{signlId}/acknowledge` or `/api/v2/alerts/{alertId}/acknowledge` with foreign body userId vs token principal (read audit identity), (2) `connect.signl4.com/api/v2/subscriptions/{id}/userLicenses` cross-tenant, (3) introspection enforcement across identity hosts (6/6 registration known). Do not send real keys in URLs.
 [LEARN] Reading full OpenAPI 3.0.4 specs (v1/v2/v3) once revealed API_Key_Query declared across all versions and body schemas (no prepaid tenant field) — static sweep beats narrow greps.
 [RISK] derdack: 3 — 0 live mutating requests; only safe GETs of public specs and controlled param test with dummy key. No credentials, no tenant data exposed.
+## 2026-10-16 23:13:01 UTC [target] (model bigpickle)

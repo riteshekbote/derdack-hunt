@@ -7019,3 +7019,5 @@
 - LEARN: Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
 - LEARN: Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
 - LEARN: Reading full OpenAPI 3.0.4 specs (v1/v2/v3) once revealed API_Key_Query declared across all versions and body schemas (no prepaid tenant field) — static sweep b
+
+## RANKED HYPOTHESES 2026-10-16 23:13:12 UTC
