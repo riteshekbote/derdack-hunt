@@ -3006,3 +3006,17 @@ www.derdack.com
 - CHANGED vps.signl4.com A-record 72.167.227.27 (GoDaddy secureserver.net) remains dangling (nginx default vhost) — intermittent TCP-timeout observed, DNS unchanged
 - CHANGED Triage pipeline remains broken: ≥59 consecutive failed Triager runs (2026-09-25→2026-10-15), `reports/valid-bugs.md` running count unreliable
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
+
+## 2026-10-16 03:40:58 UTC
+- NEW Triage outage, first recorded: 57 consecutive Triager runs have failed (2026-09-25 09:58 → 2026-10-06 06:24; 74/213 runs total), every one terminated by upstream `UnknownError`; the last run that prod
+- NEW triage.yml:45 collects `grep "\[UNVALIDATED\]" leads/lead-*.md`; that string occurs 0 times in any of the 6 lead files, so `new-leads.txt` has been empty on every run — 26 runs show the model reportin
+- NEW Both passive verifiers scope to `PROBE_ALLOW: derdack.com` (hunt.yml:13, triage.yml:12), so no `signl4.com`/`enterprisealert.com` lead URL is ever re-verified; every `probe-results.md` section since 2
+- CHANGED credential-in-URL item is report-complete: `API_Key_Query` declared in `components.securitySchemes` on V1+V2+V3 (global `security: [{}]` empty on all three), live-confirmed 2026-09-09 (`?x-s4-api-key=
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this i
+- CHANGED No new attack surface locally: `probe-results.md` tail, reposcan (TARGET_ORG unset) and the host map yielded nothing unexamined; queue unchanged — the missing piece was a verified route to a triager, 
+- NEW Exhaustive secret scan of all 66 public repos (1614 files) across github.com/signl4 + github.com/Derdack completed → exactly 2 live webhook secrets (`vbguzfsi`, `96sbq38s`); no cloud creds, private ke
+- NEW `git log -p --all` over 1048 commits of signl4/docs confirms `vbguzfsi` is the ONLY webhook secret ever committed; no removed-but-still-live secrets in history
+- NEW All 3 hardcoded-cred findings re-verified at HEAD 2026-10-16: `96sbq38s` (google-iot:19, losant:148), `sa:Derdack!` (holidayimport:16,22), `cmkadmin:CNlydVqZ` (checkmk/2-way/Main.js:90-91)
+- CHANGED signl4/docs pushed 2026-10-15T15:20:20Z (commit 3cc9c28412, author "Ron"): added integrations/trendai/ with `YOUR_SIGNL4_SECRET` placeholders; leaked `vbguzfsi` at SIGNL4_Alerting.yaml:7 unremediated
+- CHANGED Triage pipeline remains broken: ≥59 consecutive failed Triager runs (2026-09-25→2026-10-15), `reports/valid-bugs.md` running count unreliable
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted

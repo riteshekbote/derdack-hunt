@@ -1,42 +1,105 @@
-## 2026-10-16 00:06:21 UTC [target] (model bigpickle)
-[HYP] Client-supplied authorizer/tenant identifiers in V2 membership + new-family writes
-class: BUSLOGIC
-asset: connect.signl4.com/api/v2/teams/memberships
-confidence: 60
-[HYP] Client-supplied authorizer/tenant identifiers in V2 membership + new-family writes
-class: BUSLOGIC
-asset: connect.signl4.com/api/v2/teams/memberships
-confidence: 60
-[NEW] Exhaustive secret scan of all 66 public repos (1614 files) across github.com/signl4 + github.com/Derdack → exactly 2 live webhook secrets (`vbguzfsi`, `96sbq38s`); no new secrets anywhere. Global (not scoped) negative.
-[CHANGED] signl4/docs pushed 2026-10-15T15:20:20Z (commit 3cc9c28412, author "Ron"): +integrations/trendai/{trendai.md,2 images}; trendai/fortinet/zscaler pages all use `YOUR_SIGNL4_SECRET` placeholder; leaked `vbguzfsi` UNREMEDIATED at HEAD `integrations/devtools/SIGNL4_Alerting.yaml:7` (same repo, edited same day).
-[NEW] `git log -p --all` over 1048 commits of signl4/docs → `vbguzfsi` is the ONLY webhook secret ever committed; no removed-but-still-live secrets.
-[NEW] All 3 hardcoded-cred findings re-verified at HEAD 2026-10-16: `96sbq38s` google-iot:19 + losant:148; `sa:Derdack!` holidayimport:16/:22; `cmkadmin:CNlydVqZ` checkmk/2-way/Main.js:90-91.
-[CHANGED] V2 swagger unchanged (sha 837b34ca…, 190 paths).
-[PRIO] github.com/{signl4,Derdack} public repos, 8.6, ... 
-[PRIO] connect.signl4.com/api/v2/teams/memberships, 6.8, ...
-[PRIO] demo.enterprisealert.com/EAWebService, ...
-[HYP] ...
+## 2026-10-16 03:40:49 UTC [target] (model bigpickle)
+[PRIO] asset=github.com/Derdack/derdack-oncall-holidayimport,score=9.5,axis=a=9.5,b=9.5,t=9.0,g=9.5,c=9.0,f=9.5
+[PRIO] asset=github.com/Derdack/derdack-plugin-checkmk,score=9.3,axis=a=9.5,b=9.0,t=8.5,g=9.5,c=9.0,f=9.5
+[PRIO] asset=connect.signl4.com/api/v2/teams/memberships,score=7.3,axis=a=8.0,b=8.0,t=8.0,g=7.0,c=7.0,f=5.0
+[PRIO] asset=signl4/docs (integrations/devtools/SIGNL4_Alerting.yaml + google-iot/losant),score=7.0,axis=a=7.5,b=7.0,t=6.5,g=7.0,c=7.0,f=7.0
+[PRIO] asset=demo.enterprisealert.com/EAWebService,score=6.0,axis=a=6.0,b=5.0,t=6.0,g=6.0,c=6.0,f=8.0
+[PRIO] asset=vps.signl4.com,score=4.0,axis=a=4.0,b=4.0,t=3.0,g=5.0,c=5.0,f=2.0
+[HYP] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
 class: AUTH
-asset: github.com/signl4/docs (integrations/devtools/SIGNL4_Alerting.yaml:7) + signl4-integration-{google-iot,losant}
+asset: github.com/Derdack/derdack-oncall-holidayimport
 confidence: 95
-reasoning: vbguzfsi and 96sbq38s present at HEAD 2026-10-16; placeholders (xxxx/YOUR_*) elsewhere in same files prove non-intent; authored by staff users rons4/Ron; org-wide scan of 66 repos found these as the only two live secrets.
-evidence_needed: none (frozen); freshness re-confirmed at HEAD.
-verify_steps: GET raw.githubusercontent.com/signl4/docs/main/integrations/devtools/SIGNL4_Alerting.yaml (line 7); POST Content-Length:0 to https://connect.signl4.com/webhook/vbguzfsi → expect 400 code 4000, NOT 404 code 3004 (non-mutating oracle; do NOT send {}).
-impact: anyone reading the repo can inject alerts into the vendor's on-call team (phishing/social-eng vector, alert suppression).
+reasoning: At HEAD 2026-10-16, HolidayImport.js:16 and HolidayDeleteAll.js:22 contain `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdack!` (authored 2022-12-07 by rbormann@de.derdack.com). The repo is public and unremediated.
+evidence_needed: No new evidence required; live at HEAD (verified 2026-10-16).
+verify_steps: GET https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/master/HolidayImport.js (line 16) and compare to known plaintext credential string; GET https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/master/HolidayDeleteAll.js (line 22).
+impact: Full SQL Server compromise of Enterprise Alert 2017 backend if reachable from internet; HIGH severity.
 testability: PASSIVE
-class: IDOR
-asset: connect.signl4.com/api/v2/teams/{teamId}/memberships/{userId} (PUT/DELETE), /v2/teams/memberships (POST)
-confidence: 55
-reasoning: swagger 837b34ca declares client-supplied query requesterUserId ("This must be provided when using an api key. This user must have role administrator..."), POST body carries inviterId+teamId (required), PUT body UserMembership carries teamId; read-side GET memberships/{userId} has a 403 "not allowed to access the user" guard, so read-authz exists but write-authz delta is unproven.
-evidence_needed: a low-priv X-S4-Api-Key; observe whether server honors requesterUserId != token subject.
-verify_steps: as low-priv key holder: PUT /v2/teams/{myTeamId}/memberships/{victim}?requesterUserId=<adminId> body {"roleId":"<admin-role>"} → 200/403? then GET /v2/teams/memberships/{foreignUserId} for 403 baseline.
-impact: privilege escalation / cross-team membership manipulation if requesterUserId is trusted without binding to token subject.
+[HYP] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+class: AUTH
+asset: github.com/Derdack/derdack-plugin-checkmk
+confidence: 95
+reasoning: At HEAD, derdack-plugin-checkmk/2-way/Main.js:90-94 contains `username="cmkadmin"`, `password="CNlydVqZ"`, `serverURL="http://192.168.88.107:8080/cmk/check_mk/api/v0/"` (authored 2024-05-27 by rons4, unremediated).
+evidence_needed: No new evidence required; live at HEAD (verified 2026-10-16).
+verify_steps: GET https://raw.githubusercontent.com/Derdack/derdack-plugin-checkmk/master/2-way/Main.js (lines 90-94) and inspect credentials + internal IP.
+impact: Administrative access to Checkmk instance at 192.168.88.107 if reachable; HIGH severity.
+testability: PASSIVE
+[HYP] Client-supplied authorizer/tenant identifiers in SIGNL4 V2 memberships
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/teams/memberships
+confidence: 60
+reasoning: V2 OpenAPI (sha 837b34ca) documents PUT/DELETE /v2/teams/{teamId}/memberships/{userId} accepts `requesterUserId` query parameter ("This must be provided when using an api key. This user must have role administrator..."); POST /v2/teams/memberships body carries `inviterId` and `teamId`; PUT body carries `teamId`. Read-side GET /v2/teams/memberships/{userId} documents 403 "not allowed to access the user", so read-authz exists but write-authorizer binding to token subject is unproven. Global `security:[{}]` means auth declared optional in spec.
+evidence_needed: A valid low-privilege X-S4-Api-Key for a SIGNL4 account (vendor-issued tenant key). No live key held.
+verify_steps: 1) With low-priv X-S4-Api-Key, PUT /api/v2/teams/{myTeamId}/memberships/{targetUserId}?requesterUserId=<foreignUserId> with body {"roleId":"<admin-role>"} — observe 200 vs 403 vs behavior. 2) POST /api/v2/teams/memberships with body containing inviterId=<foreignUserId> and teamId=<foreignTeamId> — observe outcome. 3) GET /api/v2/teams/memberships/{foreignUserId} to confirm baseline 403 (read-only sanity).
+impact: Cross-tenant role escalation/membership manipulation if requesterUserId/inviterId trusted without binding to API-key subject; HIGH severity if confirmed.
 testability: AUTH_HELPED
+[FINAL] Hardcoded SQL Server SA credentials in public Derdack GitHub repo (class: AUTH, asset: github.com/Derdack/derdack-oncall-holidayimport, confidence 95, PASSIVE) — facts verified at HEAD.
+[FINAL] Hardcoded Checkmk admin credentials in public Derdack GitHub repo (class: AUTH, asset: github.com/Derdack/derdack-plugin-checkmk, confidence 95, PASSIVE) — facts verified at HEAD.
+[FINAL] Client-supplied authorizer/tenant identifiers in SIGNL4 V2 memberships (class: BUSLOGIC, asset: connect.signl4.com/api/v2/teams/memberships, confidence 60, AUTH_HELPED) — schema-derived hypothesis; needs a valid low-priv X-S4-Api-Key.
+[PARKED] Public SIGNL4 team webhook secrets vbguzfsi/96sbq38s in signl4/docs and integration repos (class: AUTH, confidence 95, PASSIVE) — already known live at HEAD; no remaining passive verification needed, queueing for human submission path (no_data_modification constraint respected).
+[PARKED] EA WSDL internal hostname leak https://ereesus/EAWebService/EventProviderAPI.asmx (class: MISCONFIG, asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl, confidence 65, PASSIVE) — config-level disclosure only (CWE-200 hygiene), not directly exploitable from internet without additional path; program treats descriptive disclosures conservatively.
+[PARKED] vps.signl4.com dangling A-record to GoDaddy shared host (class: MISCONFIG, asset: vps.signl4.com, confidence 70, HUMAN_ONLY) — takeover potential gated on DNS/hosting-account control (cannot claim from researcher seat); exploitability HUMAN_ONLY.
+[NEXT] HUMAN: Submit the 3 FINAL items to bugs.olivermaicher.eu: (1) Derdack-oncall-holidayimport hardcoded SQL Server SA creds (sa:Derdack!); (2) Derdack-plugin-checkmk hardcoded Checkmk admin creds (cmkadmin:CNlydVqZ, http://192.168.88.107:8080/); (3) SIGNL4 V2 memberships requesterUserId/inviterId/tenant identifier trust (BUSLOGIC, AUTH_HELPED) with full verify_steps and impact. Triage pipeline (opencode/mimo-v2.5-free) is broken (≥59 consecutive UnknownError); do not wait for automated triager. Include repo SHAs/HEAD refs (2026-10-16) and OpenAPI sha 837b34ca.
+[LEARN] ACCEPTED AUTH @ github.com/Derdack — Brand-scoped scanning (signl4/* only) produced false "secrets exhausted" conclusion; the sibling Derdack org was never scanned (reposcan: "TARGET_ORG not configured for derdack") and holds real hardcoded SA and Checkmk credentials. Enumerate orgs per-org, not per-brand.
+[LEARN] REJECTED OTHER @ api.signl4.com/api/v2/teams — Auth-status "flapping" (401↔405) observed at cycle granularity is temporal (deployment-slot), not per-request. Six consecutive GETs in one session are required before calling a route intermittent; single-sample per cycle conflates config change with routing variance.
+[LEARN] ACCEPTED OTHER @ demo.enterprisealert.com/EAWebService — Path-family probing of a known-404 root host (IIS/App-Proxy) recovered a full live EA sub-app; root-only status is not full-host status. Apply this control-first discipline to multi-app/App-Proxy hosts before declaring inert.
+[LEARN] REJECTED MISCONFIG @ parked Derdack hosts (dev.derdack.com, us.derdack.com) — Apache mod_negotiation/MultiViews 300 is a static dot-prefix basename echo. A status code without a body hash/control is not evidence; fabricate a control path first before interpreting 403/404/300 as sensitive-file disclosure.
+[LEARN] REJECTED AUTH @ webhook oracle enumeration — Team secret is operator-chosen (not high-entropy fixed). Guess-enumeration falls under program-REJECTED brute-force class; oracle exploitable only via secret leak. Non-mutating Content-Length:0 POST is the correct discriminator (valid→400/4000, invalid→404/3004); sending `{}` creates real events and violates no_data_modification.
+[LEARN] REJECTED OTHER @ triage pipeline — opencode/mimo-v2.5-free fails UnknownError on trivial prompt (root cause of ≥59 consecutive failed Triager runs). Fallback model chain required; full [HYP] [UNVALIDATED] block extraction (not title-only) is needed because grep for `[UNVALIDATED]` alone matched 0 in leads/lead-*.md.
+[RISK] program: 85 — Two confirmed high-severity credential exposures in public Derdack GitHub repos (SQL Server SA, Checkmk admin) pose immediate risk if those internal services are reachable. SIGNL4 V2 membership BUSLOGIC is high-value and testable with AUTH_HELPED (needs valid key). Webhook secrets already public in signl4/docs (vendor docs repo) — low complexity to abuse. EA WSDL internal hostname is low exploitability alone. vps.signl4.com dangling DNS is HUMAN_ONLY. Estate identity/API surface otherwise stable with zero drift (passive surface exhausted). Triage pipeline broken (model-side) is the primary reporting bottleneck, not discovery.
+[PRIO] signl4.derdack.com,8,7,6,5,6,7
+[PRIO] dev.derdack.com,6,5,8,7,4,8
+[PRIO] signals.derdack.com,5,6,4,5,5,6
+[HYP] SIGNL4 API authentication bypass
+class: AUTH
+asset: signl4.derdack.com
+confidence: 30
+reasoning: SIGNL4 is a SaaS platform with mobile alerting; likely exposes API with OAuth/JWT; auth endpoints common target
+evidence_needed: API documentation, OAuth endpoints, JWT tokens
+verify_steps: GET https://signl4.derdack.com/api/v1/health OR /api/ OR /docs OR /swagger; HEAD https://signl4.derdack.com/.well-known/openid-configuration
+impact: Full account takeover, access to customer alerting data, severity CRITICAL
+testability: AUTH_HELPED
+[HYP] Dev server exposed with debug endpoints
 class: MISCONFIG
-asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
-confidence: 65
-reasoning: 200, 29968 B, sha256 e8b753f2…, wsdl soap:address → https://ereesus/EAWebService/... (single-label internal host).
-evidence_needed: none (config-level).
-verify_steps: GET the WSDL; grep soap:address.
-impact: internal hostname/version disclosure — hygiene only, AUTH_HELPED for exploit.
+asset: dev.derdack.com
+confidence: 25
+reasoning: Development subdomain often contains staging/test environments with weaker security; debug endpoints may expose internal APIs
+evidence_needed: HTTP status codes, response headers, tech stack identification
+verify_steps: GET https://dev.derdack.com/; OPTIONS https://dev.derdack.com/; GET https://dev.derdack.com/api/ OR /debug OR /test
+impact: Access to internal APIs, test credentials, staging data; severity HIGH
 testability: PASSIVE
+[HYP] SIGNL4 subdomain takeover candidate
+class: MISCONFIG
+asset: signals.derdack.com
+confidence: 20
+reasoning: "signals" subdomain may point to external service (SNS, third-party) but not properly configured; subdomain takeover common on cloud providers
+evidence_needed: DNS CNAME records, HTTP response, cloud provider identification
+verify_steps: dig signals.derdack.com CNAME; GET https://signals.derdack.com/; check if points to AWS/GCP/Azure with dangling CNAME
+impact: Takeover of subdomain for phishing/cookie theft; severity MEDIUM
+[NEXT] STOP PROBING — do not spend further unauthenticated requests on this asset; the passive well is dry and the top of the queue is now uniformly AUTH_HELPED. (a) Record/report the upgraded credential-in-URL item (`API_Key_Query` in `securitySchemes` on V1+V2+V3, confidence 65, MISCONFIG/CWE-598, LOW-MEDIUM, PASSIVE, zero credential needed) since it is complete and self-evidencing and does not compete for the scarce credential. (b) When a credential arrives, run the [HYP] verify_steps on ONE route first — `/api/v3/signls/{signlId}/acknowledge` with a low-privileged token and a foreign `userId` — and read back the audit identity before drawing any conclusion; if `403`, the whole class collapses to a single middleware check and closes cleanly across all 39. (c) Only then spend the credential on `userLicenses` and introspection enforcement, which are lower-impact per unit of credential spent.
+[NEW] Triage outage, first recorded: 57 consecutive Triager runs have failed (2026-09-25 09:58 → 2026-10-06 06:24; 74/213 runs total), every one terminated by upstream `UnknownError`; the last run that produced a 7-Question Gate output is `triage/run-2026-09-25-05-00.md` — no lead has passed a gate in 11 days.
+[NEW] triage.yml:45 collects `grep "\[UNVALIDATED\]" leads/lead-*.md`; that string occurs 0 times in any of the 6 lead files, so `new-leads.txt` has been empty on every run — 26 runs show the model reporting "The `LEADS:` section is empty" and improvising by reading lead files itself (run-2026-09-25-05-00 is the documented case). The automated path behind any "[NEXT] report X" does not exist as written.
+[NEW] Both passive verifiers scope to `PROBE_ALLOW: derdack.com` (hunt.yml:13, triage.yml:12), so no `signl4.com`/`enterprisealert.com` lead URL is ever re-verified; every `probe-results.md` section since 2026-10-04 13:41 is empty (13 consecutive).
+[CHANGED] credential-in-URL item is report-complete: `API_Key_Query` declared in `components.securitySchemes` on V1+V2+V3 (global `security: [{}]` empty on all three), live-confirmed 2026-09-09 (`?x-s4-api-key=test` → 403 "API Key is invalid" vs 401 absent), `referrer-policy: strict-origin-when-cross-origin`, zero public doc/sample usage — mechanism proven, harm conditional on log/Referer retention and unobservable from here.
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
+[CHANGED] No new attack surface locally: `probe-results.md` tail, reposcan (TARGET_ORG unset) and the host map yielded nothing unexamined; queue unchanged — the missing piece was a verified route to a triager, not more evidence.
+[PRIO] api.signl4.com/api/docs/v1|v2|v3/swagger.json#components.securitySchemes,6.7,attack_surface=4,business_value=7,tech_exposure=8,gate_ease=10,cloud_surface=3,freshness=9
+[PRIO] connect.signl4.com/identity/connect/{introspect,revocation},6.6,attack_surface=7,business_value=8,tech_exposure=8,gate_ease=6,cloud_surface=8,freshness=10
+[PRIO] connect.signl4.com/api/v2/subscriptions/{id}/userLicenses,6.5,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=4,cloud_surface=7,freshness=6
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+class: MISCONFIG
+asset: api.signl4.com/api/docs/v1|v2|v3/swagger.json (components.securitySchemes.API_Key_Query); behavioural twin on connect.signl4.com/api/v2/*
+confidence: 65
+reasoning: All three public specs (V1 493618 B, V2 1216391 B, V3 1213127 B; OpenAPI 3.0.4, `components.schemas`) declare exactly three securitySchemes — `API_Key_Header` (`x-s4-api-key`, in: header), `API_Key_Query` (same secret, in: query) and `OAuth2` authorizationCode — with global `security: [{}]` empty on all three, i.e. the query scheme is advertised at document level rather than attached to individual operations. It is not hypothetical: on 2026-09-09 an unauthenticated `GET` carrying `?x-s4-api-key=test` returned 403 "API Key is invalid" while the identical request without the parameter returned 401, which proves the deployed auth pipeline reads the query parameter and distinguishes absent from invalid. A secret in a request line reaches CDN/proxy/access logs, browser history and Referer headers, none of which an `Authorization` header touches. Two countervailing facts are carried here because they decide severity, not because they weaken the mechanism: every API response returns `referrer-policy: strict-origin-when-cross-origin`, and a sweep of the full public docs/integration corpus found zero real uses of query-param auth — canonical documented usage is the `X-S4-Api-Key` header. No key has ever been sent in a query string from this seat, and none exists here.
+evidence_needed: Mechanism is settled; the gap is harm-side. (a) Any consumer-facing URL, sample or SDK that actually places a key in the query string — swept, none found; (b) evidence the deployment retains query strings in logs or CDN — vendor-side, not observable externally; (c) a triager's judgement on whether a documented-and-live credential-in-URL scheme is reportable on design grounds alone, given the program requires a PoC demonstrating a specific exploit.
+verify_steps: PASSIVE, already executed — (1) read `securitySchemes` in the three swagger.json documents (V1+V2+V3 done); (2) unauthenticated differential `GET /api/v2/teams?x-s4-api-key=test` vs the same URL without the parameter → 403 vs 401 (done 2026-09-09); (3) read `referrer-policy` on API responses (done: strict-origin-when-cross-origin); (4) corpus search for `x-s4-api-key=` across public docs/integrations (done, zero hits). The only remaining step is human: file or discard. Zero further requests from this seat.
+impact: If any consumer uses the documented scheme, the key is written into every URL it appears in — server and CDN access logs, proxies, browser history, origin-only Referer — and a leaked key grants the full public API surface documented in the same spec (alerts, teams, webhooks, subscriptions, schedules, users) for that tenant. LOW-MEDIUM and explicitly conditional: mechanism proven, realised harm depends on log retention and consumer usage, neither observable from outside. Rejected-class risk stated up front — a gate could file this as hygiene/design-without-POC, which is why it is submitted as a candidate rather than asserted as a confirmed vulnerability.
+testability: PASSIVE
+[PARKED] OIDC cross-host token acceptance — confidence 55, unchanged; registration PROVEN 6/6, enforcement needs `client_secret`; resumes at zero setup on the next AUTH_HELPED session.
+[PARKED] Body-supplied `userId` attribution class (39 write routes, confidence 65) — credential-gated; the single-route test plan for `/api/v3/signls/{signlId}/acknowledge` is already written in the prior cycle's block, so re-emitting it as a [HYP] would only duplicate what the aggregator holds and burn the one-ranked-hypothesis slot; it stays parked.
+[HYP] The API records the ACTING USER from the request body rather than from the authenticated principal on alert-acknowledgement and duty endpoints, so a subscription-scoped integration credential can act as, and be logged as, an arbitrary user M-bM-^@M-^T falsifying alert-acknowledgement history and duty/attendance records$
+class: AUTH$
+asset: connect.signl4.com/api/v3/signls/{signlId}/acknowledge, /v3/signls/{signlId}/close, /v3/signls/acknowledgeMultiple, /v3/signls/closeMultiple, /v3/duties/punchIn, /v3/duties/punchOut (primary); /v2/alerts/{alertId}/annotate, /v2/duties/punchIn, /v2/shifts/swapAssignments (siblings)$
+confidence: 65$
+reasoning: This is the direct by-product of refusing to stop at the prepaid refutation. I generalised the sweep from "does any write body carry a subscriptionId" to "does any write body carry ANY identity handle", expecting a confirmation of the clean result and got the opposite: 39 distinct write routes repo-wide take a body-supplied user identifier, systematically, across all three versions and four product families. `userId` is `required: true` on most of them. The shapes that matter are the ones where the body names WHO and the URL names WHAT: `POST /v3/signls/{signlId}/acknowledge` takes `{signlId}` in the path and `userId` in the body, meaning the request identifies both the alarm being acknowledged and the person credited with acknowledging it. Duty routes are the same: `POST /v3/duties/punchIn` takes a required `userId` and writes an attendance record. For a SIGL/alerting platform the actor of an acknowledgement is a record of record and a compliance artifact, so if it comes from the payload rather than the token, every one of these routes is an attribution-forgery surface reachable with one ordinary integration credential. This is also the same shape as the parked `userLicenses` IDOR one layer out M-bM-^@M-^T that item asks whether a path-segment `{id}` is validated against the caller, this asks whether a body-supplied `userId` is M-bM-^@M-^T and if the answer is no anywhere, it is no systematically rather than once.$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)$
+class: MISCONFIG$
