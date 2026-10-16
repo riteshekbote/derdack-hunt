@@ -12403,3 +12403,110 @@ evidence_needed: <what proves it>
 [HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
 class: MISCONFIG
 asset: api.signl4.com/api/docs/v1|v2|v3/swagger.json (components.securitySchemes.API_Key_Query); behavioural twin on connect.signl4.com/api/v2/*
+## 2026-10-16 13:50:05 UTC [target] (model bigpickle)
+[PRIO] connect.signl4.com/api/v2/subscriptions/{id}/userLicenses,6.5,attack_surface=8,business_value=9,tech_exposure=7,gate_ease=4,cloud_surface=7,freshness=6
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+class: MISCONFIG
+asset: api.signl4.com/api/docs/v1|v2|v3/swagger.json (components.securitySchemes.API_Key_Query); behavioural twin on connect.signl4.com/api/v2/*
+confidence: 65
+reasoning: All three public specs (V1 493618 B, V2 1216391 B, V3 1213127 B; OpenAPI 3.0.4, `components.schemas`) declare exactly three securitySchemes — `API_Key_Header` (`x-s4-api-key`, in: header), `API_Key_Query` (same secret, in: query) and `OAuth2` authorizationCode — with global `security: [{}]` empty on all three, i.e. the query scheme is advertised at document level rather than attached to individual operations. It is not hypothetical: on 2026-09-09 an unauthenticated `GET` carrying `?x-s4-api-key=test` returned 403 "API Key is invalid" while the identical request without the parameter returned 401, which proves the deployed auth pipeline reads the query parameter and distinguishes absent from invalid. A secret in a request line reaches CDN/proxy/access logs, browser history and Referer headers, none of which an `Authorization` header touches. Two countervailing facts are carried here because they decide severity, not because they weaken the mechanism: every API response returns `referrer-policy: strict-origin-when-cross-origin`, and a sweep of the full public docs/integration corpus found zero real uses of query-param auth — canonical documented usage is the `X-S4-Api-Key` header. No key has ever been sent in a query string from this seat, and none exists here.
+evidence_needed: Mechanism is settled; the gap is harm-side. (a) Any consumer-facing URL, sample or SDK that actually places a key in the query string — swept, none found; (b) evidence the deployment retains query strings in logs or CDN — vendor-side, not observable externally; (c) a triager's judgement on whether a documented-and-live credential-in-URL scheme is reportable on design grounds alone, given the program requires a PoC demonstrating a specific exploit.
+verify_steps: PASSIVE, already executed — (1) read `securitySchemes` in the three swagger.json documents (V1+V2+V3 done); (2) unauthenticated differential `GET /api/v2/teams?x-s4-api-key=test` vs the same URL without the parameter → 403 vs 401 (done 2026-09-09); (3) read `referrer-policy` on API responses (done: strict-origin-when-cross-origin); (4) corpus search for `x-s4-api-key=` across public docs/integrations (done, zero hits). The only remaining step is human: file or discard. Zero further requests from this seat.
+impact: If any consumer uses the documented scheme, the key is written into every URL it appears in — server and CDN access logs, proxies, browser history, origin-only Referer — and a leaked key grants the full public API surface documented in the same spec (alerts, teams, webhooks, subscriptions, schedules, users) for that tenant. LOW-MEDIUM and explicitly conditional: mechanism proven, realised harm depends on log retention and consumer usage, neither observable from outside. Rejected-class risk stated up front — a gate could file this as hygiene/design-without-POC, which is why it is submitted as a candidate rather than asserted as a confirmed vulnerability.
+testability: PASSIVE
+[PARKED] OIDC cross-host token acceptance — confidence 55, unchanged; registration PROVEN 6/6, enforcement needs `client_secret`; resumes at zero setup on the next AUTH_HELPED session.
+[PARKED] Body-supplied `userId` attribution class (39 write routes, confidence 65) — credential-gated; the single-route test plan for `/api/v3/signls/{signlId}/acknowledge` is already written in the prior cycle's block, so re-emitting it as a [HYP] would only duplicate what the aggregator holds and burn the one-ranked-hypothesis slot; it stays parked.
+[HYP] The API records the ACTING USER from the request body rather than from the authenticated principal on alert-acknowledgement and duty endpoints, so a subscription-scoped integration credential can act as, and be logged as, an arbitrary user M-bM-^@M-^T falsifying alert-acknowledgement history and duty/attendance records$
+class: AUTH$
+asset: connect.signl4.com/api/v3/signls/{signlId}/acknowledge, /v3/signls/{signlId}/close, /v3/signls/acknowledgeMultiple, /v3/signls/closeMultiple, /v3/duties/punchIn, /v3/duties/punchOut (primary); /v2/alerts/{alertId}/annotate, /v2/duties/punchIn, /v2/shifts/swapAssignments (siblings)$
+confidence: 65$
+reasoning: This is the direct by-product of refusing to stop at the prepaid refutation. I generalised the sweep from "does any write body carry a subscriptionId" to "does any write body carry ANY identity handle", expecting a confirmation of the clean result and got the opposite: 39 distinct write routes repo-wide take a body-supplied user identifier, systematically, across all three versions and four product families. `userId` is `required: true` on most of them. The shapes that matter are the ones where the body names WHO and the URL names WHAT: `POST /v3/signls/{signlId}/acknowledge` takes `{signlId}` in the path and `userId` in the body, meaning the request identifies both the alarm being acknowledged and the person credited with acknowledging it. Duty routes are the same: `POST /v3/duties/punchIn` takes a required `userId` and writes an attendance record. For a SIGL/alerting platform the actor of an acknowledgement is a record of record and a compliance artifact, so if it comes from the payload rather than the token, every one of these routes is an attribution-forgery surface reachable with one ordinary integration credential. This is also the same shape as the parked `userLicenses` IDOR one layer out M-bM-^@M-^T that item asks whether a path-segment `{id}` is validated against the caller, this asks whether a body-supplied `userId` is M-bM-^@M-^T and if the answer is no anywhere, it is no systematically rather than once.$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)$
+class: MISCONFIG$
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:4
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:4
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:4
+[CHANGED] triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique bloc
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] alpha
+[HYP] [UNVALIDATED] alpha$
+[HYP] [UNVALIDATED] beta
+[HYP] [UNVALIDATED] beta$
+[LEARN] REJECTED OTHER @ triage pipeline — opencode/mimo-v2.5-free fails UnknownError on trivial prompt (root cause of ≥59 consecutive f
+[LEARN] Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
+[LEARN] Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
+[NEXT] Submit findings to bugs.olivermaicher.eu with evidence. Also need to fix triage pipeline - leads now have [UNVALIDATED] markers.
+evidence_needed: <what proves it>
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential 
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Ref
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+class: MISCONFIG
+asset: api.signl4.com/api/docs/v1|v2|v3/swagger.json (components.securitySchemes.API_Key_Query); behavioural twin on connect.signl4.com/api/v2/*
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+class: MISCONFIG
+asset: api.signl4.com/api/docs/v1|v2|v3/swagger.json (components.securitySchemes.API_Key_Query); behavioural twin on connect.signl4.com/api/v2/*
+confidence: 65
+reasoning: All three public specs (V1 493618 B, V2 1216391 B, V3 1213127 B; OpenAPI 3.0.4, `components.schemas`) declare exactly three securitySchemes — `API_Key_Header` (`x-s4-api-key`, in: header), `API_Key_Query` (same secret, in: query) and `OAuth2` authorizationCode — with global `security: [{}]` empty on all three, i.e. the query scheme is advertised at document level rather than attached to individual operations. It is not hypothetical: on 2026-09-09 an unauthenticated `GET` carrying `?x-s4-api-key=test` returned 403 "API Key is invalid" while the identical request without the parameter returned 401, which proves the deployed auth pipeline reads the query parameter and distinguishes absent from invalid. A secret in a request line reaches CDN/proxy/access logs, browser history and Referer headers, none of which an `Authorization` header touches. Two countervailing facts are carried here because they decide severity, not because they weaken the mechanism: every API response returns `referrer-policy: strict-origin-when-cross-origin`, and a sweep of the full public docs/integration corpus found zero real uses of query-param auth — canonical documented usage is the `X-S4-Api-Key` header. No key has ever been sent in a query string from this seat, and none exists here.
+evidence_needed: Mechanism is settled; the gap is harm-side. (a) Any consumer-facing URL, sample or SDK that actually places a key in the query string — swept, none found; (b) evidence the deployment retains query strings in logs or CDN — vendor-side, not observable externally; (c) a triager's judgement on whether a documented-and-live credential-in-URL scheme is reportable on design grounds alone, given the program requires a PoC demonstrating a specific exploit.
+verify_steps: PASSIVE, already executed — (1) read `securitySchemes` in the three swagger.json documents (V1+V2+V3 done); (2) unauthenticated differential `GET /api/v2/teams?x-s4-api-key=test` vs the same URL without the parameter → 403 vs 401 (done 2026-09-09); (3) read `referrer-policy` on API responses (done: strict-origin-when-cross-origin); (4) corpus search for `x-s4-api-key=` across public docs/integrations (done, zero hits). The only remaining step is human: file or discard. Zero further requests from this seat.
+impact: If any consumer uses the documented scheme, the key is written into every URL it appears in — server and CDN access logs, proxies, browser history, origin-only Referer — and a leaked key grants the full public API surface documented in the same spec (alerts, teams, webhooks, subscriptions, schedules, users) for that tenant. LOW-MEDIUM and explicitly conditional: mechanism proven, realised harm depends on log retention and consumer usage, neither observable from outside. Rejected-class risk stated up front — a gate could file this as hygiene/design-without-POC, which is why it is submitted as a candidate rather than asserted as a confirmed vulnerability.
+testability: PASSIVE
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+reasoning: V1/V2/V3 OpenAPI 3.0.4 all define `API_Key_Query` with name `x-s4-api-key` in query and `global security: [{}]`. Live test 2026-10-06: `connect.signl4.com/api/v2/teams?x-s4-api-key=test` returns HTTP 403 "API Key is invalid" while same request without param returns 401; `api.signl4.com/api/v2/teams` returns 401 without param. Header scheme `X-S4-Api-Key` exists; documenting query-param API key increases exposure to logs/referrers.
+evidence_needed: Confirm no production samples use query param (docs/integrations). Document conditional severity (depends on log retention/referrer policy observed).
+verify_steps: PASSIVE — specs already retrieved (v1/v2/v3). Optional: GET `https://api.signl4.com/api/docs/v1/swagger.json` and confirm `components.securitySchemes.API_Key_Query.in=='query'` (done). Live verification already done via controlled test with dummy key (403 vs 401). 
+impact: LOW-MEDIUM — Credential leakage via URL (logs/referrers/CDN/browser history); conditional on retention. No direct exploit demonstrated; no key sent. 
+testability: PASSIVE
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+class: AUTH
+asset: https://github.com/Derdack/derdack-oncall-holidayimport/blob/main/HolidayImport.js#L16
+confidence: 95
+reasoning: HolidayImport.js:16 and HolidayDeleteAll.js:22 contain connection string `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdack!;Database=EnterpriseAlert2017`. Public repo, default branch, authored by rbormann@de.derdack.com, committed 2022-12-07, unremediated. sqlserver.derdack-support.local is internal-only (NXDOMAIN externally).
+evidence_needed: Internal reachability and credential validity (cannot be passively verified from internet). Public exposure of credentials in Git history is sufficient for reporting.
+verify_steps: 1) git clone --depth 1 https://github.com/Derdack/derdack-oncall-holidayimport 2) grep -n "sa;PWD=Derdack!" HolidayImport.js HolidayDeleteAll.js 3) Confirm files are public on github.com
+impact: SQL Server SA credentials to Enterprise Alert database enable full DB read/write if reachable (HIGH). Public credential exposure violates security best practices.
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL que
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL que
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack G
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack G
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret 
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret 
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq$
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)$
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname$
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this is the line for a human to correct.
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended conventi
+[NEXT] Submit findings to bugs.olivermaicher.eu with evidence. Also need to fix triage pipeline - leads now have [UNVALIDATED] markers.
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] <title>
+class: <IDOR|SSRF|AUTH|XSS|BUSLOGIC|MISCONFIG|OATH|OTHER>
+asset: <host/endpoint>
+confidence: <0-100>
+reasoning: <facts only>
+evidence_needed: <what proves it>
+verify_steps: <passive-first concrete HTTP requests>
+impact: <what attacker gets + severity>
+testability: <PASSIVE|AUTH_HELPED|HUMAN_ONLY>
