@@ -12194,3 +12194,45 @@ evidence_needed: A valid SIGNL4 API key for a low-priv/team-scoped principal, th
 verify_steps: 1) With low-priv X-S4-Api-Key: PUT /api/v2/teams/{myTeamId}/memberships/{targetUserId}?requesterUserId=<otherUserId> body role=admin → observe whether server honors client-supplied requester vs token subject. 2) POST /api/v2/eventsources body teamId=<foreign> → observe tenant of created object. 3) GET /api/v2/teams/memberships/{foreignUserId} → confirm 403 (baseline).
 impact: Cross-tenant role escalation / tenant escape → account takeover across SIGNL4 tenants; HIGH/CRITICAL if write-authorizer trusts client.
 testability: AUTH_HELPED
+## 2026-10-16 00:06:21 UTC [target] (model bigpickle)
+[HYP] Client-supplied authorizer/tenant identifiers in V2 membership + new-family writes
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/teams/memberships
+confidence: 60
+[HYP] Client-supplied authorizer/tenant identifiers in V2 membership + new-family writes
+class: BUSLOGIC
+asset: connect.signl4.com/api/v2/teams/memberships
+confidence: 60
+[NEW] Exhaustive secret scan of all 66 public repos (1614 files) across github.com/signl4 + github.com/Derdack → exactly 2 live webhook secrets (`vbguzfsi`, `96sbq38s`); no new secrets anywhere. Global (not scoped) negative.
+[CHANGED] signl4/docs pushed 2026-10-15T15:20:20Z (commit 3cc9c28412, author "Ron"): +integrations/trendai/{trendai.md,2 images}; trendai/fortinet/zscaler pages all use `YOUR_SIGNL4_SECRET` placeholder; leaked `vbguzfsi` UNREMEDIATED at HEAD `integrations/devtools/SIGNL4_Alerting.yaml:7` (same repo, edited same day).
+[NEW] `git log -p --all` over 1048 commits of signl4/docs → `vbguzfsi` is the ONLY webhook secret ever committed; no removed-but-still-live secrets.
+[NEW] All 3 hardcoded-cred findings re-verified at HEAD 2026-10-16: `96sbq38s` google-iot:19 + losant:148; `sa:Derdack!` holidayimport:16/:22; `cmkadmin:CNlydVqZ` checkmk/2-way/Main.js:90-91.
+[CHANGED] V2 swagger unchanged (sha 837b34ca…, 190 paths).
+[PRIO] github.com/{signl4,Derdack} public repos, 8.6, ... 
+[PRIO] connect.signl4.com/api/v2/teams/memberships, 6.8, ...
+[PRIO] demo.enterprisealert.com/EAWebService, ...
+[HYP] ...
+class: AUTH
+asset: github.com/signl4/docs (integrations/devtools/SIGNL4_Alerting.yaml:7) + signl4-integration-{google-iot,losant}
+confidence: 95
+reasoning: vbguzfsi and 96sbq38s present at HEAD 2026-10-16; placeholders (xxxx/YOUR_*) elsewhere in same files prove non-intent; authored by staff users rons4/Ron; org-wide scan of 66 repos found these as the only two live secrets.
+evidence_needed: none (frozen); freshness re-confirmed at HEAD.
+verify_steps: GET raw.githubusercontent.com/signl4/docs/main/integrations/devtools/SIGNL4_Alerting.yaml (line 7); POST Content-Length:0 to https://connect.signl4.com/webhook/vbguzfsi → expect 400 code 4000, NOT 404 code 3004 (non-mutating oracle; do NOT send {}).
+impact: anyone reading the repo can inject alerts into the vendor's on-call team (phishing/social-eng vector, alert suppression).
+testability: PASSIVE
+class: IDOR
+asset: connect.signl4.com/api/v2/teams/{teamId}/memberships/{userId} (PUT/DELETE), /v2/teams/memberships (POST)
+confidence: 55
+reasoning: swagger 837b34ca declares client-supplied query requesterUserId ("This must be provided when using an api key. This user must have role administrator..."), POST body carries inviterId+teamId (required), PUT body UserMembership carries teamId; read-side GET memberships/{userId} has a 403 "not allowed to access the user" guard, so read-authz exists but write-authz delta is unproven.
+evidence_needed: a low-priv X-S4-Api-Key; observe whether server honors requesterUserId != token subject.
+verify_steps: as low-priv key holder: PUT /v2/teams/{myTeamId}/memberships/{victim}?requesterUserId=<adminId> body {"roleId":"<admin-role>"} → 200/403? then GET /v2/teams/memberships/{foreignUserId} for 403 baseline.
+impact: privilege escalation / cross-team membership manipulation if requesterUserId is trusted without binding to token subject.
+testability: AUTH_HELPED
+class: MISCONFIG
+asset: demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+confidence: 65
+reasoning: 200, 29968 B, sha256 e8b753f2…, wsdl soap:address → https://ereesus/EAWebService/... (single-label internal host).
+evidence_needed: none (config-level).
+verify_steps: GET the WSDL; grep soap:address.
+impact: internal hostname/version disclosure — hygiene only, AUTH_HELPED for exploit.
+testability: PASSIVE

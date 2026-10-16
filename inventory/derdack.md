@@ -2991,3 +2991,18 @@ www.derdack.com
 - CHANGED Second live SIGNL4 team webhook secret `96sbq38s` confirmed live at `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148` via Content-Length:0 control
 - CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.aspx live (200, 1843 B) — HTTP handler interface advertises 10 handlers; EA handler auth ENFORCED via read-only GETs
 - CHANGED Frozen evidence re-verified live 2026-10-15: vbguzfsi (yaml sha256 7b5d2a95…), 96sbq38s (google-iot 97fc94f9… + losant 2999995c…), PWD=Derdack! (Derdack master), cmkadmin/CNlydVqZ (derdack-plugin-chec
+
+## 2026-10-16 00:06:34 UTC
+- NEW Exhaustive secret scan of all 66 public repos (1614 files) across github.com/signl4 + github.com/Derdack → exactly 2 live webhook secrets (`vbguzfsi`, `96sbq38s`); no new secrets anywhere. Global (not
+- CHANGED signl4/docs pushed 2026-10-15T15:20:20Z (commit 3cc9c28412, author "Ron"): +integrations/trendai/{trendai.md,2 images}; trendai/fortinet/zscaler pages all use `YOUR_SIGNL4_SECRET` placeholder; leaked 
+- NEW `git log -p --all` over 1048 commits of signl4/docs → `vbguzfsi` is the ONLY webhook secret ever committed; no removed-but-still-live secrets.
+- NEW All 3 hardcoded-cred findings re-verified at HEAD 2026-10-16: `96sbq38s` google-iot:19 + losant:148; `sa:Derdack!` holidayimport:16/:22; `cmkadmin:CNlydVqZ` checkmk/2-way/Main.js:90-91.
+- CHANGED V2 swagger unchanged (sha 837b34ca…, 190 paths).
+- NEW api.signl4.com/api/docs/v2/swagger.json grew to 1,225,783 B (sha256 837b34ca) vs 1,216,391 B on 2026-10-11 — 190 paths (V1=93, V3=207); newly-catalogued families: `/v2/remoteActions`, `/v2/scripts`, `
+- NEW github.com/Derdack org (12 public repos) fully scanned for first time on 2026-10-14 — revealed hardcoded SQL Server SA creds (`sa:Derdack!` @ `sqlserver.derdack-support.local`) in `derdack-oncall-holi
+- NEW api.signl4.com/api/v2/teams auth-status flipped to route-gated (401 on unauth GET + invalid Bearer) vs prior handler-deferred 405 pattern — temporal flip confirmed by 6 consecutive probes
+- CHANGED Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), shared client_id `692A0A56-892F-4AE2-8259-76DA398990B6`, passw
+- CHANGED PASSIVE deliverables re-verified live and byte-stable after 5+ days: webhook oracle `vbguzfsi`→400/code 4000, fabricated `zq7x2k9p`→404/code 3004, `96sbq38s`→400/code 4000; EA WSDL → 200, 29968 B, sha
+- CHANGED vps.signl4.com A-record 72.167.227.27 (GoDaddy secureserver.net) remains dangling (nginx default vhost) — intermittent TCP-timeout observed, DNS unchanged
+- CHANGED Triage pipeline remains broken: ≥59 consecutive failed Triager runs (2026-09-25→2026-10-15), `reports/valid-bugs.md` running count unreliable
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
