@@ -3020,3 +3020,15 @@ www.derdack.com
 - CHANGED signl4/docs pushed 2026-10-15T15:20:20Z (commit 3cc9c28412, author "Ron"): added integrations/trendai/ with `YOUR_SIGNL4_SECRET` placeholders; leaked `vbguzfsi` at SIGNL4_Alerting.yaml:7 unremediated
 - CHANGED Triage pipeline remains broken: ≥59 consecutive failed Triager runs (2026-09-25→2026-10-15), `reports/valid-bugs.md` running count unreliable
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials; passive surface exhausted
+
+## 2026-10-16 08:48:24 UTC
+- NEW Triage outage, first recorded: 57 consecutive Triager runs have failed (2026-09-25 09:58 → 2026-10-06 06:24; 74/213 runs total), every one terminated by upstream `UnknownError`; the last run that prod
+- NEW triage.yml:45 collects `grep "\[UNVALIDATED\]" leads/lead-*.md`; that string occurs 0 times in any of the 6 lead files, so `new-leads.txt` has been empty on every run — 26 runs show the model reportin
+- NEW Both passive verifiers scope to `PROBE_ALLOW: derdack.com` (hunt.yml:13, triage.yml:12), so no `signl4.com`/`enterprisealert.com` lead URL is ever re-verified; every `probe-results.md` section since 2
+- CHANGED credential-in-URL item is report-complete: `API_Key_Query` declared in `components.securitySchemes` on V1+V2+V3 (global `security: [{}]` empty on all three), live-confirmed 2026-09-09 (`?x-s4-api-key=
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this i
+- CHANGED No new attack surface locally: `probe-results.md` tail, reposcan (TARGET_ORG unset) and the host map yielded nothing unexamined; queue unchanged — the missing piece was a verified route to a triager, 
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:4
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:4
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:4
+- CHANGED triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique bloc
