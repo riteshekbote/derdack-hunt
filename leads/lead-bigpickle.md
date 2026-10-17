@@ -13911,3 +13911,4 @@ testability: PASSIVE
 [HYP] token-exchange grant on staging IdP synthesizes prod-compatible tokens via shared key (grant-level cross
 [HYP] token-exchange plus advertised mobile_api/account_portal/reseller_portal scopes over a 6-host shared key
 ## 2026-10-17 18:51:59 UTC [target] (model bigpickle)
+## 2026-10-17 21:17:28 UTC [target] (model bigpickle)
