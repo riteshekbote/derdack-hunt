@@ -3135,3 +3135,10 @@ www.derdack.com
 - CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
 
 ## 2026-10-17 21:17:40 UTC
+
+## 2026-10-17 23:19:33 UTC
+- NEW nemotron3 added JWT alg confusion hypothesis for signl4.derdack.com at confidence 55 — more specific than my generic auth bypass (30)
+- CHANGED Fundamental blocker persists: 0/9 hosts probed for live HTTP; all hypotheses remain speculative without tech/status confirmation
+- NEW triage.yml:45 collects `grep "\[UNVALIDATED\]" leads/lead-*.md`; that string occurs 0 times in any of the 6 lead files, so `new-leads.txt` has been empty on every run — 26 runs show the model reportin
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this i
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this i
