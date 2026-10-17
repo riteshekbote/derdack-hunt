@@ -7082,3 +7082,8 @@
 - [0] ?: [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname (from art/lead_bigpickle.txt)
 - NEXT(hypotheses-bigpickle.txt): HUMAN: file the [HYP] above at bugs.olivermaicher.eu (report + the four passive proof steps + the condi
 - LEARN: REJECTED OTHER @ triage pipeline — opencode/mimo-v2.5-free fails UnknownError on trivial prompt (roo
+
+## RANKED HYPOTHESES 2026-10-17 16:31:37 UTC
+- [0] ?: signl4.derdack.com API authentication bypass via unauthenticated endpoints (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: file the [HYP] above at bugs.olivermaicher.eu (report + the four passive proof steps + the condi
+- LEARN: REJECTED OTHER @ triage pipeline — opencode/mimo-v2.5-free fails UnknownError on trivial prompt (roo
