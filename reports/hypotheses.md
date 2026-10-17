@@ -7032,3 +7032,22 @@
 - LEARN: Reading full OpenAPI 3.0.4 specs (v1/v2/v3) once revealed API_Key_Query declared across all versions and body schemas (no prepaid tenant field) — static sweep b
 - LEARN: github.com/Derdack org was missed by previous signl4-only scans; must enumerate all orgs in scope.
 - LEARN: Webhook secrets can be live even in vendor docs repos; Content-Length:0 oracle is effective for validation without creating incidents.
+
+## RANKED HYPOTHESES 2026-10-17 05:21:02 UTC
+- [95] https://github.com/signl4/docs/blob/main/integrations/devtools/SIGNL4_Alerting.yaml#L7: [UNVALIDATED] alpha$ (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): Submit findings to bugs.olivermaicher.eu with evidence. Also need to fix triage pipeline - leads now have [UNVALIDATED] markers.
+- LEARN: github.com/Derdack org was missed by previous signl4-only scans; must enumerate all orgs in scope.
+- LEARN: Webhook secrets can be live even in vendor docs repos; Content-Length:0 oracle is effective for validation without creating incidents.
+- LEARN: ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: Path-family probing of App-Proxy-fronted host recovered live EA sub-app (root-only status ≠ full-hos
+- LEARN: ACCEPTED OTHER @ GitHub secret hunting: Status codes alone insufficient; hash bodies, use control paths, and read schemas (not just path lists). Query-matched c
+- LEARN: REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-
+- LEARN: REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are no
+- LEARN: REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the ver
+- LEARN: REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there 
+- LEARN: REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a tran
+- LEARN: REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is
+- LEARN: REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier 
+- LEARN: REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control on
+- LEARN: REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+- LEARN: REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files;
+- LEARN: ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across a

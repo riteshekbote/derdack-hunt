@@ -3066,3 +3066,12 @@ www.derdack.com
 
 ## 2026-10-17 01:14:40 UTC
 - CHANGED triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique bloc
+
+## 2026-10-17 05:21:02 UTC
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:4
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended conventi
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this i
+- CHANGED triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique bloc
+- CHANGED triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique blocks recoverable vs 0 before), valid-bugs tail in triage prompt, PROBE_A
