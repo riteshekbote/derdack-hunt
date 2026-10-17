@@ -101101,3 +101101,1703 @@ Secrets referenced by sha256 + public file:line per rules; cross-env finding wor
 [0m
 > build · big-pickle
 [0m
+===== ANALYST bigpickle 2026-10-17 01:14:40 UTC =====
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && ls leads/ 2>/dev/null | tail -20 && ls reports/ 2>/dev/null
+total 1736
+drwxr-xr-x 12 runner runner   4096 Oct 17 00:54 .
+drwxr-xr-x  3 runner runner   4096 Oct 17 00:54 ..
+drwxr-xr-x  7 runner runner   4096 Oct 17 00:54 .git
+drwxr-xr-x  3 runner runner   4096 Oct 17 00:54 .github
+-rw-r--r--  1 runner runner   1831 Oct 17 00:54 README.md
+-rw-r--r--  1 runner runner     32 Oct 17 00:54 analyst-out.txt
+-rw-r--r--  1 runner runner 825753 Oct 17 00:54 analyst-prompt.txt
+-rw-r--r--  1 runner runner 821874 Oct 17 00:54 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 inventory
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 leads
+-rw-r--r--  1 runner runner  24892 Oct 17 00:54 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 reports
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct 17 00:54 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 scripts
+-rw-r--r--  1 runner runner     33 Oct 17 00:54 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct 17 00:54 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct 17 00:54 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct 17 00:54 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct 17 00:54 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct 17 00:54 state_nemotron3.json
+drwxr-xr-x  2 runner runner  16384 Oct 17 00:54 triage
+lead-bigpickle.md
+lead-laguna.md
+lead-ling3.md
+lead-longcat.md
+lead-mimo.md
+lead-nemotron3.md
+reposcan-derdack.md
+analyst-bigpickle.log
+analyst-laguna.log
+analyst-ling3.log
+analyst-longcat.log
+analyst-nemotron3.log
+hypotheses-bigpickle.txt
+hypotheses-laguna.txt
+hypotheses-ling3.txt
+hypotheses-longcat.txt
+hypotheses-nemotron3.txt
+hypotheses.md
+valid-bugs.md
+[0m
+[0m$ [0mgit log --oneline -5 2>/dev/null; git status --short 2>/dev/null | head -20
+d7cebc5 triage 2026-10-16-23-37
+?? analyst-out.txt
+?? analyst-prompt.txt
+?? ctx.txt
+[0m
+## Objective
+- Execute an 8-step structured bug bounty hunt against Derdack GmbH / Derdack Group (SIGNL4 + Enterprise Alert), producing only evidence-backed hypotheses with no invented vulnerabilities.
+- Report channel: `bugs.olivermaicher.eu`. Current phase: POC, target=api.
+
+## Important Details
+- **Scope**: All Derdack GmbH infrastructure incl. SIGNL4 and Enterprise Alert.
+- **Probe rules**: Passive-first, ≤1 rps, GET/HEAD/OPTIONS only; no auth-bypass or mutating tests against live customer data.
+- **Key safe oracle**: Webhook secret validation uses `Content-Length:0` POST (valid→400/4000, invalid→404/3004). Sending `{}` body creates real events (violates no_data_modification).
+- **REJECTED classes** (do not re-propose): brute-force/rate-limit/lockout, OPTIONS/TRACE standalone, descriptive headers only, username enumeration on login/forgot, public login panels, clickjacking without exploit, known-vuln library without program-specific exploit.
+- **6 identity hosts** share byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant on staging. AUTH_HELPED on client_secret.
+- **Cross-env token forgery chain** complete (config-level), blocked on client_secret.
+- **API namespaces fully mapped**: V1 (93 paths), V2 (190 paths, grew 2026-10-15), V3 (207 paths), webhook, events. V4 confirmed absent. Zero unauth read surface.
+- **Introspection/revocation registered 6/6** identity hosts. DPoP challenge returns Bearer only (not enforced).
+- **vps.signl4.com**: dangling A=72.167.227.27 (GoDaddy secureserver.net), takeover candidate but HUMAN_ONLY.
+- **demo.enterprisealert.com/EAWebService**: live EA 9.5.26147, WSDL leaks internal hostname `ereesus`. All credential paths gated (Error-1/401).
+- **Credential leaks confirmed** (unremediated): `vbguzfsi` (signl4/docs SIGNL4_Alerting.yaml:7), `96sbq38s` (signl4-integration-google-iot/index.js:19 + signl4-integration-losant/signl4-alert-v100.node:148), `sa:Derdack!` (derdack-oncall-holidayimport/HolidayImport.js:16/:22), `cmkadmin:CNlydVqZ` (derdack-plugin-checkmk/2-way/Main.js:90-91).
+- **Triage pipeline dead**: ≥59 consecutive UnknownError runs (2026-09-25→2026-10-16); `grep "[UNVALIDATED]"` matches 0 in leads; `PROBE_ALLOW: derdack.com` excludes signl4/enterprisealert leads.
+- **Local edits (uncommitted)**: triage.yml + hunt.yml modified for model fallback chain + full [HYP] [UNVALIDATED] block extraction.
+
+## Work State
+### Completed
+- Full estate map: 6 identity hosts + V1/V2/V3/webhook/events namespaces + CT surface closed.
+- OIDC introspection/revocation routing parity closed at 6/6 ingresses.
+- DPoP challenge probe complete (3/3 Bearer-only; mitigating control not enforced).
+- Prepaid body-identifier hypothesis REFUTED statically (131 write ops swept, zero accept tenant in body).
+- Cross-env token forgery chain documented at config level across 6 hosts.
+- EA WSDL internal hostname leak (`ereesus`) confirmed live, sha256 e8b753f2….
+- Webhook secret oracle validated (Content-Length:0 control; vbguzfsi→400/4000, fabricated→404/3004, 96sbq38s→400/4000).
+- github.com/Derdack org scanned first time (2026-10-14), revealing hardcoded SA + Checkmk creds.
+- Full 66-repo secret scan (signl4 + Derdack orgs): only 2 live webhook secrets exist.
+- vps.signl4.com subdomain takeover re-verified across 7+ cycles.
+- GraphQL class closed negative (15/15 bare 404).
+- V4 namespace confirmed absent.
+- Cross-env OIDC introspection routing confirmed 6/6 with passing controls.
+
+### Active
+- POC phase, target=api. Latest cycle boundary: 2026-10-16 23:13:12 UTC.
+- triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction.
+- Final deliverable set frozen (webhook leak, EA WSDL, SA creds, Checkmk creds, API_Key_Query CWE-598, vps takeover).
+
+### Blocked
+- **Triage gate dead**: ≥59 consecutive UnknownError runs; `PROBE_ALLOW` excludes signl4/enterprisealert; `reports/valid-bugs.md` count unreliable.
+- **All top hypotheses AUTH_HELPED**: need valid X-S4-Api-Key or OAuth token from program channel.
+- **Passive surface exhausted**: no new paths/verbs/differentials across identity/API/CT/WP/EA.
+
+## Next Move
+1. Submit confirmed findings to `bugs.olivermaicher.eu` via HUMAN path (highest-value action while gate is dead).
+2. Obtain valid `X-S4-Api-Key` or OAuth token via program channel to test: (a) `/api/v3/signls/{signlId}/acknowledge` body-userId impersonation, (b) `/api/v2/subscriptions/{id}/userLicenses` cross-tenant BOLA, (c) introspection enforcement across identity hosts.
+
+## Relevant Files
+- `.github/workflows/triage.yml`: edited locally (uncommitted); model fallback + [UNVALIDATED] block extraction; line 45 greps `[UNVALIDATED]`; `PROBE_ALLOW: derdack.com` at line 12.
+- `.github/workflows/hunt.yml`: edited locally (uncommitted); `PROBE_ALLOW: derdack.com` at line 13.
+- `reports/valid-bugs.md`: running count unreliable (model-generated, no gate since 2026-09-25).
+- `leads/lead-*.md`: 9 unique [HYP] [UNVALIDATED] blocks recoverable after fix (was 0 before).
+- `art/lead_bigpickle.txt`: this agent's last lead output.
+- `art/hypotheses-bigpickle.txt`: aggregated hypotheses.
+- `reposcan-raw/summary.txt`: "TARGET_ORG not configured for derdack" (now resolved).
+- `inventory/derdack.md`: initial 9-host inventory seed.
+- `scope.yml`: program scope definition.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+[0m$ [0mgit log --oneline -15; echo ---; cat state_bigpickle.json; echo; cat analyst-out.txt; echo ---; ls -la triage/ | tail -15
+d7cebc5 triage 2026-10-16-23-37
+---
+{"phase": "POC", "target": "api"}
+[0m
+> build · big-pickle
+[0m
+[0m$ [0mls -la && ls leads/ 2>/dev/null | tail -20 && ls reports/ 2>/dev/null
+total 1736
+drwxr-xr-x 12 runner runner   4096 Oct 17 00:54 .
+drwxr-xr-x  3 runner runner   4096 Oct 17 00:54 ..
+drwxr-xr-x  7 runner runner   4096 Oct 17 00:54 .git
+drwxr-xr-x  3 runner runner   4096 Oct 17 00:54 .github
+-rw-r--r--  1 runner runner   1831 Oct 17 00:54 README.md
+-rw-r--r--  1 runner runner     32 Oct 17 00:54 analyst-out.txt
+-rw-r--r--  1 runner runner 825753 Oct 17 00:54 analyst-prompt.txt
+-rw-r--r--  1 runner runner 821874 Oct 17 00:54 ctx.txt
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 inventory
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 knowledge
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 leads
+-rw-r--r--  1 runner runner  24892 Oct 17 00:54 probe-results.md
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 recon-notes
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 reports
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 reposcan-raw
+-rw-r--r--  1 runner runner   3292 Oct 17 00:54 scope.yml
+drwxr-xr-x  2 runner runner   4096 Oct 17 00:54 scripts
+-rw-r--r--  1 runner runner     33 Oct 17 00:54 state_bigpickle.json
+-rw-r--r--  1 runner runner     33 Oct 17 00:54 state_laguna.json
+-rw-r--r--  1 runner runner     33 Oct 17 00:54 state_ling3.json
+-rw-r--r--  1 runner runner     33 Oct 17 00:54 state_longcat.json
+-rw-r--r--  1 runner runner     33 Oct 17 00:54 state_mimo.json
+-rw-r--r--  1 runner runner     33 Oct 17 00:54 state_nemotron3.json
+drwxr-xr-x  2 runner runner  16384 Oct 17 00:54 triage
+lead-bigpickle.md
+lead-laguna.md
+lead-ling3.md
+lead-longcat.md
+lead-mimo.md
+lead-nemotron3.md
+reposcan-derdack.md
+analyst-bigpickle.log
+analyst-laguna.log
+analyst-ling3.log
+analyst-longcat.log
+analyst-nemotron3.log
+hypotheses-bigpickle.txt
+hypotheses-laguna.txt
+hypotheses-ling3.txt
+hypotheses-longcat.txt
+hypotheses-nemotron3.txt
+hypotheses.md
+valid-bugs.md
+[0m
+[0m$ [0mgit log --oneline -5 2>/dev/null; git status --short 2>/dev/null | head -20
+d7cebc5 triage 2026-10-16-23-37
+?? analyst-out.txt
+?? analyst-prompt.txt
+?? ctx.txt
+[0m
+## Objective
+- Execute an 8-step structured bug bounty hunt against Derdack GmbH / Derdack Group (SIGNL4 + Enterprise Alert), producing only evidence-backed hypotheses with no invented vulnerabilities.
+- Report channel: `bugs.olivermaicher.eu`. Current phase: POC, target=api.
+
+## Important Details
+- **Scope**: All Derdack GmbH infrastructure incl. SIGNL4 and Enterprise Alert.
+- **Probe rules**: Passive-first, ≤1 rps, GET/HEAD/OPTIONS only; no auth-bypass or mutating tests against live customer data.
+- **Key safe oracle**: Webhook secret validation uses `Content-Length:0` POST (valid→400/4000, invalid→404/3004). Sending `{}` body creates real events (violates no_data_modification).
+- **REJECTED classes** (do not re-propose): brute-force/rate-limit/lockout, OPTIONS/TRACE standalone, descriptive headers only, username enumeration on login/forgot, public login panels, clickjacking without exploit, known-vuln library without program-specific exploit.
+- **6 identity hosts** share byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256) + client_id 692A0A56-892F-4AE2-8259-76DA398990B6 + password grant on staging. AUTH_HELPED on client_secret.
+- **Cross-env token forgery chain** complete (config-level), blocked on client_secret.
+- **API namespaces fully mapped**: V1 (93 paths), V2 (190 paths, grew 2026-10-15), V3 (207 paths), webhook, events. V4 confirmed absent. Zero unauth read surface.
+- **Introspection/revocation registered 6/6** identity hosts. DPoP challenge returns Bearer only (not enforced).
+- **vps.signl4.com**: dangling A=72.167.227.27 (GoDaddy secureserver.net), takeover candidate but HUMAN_ONLY.
+- **demo.enterprisealert.com/EAWebService**: live EA 9.5.26147, WSDL leaks internal hostname `ereesus`. All credential paths gated (Error-1/401).
+- **Credential leaks confirmed** (unremediated): `vbguzfsi` (signl4/docs SIGNL4_Alerting.yaml:7), `96sbq38s` (signl4-integration-google-iot/index.js:19 + signl4-integration-losant/signl4-alert-v100.node:148), `sa:Derdack!` (derdack-oncall-holidayimport/HolidayImport.js:16/:22), `cmkadmin:CNlydVqZ` (derdack-plugin-checkmk/2-way/Main.js:90-91).
+- **Triage pipeline dead**: ≥59 consecutive UnknownError runs (2026-09-25→2026-10-16); `grep "[UNVALIDATED]"` matches 0 in leads; `PROBE_ALLOW: derdack.com` excludes signl4/enterprisealert leads.
+- **Local edits (uncommitted)**: triage.yml + hunt.yml modified for model fallback chain + full [HYP] [UNVALIDATED] block extraction.
+
+## Work State
+### Completed
+- Full estate map: 6 identity hosts + V1/V2/V3/webhook/events namespaces + CT surface closed.
+- OIDC introspection/revocation routing parity closed at 6/6 ingresses.
+- DPoP challenge probe complete (3/3 Bearer-only; mitigating control not enforced).
+- Prepaid body-identifier hypothesis REFUTED statically (131 write ops swept, zero accept tenant in body).
+- Cross-env token forgery chain documented at config level across 6 hosts.
+- EA WSDL internal hostname leak (`ereesus`) confirmed live, sha256 e8b753f2….
+- Webhook secret oracle validated (Content-Length:0 control; vbguzfsi→400/4000, fabricated→404/3004, 96sbq38s→400/4000).
+- github.com/Derdack org scanned first time (2026-10-14), revealing hardcoded SA + Checkmk creds.
+- Full 66-repo secret scan (signl4 + Derdack orgs): only 2 live webhook secrets exist.
+- vps.signl4.com subdomain takeover re-verified across 7+ cycles.
+- GraphQL class closed negative (15/15 bare 404).
+- V4 namespace confirmed absent.
+- Cross-env OIDC introspection routing confirmed 6/6 with passing controls.
+
+### Active
+- POC phase, target=api. Latest cycle boundary: 2026-10-16 23:13:12 UTC.
+- triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction.
+- Final deliverable set frozen (webhook leak, EA WSDL, SA creds, Checkmk creds, API_Key_Query CWE-598, vps takeover).
+
+### Blocked
+- **Triage gate dead**: ≥59 consecutive UnknownError runs; `PROBE_ALLOW` excludes signl4/enterprisealert; `reports/valid-bugs.md` count unreliable.
+- **All top hypotheses AUTH_HELPED**: need valid X-S4-Api-Key or OAuth token from program channel.
+- **Passive surface exhausted**: no new paths/verbs/differentials across identity/API/CT/WP/EA.
+
+## Next Move
+1. Submit confirmed findings to `bugs.olivermaicher.eu` via HUMAN path (highest-value action while gate is dead).
+2. Obtain valid `X-S4-Api-Key` or OAuth token via program channel to test: (a) `/api/v3/signls/{signlId}/acknowledge` body-userId impersonation, (b) `/api/v2/subscriptions/{id}/userLicenses` cross-tenant BOLA, (c) introspection enforcement across identity hosts.
+
+## Relevant Files
+- `.github/workflows/triage.yml`: edited locally (uncommitted); model fallback + [UNVALIDATED] block extraction; line 45 greps `[UNVALIDATED]`; `PROBE_ALLOW: derdack.com` at line 12.
+- `.github/workflows/hunt.yml`: edited locally (uncommitted); `PROBE_ALLOW: derdack.com` at line 13.
+- `reports/valid-bugs.md`: running count unreliable (model-generated, no gate since 2026-09-25).
+- `leads/lead-*.md`: 9 unique [HYP] [UNVALIDATED] blocks recoverable after fix (was 0 before).
+- `art/lead_bigpickle.txt`: this agent's last lead output.
+- `art/hypotheses-bigpickle.txt`: aggregated hypotheses.
+- `reposcan-raw/summary.txt`: "TARGET_ORG not configured for derdack" (now resolved).
+- `inventory/derdack.md`: initial 9-host inventory seed.
+- `scope.yml`: program scope definition.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+---
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-14-20-55.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-14-23-31.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-15-01-45.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-15-06-34.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-15-11-59.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-15-16-24.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-15-20-00.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-15-22-54.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-16-00-51.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-16-05-12.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-16-09-50.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-16-14-22.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-16-18-18.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-16-21-16.md
+-rw-r--r--  1 runner runner   210 Oct 17 00:54 run-2026-10-16-23-37.md
+[0m
+[0m$ [0mgit show --stat HEAD | head -40; echo ===; git log --oneline --since="2026-10-16 23:00" -- .github/workflows/ | head
+commit d7cebc50583ff6bad96a7d94629661d9360b6098
+Author: github-actions <actions@github.com>
+Date:   Fri Oct 16 23:37:45 2026 +0000
+
+    triage 2026-10-16-23-37
+
+ .github/workflows/hunt.yml        |    250 +
+ .github/workflows/reposcan.yml    |    109 +
+ .github/workflows/sync-issues.yml |     44 +
+ .github/workflows/triage.yml      |    138 +
+ README.md                         |     34 +
+ inventory/derdack.md              |   3065 ++
+ knowledge/index.md                |   1503 +
+ leads/lead-bigpickle.md           |  12637 +++++
+ leads/lead-laguna.md              |    258 +
+ leads/lead-ling3.md               |    258 +
+ leads/lead-longcat.md             |    257 +
+ leads/lead-mimo.md                |      1 +
+ leads/lead-nemotron3.md           |  17394 ++++++
+ leads/reposcan-derdack.md         |   1071 +
+ probe-results.md                  |   1022 +
+ recon-notes/DEDICATED-DEEP.md     |     21 +
+ reports/analyst-bigpickle.log     | 101103 +++++++++++++++++++++++++++++++++++
+ reports/analyst-laguna.log        |   2064 +
+ reports/analyst-ling3.log         |   2064 +
+ reports/analyst-longcat.log       |   2056 +
+ reports/analyst-nemotron3.log     |  37602 +++++++++++++
+ reports/hypotheses-bigpickle.txt  |      1 +
+ reports/hypotheses-laguna.txt     |      1 +
+ reports/hypotheses-ling3.txt      |      1 +
+ reports/hypotheses-longcat.txt    |      1 +
+ reports/hypotheses-nemotron3.txt  |      1 +
+ reports/hypotheses.md             |   7023 +++
+ reports/valid-bugs.md             |    108 +
+ reposcan-raw/summary.txt          |      1 +
+ scope.yml                         |     55 +
+ scripts/sync-issues.py            |    429 +
+ state_bigpickle.json              |      1 +
+ state_laguna.json                 |      1 +
+ state_ling3.json                  |      1 +
+===
+d7cebc5 triage 2026-10-16-23-37
+[0m
+[0m$ [0mcat triage/run-2026-10-16-23-37.md; echo ===; grep -n "PROBE_ALLOW\|UNVALIDATED\|model" .github/workflows/triage.yml | head -30; echo ===; grep -n "PROBE_ALLOW" .github/workflows/hunt.yml
+===== TRIAGE 2026-10-16 23:37:45 UTC =====
+[91m[1mError: [0m{
+  "name": "UnknownError",
+  "data": {
+    "message": "Unexpected server error. Check server logs for details.",
+    "ref": "err_3c1770a7"
+  }
+}
+===
+12:  PROBE_ALLOW: "derdack.com"
+42:      - name: Collect UNVALIDATED leads
+45:          grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25 > new-leads.txt
+61:      - name: Validate with second model (7-Question Gate)
+80:          timeout -k 15 15m opencode run --model "$MODEL_ID" < triage-prompt.txt > triage-output.txt 2>&1 || true
+===
+13:  PROBE_ALLOW: "derdack.com"
+209:          allow=os.environ.get('PROBE_ALLOW','').lower()
+[0m
+[0m$ [0mgrep -c "UNVALIDATED" leads/lead-bigpickle.md leads/lead-nemotron3.md 2>/dev/null; echo ===; grep -c "HYP" leads/lead-bigpickle.md; echo ===; tail -60 leads/lead-bigpickle.md
+leads/lead-bigpickle.md:275
+leads/lead-nemotron3.md:32
+===
+1153
+===
+[CHANGED] triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique bloc
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname$
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack G
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack G
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret 
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL que
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] alpha
+[HYP] [UNVALIDATED] alpha$
+[HYP] [UNVALIDATED] beta
+[HYP] [UNVALIDATED] beta$
+[LEARN] REJECTED OTHER @ triage pipeline — opencode/mimo-v2.5-free fails UnknownError on trivial prompt (root cause of ≥59 consecutive f
+[LEARN] Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
+[LEARN] Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
+[LEARN] Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
+[NEXT] Submit findings to bugs.olivermaicher.eu with evidence. Also need to fix triage pipeline - leads now have [UNVALIDATED] markers.
+confidence: 65
+confidence: 95
+confidence: 95
+confidence: 95
+confidence: 95
+confidence: 85
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+class: MISCONFIG
+asset: api.signl4.com/api/docs/v1|v2|v3/swagger.json (components.securitySchemes.API_Key_Query); behavioural twin on connect.signl4.com/api/v2/*
+confidence: 65
+reasoning: All three public specs (V1 493618 B, V2 1216391 B, V3 1213127 B; OpenAPI 3.0.4, `components.schemas`) declare exactly three securitySchemes — `API_Key_Header` (`x-s4-api-key`, in: header), `API_Key_Query` (same secret, in: query) and `OAuth2` authorizationCode — with global `security: [{}]` empty on all three, i.e. the query scheme is advertised at document level rather than attached to individual operations. It is not hypothetical: on 2026-09-09 an unauthenticated `GET` carrying `?x-s4-api-key=test` returned 403 "API Key is invalid" while the identical request without the parameter returned 401, which proves the deployed auth pipeline reads the query parameter and distinguishes absent from invalid. A secret in a request line reaches CDN/proxy/access logs, browser history and Referer headers, none of which an `Authorization` header touches. Two countervailing facts are carried here because they decide severity, not because they weaken the mechanism: every API response returns `referrer-policy: strict-origin-when-cross-origin`, and a sweep of the full public docs/integration corpus found zero real uses of query-param auth — canonical documented usage is the `X-S4-Api-Key` header. No key has ever been sent in a query string from this seat, and none exists here.
+evidence_needed: Mechanism is settled; the gap is harm-side. (a) Any consumer-facing URL, sample or SDK that actually places a key in the query string — swept, none found; (b) evidence the deployment retains query strings in logs or CDN — vendor-side, not observable externally; (c) a triager's judgement on whether a documented-and-live credential-in-URL scheme is reportable on design grounds alone, given the program requires a PoC demonstrating a specific exploit.
+verify_steps: PASSIVE, already executed — (1) read `securitySchemes` in the three swagger.json documents (V1+V2+V3 done); (2) unauthenticated differential `GET /api/v2/teams?x-s4-api-key=test` vs the same URL without the parameter → 403 vs 401 (done 2026-09-09); (3) read `referrer-policy` on API responses (done: strict-origin-when-cross-origin); (4) corpus search for `x-s4-api-key=` across public docs/integrations (done, zero hits). The only remaining step is human: file or discard. Zero further requests from this seat.
+impact: If any consumer uses the documented scheme, the key is written into every URL it appears in — server and CDN access logs, proxies, browser history, origin-only Referer — and a leaked key grants the full public API surface documented in the same spec (alerts, teams, webhooks, subscriptions, schedules, users) for that tenant. LOW-MEDIUM and explicitly conditional: mechanism proven, realised harm depends on log retention and consumer usage, neither observable from outside. Rejected-class risk stated up front — a gate could file this as hygiene/design-without-POC, which is why it is submitted as a candidate rather than asserted as a confirmed vulnerability.
+testability: PASSIVE
+[PARKED] OIDC cross-host token acceptance — confidence 55, unchanged; registration PROVEN 6/6, enforcement needs `client_secret`; resumes at zero setup on the next AUTH_HELPED session.
+[PARKED] Body-supplied `userId` attribution class (39 write routes, confidence 65) — credential-gated; the single-route test plan for `/api/v3/signls/{signlId}/acknowledge` is already written in the prior cycle's block, so re-emitting it as a [HYP] would only duplicate what the aggregator holds and burn the one-ranked-hypothesis slot; it stays parked.
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+reasoning: V1/V2/V3 OpenAPI 3.0.4 all define `API_Key_Query` with name `x-s4-api-key` in query and `global security: [{}]`. Live test 2026-10-06: `connect.signl4.com/api/v2/teams?x-s4-api-key=test` returns HTTP 403 "API Key is invalid" while same request without param returns 401; `api.signl4.com/api/v2/teams` returns 401 without param. Header scheme `X-S4-Api-Key` exists; documenting query-param API key increases exposure to logs/referrers.
+evidence_needed: Confirm no production samples use query param (docs/integrations). Document conditional severity (depends on log retention/referrer policy observed).
+verify_steps: PASSIVE — specs already retrieved (v1/v2/v3). Optional: GET `https://api.signl4.com/api/docs/v1/swagger.json` and confirm `components.securitySchemes.API_Key_Query.in=='query'` (done). Live verification already done via controlled test with dummy key (403 vs 401). 
+impact: LOW-MEDIUM — Credential leakage via URL (logs/referrers/CDN/browser history); conditional on retention. No direct exploit demonstrated; no key sent. 
+testability: PASSIVE
+[PARKED] Body-supplied actor fields (userId/uid) on write routes (e.g. POST /v3/signls/{signlId}/acknowledge requires userId in body; POST /v2/alerts/{alertId}/acknowledge requires uid) — needs AUTH_HELPED test against live token to determine if server uses body field to impersonate vs derives from token.
+[FINAL] MISCONFIG @ api.signl4.com API_Key_Query (CWE-598) — confidence 70, PASSIVE, repo-wide V1/V2/V3, live validated (403 vs 401). Report-ready with conditional severity.
+[NEXT] STOP PROBING unauthenticated surface. Obtain valid X-S4-Api-Key or OAuth token via program channel to test: (1) one single-route impersonation test on `/api/v3/signls/{signlId}/acknowledge` or `/api/v2/alerts/{alertId}/acknowledge` with foreign body userId vs token principal (read audit identity), (2) `connect.signl4.com/api/v2/subscriptions/{id}/userLicenses` cross-tenant, (3) introspection enforcement across identity hosts (6/6 registration known). Do not send real keys in URLs.
+[LEARN] Reading full OpenAPI 3.0.4 specs (v1/v2/v3) once revealed API_Key_Query declared across all versions and body schemas (no prepaid tenant field) — static sweep beats narrow greps.
+[RISK] derdack: 3 — 0 live mutating requests; only safe GETs of public specs and controlled param test with dummy key. No credentials, no tenant data exposed.
+## 2026-10-16 23:13:01 UTC [target] (model bigpickle)
+[0m
+[0m→ [0mRead .github/workflows/triage.yml
+[0m
+[0m$ [0mgrep -h "^\[HYP\] \[UNVALIDATED\]" leads/lead-*.md | sort -u; echo ===TOTAL; grep -h "^\[HYP\] \[UNVALIDATED\]" leads/lead-*.md | sort -u | wc -l
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname$
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack G
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack G
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret 
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL que
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential 
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Ref
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)$
+[HYP] [UNVALIDATED] alpha
+[HYP] [UNVALIDATED] alpha$
+[HYP] [UNVALIDATED] beta
+[HYP] [UNVALIDATED] beta$
+===TOTAL
+25
+[0m
+[0m$ [0mcommand -v opencode && opencode --version; echo ===; sed -n '1,60p' .github/workflows/hunt.yml
+/usr/local/bin/opencode
+1.19.3
+===
+name: Deep Hunt (Derdack GmbH / Derdack Group)
+
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+env:
+  PROBE_ALLOW: "derdack.com"
+
+jobs:
+  analyst:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: hunt-derdack-${{ matrix.model.name }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        model:
+          - { id: opencode/big-pickle, name: bigpickle }
+          - { id: opencode/nemotron-3-ultra-free, name: nemotron3 }
+          - { id: opencode/longcat-2.0-free, name: longcat }
+          - { id: opencode/ling-3.0-flash-free, name: ling3 }
+          - { id: opencode/laguna-s-2.1-free, name: laguna }
+    env:
+      MODEL_ID: ${{ matrix.model.id }}
+      OPENCODE_REASONING: xhigh
+      MODEL_NAME: ${{ matrix.model.name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install OpenCode
+        run: |
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          if command -v opencode >/dev/null 2>&1; then opencode --version; exit 0; fi
+          npm install -g opencode-ai 2>/dev/null || npm install -g --prefix "$HOME/.npm-global" opencode-ai 2>/dev/null || true
+          if ! command -v opencode >/dev/null 2>&1; then
+            for i in 1 2 3; do
+              curl -fsSL https://opencode.ai/install | bash && break
+              echo "opencode.ai installer attempt $i failed, retrying in 15s..."
+              sleep 15
+            done
+          fi
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+          opencode --version
+
+      - name: Prepare context (RAG + state + inventory + last cycle)
+        run: |
+          mkdir -p knowledge inventory leads reports
+          [ -f knowledge/index.md ] || echo "# Knowledge Base (seed)" > knowledge/index.md
+          [ -f state_${MODEL_NAME}.json ] || echo '{"phase":"RECON","target":"api"}' > state_${MODEL_NAME}.json
+          {
+            echo "=== KNOWLEDGE BASE ==="
+[0m
+[0m$ [0msed -n '195,225p' .github/workflows/hunt.yml; echo ===; grep -n "MODEL\|opencode run" .github/workflows/hunt.yml | head -20
+json.dump(st,open(sp,'w'))
+          for f in glob.glob('art/analyst-*.out'):
+              model=re.search(r'art/analyst-([a-z0-9]+)\.out$',f)
+              if model:
+                  with open(f'reports/analyst-{model.group(1)}.log','a') as lg:
+                      lg.write(f"===== ANALYST {model.group(1)} {stamp} =====\n"+open(f,errors='ignore').read())
+          print('merged',len(all_h),'hypotheses')
+          PY_EOF
+
+      - name: Passive verifier on leads (rate-limited read-only)
+        shell: bash
+        run: |
+          python3 << 'ROBOT_PY'
+          import re, glob, ssl, urllib.request, os, time
+          allow=os.environ.get('PROBE_ALLOW','').lower()
+          pat=re.compile(r'https?://[^\s"\)\]\}]+')
+          urls,seen=[],set()
+          for f in glob.glob('art/lead_*.txt')+glob.glob('lead_*.txt')+glob.glob('analyst-*.out'):
+              try: txt=open(f,errors='ignore').read()
+              except OSError: continue
+              for m in pat.findall(txt):
+                  u=m.strip('.,;)]}>')
+                  if u in seen or not u.startswith('https://'): continue
+                  seen.add(u)
+                  if allow and not any(a in u.lower() for a in allow.split('|')): continue
+                  urls.append(u[:300])
+          ctx=ssl.create_default_context(); rows=[]
+          for u in urls[:12]:
+              time.sleep(1)
+              try:
+                  req=urllib.request.Request(u,method='HEAD',headers={'User-Agent':'Mozilla/5.0 (passive verifier)'})
+===
+32:      MODEL_ID: ${{ matrix.model.id }}
+34:      MODEL_NAME: ${{ matrix.model.name }}
+58:          [ -f state_${MODEL_NAME}.json ] || echo '{"phase":"RECON","target":"api"}' > state_${MODEL_NAME}.json
+63:            cat state_${MODEL_NAME}.json
+65:            tail -60 leads/lead-${MODEL_NAME}.md 2>/dev/null || echo none
+107:          timeout -k 15 20m opencode run --model "$MODEL_ID" < analyst-prompt.txt > analyst-out.txt 2>&1 || true
+108:          cp analyst-out.txt analyst-${MODEL_NAME}.out
+111:            echo "## $(date -u +'%Y-%m-%d %H:%M:%S UTC') [target] (model ${MODEL_NAME})"
+113:          } > lead_${MODEL_NAME}.txt
+[0m
+[0m→ [0mRead scope.yml
+[0m
+[0m$ [0mpython3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/triage.yml')); yaml.safe_load(open('.github/workflows/hunt.yml')); print('YAML OK')" 2>&1 | tail -3; date -u
+YAML OK
+Sat Oct 17 00:58:02 UTC 2026
+[0m
+[0m$ [0mhead -40 reports/valid-bugs.md; echo ===; ls recon-notes/; echo ===; grep -rn "olivermaicher\|submission\|report draft" reports/*.md recon-notes/ knowledge/index.md 2>/dev/null | head -10
+# Validated findings (running count 0)
+
+- 2 lead(s) marked VALID at 2026-09-03 23:20:09 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 3 lead(s) marked VALID at 2026-09-04 17:46:22 UTC
+  - | Q7 Reasonable triager? | **Yes** | Information disclosure of sensitive file paths on a live dev host is a valid finding |
+  - **Verdict: VALID**
+  - | dev.derdack.com MultiViews path disclosure | **VALID** | 5.3 | Report to bugs.olivermaicher.eu |
+
+- 1 lead(s) marked VALID at 2026-09-05 13:31:45 UTC
+  - Please paste the lead(s) you want me to triage, and I'll run each through the 7-Question Gate with verdict, reasoning, and (if VALID) proof steps, impact, CVSS 3.1, and reporting channel.
+
+- 2 lead(s) marked VALID at 2026-09-06 06:28:40 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+
+- 2 lead(s) marked VALID at 2026-09-08 10:34:26 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+
+- 4 lead(s) marked VALID at 2026-09-09 06:38:04 UTC
+  - **VERDICT: VALID**
+  - **VERDICT: VALID**
+  - | 1 | Cross-Env JWKS Key + Client/Scope Reuse | **VALID** | 7.4 |
+  - | 6 | Staging IdP Directly Reachable | **VALID** | 6.5 |
+
+- 4 lead(s) marked VALID at 2026-09-10 10:37:58 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - | Q7 Reasonable triager? | Yes — hardcoded real secrets in public code is a standard valid finding |
+  - **Verdict: VALID**
+
+- 14 lead(s) marked VALID at 2026-09-11 05:08:59 UTC
+  - **Verdict: VALID**
+  - **Verdict: VALID**
+  - **Verdict: HOLD** — valid code defect, but impact gated on EA Scripting Host deployment and attacker ability to control event parameters; needs confirmatory evidence of production deployment
+  - **Verdict: HOLD** — valid code defect, but impact requires confirmation that parameters originate from external/user input in production
+  - **Verdict: VALID**
+===
+DEDICATED-DEEP.md
+===
+reports/hypotheses.md:352:- NEXT(hypotheses-bigpickle.txt): HUMAN: submit confirmed cross-env signing-key + OAuth client/scope reuse report draft to bugs.olivermaicher.eu (report queued, evidence pack complete: OIDC+JWKS
+reports/hypotheses.md:366:- NEXT(hypotheses-bigpickle.txt): HUMAN: submit confirmed cross-env signing-key + OAuth client/scope reuse report draft to bugs.olivermaicher.eu (evidence pack complete: JWKS deep-equal x4, scop
+reports/hypotheses.md:383:- NEXT(hypotheses-bigpickle.txt): HUMAN: submit confirmed cross-env signing-key + OAuth client/scope reuse report draft to bugs.olivermaicher.eu (evidence pack complete: JWKS deep-equal x4, scop
+reports/hypotheses.md:403:- NEXT(hypotheses-bigpickle.txt): HUMAN: (a) submit cross-env identity reuse report to bugs.olivermaicher.eu (evidence now spans 3 app families: IdP connect/devconnect, account/manage portals, s
+reports/hypotheses.md:1284:- NEXT(hypotheses-bigpickle.txt): HUMAN: draft report for bugs.olivermaicher.eu — (1) webhook team-secret design finding: URL-embedded operator-entropy bearer secret, no security scheme, 3004 or
+reports/hypotheses.md:1353:- NEXT(hypotheses-bigpickle.txt): HUMAN: submit report to bugs.olivermaicher.eu — PRIMARY: `connect.signl4.com/webhook/{teamSecret}` authless single-endpoint write surface, URL-embedded operator
+reports/hypotheses.md:1386:- NEXT(hypotheses-bigpickle.txt): HUMAN: submit report to bugs.olivermaicher.eu — PRIMARY: `connect.signl4.com/webhook/{teamSecret}` authless single-endpoint write surface, URL-embedded operator
+reports/hypotheses.md:1479:- NEXT(hypotheses-bigpickle.txt): HUMAN: submit to bugs.olivermaicher.eu — PRIMARY `connect.signl4.com/webhook/{teamSecret}` authless write surface (URL-embedded operator-entropy secret, 3004-or
+reports/hypotheses.md:3804:- NEXT(hypotheses-bigpickle.txt): HUMAN: Transition state_bigpickle phase POC→REPORT and finalize for bugs.olivermaicher.eu: (a) demo.enterprisealert.com/EAWebService public EA alert API exposur
+reports/hypotheses.md:3836:- NEXT(hypotheses-bigpickle.txt): HUMAN: Transition state_bigpickle phase POC→REPORT and finalize for bugs.olivermaicher.eu: (a) demo.enterprisealert.com/EAWebService public EA alert API exposur
+[0m
+[0m$ [0mtimeout 90 opencode run --model opencode/mimo-v2.5-free <<< "Reply with exactly: OK" 2>&1 | tail -15; echo "EXIT=$?"
+[91m[1mError: [0m{
+  "name": "UnknownError",
+  "data": {
+    "message": "Unexpected server error. Check server logs for details.",
+    "ref": "err_e79e1878"
+  }
+}
+EXIT=0
+[0m
+[0m$ [0mgrep -n "\[HYP\] \[UNVALIDATED\] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)" leads/lead-bigpickle.md | head -3
+11300:[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+11909:[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+11966:[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[0m
+[0m$ [0mfor m in opencode/big-pickle opencode/nemotron-3-ultra-free opencode/longcat-2.0-free; do echo "== $m"; timeout 60 opencode run --model "$m" <<< "Reply with exactly: OK" 2>&1 | tail -3; done
+== opencode/big-pickle
+> build · big-pickle
+[0m
+OK
+== opencode/nemotron-3-ultra-free
+[0m
+> build · nemotron-3-ultra-free
+[0m
+== opencode/longcat-2.0-free
+    "ref": "err_f75ad82d"
+  }
+}
+[0m
+[0m$ [0msed -n '11295,11340p' leads/lead-bigpickle.md
+reasoning: Lines 90-94 define username="cmkadmin", password="CNlydVqZ", serverURL="http://192.168.88.107:8080/cmk/check_mk/api/v0/". Public repo, default branch, authored by rons4, committed 2024-05-27, unremediated. Target is RFC1918 (192.168.88.107).
+evidence_needed: Credential validity against internal Checkmk instance (cannot be done passively from internet). Public exposure of credentials is sufficient.
+verify_steps: 1) git clone --depth 1 https://github.com/Derdack/derdack-plugin-checkmk 2) grep -n "cmkadmin\|CNlydVqZ\|192.168.88.107" 2-way/Main.js
+impact: Checkmk admin access to internal monitoring system enables alert manipulation, reconnaissance, lateral movement if reachable (HIGH).
+testability: PASSIVE
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+class: AUTH
+asset: https://github.com/signl4/docs/blob/main/integrations/devtools/SIGNL4_Alerting.yaml#L7
+confidence: 95
+reasoning: SIGNL4_Alerting.yaml contains https://connect.signl4.com/webhook/vbguzfsi. Live verification via Content-Length:0 POST: valid secret returns 400/4000 ("event null or empty"); fabricated returns 404/3004 ("no matching event source"). Secret is live and unremediated.
+evidence_needed: Control-based verification already performed passively.
+verify_steps: curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/vbguzfsi -H 'Content-Length: 0' returns 400; control returns 404.
+impact: Knowledge of live team webhook secret enables unauthorized alert injection via POST to /webhook/{teamSecret}. Severity HIGH.
+testability: PASSIVE
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+class: AUTH
+asset: https://github.com/signl4/signl4-integration-google-iot/blob/main/index.js#L19
+confidence: 95
+reasoning: Both signl4-integration-google-iot/index.js:19 and signl4-integration-losant/signl4-alert-v100.node:148 contain team secret 96sbq38s. Verified live via webhook oracle (valid returns 400/4000, invalid 404/3004). Unremediated in public repos.
+evidence_needed: Control-based verification already performed passively.
+verify_steps: curl -s -o /dev/null -w '%{http_code}' -X POST https://connect.signl4.com/webhook/96sbq38s -H 'Content-Length: 0' returns 400; control returns 404.
+impact: Unauthorized alert injection capability via exposed webhook secret. Severity HIGH.
+testability: PASSIVE
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+class: MISCONFIG
+asset: https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl
+confidence: 85
+reasoning: WSDL returns 200 with sha256 e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae and contains internal SOAP address https://ereesus/EAWebService/EventProviderAPI.asmx. Exposes internal network hostname configuration in publicly accessible WSDL.
+evidence_needed: SHA256 verification of WSDL content (already performed).
+verify_steps: curl -s "https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl" | sha256sum matches e8b753f2c093a837552ad934b0baac9381ae09482db7f0f4277fbf32c07eaeae; grep -q "ereesus" in response.
+impact: Internal hostname disclosure (information leakage) from publicly accessible demo environment. Can aid network reconnaissance. Severity LOW-MEDIUM.
+testability: PASSIVE
+[PARKED] Cross-env token forgery chain via shared JWKS across 6 identity hosts (client_id 692A0A56-892F-4AE2-8259-76DA398990B6) - requires legitimate client_secret (AUTH_HELPED), not pursued for automated triage.
+[PARKED] vps.signl4.com dangling A record (72.167.227.27, GoDaddy shared host) - HUMAN_ONLY takeover assessment.
+[PARKED] EA credential-gated endpoints - auth enforced, no unauth mutating primitive found by passive probes.
+[FINAL] 5 findings ready for submission to bugs.olivermaicher.eu. Findings include credential leaks in public Git repos (SQL SA + Checkmk admin + 2 webhook secrets) and EA WSDL internal hostname disclosure.
+[NEXT] Submit findings to bugs.olivermaicher.eu with evidence. Also need to fix triage pipeline - leads now have [UNVALIDATED] markers.
+[LEARN] github.com/Derdack org was missed by previous signl4-only scans; must enumerate all orgs in scope.
+[LEARN] Webhook secrets can be live even in vendor docs repos; Content-Length:0 oracle is effective for validation without creating incidents.
+[RISK] derdack: 92 - Public exposure of production-adjacent credentials requires rotation and secret removal from Git history.
+[RISK] derdack: 98 — 6 identity hosts serve one byte-identical prod RS256 key with account-host mint-mismatch (issuer=
+## 2026-10-14 14:52:33 UTC [target] (model bigpickle)
+[HYP] Live SIGNL4 team webhook secret leaked in vendor's public repo enables unauthorized alert injection
+class: AUTH
+asset: https://connect.signl4.com/webhook/vbguzfsi
+confidence: 95
+[0m
+[0m$ [0mfor m in opencode/nemotron-3-ultra-free opencode/ling-3.0-flash-free opencode/laguna-s-2.1-free; do echo "== $m"; timeout 60 opencode run --model "$m" <<< "Reply with exactly: OK" 2>&1 | grep -E "OK|Error|ref_" | tail -3; done
+== opencode/nemotron-3-ultra-free
+== opencode/ling-3.0-flash-free
+[91m[1mError: [0m{
+  "name": "UnknownError",
+== opencode/laguna-s-2.1-free
+[91m[1mError: [0m{
+  "name": "UnknownError",
+[0m
+[0m$ [0mgrep -c "^\[HYP\] \[UNVALIDATED\]" leads/lead-*.md; echo ===; grep -h "^\[HYP\] \[UNVALIDATED\]" leads/lead-*.md | sort -u | grep -c "class:"
+leads/lead-bigpickle.md:190
+leads/lead-laguna.md:0
+leads/lead-ling3.md:0
+leads/lead-longcat.md:0
+leads/lead-mimo.md:0
+leads/lead-nemotron3.md:0
+===
+0
+[0m
+[0m$ [0mtimeout 180 opencode run --model opencode/nemotron-3-ultra-free <<< "Reply with exactly: OK" > /tmp/opencode/nemotron-test.txt 2>&1; echo "EXIT=$?"; cat /tmp/opencode/nemotron-test.txt
+EXIT=1
+[0m
+> build · nemotron-3-ultra-free
+[0m
+[91m[1mError: [0m{"message":"Streaming response failed: [503] Upstream error from Nvidia: Service temporarily overloaded","type":"server_error"}
+[0m
+[0m# [0mTodos
+[•] Fix triage.yml: model fallback chain (mimo/longcat/ling3/laguna all UnknownError)
+[ ] Fix collect step: full [HYP] [UNVALIDATED] block extraction (currently single lines + artifacts)
+[ ] Widen PROBE_ALLOW to include signl4.com|enterprisealert.com in triage.yml + hunt.yml
+[ ] Validate YAML + run extraction locally
+[0m
+[0m$ [0mgrep -rn "x-s4-api-key\|API_Key_Query" knowledge/index.md | head -5; echo ===; tail -30 knowledge/index.md
+188:- 2026-09-09 ACCEPTED AUTH @ api.signl4.com: swagger declares `API_Key_Query` scheme (x-s4-api-key in query param) — potential key leakage vector via referrer/logs if live
+191:- 2026-09-09 ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational — first live test confirms API key validation pipeline
+194:- 2026-09-09 ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → referrer-leak impact not demonstrable.
+197:- 2026-09-10 ACCEPTED AUTH @ api.signl4.com + connect.signl4.com: API key via query parameter (`?x-s4-api-key=<key>`) confirmed LIVE (403 "API Key is invalid" vs 401 when absent); dual auth pipeline (Bearer + API key) confirmed; swagger `API_Key_Query` scheme operational — first live test confirms API key validation pipeline
+200:- 2026-09-10 ACCEPTED AUTH @ all SIGNL4 docs/integration corpus: canonical auth = `X-S4-Api-Key` header; query-param `API_Key_Query` is swagger-only, no real-world usage → referrer-leak impact not demonstrable.
+===
+- 2026-10-15 ACCEPTED OTHER @ raw.githubusercontent fetch: Derdack repos default_branch=master; a 404 on `main` is NOT remediation — always read default_branch via API before claiming a file was removed.
+- 2026-10-15 ACCEPTED AUTH @ signl4/docs: 2026-10-14 pushes swept (placeholder-only); active maintenance does not imply new exposure.
+- 2026-10-15 REJECTED OTHER @ opencode free-model fleet: UnknownError reproduces on a 1-word prompt via `opencode run --model <id>` — isolate model health with a PONG probe before blaming prompt/leads when a workflow produces no output
+- 2026-10-15 ACCEPTED OTHER @ raw.githubusercontent: hash bodies as-is (sha256sum of exact bytes); `$(cat f)` strips the trailing newline and yields a different digest, which falsely reads as content drift
+- 2026-10-16 ACCEPTED AUTH @ github.com/Derdack: Brand-scoped RAG ("53 signl4/* repos") produced false "secrets exhausted" conclusion — sibling `github.com/Derdack` org was never scanned (reposcan: "TARGET_ORG not configured"), and it holds real hardcoded SA/Checkmk credentials; org coverage must be enumerated per-org, not per-brand
+- 2026-10-16 ACCEPTED AUTH @ signl4/docs: Prior "placeholder-only" rejection was false negative — `vbguzfsi` and `96sbq38s` are live team webhook secrets (unsanitized in vendor docs). Webhook secret ≠ REST API key; use Content-Length:0 oracle is effective for validation without creating incidents.
+- 2026-10-16 ACCEPTED MISCONFIG @ demo.enterprisealert.com/EAWebService: Path-family probing of App-Proxy-fronted host recovered live EA sub-app (root-only status ≠ full-host status). Apply to future App-Proxy-fronted/multi-app hosts before declaring inert.
+- 2026-10-16 ACCEPTED OTHER @ GitHub secret hunting: Status codes alone insufficient; hash bodies, use control paths, and read schemas (not just path lists). Query-matched controls prevent false positives when testing query params.
+- 2026-10-16 REJECTED AUTH @ all public docs: client_id 692A0A56 not published anywhere — no GitHub/npm/Postman/helpcenter leak; credential source vector closed from public-doc angle
+- 2026-10-16 REJECTED MISCONFIG @ s4dev1..8.enterprisealert.com: consistent 8/8 disclosure of Azure resource identifiers is real and fully traceable, but resource IDs are non-secret and non-actionable, and the program rejects descriptive-headers-only classes
+- 2026-10-16 REJECTED MISCONFIG @ connect.signl4.com/mobileapi: a custom branded WAF error page is a configuration artifact, not a vulnerability; the page suppressed the very diagnostics the sibling hosts leak, and its content carried no internal identifiers
+- 2026-10-16 REJECTED AUTH @ demo.enterprisealert.com: App-Proxy pre-auth is not exposed on the public custom hostname, so no unauthenticated identity endpoint exists there despite the host being App-Proxy fronted
+- 2026-10-16 REJECTED OTHER @ labconnect/labaccount.signl4.com: 502 is stable across both hosts, both paths, and multiple hours; this is a persistently dead tier, not a transient outage, and re-checking it has negative expected value
+- 2026-10-16 REJECTED OTHER @ connect/api/demo × {graphql, /api/graphql, /api/v2|v3/graphql, /graphiql}: 15/15 uniform bare 404 — the GraphQL class named in the directive is absent from the API gateway and the demo app; no alternative read surface remains for the AUTH_HELPED queue
+- 2026-10-16 REJECTED OTHER @ s4dev5/6/7.enterprisealert.com: deep EA path returns bare 404 with zero x-ms-proxy-* headers, matching s4dev1/2/3/8 — the App Proxy identifier disclosure is bounded at 2 of 8 hosts, not an estate-wide defect
+- 2026-10-16 REJECTED OTHER @ api.signl4.com/identity & account.signl4.com/identity OIDC discovery: DPoP metadata present but not enforced at gateway — mitigating control only, not a vulnerability
+- 2026-10-16 REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
+- 2026-10-16 REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files; second host confirming estate-wide parked-minimal config class
+- 2026-10-16 ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+- 2026-10-16 ACCEPTED AUTH @ github.com/Derdack — Brand-scoped scanning (signl4/* only) produced false "secrets exhausted" conclusion; the sibling Derdack org was never scanned (reposcan: "TARGET_ORG not configured for derdack") and holds real hardcoded SA and Checkmk credentials. Enumerate orgs per-org, not per-brand.
+- 2026-10-16 REJECTED OTHER @ api.signl4.com/api/v2/teams — Auth-status "flapping" (401↔405) observed at cycle granularity is temporal (deployment-slot), not per-request. Six consecutive GETs in one session are required before calling a route intermittent; single-sample per cycle conflates config change with routing variance.
+- 2026-10-16 ACCEPTED OTHER @ demo.enterprisealert.com/EAWebService — Path-family probing of a known-404 root host (IIS/App-Proxy) recovered a full live EA sub-app; root-only status is not full-host status. Apply this control-first discipline to multi-app/App-Proxy hosts before declaring inert.
+- 2026-10-16 REJECTED MISCONFIG @ parked Derdack hosts (dev.derdack.com, us.derdack.com) — Apache mod_negotiation/MultiViews 300 is a static dot-prefix basename echo. A status code without a body hash/control is not evidence; fabricate a control path first before interpreting 403/404/300 as sensitive-file disclosure.
+- 2026-10-16 REJECTED AUTH @ webhook oracle enumeration — Team secret is operator-chosen (not high-entropy fixed). Guess-enumeration falls under program-REJECTED brute-force class; oracle exploitable only via secret leak. Non-mutating Content-Length:0 POST is the correct discriminator (valid→400/4000, invalid→404/3004); sending `{}` creates real events and violates no_data_modification.
+- 2026-10-16 REJECTED OTHER @ triage pipeline — opencode/mimo-v2.5-free fails UnknownError on trivial prompt (root cause of ≥59 consecutive failed Triager runs). Fallback model chain required; full [HYP] [UNVALIDATED] block extraction (not title-only) is needed because grep for `[UNVALIDATED]` alone matched 0 in leads/lead-*.md.
+- 2026-10-16 Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
+- 2026-10-16 Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
+- 2026-10-16 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
+- 2026-10-16 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
+- 2026-10-16 Reading full OpenAPI 3.0.4 specs (v1/v2/v3) once revealed API_Key_Query declared across all versions and body schemas (no prepaid tenant field) — static sweep beats narrow greps.
+[0m
+Now I understand the situation better. Let me analyze:
+
+1. Triage pipeline (`.github/workflows/triage.yml`):
+   - Line 45: `grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25 > new-leads.txt` — this DOES now match [UNVALIDATED] lines (190 in lead-bigpickle.md). Wait, the summary said "grep [UNVALIDATED] matches 0 in leads" — but now it matches 190. So the local edits to leads (adding [UNVALIDATED] markers) have been committed. Actually the leads have [UNVALIDATED] markers now.
+   - Line 80: `opencode run --model "$MODEL_ID"` where MODEL_ID = `opencode/mimo-v2.5-free` — this model fails with UnknownError. Just confirmed live: mimo-v2.5-free → UnknownError. big-pickle works. nemotron is overloaded (503). longcat → UnknownError. ling3 → UnknownError. laguna → UnknownError.
+   
+   So the fix: add a model fallback chain in triage.yml. Currently only tries mimo-v2.5-free. Summary says "edited locally (uncommitted)" but git status shows only untracked analyst-out.txt, analyst-prompt.txt, ctx.txt — so NO workflow edits are pending. The workflows are committed as-is (single big commit d7cebc5). The summary claimed local edits existed, but they don't. So the fallback chain is NOT actually implemented.
+
+2. PROBE_ALLOW: "derdack.com" — excludes signl4.com and enterprisealert.com. The probe step at line 53 filters hosts by `derdack.com`. Scope says all Derdack infrastructure including SIGNL4 and Enterprise Alert. So PROBE_ALLOW should include signl4.com and enterprisealert.com. That's why leads about signl4.com URLs don't get probed.
+
+3. The new-leads.txt collection at line 45 works now (190 [UNVALIDATED] matches). But it grabs single lines only, not full blocks. The summary said "full [HYP] [UNVALIDATED] block extraction" was part of the intended edit — not implemented.
+
+So the next steps are clear: fix triage.yml with:
+- Model fallback chain (big-pickle first, or fall through the list), since mimo/longcat/ling3/laguna fail with UnknownError and nemotron is flaky (503).
+- Expand PROBE_ALLOW to include signl4.com and enterprisealert.com (in-scope).
+- Extract full [HYP] blocks (not just one line).
+
+But wait — the user asked "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed." The summary's Next Move was:
+1. Submit confirmed findings to bugs.olivermaicher.eu via HUMAN path.
+2. Obtain valid credentials.
+
+Both are HUMAN_ONLY / need credentials. But there's a concrete engineering next step: fix the triage pipeline. That is within our capability. The prior state explicitly says "Also need to fix triage pipeline". And the workflows are committed without the fixes (the summary's claim of local edits is inaccurate — they aren't in working tree or HEAD).
+
+Let me verify: does .github/workflows/triage.yml have a model fallback? Line 22: `MODEL_ID: opencode/mimo-v2.5-free`, line 80: `timeout -k 15 15m opencode run --model "$MODEL_ID"`. No fallback chain. Confirmed not implemented.
+
+Let me check hunt.yml line 13 PROBE_ALLOW too, and check whether there's a fallback there.
+
+Actually hunt.yml has a matrix of models — each job uses a different model. So hunt works for bigpickle at least (bigpickle produces leads). The dead model in triage is mimo.
+
+So the concrete fix:
+1. triage.yml: add model fallback chain so if mimo fails, try big-pickle, nemotron, etc. This unblocks the validation gate.
+2. Expand PROBE_ALLOW in both triage.yml and hunt.yml to include signl4.com|enterprisealert.com (in scope) so probe step doesn't skip in-scope leads.
+3. Maybe improve new-leads extraction to full blocks.
+
+Let me confirm the current triage output file shows the UnknownError and check what model. Let me also test the fallback approach more: test big-pickle works reliably with a real-ish prompt. I already tested big-pickle → OK. Good.
+
+Let me now implement the fix. But first, is a fallback chain even needed, or should we just switch mimo→big-pickle? A chain is more robust. Let me write a bash loop that tries models in order until one succeeds.
+
+Let me look at how the triage prompt is constructed and whether output parsing depends on model. The gate expects verdicts. A fallback loop:
+
+```bash
+MODELS="${MODEL_FALLBACKS:-opencode/mimo-v2.5-free opencode/big-pickle opencode/nemotron-3-ultra-free}"
+ok=0
+for m in $MODELS; do
+  echo "=== trying model $m ==="
+  timeout -k 15 15m opencode run --model "$m" < triage-prompt.txt > triage-output.txt 2>&1 || true
+  if [ -s triage-output.txt ] && ! grep -qi 'UnknownError\|"name": "Error"\|Streaming response failed' triage-output.txt; then
+    ok=1; echo "model $m produced output"; break
+  fi
+  echo "model $m failed; falling back"
+done
+```
+
+But note: `opencode run` with no TTY. In the CI it works (hunt uses it). Fine.
+
+Also PROBE_ALLOW expansion. In triage.yml line 53 the filter is hardcoded `grep -qiE '(derdack.com)'`. I should change to use PROBE_ALLOW split. And env PROBE_ALLOW at line 12 to `derdack.com|signl4.com|enterprisealert.com`. Same in hunt.yml line 13.
+
+Wait — is expanding PROBE_ALLOW safe? The probe is passive GET with Range header, rate-limited 1 rps. Scope includes SIGNL4 and Enterprise Alert. So yes, in scope.
+
+Let me also consider the extraction improvement: line 45 currently takes single lines. Full blocks would give the triager the reasoning/evidence. The lead format is blocks separated by lines starting with `[HYP]` ... fields until next blank or next tag. A python extractor could pull from `[HYP] [UNVALIDATED]` until the next line starting with `[`. Let me write that.
+
+Actually, let me be careful about over-engineering. The user's directive is to continue if next steps exist. The highest-value autonomous next step is fixing the triage gate. Let me do that with edits.
+
+But hold on — should I commit/push? The instructions say never commit unless asked. But this repo is an automated pipeline where the workflow commits itself. The triage workflow commits changes. If I edit the workflow locally but don't commit/push, the next GitHub Actions run will use the committed version, not my local edit. So to actually fix the pipeline in production, the workflow file must be committed and pushed. The user said "Continue if you have next steps". Prior work pattern: the repo auto-commits. Hmm.
+
+The instruction: "NEVER commit changes unless the user explicitly asks you to." The user hasn't explicitly asked to commit. But the whole point of this session is to fix the pipeline. Let me think about what's expected.
+
+Given the environment (GitHub Actions running opencode as a hunt agent), the prior cycles committed via the workflows themselves. But my edits to workflow files need committing to take effect. The user's earlier message ("What did we do so far?") suggests this is a continuation session. The "Continue if you have next steps" is an automated prompt.
+
+I think the right move: make the edits to the workflow files (the concrete engineering fix), verify YAML validity and logic, then report. Regarding committing — I should ask or since it's needed for the fix to take effect... The repo's git log shows the last commit was `triage 2026-10-16-23-37` which is the bulk import. Actually the entire repo was committed in one commit labeled "triage" — that's the initial import of all files. So each triage run commits.
+
+Hmm, actually the workflow file itself is committed; a scheduled run will pick the committed version. If I don't push, no effect. But modifying workflow files requires push. Since the user explicitly wants the pipeline fixed (it's the stated blocker), and this is an autonomous agent context, I'll make the edits and commit+push. But the system prompt strictly says never commit unless explicitly asked.
+
+Let me reconsider: maybe I shouldn't commit. The safest is to make the edits, verify, and tell the user the fix is ready but needs committing/pushing. Actually the instruction is strong: "NEVER commit changes unless the user explicitly asks you to. It is VERY IMPORTANT to only commit when explicitly asked."
+
+Given that, I'll make the edits and NOT commit, then report and ask whether to commit. But the user said "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed." I'm not unsure — I have a next step (edit the workflow). I'll do the edits and then note the commit decision.
+
+Hmm, but an edit that's never committed is useless for the CI. Let me re-read: maybe I can test the fix locally by running the triage gate locally with big-pickle, producing an actual triage verdict, which is the real deliverable. That's a valuable next step: run the fixed gate locally against the 5 real [UNVALIDATED] findings, producing a validated triage. That advances the hunt (generates verdicts) without needing a commit.
+
+But launching opencode run --model big-pickle from within opencode (nested) — might work but is resource-heavy. The gate takes ~15 min. That's a lot. Yet it's exactly the fix validation.
+
+Let me be pragmatic:
+1. Fix triage.yml (model fallback + PROBE_ALLOW + block extraction).
+2. Fix hunt.yml PROBE_ALLOW.
+3. Validate YAML + run extraction locally to confirm 5+ unique blocks.
+4. Optionally run the gate locally with big-pickle on the extracted leads to produce verdicts.
+5. Report; ask about committing.
+
+Actually, let me reconsider the value. The summary lists deliverables already frozen and the primary next move is HUMAN submission. The automated agent can't submit. So the only real autonomous work is fixing the pipeline for future cycles. Let me do that well.
+
+Let me look at the full triage.yml and hunt.yml relevant sections and implement.
+
+Let me also double-check: are the lead files' `[UNVALIDATED]` markers actually there because of committed edits to lead files? Yes, committed in d7cebc5. Good. So the collection step at line 45 now works (190 lines). The gate failure is purely the model.
+
+Let me now implement the fallback. I need to know the model IDs available. scope.yml lists them. mimo isn't in scope.yml models list — interesting, triage uses mimo-v2.5-free which isn't even in the models list. So it's an orphan model that's dead. The fallback list should use scope.yml models.
+
+Let me write edits.
+
+For triage.yml:
+- env: add MODEL_ID as primary? Keep MODEL_ID: opencode/mimo-v2.5-free but add MODEL_FALLBACKS. Actually simplest: replace env MODEL_ID with a list.
+
+Let me design:
+
+```yaml
+    env:
+      MODEL_ID: opencode/mimo-v2.5-free
+      MODEL_FALLBACKS: opencode/big-pickle opencode/nemotron-3-ultra-free opencode/longcat-2.0-free opencode/ling-3.0-flash-free opencode/laguna-s-2.1-free
+      OPENCODE_REASONING: xhigh
+```
+
+Validate step:
+
+```bash
+          export PATH=...
+          cat > triage-prompt.txt << 'PROMPT_START'
+          ...
+          PROMPT_START
+          cat probe-results.txt >> triage-prompt.txt
+          echo "" >> triage-prompt.txt
+          echo "LEADS:" >> triage-prompt.txt
+          cat new-leads.txt >> triage-prompt.txt
+          : > triage-output.txt
+          for M in "$MODEL_ID" $MODEL_FALLBACKS; do
+            echo "=== attempting model $M ===" >&2
+            timeout -k 15 15m opencode run --model "$M" < triage-prompt.txt > triage-output.txt 2>&1 || true
+            if [ -s triage-output.txt ] && ! grep -qiE 'UnknownError|Streaming response failed|"type":"server_error"' triage-output.txt; then
+              echo "model $M produced triage output" >&2
+              break
+            fi
+            echo "model $M failed or produced no verdicts; falling back" >&2
+          done
+          echo "=== triage preview ==="; head -40 triage-output.txt
+```
+
+Hmm, one issue: the `head -25`/single-line extraction. Let me replace line 42-46 with a python block extractor.
+
+```bash
+      - name: Collect UNVALIDATED leads
+        run: |
+          mkdir -p triage reports
+          python3 << 'PY'
+          import glob, re
+          blocks, seen = [], set()
+          for f in glob.glob('leads/lead-*.md'):
+              txt = open(f, errors='ignore').read().split('\n')
+              i = 0
+              while i < len(txt):
+                  if txt[i].startswith('[HYP] [UNVALIDATED]'):
+                      j = i + 1
+                      while j < len(txt) and txt[j] and not txt[j].startswith('['):
+                          j += 1
+                      block = '\n'.join(txt[i:j]).strip()
+                      key = block[:120]
+                      if key not in seen:
+                          seen.add(key); blocks.append(block)
+                      i = j
+                  else:
+                      i += 1
+          with open('new-leads.txt','w') as out:
+              out.write('\n\n'.join(blocks[:15]) + ('\n' if blocks else ''))
+          print(f'unvalidated lead blocks: {len(blocks)} (wrote {min(len(blocks),15)})')
+          PY
+```
+
+Note: blocks contain lines like `class:`, `confidence:` which don't start with `[`, so the while loop continues until a blank line or next `[`. Good. But some blocks have blank line separation? From the sample, fields are contiguous lines then next `[HYP]`. Actually between blocks there might be no blank line. The next block starts with `[HYP]` → loop stops. Good.
+
+But there's a subtlety: the API_Key_Query block's reasoning is very long single line. Fine.
+
+Also dedupe by first 120 chars — the multiple API_Key_Query variants differ after 120 chars, so they'd be treated distinct. Could dedupe by the full description. Let me dedupe by normalized full block. But variants differ in reasoning text. There are ~25 unique lines. Let's just cap at 15 blocks. Actually better dedupe on the title line plus class. Hmm, the variants of API_Key_Query have identical title but different reasoning. Dedupe by title would collapse them. Let me dedupe by the first line (title) primarily, keeping the longest block. That gives cleaner output.
+
+Let me do: group by title (first line stripped of trailing `$`), keep block with longest content.
+
+There's odd `$` at end of some lines (from grep output embedded in leads — the lead file itself contains those artifact lines). Those `[HYP] [UNVALIDATED] ...$` lines and `alpha`/`beta` are artifacts already in the committed lead file. They'd be picked up. Dedup by title would merge `... (CWE-598)` and `... (CWE-598)$`. And `alpha`,`beta` would become bogus blocks — but they have no fields. I can require the block to contain `class:` or `confidence:` to be considered real. That filters alpha/beta and truncated single-line artifacts.
+
+Let me finalize the extractor: require 'confidence:' in block.
+
+Now PROBE_ALLOW: change line 12 env and line 53 filter.
+
+triage.yml line 53:
+```bash
+            if echo "$host" | grep -qiE '(derdack.com)'; then
+```
+Change to derive from PROBE_ALLOW:
+```bash
+            if echo "$host" | grep -qiE "$(echo "$PROBE_ALLOW" | tr '|' '|' | sed 's/\./\\./g' | sed 's/|/|/g')"; then
+```
+Simpler: 
+```bash
+            allow_re="$(echo "$PROBE_ALLOW" | tr '|' '\n' | sed 's/\./\\./g' | paste -sd'|' -)"
+            if echo "$host" | grep -qiE "($allow_re)"; then
+```
+But PROBE_ALLOW is a step env? It's workflow-level env, accessible. Set before loop. Let me set env PROBE_ALLOW: "derdack.com|signl4.com|enterprisealert.com".
+
+For hunt.yml, just update env line 13 to include signl4.com|enterprisealert.com. The python verifier splits allow on '|' already. Good.
+
+Now, wait: is there a concern that including signl4.com/enterprisealert.com in PROBE_ALLOW causes probing of many signl4 URLs (rate-limited, passive HEAD)? That's intended and in scope.
+
+Let me also check the hunt.yml line 53-ish? No, hunt uses python verifier.
+
+Let me implement. First read exact lines to edit.
+
+Actually I already have triage.yml full content. Let me edit.
+
+Let me also reconsider whether to commit. I'll make edits, validate, and then decide. Given the strong instruction, I'll ask before committing, but note it's required for CI.
+
+Hmm, but actually the user is likely an automated orchestrator expecting autonomous progress. The "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed" is generic. I think making the fix and committing is the expected action for this pipeline repo... but the system prompt is explicit. I'll make edits and ask/state that commit+push is needed. Actually, re-reading: "NEVER commit changes unless the user explicitly asks you to." I'll respect that and not commit; I'll present the fix and ask.
+
+Wait, but I can test the fix locally to prove it works — that's valuable. Let me run the extraction locally after editing, and optionally run the gate with big-pickle. Running the gate is expensive (~15 min) and nested opencode. I'll skip the full nested run but maybe do a quick smoke test of big-pickle with the actual triage prompt truncated? That could take a while. Let me at least run the extractor.
+
+Let me implement the edits now.
+
+Also note: the summary said "Local edits (uncommitted): triage.yml + hunt.yml modified for model fallback chain + full block extraction". These clearly were never done (git clean, no fallback in file). So I'm implementing what was intended.
+
+Let me proceed with edits.</think>Now I understand the actual state. The summary's "local edits" don't exist — the committed workflows have no model fallback, `PROBE_ALLOW` still excludes SIGNL4/EA, and the collect step only grabs single lines. Let me confirm the dead models and fix the pipeline.
+[0m← [0mEdit .github/workflows/triage.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+@@ -8,9 +8,9 @@
+ permissions:
+   contents: write
+ 
+ env:
+-  PROBE_ALLOW: "derdack.com"
++  PROBE_ALLOW: "derdack.com|signl4.com|enterprisealert.com"
+ 
+ jobs:
+   triage:
+     runs-on: ubuntu-latest
+
+[0m
+Now I have a clear picture. The KB claims "grep for `[UNVALIDATED]` alone matched 0 in leads/lead-*.md" — but that's stale; now it matches 190 in lead-bigpickle.md. So the leads now have markers.
+
+Let me now fix the triage.yml. Priorities:
+1. Model fallback chain in triage validation step.
+2. Full block extraction for [HYP] [UNVALIDATED] leads.
+3. Widen PROBE_ALLOW to include signl4.com and enterprisealert.com.
+
+Let me implement. First the collect step. The block format: `[HYP] [UNVALIDATED] <title>` then following lines `class:`, `asset:`, `confidence:`, `reasoning:`, `evidence_needed:`, `verify_steps:`, `impact:`, `testability:` until next `[` marker. Extract full blocks, dedupe by title, cap.
+
+Let me write a python extractor.
+
+Also the probe step greps URLs from new-leads.txt and only probes derdack.com hosts. Need to widen to signl4.com/enterprisealert.com. It uses `grep -qiE '(derdack.com)'` hardcoded. Change to read PROBE_ALLOW.
+
+Let me edit triage.yml.
+
+For model fallback: replace single opencode run with a loop over models. Use MODEL_ID first then fallbacks. Let me define MODEL_CHAIN as env or inline.
+
+Let me make the edits.</think>The dead models are `mimo-v2.5-free` (UnknownError), `longcat-2.0-free`, `ling-3.0-flash-free`, `laguna-s-2.1-free`; `big-pickle` works, `nemotron-3-ultra-free` is intermittent (503). Now fixing the pipeline.
+[0m← [0mEdit .github/workflows/triage.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+@@ -19,8 +19,9 @@
+   group: triage-derdack
+   cancel-in-progress: true
+ env:
+   MODEL_ID: opencode/mimo-v2.5-free
++  MODEL_FALLBACKS: "opencode/big-pickle opencode/nemotron-3-ultra-free opencode/longcat-2.0-free opencode/ling-3.0-flash-free opencode/laguna-s-2.1-free"
+   OPENCODE_REASONING: xhigh
+ steps:
+   - name: Checkout
+     uses: actions/checkout@v5
+
+[0m
+Now fix the collect step to extract full blocks. Let me write the python extractor inline. The grep step currently is:
+
+```
+      - name: Collect UNVALIDATED leads
+        run: |
+          mkdir -p triage reports
+          grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25 > new-leads.txt
+          echo "unvalidated leads: $(wc -l < new-leads.txt)"
+```
+
+I'll replace with python that extracts blocks starting at `[HYP] [UNVALIDATED]` and includes following field lines until the next `[` marker or blank line. Dedupe by title. Cap ~15 blocks / ~20KB.
+
+Let me write it. I need to be careful with YAML heredoc indentation. Use `python3 << 'PY'` inside run with proper indentation (10 spaces for content within the step? Actually the run: | block content is indented at 10 spaces). Let me match existing style: the python heredoc in later steps uses 10-space indentation for code. Good.
+
+Block extraction logic:
+- Read each leads/lead-*.md
+- Split lines
+- Find lines matching `^\[HYP\] \[UNVALIDATED\]`
+- Title = line stripped, strip trailing `$`
+- Collect subsequent lines while line starts with a known field (class:, asset:, confidence:, reasoning:, evidence_needed:, verify_steps:, impact:, testability:) OR line is non-empty and not starting with `[`. Stop at line starting with `[`.
+- Only keep block if it has confidence: or class: (filter artifacts like alpha/beta)
+- Dedupe by title
+- Output blocks separated by blank line, cap 15.
+
+But note some fields can be multi-line? The reasoning lines are single long lines. Fine.
+
+Also the lead file has lines with trailing `$` from grep artifacts embedded in the text; strip trailing `$` from title.
+
+Let me implement.</think>
+[0m← [0mEdit .github/workflows/triage.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+@@ -42,10 +42,43 @@
+ 
+ - name: Collect UNVALIDATED leads
+   run: |
+     mkdir -p triage reports
+-    grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25 > new-leads.txt
+-    echo "unvalidated leads: $(wc -l < new-leads.txt)"
++    python3 << 'PY'
++    import glob, re
++    FIELDS = ('class:', 'asset:', 'confidence:', 'reasoning:',
++              'evidence_needed:', 'verify_steps:', 'impact:', 'testability:')
++    blocks, seen = [], {}
++    for f in sorted(glob.glob('leads/lead-*.md')):
++        lines = open(f, errors='ignore').read().split('\n')
++        i = 0
++        while i < len(lines):
++            if lines[i].startswith('[HYP] [UNVALIDATED]'):
++                title = lines[i].strip().rstrip('$').strip()
++                body, j = [], i + 1
++                while j < len(lines):
++                    s = lines[j].strip()
++                    if s.startswith('[') or (s and not any(s.startswith(fld) for fld in FIELDS)):
++                        break
++                    if s:
++                        body.append(s)
++                    j += 1
++                block = '\n'.join([title] + body)
++                # keep only real hypotheses (drop 'alpha'/'beta'/title-only artifacts)
++                if any(s.startswith('confidence:') for s in body):
++                    if title not in seen or len(block) > len(seen[title]):
++                        seen[title] = block
++                i = j
++            else:
++                i += 1
++    blocks = list(seen.values())
++    with open('new-leads.txt', 'w') as out:
++        out.write('\n\n'.join(blocks[:15]))
++        if blocks:
++            out.write('\n')
++    print(f'unvalidated lead blocks: {len(blocks)} (wrote {min(len(blocks), 15)})')
++    PY
++    echo "unvalidated leads file bytes: $(wc -c < new-leads.txt)"
+ 
+ - name: Passive live probe of endpoint leads (rate-limited)
+   run: |
+     : > probe-results.txt
+
+[0m
+Now fix the probe step to use PROBE_ALLOW instead of hardcoded derdack.com. Current:
+
+```
+          grep -oE 'https?://[a-zA-Z0-9._/-]+' new-leads.txt | sort -u | head -20 | while read -r url; do
+            host=$(echo "$url" | sed -E 's|https?://([^/]+).*|\1|')
+            if echo "$host" | grep -qiE '(derdack.com)'; then
+```
+
+Change the allow check to build regex from PROBE_ALLOW. Since it's already a `|`-separated env value, I can use it directly but must escape dots. Simpler: `grep -qiE "$(echo "$PROBE_ALLOW" | tr '|' '\n' | sed 's/\./\\./g' | paste -sd'|' -)"`. Build once before the loop.
+
+Let me edit.</think>
+[0m← [0mEdit .github/workflows/triage.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+@@ -81,11 +81,12 @@
+ 
+ - name: Passive live probe of endpoint leads (rate-limited)
+   run: |
+     : > probe-results.txt
++    allow_re=$(printf '%s' "$PROBE_ALLOW" | tr '|' '\n' | sed 's/\./\\./g' | paste -sd'|' -)
+     grep -oE 'https?://[a-zA-Z0-9._/-]+' new-leads.txt | sort -u | head -20 | while read -r url; do
+       host=$(echo "$url" | sed -E 's|https?://([^/]+).*|\1|')
+-      if echo "$host" | grep -qiE '(derdack.com)'; then
++      if echo "$host" | grep -qiE "($allow_re)"; then
+         code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -A 'Mozilla/5.0 (passive research probe)' -H 'Range: bytes=0-1' "$url" 2>/dev/null || echo TIMEOUT)
+         echo "$code $url" >> probe-results.txt
+         sleep 1
+       fi
+
+[0m
+</think>Now the model fallback in the validate step. Current line 80:
+
+```
+          timeout -k 15 15m opencode run --model "$MODEL_ID" < triage-prompt.txt > triage-output.txt 2>&1 || true
+```
+
+Replace with a chain that tries MODEL_ID then MODEL_FALLBACKS, checking output for UnknownError/error and non-empty. Also produce a marker so downstream knows which model succeeded. Let me read the current exact lines.</think>
+[0m→ [0mRead .github/workflows/triage.yml[90m [offset=88, limit=30][0m
+</think>
+[0m
+[0m← [0mEdit .github/workflows/triage.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+@@ -111,9 +111,23 @@
+     cat probe-results.txt >> triage-prompt.txt
+     echo "" >> triage-prompt.txt
+     echo "LEADS:" >> triage-prompt.txt
+     cat new-leads.txt >> triage-prompt.txt
+-    timeout -k 15 15m opencode run --model "$MODEL_ID" < triage-prompt.txt > triage-output.txt 2>&1 || true
++    : > triage-output.txt
++    : > triage-model.txt
++    for M in "$MODEL_ID" $MODEL_FALLBACKS; do
++      echo "=== attempting model $M ===" >&2
++      timeout -k 15 12m opencode run --model "$M" < triage-prompt.txt > triage-attempt.txt 2>&1 || true
++      if [ -s triage-attempt.txt ] && ! grep -qiE 'UnknownError|"type"[[:space:]]*:[[:space:]]*"server_error"|Streaming response failed|^Error:' triage-attempt.txt; then
++        mv triage-attempt.txt triage-output.txt
++        printf '%s\n' "$M" > triage-model.txt
++        echo "model $M produced triage output" >&2
++        break
++      fi
++      echo "model $M failed (empty or error); trying next" >&2
++    done
++    [ -s triage-output.txt ] || cp triage-attempt.txt triage-output.txt
++    echo "=== triage model: $(cat triage-model.txt 2>/dev/null || echo none) ==="
+     echo "=== triage preview ==="; head -40 triage-output.txt
+ 
+ - name: Update valid-bugs counter
+   run: |
+
+[0m
+</think>Now update hunt.yml PROBE_ALLOW as well.
+[0m← [0mEdit .github/workflows/hunt.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
+@@ -9,9 +9,9 @@
+   contents: write
+   actions: write
+ 
+ env:
+-  PROBE_ALLOW: "derdack.com"
++  PROBE_ALLOW: "derdack.com|signl4.com|enterprisealert.com"
+ 
+ jobs:
+   analyst:
+     runs-on: ubuntu-latest
+
+[0m
+[0m$ [0mpython3 -c "import yaml; yaml.safe_load(open('.github/workflows/triage.yml')); yaml.safe_load(open('.github/workflows/hunt.yml')); print('YAML OK')"
+YAML OK
+[0m
+Now let me validate YAML and run the extraction locally to make sure it works.
+
+Also, the hunt.yml matrix includes dead models (longcat, ling3, laguna). Those jobs just produce nothing but `|| true` handles it. Should I add fallback there too? The matrix uses MODEL_NAME for state/lead files, so a fallback would need to keep the matrix identity. Let me check the hunt.yml validate/run step around line 107.
+
+Actually, let me focus. The main blocker was triage. But hunt matrix also wastes 3/5 jobs on dead models. Let me check if hunt.yml writes output relevant to lead files. Line 107: `timeout -k 15 20m opencode run --model "$MODEL_ID" < analyst-prompt.txt > analyst-out.txt 2>&1 || true`. Since each matrix entry writes its own lead_${MODEL_NAME}.txt, a fallback within the job could still write to that name. But then two matrix jobs (bigpickle + fallback of longcat) could produce near-duplicate outputs. That's acceptable since they'd be attributed to their matrix slot. Actually better: add fallback chain to hunt.yml too, writing to the matrix slot. But since big-pickle is already in the matrix, fallbacks to big-pickle from other slots duplicate. It's fine but wasteful.
+
+Better approach: remove dead models from the matrix or add fallback. The current dead models produce empty lead files (lead-laguna 258 lines? Actually lead-laguna.md is 258 lines but 0 [HYP][UNVALIDATED]). Let me check if they produced anything at all. lead-mimo.md is 1 line (empty). So mimo (not in matrix) is dead. In matrix: bigpickle (works), nemotron3 (intermittent), longcat (dead→UnknownError), ling3 (dead), laguna (dead). So 3/5 hunt jobs are wasted.
+
+Adding a fallback chain in hunt.yml that reassigns to a working model would recover those slots. Let me add it. The fallback should write to the same `analyst-out.txt` and `lead_${MODEL_NAME}.txt`, but label the used model. Actually the lead header includes `(model ${MODEL_NAME})`. I'll add a note of fallback.
+
+Let me look at hunt.yml lines 100-120.</think>Now let me validate YAML and test the extraction locally.
+[0m→ [0mRead .github/workflows/hunt.yml[90m [offset=100, limit=20][0m
+Let me add a fallback chain to hunt.yml too, so dead matrix slots recover. I'll introduce a MODEL_CHAIN env listing the matrix model first then fallbacks, and track the actual model used.
+
+Let me edit lines 106-114.</think>
+[0m
+[0m← [0mEdit .github/workflows/hunt.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
+@@ -103,13 +103,26 @@
+ STEP 7 — RISK: [RISK] <program>: <0-100> reason.
+ RULES: facts vs hypotheses strictly separated; no endpoint-map-only; no REJECTED class; sha256 any secret; all claims trace to context or your own read-only probes; passive-first, <=1 rps, GET/HEAD/OPTIONS only for live probes; no auth-bypass or mutating tests against live customer data; any scanner output requires manual validation.
+ PROMPT_EOF
+ export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+-timeout -k 15 20m opencode run --model "$MODEL_ID" < analyst-prompt.txt > analyst-out.txt 2>&1 || true
++: > analyst-out.txt
++: > used-model.txt
++for M in "$MODEL_ID" opencode/big-pickle opencode/nemotron-3-ultra-free; do
++  [ "$M" = "opencode/big-pickle" ] && [ "$MODEL_NAME" != "bigpickle" ] && [ -s analyst-out.txt ] && break
++  echo "=== $MODEL_NAME attempting model $M ===" >&2
++  timeout -k 15 18m opencode run --model "$M" < analyst-prompt.txt > analyst-attempt.txt 2>&1 || true
++  if [ -s analyst-attempt.txt ] && ! grep -qiE 'UnknownError|"type"[[:space:]]*:[[:space:]]*"server_error"|Streaming response failed|^Error:' analyst-attempt.txt; then
++    mv analyst-attempt.txt analyst-out.txt
++    printf '%s\n' "$M" > used-model.txt
++    break
++  fi
++  echo "$MODEL_NAME: model $M failed; trying next" >&2
++done
++[ -s analyst-out.txt ] || cp analyst-attempt.txt analyst-out.txt
+ cp analyst-out.txt analyst-${MODEL_NAME}.out
+ grep -E '^\[(NEW|CHANGED|PRIO|HYP|PARKED|FINAL|NEXT|LEARN|RISK)\]|^class:|^confidence:|^asset:|^impact:|^testability:|^verify_steps:|^reasoning:|^evidence_needed:' analyst-out.txt > lead.txt || true
+ {
+-  echo "## $(date -u +'%Y-%m-%d %H:%M:%S UTC') [target] (model ${MODEL_NAME})"
++  echo "## $(date -u +'%Y-%m-%d %H:%M:%S UTC') [target] (model ${MODEL_NAME}; used $(cat used-model.txt 2>/dev/null || echo none))"
+   cat lead.txt
+ } > lead_${MODEL_NAME}.txt
+ echo "lead bytes: $(wc -c < lead.txt) | raw bytes: $(wc -c < analyst-out.txt)"
+ 
+
+[0m
+[0m← [0mEdit .github/workflows/hunt.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/hunt.yml
+@@ -106,9 +106,8 @@
+ export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+ : > analyst-out.txt
+ : > used-model.txt
+ for M in "$MODEL_ID" opencode/big-pickle opencode/nemotron-3-ultra-free; do
+-  [ "$M" = "opencode/big-pickle" ] && [ "$MODEL_NAME" != "bigpickle" ] && [ -s analyst-out.txt ] && break
+   echo "=== $MODEL_NAME attempting model $M ===" >&2
+   timeout -k 15 18m opencode run --model "$M" < analyst-prompt.txt > analyst-attempt.txt 2>&1 || true
+   if [ -s analyst-attempt.txt ] && ! grep -qiE 'UnknownError|"type"[[:space:]]*:[[:space:]]*"server_error"|Streaming response failed|^Error:' analyst-attempt.txt; then
+     mv analyst-attempt.txt analyst-out.txt
+
+[0m
+Wait, my loop logic for hunt.yml has a weird condition: `[ "$M" = "opencode/big-pickle" ] && [ "$MODEL_NAME" != "bigpickle" ] && [ -s analyst-out.txt ] && break` — this is meant to skip big-pickle fallback if... actually this is confusing and buggy. The intent: for the bigpickle matrix slot, first model is big-pickle. For other slots, MODEL_ID first, then big-pickle, then nemotron. We should just try in order and take the first success. The special-case line is wrong — if MODEL_NAME != bigpickle and analyst-out.txt is already non-empty it would break before trying big-pickle, but analyst-out.txt is only set on success (then the loop would've already broken). Actually the `&& break` condition would never trigger meaningfully and could break prematurely if analyst-out.txt is non-empty from... it's `: >` emptied at start. So never non-empty at that check. So the line is a no-op essentially but confusing. Let me remove it.
+
+Actually wait — there's a subtle issue: if the matrix MODEL_ID itself is big-pickle, the chain is big-pickle, big-pickle, nemotron. Duplicate. Fine, harmless.
+
+Let me simplify by removing the confusing line.</think>
+Now, one concern: for the bigpickle matrix slot, if big-pickle fails, it'd retry big-pickle (duplicate) then nemotron. Fine.
+
+But there's a resource concern: 5 matrix jobs each with fallback to big-pickle could create 5 big-pickle runs if all free models are dead. That's heavy but acceptable and keeps the pipeline alive.
+
+Now validate YAML and test the extraction locally. Let me create a test by running the python extractor against leads to verify output.
+
+Let me extract the python code and run it. I'll just run the same script inline here.
+
+Also I should verify the triage prompt generation + local run with big-pickle. Let me first test the extractor.</think>Now validate YAML and test the block extractor locally.
+[0m$ [0mpython3 -c "import yaml; yaml.safe_load(open('.github/workflows/triage.yml')); yaml.safe_load(open('.github/workflows/hunt.yml')); print('YAML OK')"
+cd /tmp/opencode && mkdir -p extract-test && cd extract-test && cp -r /home/runner/work/derdack-hunt/derdack-hunt/leads . 2>/dev/null
+python3 << 'PY'
+import glob, re
+FIELDS = ('class:', 'asset:', 'confidence:', 'reasoning:',
+          'evidence_needed:', 'verify_steps:', 'impact:', 'testability:')
+blocks, seen = [], {}
+for f in sorted(glob.glob('leads/lead-*.md')):
+    lines = open(f, errors='ignore').read().split('\n')
+    i = 0
+    while i < len(lines):
+        if lines[i].startswith('[HYP] [UNVALIDATED]'):
+            title = lines[i].strip().rstrip('$').strip()
+            body, j = [], i + 1
+            while j < len(lines):
+                s = lines[j].strip()
+                if s.startswith('[') or (s and not any(s.startswith(fld) for fld in FIELDS)):
+                    break
+                if s:
+                    body.append(s)
+                j += 1
+            block = '\n'.join([title] + body)
+            if any(s.startswith('confidence:') for s in body):
+                if title not in seen or len(block) > len(seen[title]):
+                    seen[title] = block
+            i = j
+        else:
+            i += 1
+blocks = list(seen.values())
+open('new-leads.txt','w').write('\n\n'.join(blocks[:15]) + ('\n' if blocks else ''))
+print(f'unvalidated lead blocks: {len(blocks)} (wrote {min(len(blocks),15)})')
+print('---')
+for b in blocks[:15]:
+    print(b.split(chr(10))[0][:100])
+PY
+YAML OK
+unvalidated lead blocks: 8 (wrote 8)
+---
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the depl
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] alpha
+[HYP] [UNVALIDATED] beta
+[0m
+The extractor works but "alpha" and "beta" got picked up because they have a `confidence:` line after them? Let me look at the lead file around alpha/beta.
+
+Earlier grep showed:
+```
+[HYP] [UNVALIDATED] alpha
+[HYP] [UNVALIDATED] alpha$
+[HYP] [UNVALIDATED] beta
+[HYP] [UNVALIDATED] beta$
+```
+
+Let me check their bodies. They may have confidence fields. Let me look.</think>The extractor picks up `alpha`/`beta` artifacts. Let me inspect them.
+[0m$ [0mgrep -n -A6 "^\[HYP\] \[UNVALIDATED\] alpha" leads/lead-*.md | head -20; echo ===; grep -n -A6 "^\[HYP\] \[UNVALIDATED\] beta" leads/lead-*.md | head -20
+leads/lead-bigpickle.md:11926:[HYP] [UNVALIDATED] alpha
+leads/lead-bigpickle.md-11927-class: AUTH
+leads/lead-bigpickle.md-11928-asset: a
+leads/lead-bigpickle.md-11929-confidence: 55
+leads/lead-bigpickle.md-11930-[HYP] [UNVALIDATED] beta
+leads/lead-bigpickle.md-11931-class: IDOR
+leads/lead-bigpickle.md-11932-asset: b
+--
+leads/lead-bigpickle.md:11934:[HYP] [UNVALIDATED] alpha$
+leads/lead-bigpickle.md-11935-class: AUTH$
+leads/lead-bigpickle.md-11936-asset: a$
+leads/lead-bigpickle.md-11937-confidence: 55$
+leads/lead-bigpickle.md-11938-[HYP] [UNVALIDATED] beta$
+leads/lead-bigpickle.md-11939-class: IDOR$
+leads/lead-bigpickle.md-11940-asset: b$
+--
+leads/lead-bigpickle.md:11999:[HYP] [UNVALIDATED] alpha
+leads/lead-bigpickle.md-12000-class: AUTH
+leads/lead-bigpickle.md-12001-asset: a
+leads/lead-bigpickle.md-12002-confidence: 55
+===
+leads/lead-bigpickle.md:11930:[HYP] [UNVALIDATED] beta
+leads/lead-bigpickle.md-11931-class: IDOR
+leads/lead-bigpickle.md-11932-asset: b
+leads/lead-bigpickle.md-11933-confidence: 61
+leads/lead-bigpickle.md-11934-[HYP] [UNVALIDATED] alpha$
+leads/lead-bigpickle.md-11935-class: AUTH$
+leads/lead-bigpickle.md-11936-asset: a$
+--
+leads/lead-bigpickle.md:11938:[HYP] [UNVALIDATED] beta$
+leads/lead-bigpickle.md-11939-class: IDOR$
+leads/lead-bigpickle.md-11940-asset: b$
+leads/lead-bigpickle.md-11941-confidence: 61$
+leads/lead-bigpickle.md-11942-[CHANGED] opencode/mimo-v2.5-free (triage model) fails UnknownError on a trivial PONG prompt — root cause of ≥59 consecutive failed Triager runs is model-side; also dead: longcat-2.0-free, laguna-s-2.1-free, ling-3.0-flash-free; working: nemotron-3-ultra-free, big-pickle (4/6 fleet models dead)
+leads/lead-bigpickle.md-11943-[CHANGED] frozen evidence re-verified live 2026-10-15 14:44-14:48 UTC, byte-identical: JWKS 6/6 hosts sha256=96c931f2 kid 91EE4F3C; account+api issuer still connect.signl4.com/identity; password grant on all 6, no registration_endpoint; swagger 1225783 B sha 837b34ca; EA WSDL 29968 B sha e8b753f2; vbguzfsi/96sbq38s/sa:Derdack!/cmkadmin:CNlydVqZ all present in public GitHub raw (default_branch read first: Derdack=master, signl4=main)
+leads/lead-bigpickle.md-11944-[CHANGED] Derdack org 12 repos last push 2024-05-27, signl4 org 53 repos last push 2026-10-14T11:40 — no new commits since prior cycle; no new secrets surface
+--
+leads/lead-bigpickle.md:12003:[HYP] [UNVALIDATED] beta
+leads/lead-bigpickle.md-12004-class: IDOR
+leads/lead-bigpickle.md-12005-asset: b
+leads/lead-bigpickle.md-12006-confidence: 61
+[0m
+These are test/example lines the agent emitted. They're noise. I should filter them out. An easy heuristic: skip if asset is a single char, or title is a placeholder like alpha/beta, or block is too short. Better: require the block to have a `reasoning:` or `verify_steps:` field (real hypotheses have full bodies with reasoning). Let me check: alpha/beta only have class: AUTH, asset: a, confidence: 55 — no reasoning. Real blocks have reasoning + verify_steps. So require at least a `reasoning:` or `impact:` field.
+
+Let me check the real 6 blocks - do they all have reasoning? The webhook ones: reasoning yes. SQL SA, Checkmk: reasoning yes. WSDL: reasoning yes. API_Key_Query: reasoning yes. Good.
+
+Also filter asset values shorter than 4 chars. Requiring `reasoning:` (or `verify_steps:`) is cleanest.
+
+Let me update the extractor condition to require a reasoning: field.</think>Those are placeholder test lines with no `reasoning:` field. Let me tighten the filter to require real body fields.
+[0m← [0mEdit .github/workflows/triage.yml
+Index: /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+===================================================================
+--- /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
++++ /home/runner/work/derdack-hunt/derdack-hunt/.github/workflows/triage.yml
+@@ -63,9 +63,9 @@
+             body.append(s)
+         j += 1
+     block = '\n'.join([title] + body)
+     # keep only real hypotheses (drop 'alpha'/'beta'/title-only artifacts)
+-    if any(s.startswith('confidence:') for s in body):
++    if any(s.startswith('reasoning:') for s in body):
+         if title not in seen or len(block) > len(seen[title]):
+             seen[title] = block
+     i = j
+ else:
+
+[0m
+Now let me test again. Also there's the issue that for triage, the block starts at `[HYP] [UNVALIDATED] <title>` and the extractor stops at the next line starting with `[` OR a non-field line. But real blocks may have continuation after reasoning? They are single lines. Fine.
+
+Let me re-run the extractor with the new filter.</think>
+[0m$ [0mcd /tmp/opencode/extract-test && python3 << 'PY'
+import glob
+FIELDS = ('class:', 'asset:', 'confidence:', 'reasoning:',
+          'evidence_needed:', 'verify_steps:', 'impact:', 'testability:')
+seen = {}
+for f in sorted(glob.glob('leads/lead-*.md')):
+    lines = open(f, errors='ignore').read().split('\n')
+    i = 0
+    while i < len(lines):
+        if lines[i].startswith('[HYP] [UNVALIDATED]'):
+            title = lines[i].strip().rstrip('$').strip()
+            body, j = [], i + 1
+            while j < len(lines):
+                s = lines[j].strip()
+                if s.startswith('[') or (s and not any(s.startswith(fld) for fld in FIELDS)):
+                    break
+                if s: body.append(s)
+                j += 1
+            block = '\n'.join([title] + body)
+            if any(s.startswith('reasoning:') for s in body):
+                if title not in seen or len(block) > len(seen[title]):
+                    seen[title] = block
+            i = j
+        else:
+            i += 1
+blocks = list(seen.values())
+print(f'blocks: {len(blocks)}')
+for b in blocks:
+    print(' -', b.split(chr(10))[0][6:120])
+PY
+blocks: 7
+ - [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accept
+ - [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accept
+ - [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+ - [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+ - [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+ - [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+ - [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[0m
+Now there are 7 blocks but two API_Key_Query variants (different titles, so both kept). That's fine — actually dedupe by title; they differ in title length so both kept. Let me check if they're near-duplicates. The titles differ (one truncated). It's acceptable; the triager can handle. But could dedupe better. Not critical.
+
+Now let me test the whole triage prompt generation plus run the gate locally with big-pickle to prove the fix produces verdicts. That's the real validation. It may take a while but let's try with a sane timeout. The triage prompt includes probe results (empty) and leads.
+
+Actually running the full gate locally with big-pickle could take several minutes and produce a large output. But it's valuable proof. Let me do it with a timeout of ~10 min. Actually, I'm inside opencode already; nested opencode run works (tested). Let me generate the prompt and run.
+
+But wait — the collect step also runs the passive probe step which makes live requests to signl4.com URLs (rate-limited). Running locally would send passive GETs to signl4.com — within scope and allowed. But I don't want to accidentally hammer. The probe is 1 rps, max 20 urls, GET with Range header. Acceptable. But maybe skip live probing locally and just test the model gate with leads.
+
+Let me just run the gate on the extracted blocks to confirm big-pickle produces VALID/INVALID verdicts. I'll construct a minimal prompt.
+
+Actually, the most important validation is that the fallback loop picks a working model. I can test the loop logic with a tiny prompt without the full leads. Let me test the loop shell logic directly with MODEL_ID=mimo (dead) → fallback big-pickle.
+
+Let me simulate the exact loop from triage.yml with a small prompt.</think>Now let me validate the fallback loop logic end-to-end with the exact shell from the workflow (mimo fails → falls back).
+[0m$ [0mcd /tmp/opencode && printf 'Reply with exactly: TRIAGE_OK\n' > triage-prompt.txt
+export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+MODEL_ID=opencode/mimo-v2.5-free
+MODEL_FALLBACKS="opencode/big-pickle opencode/nemotron-3-ultra-free"
+: > triage-output.txt; : > triage-model.txt
+for M in "$MODEL_ID" $MODEL_FALLBACKS; do
+  echo "=== attempting model $M ===" >&2
+  timeout -k 15 3m opencode run --model "$M" < triage-prompt.txt > triage-attempt.txt 2>&1 || true
+  if [ -s triage-attempt.txt ] && ! grep -qiE 'UnknownError|"type"[[:space:]]*:[[:space:]]*"server_error"|Streaming response failed|^Error:' triage-attempt.txt; then
+    mv triage-attempt.txt triage-output.txt
+    printf '%s\n' "$M" > triage-model.txt
+    echo "model $M produced triage output" >&2
+    break
+  fi
+  echo "model $M failed (empty or error); trying next" >&2
+done
+[ -s triage-output.txt ] || cp triage-attempt.txt triage-output.txt
+echo "=== triage model: $(cat triage-model.txt 2>/dev/null || echo none) ==="
+head -5 triage-output.txt
+=== attempting model opencode/mimo-v2.5-free ===
+model opencode/mimo-v2.5-free failed (empty or error); trying next
+=== attempting model opencode/big-pickle ===
+model opencode/big-pickle produced triage output
+=== triage model: opencode/big-pickle ===
+[0m
+> build · big-pickle
+[0m
+TRIAGE_OK
+[0m
+The fallback loop works. mimo (dead) → big-pickle (works), output TRIAGE_OK.
+
+Now let me also verify the shell logic in hunt.yml with the same test. Actually the same pattern. Fine.
+
+Now let me do a final review of the diffs, validate YAML once more, update the todos, and consider whether to commit. The user hasn't asked to commit. But the repo pipeline needs the committed workflow to take effect. Given the strong instruction not to commit unless explicitly asked, I'll present the changes and ask.
+
+But wait — the whole environment is GitHub Actions; this working copy is what CI will commit? Actually the triage workflow commits its own runtime changes to triage/reports/leads/knowledge — not the workflow files. Workflow file changes only take effect once pushed. My local edits won't be picked up unless committed/pushed.
+
+The user's "Continue if you have next steps" — I'll make the edits (done), verify (done), and then note that committing/pushing is needed and ask. Actually, given this is a hunt-automation repo and the entire purpose is to fix the dead pipeline, and prior cycles committed automatically via workflows... Hmm.
+
+Let me re-read the system instruction: "NEVER commit changes unless the user explicitly asks you to. It is VERY IMPORTANT to only commit when explicitly asked, otherwise the user will feel that you are being too proactive."
+
+I'll respect it and not commit. I'll report the fix is ready and ask whether to commit+push. But that stalls automation. However, the user prompt explicitly offers "stop and ask for clarification if you are unsure how to proceed." Committing is the one place I'm instructed to get explicit approval. So I'll ask.
+
+Hmm, but is there more autonomous high-value work? Let me think about the actual hunt.
+
+The primary next moves (submit to bugs.olivermaicher.eu, obtain credentials) are HUMAN_ONLY. I cannot do them. The pipeline fix is the autonomous contribution.
+
+I could also draft the actual submission report(s) as a deliverable file so the human can paste it. But the instruction says don't proactively create documentation files. However, a bug bounty report is arguably a required deliverable, not "documentation". The summary says findings are "report-ready" / "evidence pack complete". Let me check if a report draft already exists. Earlier grep found NEXT lines saying "submit report draft". Let me check if there's a report draft file somewhere (reports/, recon-notes/). recon-notes only has DEDICATED-DEEP.md. reports/ has valid-bugs.md, hypotheses.md, analyst logs. No dedicated report draft file.
+
+Creating a consolidated submission draft would be genuinely useful and is the explicit [NEXT] action ("draft report for bugs.olivermaicher.eu"). But the system says don't proactively create *.md docs. This is a conflict. I think the safer read: the deliverable of a bug bounty hunt is a report; the prior agent already planned it. But the "NEVER proactively create documentation files" is about README-style docs. Hmm.
+
+I'll hold off on creating files without being asked, and instead report status + ask. Actually — the user asked "What did we do so far?" then "Continue if you have next steps". I've done the pipeline fix. Let me finalize: verify diffs, update todos, and summarize + ask about commit/push and report drafting.
+
+Actually, let me reconsider committing. The environment: `.github/workflows` are tracked. If I don't commit, nothing changes for the scheduled runs. But maybe my session's changes get picked up some other way? No. The likely intended flow for this agent: edit files and commit/push (the workflows do it themselves). The task description "derdack-hunt" with hunt.yml suggests the agent is supposed to run within CI and commit. But per explicit higher-priority instruction, I need explicit user consent to commit.
+
+I'll ask. But let me also present the exact diff so the user can approve.
+
+Let me view the diff.</think>Fallback loop works (mimo dead → big-pickle). Let me review the full diff and re-validate.
+[0m$ [0mgit --no-pager diff --stat; echo ===; git --no-pager diff .github/workflows/triage.yml
+.github/workflows/hunt.yml   | 18 +++++++++++---
+ .github/workflows/triage.yml | 59 ++++++++++++++++++++++++++++++++++++++++----
+ 2 files changed, 69 insertions(+), 8 deletions(-)
+===
+diff --git a/.github/workflows/triage.yml b/.github/workflows/triage.yml
+index bd7b564..13ebc9d 100644
+--- a/.github/workflows/triage.yml
++++ b/.github/workflows/triage.yml
+@@ -9,7 +9,7 @@ permissions:
+   contents: write
+ 
+ env:
+-  PROBE_ALLOW: "derdack.com"
++  PROBE_ALLOW: "derdack.com|signl4.com|enterprisealert.com"
+ 
+ jobs:
+   triage:
+@@ -20,6 +20,7 @@ jobs:
+       cancel-in-progress: true
+     env:
+       MODEL_ID: opencode/mimo-v2.5-free
++      MODEL_FALLBACKS: "opencode/big-pickle opencode/nemotron-3-ultra-free opencode/longcat-2.0-free opencode/ling-3.0-flash-free opencode/laguna-s-2.1-free"
+       OPENCODE_REASONING: xhigh
+     steps:
+       - name: Checkout
+@@ -42,15 +43,49 @@ jobs:
+       - name: Collect UNVALIDATED leads
+         run: |
+           mkdir -p triage reports
+-          grep -h "\[UNVALIDATED\]" leads/lead-*.md 2>/dev/null | sort -u | head -25 > new-leads.txt
+-          echo "unvalidated leads: $(wc -l < new-leads.txt)"
++          python3 << 'PY'
++          import glob, re
++          FIELDS = ('class:', 'asset:', 'confidence:', 'reasoning:',
++                    'evidence_needed:', 'verify_steps:', 'impact:', 'testability:')
++          blocks, seen = [], {}
++          for f in sorted(glob.glob('leads/lead-*.md')):
++              lines = open(f, errors='ignore').read().split('\n')
++              i = 0
++              while i < len(lines):
++                  if lines[i].startswith('[HYP] [UNVALIDATED]'):
++                      title = lines[i].strip().rstrip('$').strip()
++                      body, j = [], i + 1
++                      while j < len(lines):
++                          s = lines[j].strip()
++                          if s.startswith('[') or (s and not any(s.startswith(fld) for fld in FIELDS)):
++                              break
++                          if s:
++                              body.append(s)
++                          j += 1
++                      block = '\n'.join([title] + body)
++                      # keep only real hypotheses (drop 'alpha'/'beta'/title-only artifacts)
++                      if any(s.startswith('reasoning:') for s in body):
++                          if title not in seen or len(block) > len(seen[title]):
++                              seen[title] = block
++                      i = j
++                  else:
++                      i += 1
++          blocks = list(seen.values())
++          with open('new-leads.txt', 'w') as out:
++              out.write('\n\n'.join(blocks[:15]))
++              if blocks:
++                  out.write('\n')
++          print(f'unvalidated lead blocks: {len(blocks)} (wrote {min(len(blocks), 15)})')
++          PY
++          echo "unvalidated leads file bytes: $(wc -c < new-leads.txt)"
+ 
+       - name: Passive live probe of endpoint leads (rate-limited)
+         run: |
+           : > probe-results.txt
++          allow_re=$(printf '%s' "$PROBE_ALLOW" | tr '|' '\n' | sed 's/\./\\./g' | paste -sd'|' -)
+           grep -oE 'https?://[a-zA-Z0-9._/-]+' new-leads.txt | sort -u | head -20 | while read -r url; do
+             host=$(echo "$url" | sed -E 's|https?://([^/]+).*|\1|')
+-            if echo "$host" | grep -qiE '(derdack.com)'; then
++            if echo "$host" | grep -qiE "($allow_re)"; then
+               code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -A 'Mozilla/5.0 (passive research probe)' -H 'Range: bytes=0-1' "$url" 2>/dev/null || echo TIMEOUT)
+               echo "$code $url" >> probe-results.txt
+               sleep 1
+@@ -77,7 +112,21 @@ jobs:
+           echo "" >> triage-prompt.txt
+           echo "LEADS:" >> triage-prompt.txt
+           cat new-leads.txt >> triage-prompt.txt
+-          timeout -k 15 15m opencode run --model "$MODEL_ID" < triage-prompt.txt > triage-output.txt 2>&1 || true
++          : > triage-output.txt
++          : > triage-model.txt
++          for M in "$MODEL_ID" $MODEL_FALLBACKS; do
++            echo "=== attempting model $M ===" >&2
++            timeout -k 15 12m opencode run --model "$M" < triage-prompt.txt > triage-attempt.txt 2>&1 || true
++            if [ -s triage-attempt.txt ] && ! grep -qiE 'UnknownError|"type"[[:space:]]*:[[:space:]]*"server_error"|Streaming response failed|^Error:' triage-attempt.txt; then
++              mv triage-attempt.txt triage-output.txt
++              printf '%s\n' "$M" > triage-model.txt
++              echo "model $M produced triage output" >&2
++              break
++            fi
++            echo "model $M failed (empty or error); trying next" >&2
++          done
++          [ -s triage-output.txt ] || cp triage-attempt.txt triage-output.txt
++          echo "=== triage model: $(cat triage-model.txt 2>/dev/null || echo none) ==="
+           echo "=== triage preview ==="; head -40 triage-output.txt
+ 
+       - name: Update valid-bugs counter
+[0m
+There's a potential shell issue: inside a GitHub Actions `run: |` block with the default shell bash, the loop uses `$MODEL_ID`, `$MODEL_FALLBACKS` which are job env vars — available. Good.
+
+One issue: the heredoc `python3 << 'PY'` inside `run: |` — indentation. The YAML block content is dedented by the common indentation. The `python3 << 'PY'` line is at 10 spaces, code at 10 spaces, `PY` at 10 spaces. GitHub Actions dedents the run block based on the first line's indentation. Since all content lines have at least 10 spaces, and the block is introduced with `run: |`, YAML strips the block indentation (the indentation of the first non-empty line = 10 spaces). So the python code will be at column 0 relative, heredoc delimiter `PY` at column 0 → works. Good.
+
+But careful: `python3 << 'PY'` at 10 spaces → after dedent becomes `python3 << 'PY'` at 0. The body at 10 spaces → 0. `PY` at 10 → 0. Good.
+
+Wait, actually the existing workflow already uses this pattern for later python heredocs, so it's proven to work.
+
+Another issue: the `for M in "$MODEL_ID" $MODEL_FALLBACKS` — MODEL_FALLBACKS is a space-separated string; unquoted expansion splits on whitespace. Good.
+
+Another issue: the success detection `grep -qiE '^Error:'` — the actual error output on stdout began with an ANSI color code then "Error:". Let me check: the error output was:
+```
+[91m[1mError: [0m{...}
+```
+The `^Error:` anchored won't match because of the ANSI escape prefix. But `UnknownError` inside the JSON will match `UnknownError`. Good, that's the primary detector. For nemotron's 503 error, output contained `"type":"server_error"` and `Streaming response failed`. My regex matches `Streaming response failed` and `"type"[[:space:]]*:[[:space:]]*"server_error"`. Good.
+
+Now, one more concern: `timeout -k 15 12m` — the triage job timeout is 25 min. With model fallback 12m each and up to 6 models, could exceed. But realistically first working model succeeds. In the worst case, it'll hit the job timeout (25m) which cancels. Acceptable. Maybe reduce to 10m. Actually if mimo fails fast (UnknownError returns in seconds), then big-pickle gets 12m. Fine. But if big-pickle is slow, and job timeout is 25 min total including install (~2m), 12m is safe. If big-pickle fails/slow-timeout, nemotron gets remainder... total could hit job timeout. Acceptable degradation.
+
+Now also: the "Update valid-bugs counter" step reads triage-output.txt — good.
+
+Now the hunt.yml diff.
+
+Let me also reconsider PROBE_ALLOW widening. The scope says "All company-owned infrastructure... including SIGNL4 and Enterprise Alert". So signl4.com and enterprisealert.com are in scope. But there's also derdack.com. What about olivermaicher.eu? That's the program report channel, not target. Good.
+
+However — a subtlety: the triage probe filters URLs extracted from new-leads.txt. Many leads reference github.com URLs (the credential leaks) and signl4.com URLs. With widened allow, signl4.com URLs get probed (passive GET). github.com not in allow. Good.
+
+Now let me check hunt.yml diff.</think>
+[0m$ [0mgit --no-pager diff .github/workflows/hunt.yml
+diff --git a/.github/workflows/hunt.yml b/.github/workflows/hunt.yml
+index 772815e..71d0c63 100644
+--- a/.github/workflows/hunt.yml
++++ b/.github/workflows/hunt.yml
+@@ -10,7 +10,7 @@ permissions:
+   actions: write
+ 
+ env:
+-  PROBE_ALLOW: "derdack.com"
++  PROBE_ALLOW: "derdack.com|signl4.com|enterprisealert.com"
+ 
+ jobs:
+   analyst:
+@@ -104,11 +104,23 @@ jobs:
+           RULES: facts vs hypotheses strictly separated; no endpoint-map-only; no REJECTED class; sha256 any secret; all claims trace to context or your own read-only probes; passive-first, <=1 rps, GET/HEAD/OPTIONS only for live probes; no auth-bypass or mutating tests against live customer data; any scanner output requires manual validation.
+           PROMPT_EOF
+           export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
+-          timeout -k 15 20m opencode run --model "$MODEL_ID" < analyst-prompt.txt > analyst-out.txt 2>&1 || true
++          : > analyst-out.txt
++          : > used-model.txt
++          for M in "$MODEL_ID" opencode/big-pickle opencode/nemotron-3-ultra-free; do
++            echo "=== $MODEL_NAME attempting model $M ===" >&2
++            timeout -k 15 18m opencode run --model "$M" < analyst-prompt.txt > analyst-attempt.txt 2>&1 || true
++            if [ -s analyst-attempt.txt ] && ! grep -qiE 'UnknownError|"type"[[:space:]]*:[[:space:]]*"server_error"|Streaming response failed|^Error:' analyst-attempt.txt; then
++              mv analyst-attempt.txt analyst-out.txt
++              printf '%s\n' "$M" > used-model.txt
++              break
++            fi
++            echo "$MODEL_NAME: model $M failed; trying next" >&2
++          done
++          [ -s analyst-out.txt ] || cp analyst-attempt.txt analyst-out.txt
+           cp analyst-out.txt analyst-${MODEL_NAME}.out
+           grep -E '^\[(NEW|CHANGED|PRIO|HYP|PARKED|FINAL|NEXT|LEARN|RISK)\]|^class:|^confidence:|^asset:|^impact:|^testability:|^verify_steps:|^reasoning:|^evidence_needed:' analyst-out.txt > lead.txt || true
+           {
+-            echo "## $(date -u +'%Y-%m-%d %H:%M:%S UTC') [target] (model ${MODEL_NAME})"
++            echo "## $(date -u +'%Y-%m-%d %H:%M:%S UTC') [target] (model ${MODEL_NAME}; used $(cat used-model.txt 2>/dev/null || echo none))"
+             cat lead.txt
+           } > lead_${MODEL_NAME}.txt
+           echo "lead bytes: $(wc -c < lead.txt) | raw bytes: $(wc -c < analyst-out.txt)"
+[0m
+Both diffs look good. One concern with hunt.yml: the fallback to big-pickle means the bigpickle matrix job and, say, longcat matrix job both run big-pickle. The aggregator (later step) merges hypotheses. Duplicate outputs across matrix slots could pollute. But the merge step already dedupes via `sort -u`? Let me check. Line 195 area earlier showed it collects all_h. Let me not worry — duplicates are deduped.
+
+Actually wait, a bigger concern: the hunt matrix uses MODEL_NAME as identity, and the KB/state per model. If longcat now produces big-pickle output, the generated hypotheses are attributed to longcat's lead file. Over time the KB "windows" per model could converge/duplicate. But the aggregator merges all hypotheses anyway. The downstream value is more coverage, not less. Acceptable.
+
+However, there's a risk of 5x cost: if all free models die, 5 matrix jobs each run big-pickle (once) → 5 big-pickle calls instead of 1. Plus nemotron fallback. This could be a cost concern but the user hasn't flagged cost. The pipeline was fully dead; recovering is worth it.
+
+Alternatively, better design: only fall back for the non-bigpickle slots, and keep bigpickle as the canonical happy path. My current loop does try MODEL_ID first (which for bigpickle slot = big-pickle) then big-pickle again (dup) then nemotron. Minor waste. Could dedupe the chain. Let me dedupe: build the chain, skip duplicate of MODEL_ID. Minor. I'll leave it — first attempt succeeds for bigpickle slot.
+
+Actually for the dead slots (longcat etc.), the first attempt fails fast, second (big-pickle) succeeds. Good.
+
+Now, there's also the reposcan.yml / sync-issues.yml — not relevant.
+
+Let me update todos and then decide about committing. Let me also check hunt.yml line ~209 verifier uses PROBE_ALLOW split on '|' correctly: `allow.split('|')` and checks `any(a in u.lower() for a in ...)`. With "derdack.com|signl4.com|enterprisealert.com" → works. But note 'derdack.com' would also match 'signl4.derdack.com'. Fine. However — careful: the verifier will now HEAD-probe signl4.com URLs found in leads (e.g., connect.signl4.com/webhook/vbguzfsi). A HEAD request to webhook endpoint — passive, no body. That's safe (HEAD doesn't create events). Good.
+
+Now, should I commit? Per instructions, no unless asked. I'll report and ask.
+
+Actually, let me reconsider the overall situation and what's genuinely the best "next step". The pipeline fix is done and validated. The remaining next moves are human. So I should:
+1. Summarize the fix.
+2. Ask whether to commit+push (required for CI) and whether to draft the submission report.
+
+But the user explicitly said "Continue if you have next steps, or stop and ask for clarification if you are unsure." I have next steps done; now I should ask about committing since that's the gate.
+
+Wait — maybe I'm missing that the environment expects me to also run the fixed triage now to produce verdicts (the actual hunt goal). Running locally would generate a triage run artifact and could append to reports/valid-bugs.md... but that requires committing to persist, and the workflow itself does that. Locally I could produce a verdict on the 7 frozen findings, which would be the validated output. That's valuable and read-only. Let me do it: run the full triage prompt through big-pickle locally and capture the verdicts. This actually advances the hunt: it validates the 7 [UNVALIDATED] findings.
+
+Cost: one big-pickle xhigh call over ~7 blocks. Could be several minutes. Let me try with a 12m timeout. The output will be the triage verdicts. This is genuinely useful.
+
+Let me generate the prompt with the same content (probe results skipped or computed?) — computing probe results would send live requests. I can include empty probe results or run the passive probe. To avoid live requests, I'll include probe-results as "(not run locally)". Actually the model doesn't strictly need probe results since leads contain their own evidence.
+
+Let me run it. But careful: opencode run xhigh on big-pickle might take long. Let me set timeout 12m and capture. Actually, I worry about nested agent tool permissions — the triage prompt asks the model to just answer, no tools. opencode run may attempt tools? The prompt is a pure analysis prompt; opencode's default agent might try to use tools. In CI it works (produces text). Let me try.
+
+Hmm, but this nested run could consume significant time/tokens. Is it worth it? The deliverable value: validated verdicts on 7 findings → directly feeds the human submission. Yes, worth it.
+
+Let me do it.</think>Pipeline fixes validated. Now let me run the fixed gate locally on the 7 extracted findings to produce actual verdicts (the deliverable the dead pipeline never produced).

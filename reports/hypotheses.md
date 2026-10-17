@@ -7021,3 +7021,14 @@
 - LEARN: Reading full OpenAPI 3.0.4 specs (v1/v2/v3) once revealed API_Key_Query declared across all versions and body schemas (no prepaid tenant field) — static sweep b
 
 ## RANKED HYPOTHESES 2026-10-16 23:13:12 UTC
+
+## RANKED HYPOTHESES 2026-10-17 01:14:40 UTC
+- [65] api.signl4.com/api/docs/v1|v2|v3/swagger.json: [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): Submit findings to bugs.olivermaicher.eu with evidence. Also need to fix triage pipeline - leads now have [UNVALIDATED] markers.
+- LEARN: REJECTED OTHER @ triage pipeline — opencode/mimo-v2.5-free fails UnknownError on trivial prompt (root cause of ≥59 consecutive f
+- LEARN: Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
+- LEARN: Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
+- LEARN: Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
+- LEARN: Reading full OpenAPI 3.0.4 specs (v1/v2/v3) once revealed API_Key_Query declared across all versions and body schemas (no prepaid tenant field) — static sweep b
+- LEARN: github.com/Derdack org was missed by previous signl4-only scans; must enumerate all orgs in scope.
+- LEARN: Webhook secrets can be live even in vendor docs repos; Content-Length:0 oracle is effective for validation without creating incidents.

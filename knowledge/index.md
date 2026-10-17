@@ -1501,3 +1501,10 @@
 - 2026-10-16 ACCEPTED AUTH @ signl4.derdack.com: SaaS platform target, worth investigating API auth after passive probing confirms endpoints
 - 2026-10-16 REJECTED brute-force @ all: program explicitly excludes brute-force/rate-limit/lockout policy testing
 - 2026-10-16 Reading full OpenAPI 3.0.4 specs (v1/v2/v3) once revealed API_Key_Query declared across all versions and body schemas (no prepaid tenant field) — static sweep beats narrow greps.
+- 2026-10-17 REJECTED OTHER @ triage pipeline — opencode/mimo-v2.5-free fails UnknownError on trivial prompt (root cause of ≥59 consecutive f
+- 2026-10-17 Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
+- 2026-10-17 Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
+- 2026-10-17 Validation gate is still the bottleneck: `triage.yml:45` greps `[UNVALIDATED]` (0 matches in `leads/lead-*.md`); `hunt.yml:13`/`tria
+- 2026-10-17 Reading full OpenAPI 3.0.4 specs (v1/v2/v3) once revealed API_Key_Query declared across all versions and body schemas (no prepaid tenant field) — static sweep beats narrow greps.
+- 2026-10-17 github.com/Derdack org was missed by previous signl4-only scans; must enumerate all orgs in scope.
+- 2026-10-17 Webhook secrets can be live even in vendor docs repos; Content-Length:0 oracle is effective for validation without creating incidents.
