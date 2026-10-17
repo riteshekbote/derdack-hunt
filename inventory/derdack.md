@@ -3097,3 +3097,23 @@ www.derdack.com
 - NEW Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), shared client_id `692A0A56-892F-4AE2-8259-76DA398990B6`, passw
 - NEW github.com/Derdack org (12 public repos) fully scanned for first time — revealed above hardcoded credentials; previously "TARGET_ORG not configured" (never scanned)
 - NEW api.signl4.com/api/docs/v2/swagger.json grew to 1,225,783 B (sha256 837b34ca) vs 1,216,391 B on 2026-10-11 — 190 paths (V1=93, V3=207); newly-catalogued families: `/v2/remoteActions`, `/v2/scripts`, `
+
+## 2026-10-17 13:17:10 UTC
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt
+- CHANGED triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVA
+- CHANGED triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVA
+- CHANGED DPoP challenge-layer probe COMPLETE — 3/3 identical \`WWW-Authenticate: Bearer realm="IdentityServ
+- CHANGED OIDC introspection/revocation family: route registration moved from 0/6 ingresses exercised to 4/4 n
+- CHANGED Prepaid body-identifier hypothesis REFUTED at 70 -> CLOSED as NOT_A_BUG, statically, at zero credent
+- CHANGED Queue state after this cycle: PASSIVE well for the SIGNL4 public API is dry. [FINAL] 2 (EA WSDL) rem
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep stil
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep stil
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep stil
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep stil
+- CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep stil
+- CHANGED triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] b
+- CHANGED triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] b

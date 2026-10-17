@@ -12941,3 +12941,651 @@ testability: PASSIVE
 [LEARN] REJECTED OTHER @ triage pipeline — opencode/mimo-v2.5-free fails UnknownError on trivial prompt; ≥57 consecutive failed Triager runs, grep for [UNVALIDATED] matches 0 in leads/lead-*.md — automated gate is dead.
 [LEARN] ACCEPTED OTHER @ GitHub org coverage — github.com/Derdack was previously missed by signl4-only scans (TARGET_ORG not configured); enumerating orgs per-org, not per-brand, is required to avoid false "secrets exhausted" conclusions.
 [RISK] derdack: 98 — Three CRITICAL public-source credential exposures (live SIGNL4 webhook secret enabling alert injection/resolution; hardcoded SA on internal SQL host; hardcoded Checkmk admin on internal monitoring). Combined with documented cross-env identity symmetry (6 identity hosts sharing RS256 key + client_id 692A0A56) and multiple AUTH_HELPED vectors, compromise sits one leaked credential away. Triage pipeline failure prevents automated validation; immediate human remediation and submission required.
+## 2026-10-17 13:16:58 UTC [target] (model bigpickle)
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt
+[CHANGED] triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVA
+[CHANGED] triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVA
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname$
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack G
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack G
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret 
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL que
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the depl
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the depl
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the depl
+[CHANGED] DPoP challenge-layer probe COMPLETE — 3/3 identical \`WWW-Authenticate: Bearer realm="IdentityServ
+[CHANGED] OIDC introspection/revocation family: route registration moved from 0/6 ingresses exercised to 4/4 n
+[CHANGED] Prepaid body-identifier hypothesis REFUTED at 70 -> CLOSED as NOT_A_BUG, statically, at zero credent
+[CHANGED] Queue state after this cycle: PASSIVE well for the SIGNL4 public API is dry. [FINAL] 2 (EA WSDL) rem
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep stil
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep stil
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep stil
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep stil
+[CHANGED] The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep stil
+[CHANGED] triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] b
+[CHANGED] triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] b
+[HYP]
+[HYP] ...
+[HYP] /de/ WordPress XML-RPC full exposure enables SSRF via pingback.ping and/or unauthenticated method abuse
+[HYP] /de/ and /ea/ multisite REST exposes revisions/autosaves/drafts or sensitive plugin data not gated like 
+[HYP] /de/ multisite XML-RPC legacy methods bypass REST content gating
+[HYP] /ea/ multisite revisions/autosaves IDOR
+[HYP] 2wayREST samples persist third-party API keys in EA config and echo them verbatim into EA logs
+[HYP] 2wayREST samples persist third-party API keys in EA config and echo them verbatim into EA server logs
+[HYP] 2wayREST samples require live third-party API keys in URL query string
+[HYP] <title>
+[HYP] A single staging-token replay to /api/v2/teams is a 2-bit oracle because the same gateway already separa
+[HYP] API key accepted at connect.signl4.com (API gateway) bypassing api.signl4.com routing
+[HYP] API key accepted at connect.signl4.com (API gateway) bypassing api.signl4.com routing  
+[HYP] API key accepted via query parameter leaks credential through referrer/logs
+[HYP] API key transmitted via query parameter enables referrer-based credential leakage
+[HYP] API key transmitted via query parameter enables referrer-based credential leakage  
+[HYP] API key via query parameter: weaker auth transport
+[HYP] API spec-vs-implementation security drift: swagger declares empty security requirement
+[HYP] API_Key_Query declared in all three public Swagger specs (V1/V2/V3) and live-validated on connect.signl4
+[HYP] Additional live SIGNL4 credentials in remaining org repos/gists/history
+[HYP] Additional live credentials committed in SIGNL4/Derdack public repos
+[HYP] Additional live webhook secrets in remaining public signl4/* repos
+[HYP] Additional real team secrets in signl4 org repos beyond 96sbq38s/vbguzfsi
+[HYP] Advertised `mobile_api` scope is reachable through a non-mobile path because the mobile ingress is a pat
+[HYP] App Proxy diagnostic mode is enabled on `demo.enterprisealert.com`, and on a live connector it discloses
+[HYP] App Proxy diagnostic mode on demo.enterprisealert.com/EAWebService
+[HYP] Azure AD App Proxy discloses Derdack's Azure subscription, App Proxy topology and hosting region to unau
+[HYP] Azure AD App Proxy leaks a multi-application inventory, connector state and region topology to unauthent
+[HYP] Azure registerClient.ps1 persists Azure AD ClientSecret to plaintext config
+[HYP] Azure-registration script prints live SP ClientSecret to console and assigns over-broad Sentinel role
+[HYP] BOLA on V3 billing/SCIM routes via handler-deferred auth
+[HYP] BOLA on connect.signl4.com/api/v3 file-download family (signlReports/dutyReports/attachments)
+[HYP] BOLA on prepaid subscription settings route
+[HYP] BOLA on subscription invoice download (ZUGFeRD/EN16931)
+[HYP] BOLA on subscription invoice download (ZUGFeRD/EN16931) + prepaid billing settings
+[HYP] BOLA on subscription invoice download (ZUGFeRD/EN16931) + prepaid billing settings via handler-deferred 
+[HYP] BOLA on subscription invoice download (ZUGFeRD/en16931)
+[HYP] BOLA on undocumented customer invoice download (ZUGFeRD/EN16931)
+[HYP] BOLA on undocumented invoice download (ZUGFeRD/EN16931) → cross-tenant financial exfiltration
+[HYP] Back-channel logout notification from one environment invalidates sessions in the other because both acc
+[HYP] Blazor Server assembly disclosure enables embedded secret recovery
+[HYP] Blazor assembly disclosure may recover support-portal OIDC client config and possibly a secret
+[HYP] Broken OIDC callback on prod support portal enables auth flow analysis
+[HYP] Broken OIDC callback on prod support portal enables auth flow analysis and token theft
+[HYP] Broken OIDC callback on prod support portal enables auth flow analysis and token theft  
+[HYP] Broken OIDC callback on prod support portal leaks state/nonce enabling auth flow hijack
+[HYP] CIBA grant reachable without client_secret
+[HYP] Client-supplied authorizer/tenant identifiers in SIGNL4 V2 memberships
+[HYP] Client-supplied authorizer/tenant identifiers in V2 membership + new-family writes
+[HYP] Commented-Out Pipedream Debug Webhook in Zabbix Integration
+[HYP] Credential-in-URL consolidated family (REPORT, PASSIVE-verified + HUMAN residual)
+[HYP] Credential-in-URL consolidated family (REPORT, verified)
+[HYP] Credential-in-URL consolidated family (report deliverable)
+[HYP] Credential-in-URL consolidated family (report hyp)
+[HYP] Credential-in-URL template family across vendor documentation and GitHub
+[HYP] Credentialed cross-team event write via API-key path-scope gap
+[HYP] Credentialed cross-team event write via webhookIdOrTeamId + API-key scoping gap
+[HYP] Credentialed cross-team event write via webhookIdOrTeamId path + API-key scoping gap
+[HYP] Cross-env token acceptance via handler-deferred auth on prod API
+[HYP] Cross-env token forgery chain (6 identity hosts)
+[HYP] Cross-env token forgery chain (REPORT, AUTH_HELPED)
+[HYP] Cross-env token forgery chain (re-rank for report)
+[HYP] Cross-env token forgery chain (re-rank third)
+[HYP] Cross-env token forgery chain (unchanged, recharge)
+[HYP] Cross-env token forgery chain now spans 6 identity hosts + shared prod backend appId
+[HYP] Cross-env token forgery chain now spans 6 identity hosts with expanded Enterprise Alert scopes on accoun
+[HYP] Cross-env token forgery chain remains the dominant finding, blocked on client_secret
+[HYP] Cross-env token forgery chain — shared RS256 key + client_id + password grant
+[HYP] Cross-env token forgery via 6-host
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP (standing)
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family + account mint-mismatch
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account mint-mismatch
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch  
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP with account mint-mismatch
+[HYP] Cross-env token forgery via 6-host shared RS256 IdP with account-host mint-mismatch
+[HYP] Cross-env token forgery via account IdP issuer mismatch
+[HYP] Cross-env token forgery via account IdP issuer mismatch + plain PKCE
+[HYP] Cross-env token forgery via account IdP issuer mismatch + plain PKCE + EA scopes
+[HYP] Cross-env token forgery via account IdP issuer mismatch + plain PKCE + exclusive EA scopes
+[HYP] Cross-env token forgery via account IdP issuer mismatch + plain PKCE + shared RS256 key
+[HYP] Cross-env token forgery via account IdP issuer mismatch + shared RS256 key + plain PKCE
+[HYP] Cross-env token forgery via account-hosted IdP (issuer mismatch + shared RS256 key across 6 hosts)
+[HYP] Cross-env token forgery via parametric-twin IdPs
+[HYP] Cross-env token forgery via shared RS256 key + staging grants
+[HYP] Cross-env token forgery via shared-signing-key IdP family with account-host mint-mismatch
+[HYP] Cross-environment bearer-token acceptance through shared SIGNL4 identity configuration
+[HYP] Cross-environment bearer-token acceptance through six shared-identity SIGNL4 hosts
+[HYP] Cross-environment token acceptance is unproven because introspection/revocation was never exercised on a
+[HYP] Cross-environment token acceptance via shared RS256 key + handler-deferred auth
+[HYP] Cross-environment token acceptance via shared RS256 key + handler-deferred auth on V2/V3 APIs
+[HYP] Cross-environment token acceptance via shared RS256 signing key + account-host issuer mismatch
+[HYP] Cross-environment token acceptance via shared signing key + account-host issuer mismatch
+[HYP] Cross-environment token acceptance: staging IdP (devconnect.signl4.com) issued tokens validate at prod A
+[HYP] Cross-environment token acceptance: staging IdP tokens validate at prod API due to shared RS256 key + ha
+[HYP] Cross-environment token forgery via 6-host shared RS256 IdP family
+[HYP] Cross-environment token forgery via 6-host shared RS256 IdP family with account-host mint-mismatch
+[HYP] Cross-environment token forgery via account IdP issuer mismatch + shared prod signing key
+[HYP] Cross-environment token forgery via account IdP issuer mismatch and shared RS256 signing key
+[HYP] Cross-environment token forgery via shared RS256 key + handler-deferred auth on V1/V2/V3 APIs
+[HYP] Cross-environment token forgery via shared RS256 key + handler-deferred auth on V1/V2/V3 APIs  
+[HYP] Cross-environment token forgery via shared RS256 key + handler-deferred auth on V2/V3 APIs
+[HYP] Cross-environment token forgery via shared RS256 key + password grant on staging IdP
+[HYP] Cross-environment token forgery via shared RS256 key + staging password grant
+[HYP] Cross-environment token forgery via shared RS256 key + staging password grant  
+[HYP] Cross-environment token forgery via shared prod signing key + account IdP issuer mismatch
+[HYP] Cross-environment token forgery: staging IdP issues tokens valid at prod API
+[HYP] Cross-environment token forgery: staging IdP issues tokens valid at prod API  
+[HYP] Cross-subdomain cookie-scoped session theft via HTTPS→HTTP downgrade
+[HYP] Cross-team event creation/suppression via events/{webhookIdOrTeamId}
+[HYP] Cross-team incident suppression via events/{webhookIdOrTeamId}
+[HYP] Cross-team incident suppression via events/{webhookIdOrTeamId} dual identifier
+[HYP] Cross-team incident write via attacker-chosen webhookIdOrTeamId (spoogfi + suppression)
+[HYP] Cross-tenant BOLA on V3 ZUGFeRD invoice download
+[HYP] Cross-tenant BOLA on V3 invoice download (ZUGFeRD/EN16931)
+[HYP] Cross-tenant BOLA on V3 invoice download (ZUGFeRD/EN16931) via handler-deferred auth
+[HYP] Cross-tenant BOLA on V3 invoice download (ZUGFeRD/EN16931) via handler-deferred auth  
+[HYP] Cross-tenant BOLA on V3 invoice download via handler-deferred auth
+[HYP] Cross-tenant BOLA on V3 invoice/download routes via handler-deferred auth
+[HYP] Cross-tenant BOLA on V3 invoice/download routes via handler-deferred auth  
+[HYP] Cross-tenant BOLA on V3 invoice/download via handler-deferred auth
+[HYP] Cross-tenant BOLA on hidden DELETE-capable subscription-licenses collection
+[HYP] Cross-tenant BOLA via V1 license/entitlement write surface
+[HYP] Cross-tenant BOLA via V1 license/entitlement write surface (standing)
+[HYP] Cross-tenant BOLA via subscriptionId manipulation in prepaid settings
+[HYP] Cross-tenant alert spoofing + incident suppression via API-key scoped event write to foreign teamId
+[HYP] Cross-tenant alert-report read via attacker-controlled userId+teamId query params
+[HYP] Cross-tenant file download via path-based {fileName} in V3 reports family (standing)
+[HYP] Cross-tenant financial-transaction and actor-identity disclosure via client-supplied subscriptionId
+[HYP] Cross-tenant invoice download via ZUGFeRD/EN16931 billing route on V3 API
+[HYP] Cross-tenant prepaid auto top-up settings tamper (money-flow BOLA)
+[HYP] Cross-tenant report fetch via userId+teamId query params
+[HYP] Cross-tenant report file download + path traversal via fileName
+[HYP] Cross-tenant report file download via unvalidated fileName path traversal
+[HYP] Cross-tenant report/file download via fileName + attachment path segments
+[HYP] Cross-tenant report/file download via fileName path segment
+[HYP] Cross-tenant webhook team-secret enumeration via status-keyword oracle
+[HYP] Cross-tenant webhook team-secret oracle + format characterization
+[HYP] Cross-user IDOR on V1 bulk alert operations via userId query parameter
+[HYP] Cross-user IDOR on V1 bulk alert operations via userId query parameter  
+[HYP] Cross-user IDOR via V1 userId query param on bulk alert operations
+[HYP] Cross-user IDOR via V1 userId query param on bulk alert ops
+[HYP] Cross-user IDOR via userId query parameter on V1 bulk alert endpoints
+[HYP] Cross-user alert manipulation via V1 userId impersonation on bulk lifecycle ops
+[HYP] Cross-user alert read via act-as userId query param
+[HYP] Cross-user alert report data leakage via userId query parameter
+[HYP] Cross-user bulk alert acknowledge/close via userId query parameter
+[HYP] Cross-user bulk alert acknowledge/close via userId query parameter on V1 API
+[HYP] Customer EA REST API key leakage via credential-in-URL template family
+[HYP] Customer EA REST API key leakage via template-driven deployment logs
+[HYP] DPoP enforcement gap at identity gateway
+[HYP] Dangling A-record binding on vps.signl4.com (GoDaddy shared host)
+[HYP] Dangling A-record on vps.signl4.com to GoDaddy shared hosting
+[HYP] Dangling Azure App Service binding on docs.enterprisealert.com
+[HYP] Dangling Azure Storage binding on docs.enterprisealert.com
+[HYP] Dangling DNS — vps.signl4.com A-record points at unclaimed GoDaddy shared host
+[HYP] Dangling DNS — vps.signl4.com A-record points at unclaimed third-party shared host
+[HYP] Decommissioned docs subdomain dangling on Azure static hosting edge
+[HYP] Decommissioned lab/dev/test tier still publicly resolvable and CSP-trusted while serving dead origins
+[HYP] Derdack-authored EA/SIGNL4 integration scripts model secrets in plaintext/URL/log — ClientSecret conso
+[HYP] Dev server Spring Boot actuator and Swagger exposure
+[HYP] Dev server exposed with debug endpoints
+[HYP] Device-code flow token issuance bypassing interactive login
+[HYP] Docs repo current HEAD is clean apart from vbguzfsi; a removed real credential may exist in history
+[HYP] Dynamic client registration on staging IdP enabling public client token issuance
+[HYP] EA EventProvider HTTP-interface auth bypass via credential parameter confusion
+[HYP] EA REST Endpoint Key rotation/audit lifecycle undocumented
+[HYP] EA REST apiKey URL-embedded over cleartext HTTP in vendor monitoring script
+[HYP] EA REST apiKey-in-URL credential-template family, now 6/12 org repos (+User-Monitoring README-verified p
+[HYP] EA REST apiKey-in-URL is vendor-documented primary auth — org template family corroborated by official
+[HYP] EA REST apiKey-in-URL is vendor-documented primary auth — org template family fully corroborated (CONS
+[HYP] EA REST apiKey-in-URL is vendor-documented primary auth — org template family fully corroborated by pr
+[HYP] EA REST apiKey-in-URL template family extends to User-Monitoring — 5 verified instances org-wide
+[HYP] EA REST events endpoint key lifecycle gap — no documented rotation/monitoring of the token in template
+[HYP] EA SQL-Server fingerprint embedded in vendor JS/SNMP tools
+[HYP] EA WebService credential-in-URL auth bypass on demo.enterprisealert.com
+[HYP] EA WebService credential-in-URL auth bypass on mutating handlers
+[HYP] EA WebService internal hostname leak via WSDL
+[HYP] EA WebService internal hostname leak via WSDL enables internal reconnaissance
+[HYP] EA integration sample transmits REST endpoint key in cleartext HTTP URL query
+[HYP] EA on-prem REST Endpoint Key lacks documented rotation/audit controls
+[HYP] EA/ SIGNL4 credential-in-URL vendor-template family fully corroborated across 7+ sources with md5-hash v
+[HYP] HTTPS→HTTP downgrade on blog/techblog enables MITM session cookie theft via parent-domain cookie scope
+[HYP] Handler-deferred auth bypass on api.signl4.com/api/v2/teams enabling cross-env token acceptance
+[HYP] Hardcoded Checkmk Admin Credentials with Internal IP
+[HYP] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] Hardcoded SIGNL4 Team Secret 96sbq38s in Google IoT Integration
+[HYP] Hardcoded SIGNL4 Team Secret `96sbq38s` in Google IoT Integration
+[HYP] Hardcoded SIGNL4 Team Secret `vbguzfsi` in Postman Collection & DevTools YAML
+[HYP] Hardcoded SIGNL4 Team Secret in Google IoT Integration Sample
+[HYP] Hardcoded SIGNL4 Team Secret in Postman Collection & DevTools YAML (same secret, two files)
+[HYP] Hardcoded SIGNL4 Team Secret vbguzfsi in Postman Collection & DevTools YAML
+[HYP] Hardcoded SQL Server SA credentials exposed in public Derdack GitHub repo
+[HYP] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+[HYP] Hardcoded SQL Server SA credentials in public Derdack GitHub repo enable direct database access
+[HYP] Hardcoded SQL Server SA creds in public Derdack GitHub repo
+[HYP] Hardcoded SQL Server SA creds in public Derdack GitHub repo enable full database compromise
+[HYP] Hardcoded production DB + monitoring credentials committed to public Derdack org repos
+[HYP] Hardcoded production database + monitoring credentials committed to public Derdack org repos
+[HYP] Internal SOAP address leak via EA WSDL
+[HYP] Internal SOAP hostname leak in EA WSDL
+[HYP] Internal hostname leak via EA WSDL
+[HYP] Internal hostname leak via EA WSDL enabling infrastructure reconnaissance
+[HYP] Internal infrastructure hostname leak via EA WSDL on demo.enterprisealert.com
+[HYP] Internal infrastructure hostname leak via EA WSDL on demo.enterprisealert.com  
+[HYP] Leaked SIGNL4 team secret `vbguzfsi` enables full webhook compromise and alert injection/exfiltration
+[HYP] Leaked SIGNL4 team secret `vbguzfsi` enables full webhook compromise and alert injection/exfiltration  
+[HYP] Leaked live team secrets at org HEAD enable arbitrary alert injection into a real production team
+[HYP] Leaked team secret `vbguzfsi` enables full webhook compromise and alert injection/exfiltration
+[HYP] Leaked team secret is a valid events API key
+[HYP] Leaked webhook secret doubles as webhookIdOrTeamId path param on the REST events endpoint
+[HYP] Live App Proxy responses from `demo.enterprisealert.com` emit Azure tenant object identifiers in respons
+[HYP] Live EA 9.5 web portal at demo.enterprisealert.com/EAWebService with unauthenticated attack surface
+[HYP] Live SIGNL4 team secret `vbguzfsi` in public GitHub repo enables webhook injection/resolution
+[HYP] Live SIGNL4 team webhook secret leaked in vendor's public repo enables unauthorized alert injection
+[HYP] Live SIGNL4 team webhook secrets leaked in public vendor repos enable unauthorized alert manipulation
+[HYP] Live secret is not host-scoped (connect/account/api share one webhook credential registry)
+[HYP] Mass assignment on api.signl4.com/api/v2/alerts via authenticated POST allows cross-tenant alert injecti
+[HYP] Mass assignment via missing subscriptionId in prepaid settings write endpoint
+[HYP] Mobile API ingress auth bypass via undocumented /mobileapi endpoint
+[HYP] MultiViews path disclosure on us.derdack.com mirroring dev.derdack.com
+[HYP] Nagios plugin exposes EA REST key as URL query parameter visible in process listings and server access l
+[HYP] Newly-catalogued V2 API families (/v2/remoteActions, /v2/scripts, /v2/eventsources, /v2/st) may expose B
+[HYP] OIDC introspection/revocation endpoints registered on all 6 hosts but token validation behavior unverifi
+[HYP] Pre-auth MSAL analytic cookie discloses the internal Azure App Service default hostname
+[HYP] Prepaid auto-top-up settings accept unbounded client-controlled integers over a JSON-Patch money-write r
+[HYP] Prepaid billing settings cross-tenant mutation
+[HYP] Prepaid subscription billing settings cross-tenant mutation
+[HYP] Prod IdP config drift vs staging (grant/auth_methods parity check)
+[HYP] Public Derdack GitHub org exposes hardcoded SQL Server SA and Checkmk admin credentials
+[HYP] Public EA 9.5.26147 alert API exposure on demo.enterprisealert.com/EAWebService
+[HYP] Public EA 9.5.26147 alert API exposure on demo.enterprisealert.com/EAWebService  
+[HYP] Public EA WSDL discloses a non-public service hostname and mutating contract
+[HYP] Public EA alert API @ demo.enterprisealert.com/EAWebService (REPORT, PASSIVE-verified)
+[HYP] Public EA alert API @ demo.enterprisealert.com/EAWebService (REPORT, verified)
+[HYP] Public EA alert API exposed @ demo.enterprisealert.com/EAWebService (REPORT, verified)
+[HYP] Public EA alert API exposed @ demo.enterprisealert.com/EAWebService (report deliverable)
+[HYP] Public GitHub contains live SIGNL4 team webhook secret
+[HYP] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[HYP] Public live SIGNL4 team-secret leak → webhook injection
+[HYP] Publicly committed live SIGNL4 team webhook secret 96sbq38s enables unauthenticated alert injection
+[HYP] Publicly committed live SIGNL4 team webhook secret enables unauthenticated alert injection
+[HYP] Publicly reachable Enterprise Alert metadata and handler surface on demo.enterprisealert.com
+[HYP] REST endpoint key transmitted in cleartext HTTP URL query in User-Monitoring sample
+[HYP] RFC 7662 introspection and RFC 7009 revocation are locally registered on ingresses that are not the cano
+[HYP] RFC 7662 introspection and RFC 7009 revocation are reachable on ingresses that are not the canonical iss
+[HYP] RFC 8414 path-inserted OIDC metadata parity across six identity ingresses
+[HYP] Real SIGNL4 team secret `vbguzfsi` in public GitHub repo enables full webhook compromise
+[HYP] Real SIGNL4 team secret `vbguzfsi` in public GitHub repo enables full webhook/API compromise
+[HYP] Real SIGNL4 team secrets in public GitHub repos enable immediate webhook/API access
+[HYP] Real team secret `vbguzfsi` enables full webhook compromise and alert injection/exfiltration
+[HYP] Remaining Derdack GitHub repos (12 org-wide) repeat the apiKey-in-URL or credential-echo pattern
+[HYP] Report file download is keyed by a client-supplied fileName with no normalisation, permitting traversal 
+[HYP] SAML / legacy SSO metadata namespace absent from all six identity ingresses
+[HYP] SIGNL4 API JWT alg confusion on token validation
+[HYP] SIGNL4 API authentication bypass
+[HYP] SIGNL4 API reachable via alternate host-header / legacy TLS port
+[HYP] SIGNL4 OIDC/JWKS discovery and token endpoint enumeration
+[HYP] SIGNL4 cloud team-secret is bearer-in-URL with vendor TLS-safety claim (cloud analog of EA apiKey-in-URL
+[HYP] SIGNL4 dev/lab OIDC+account staging estate exposes unauthenticated or debug surface
+[HYP] SIGNL4 devconnect staging IdentityServer shares PROD RS256 signing key enabling cross-env token forgery
+[HYP] SIGNL4 staging IdentityServer exposes debug endpoints or relaxed auth
+[HYP] SIGNL4 subdomain takeover candidate
+[HYP] SIGNL4 team secret stored/decoded/logged in plaintext by Derdack's own EA integration
+[HYP] SIGNL4 webhook team-secret in URL + 404/201 oracle
+[HYP] SSRF via internal hostname ereesus leaked in EA WSDL
+[HYP] Scrubbed 64-char API key in docs history is a rotated or synthetic key
+[HYP] Sibling application paths beside `/EAWebService/` on `demo.enterprisealert.com` expose the Enterprise Al
+[HYP] Sibling application paths on demo.enterprisealert.com expose additional unauthenticated EA surface
+[HYP] Staging IdP token accepted at prod API via shared RS256 key + shared client_id
+[HYP] Staging events namespace completes webhook family parity but adds no unauth surface
+[HYP] Staging webhook namespace mirrors prod team secrets (cross-env drift)
+[HYP] Staging webhook namespace reuses prod team secrets (cross-env drift)
+[HYP] Staging webhook/events namespaces mirror prod team secrets (cross-env drift)
+[HYP] Staging-issued RS256 access token is accepted by production identity/API hosts (cross-environment issuer
+[HYP] Staging-minted Bearer token accepted by prod api.signl4.com via single cross-env trust anchor
+[HYP] Staging-minted Bearer token accepted by prod api.signl4.com via single cross-env trust anchor with handl
+[HYP] Staging-to-prod API token acceptance via handler-deferred auth
+[HYP] Staging-to-prod API token acceptance via handler-deferred auth  
+[HYP] Staging-to-prod API token acceptance via handler-deferred auth + cross-env trust anchor
+[HYP] Staging-to-prod token acceptance via handler-deferred auth on api.signl4.com/api/v2/teams
+[HYP] Staging-token acceptance at prod handler-deferred API
+[HYP] Subdomain takeover via dangling A-record on vps.signl4.com
+[HYP] Subdomain takeover via dangling A-record on vps.signl4.com  
+[HYP] Subdomain takeover — vps.signl4.com dangling A-record (standing, proof-complete)
+[HYP] Subdomain takeover — vps.signl4.com dangling A-record to unclaimed GoDaddy shared host
+[HYP] Subscription-scoped license provisioning accepts a caller-supplied subscriptionId without a tenant bindi
+[HYP] Subsite-only plugin REST namespace on `/de/` serves a route without authorization
+[HYP] Temporal auth-status flapping on api.signl4.com/api/v2/teams indicates deployment inconsistency
+[HYP] Temporal auth-status flapping on api.signl4.com/api/v2/teams indicates version skew enabling auth bypass
+[HYP] Tenant-agnostic /api/v1/prepaid/{balance,transactions,settings} resolve resource from auth-context only
+[HYP] The API records the ACTING USER from the request body rather than from the authenticated principal on al
+[HYP] The API records the ACTING USER from the request body rather than from the authenticated principal on al
+[HYP] The DPoP binding advertised in every host's OpenID configuration is documentation-only — the unauthent
+[HYP] The EA Connector SDK callback channel on demo.enterprisealert.com is reachable pre-auth and would delive
+[HYP] The RFC 8414 path-inserted metadata forms are unprobed on all six ingresses, and the one form that has b
+[HYP] The `{fileName}` and `{attachmentId}` path segments are unnormalised, so an encoded traversal could esca
+[HYP] The introspection and revocation endpoints are advertised in all six discovery documents and have never 
+[HYP] The prepaid billing handler binds its JSON body before authorising, making a low-privilege billing write
+[HYP] The prepaid billing handler binds its JSON body before it authorises, and the control that would prove i
+[HYP] The two ticket operations in the EA WSDL are the only mutating handlers never exercised, and they author
+[HYP] The webhook team secret is the lowest-effort cross-environment credential, so a staging team secret is t
+[HYP] The webhook team secret is the lowest-effort cross-environment credential, so a staging team secret is t
+[HYP] Third-party API keys persisted in EA 2wayREST integration samples
+[HYP] Token-endpoint grant behaviour is uniform across only 2 of 6 identity ingress positions, so one weaker i
+[HYP] URL-embedded credentials make the EA alert-mutation API a read/write surface once any deployed credentia
+[HYP] URL-embedded operator-entropy webhook secret oracle — design finding across prod+staging
+[HYP] URL-embedded team secret enables unauthenticated alert injection
+[HYP] URL-embedded webhook team-secret enables alert injection + suppression of genuine alerts if leaked
+[HYP] Unauthenticated App-Proxy/SOAP metadata discloses the demo environment's internal deployment topology
+[HYP] Unauthenticated EA SOAP/REST handler access via credential-in-URL
+[HYP] Unauthenticated EventProviderAPI SOAP/REST handler access on demo.enterprisealert.com/EAWebService
+[HYP] Unauthenticated EventProviderAPI handler access on demo.enterprisealert.com/EAWebService
+[HYP] Unauthenticated EventProviderAPI mutating handler access on demo.enterprisealert.com/EAWebService
+[HYP] Unauthenticated disclosure of the complete EA 9.5.26147 Event Provider API and Connector SDK surface on 
+[HYP] Unauthenticated internal hostname leak via EA WSDL on demo.enterprisealert.com
+[HYP] Undocumented mobile API ingress with divergent authZ model on connect.signl4.com/mobileapi
+[HYP] Uniform Azure App Proxy identifier disclosure across the ENTIRE s4dev1-8 EA staging estate (8/8, correct
+[HYP] V1 "behave-as userId" privilege escalation via impersonation parameter
+[HYP] V1 /alerts/paged|report userId scoping leaks per-user alert data within tenant
+[HYP] V1 /alerts/report|paged userId scoping leaks per-user alert metrics within tenant
+[HYP] V1 API bulk alert endpoints accept userId query parameter with coded impersonation behavior
+[HYP] V1 bulk alert acknowledge/close honors arbitrary userId within tenant
+[HYP] V1 bulk alert acknowledge/close/paged/report honors arbitrary userId query param
+[HYP] V1 bulk alert userId impersonation IDOR
+[HYP] V1 cross-tenant abuse via act-as userId + scripts/inventory + users/{id}/changePassword
+[HYP] V1 legacy-auth differential: any V1 route bypassing V2/V3 handler gates
+[HYP] V1 scripts/instances enable/disable without tenant scoping verification
+[HYP] V1+V2 bulk alert acknowledge/close/paged/report honors arbitrary userId query
+[HYP] V1+v2 bulk alert acknowledge/close/paged/report honors arbitrary userId query
+[HYP] V1/V2/V3 userId(query) cross-user impersonation on alerts/signls
+[HYP] V2 users/{id}/changePassword honors arbitrary userId via handler-side auth only
+[HYP] V2 users/{userId}/changePassword cross-user reset
+[HYP] V2 users/{userId}/changePassword honors arbitrary userId via handler-side auth only
+[HYP] V2 users/{userId}/changePassword honors arbitrary userId → cross-user ATO within tenant
+[HYP] V2/V3 `userId` (query) cross-user impersonation on signls traversal
+[HYP] V2/V3 userId(query) cross-user impersonation on signls traversal
+[HYP] V3 report/attachment file-download family trusts fileName for path
+[HYP] V3 signlReports/{fileName} cross-tenant report file read
+[HYP] V3 signlReports/{fileName} trusts path filename for storage lookup
+[HYP] Vendor Azure-registration script prints ClientSecret to console + assigns Contributor-wide role
+[HYP] Vendor EventProviderAPI template embeds cleartext Username/Password in GET query string + leaks internal
+[HYP] Vendor REST integration template disables TLS by default (`-L -k`, `http://` URLs) — key-in-query-stri
+[HYP] Vendor-documented URL-embedded credentials create deployment-side exposure
+[HYP] Vendor-documented URL-embedded credentials create recoverable log and telemetry exposure
+[HYP] ViewState tamperability on the anon EA Event Provider WebForms page (deserialization RCE)
+[HYP] WP REST API post revisions leaking draft content
+[HYP] WP Theme/plugin GraphQL/REST discovery via /wp-json/ routes
+[HYP] WP revisions/autosaves leaking draft or sensitive post content
+[HYP] WP user email/PII leakage via single-user endpoint
+[HYP] WPML wpml-ph-make-external-request POST path attacker-controlled-url SSRF
+[HYP] Webhook authless single-endpoint write surface (report candidate)
+[HYP] Webhook authless write surface (carried, open for report)
+[HYP] Webhook authless write surface = only reportable unauthenticated finding (carried)
+[HYP] Webhook team secret oracle via status-keyword configuration  
+[HYP] Webhook team-secret design flaw: authless single-endpoint write surface with operator-entropy URL-embedd
+[HYP] Webhook team-secret dual-use credential: public webhook + events API, operator entropy
+[HYP] Webhook team-secret enumeration oracle enables credentialed access via leaked secrets
+[HYP] Webhook team-secret enumeration oracle enables credentialed alert injection/resolution via leaked secret
+[HYP] Webhook team-secret enumeration oracle — 100% passive-verified (FINAL)
+[HYP] Webhook team-secret enumeration via status-keyword oracle
+[HYP] Webhook team-secret enumeration via status-keyword oracle  
+[HYP] Webhook team-secret enumeration via status-keyword oracle enables alert acknowledgment/resolution withou
+[HYP] Webhook team-secret leak enables alert spoof/suppression
+[HYP] Webhook team-secret leak enables alert spoof/suppression via documented status-mapping params
+[HYP] Webhook team-secret no-security-scheme oracle — 100% passive-verified (FINAL)
+[HYP] Webhook team-secret oracle estate-wide incl prod API host
+[HYP] Webhook team-secret oracle estate-wide incl prod api host
+[HYP] Webhook team-secret oracle fully registered on prod API host + staging mirror
+[HYP] WordPress Gutenberg blocks/revisions leaking draft or sensitive post content
+[HYP] X-Forwarded-Host trust breaks the authorize-endpoint Location rewrite
+[HYP] XML-RPC unauthenticated method enumeration on WP multisite subsites
+[HYP] XML-RPC unauthenticated read-method enumeration on WP multisite subsites
+[HYP] XML-RPC unauthenticated read-method enumeration on WP multisite subsites  
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname$
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack G
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack G
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret 
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL que
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the depl
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipel
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipel
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipel
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipel
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipel
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipel
+[HYP] [UNVALIDATED] alpha
+[HYP] [UNVALIDATED] alpha$
+[HYP] [UNVALIDATED] beta
+[HYP] [UNVALIDATED] beta$
+[HYP] \`PUT /api/v2/prepaid/settings\` resolves the target subscription from a request-body field rather than 
+[HYP] `dev.derdack.com` `/backups/` and `/logs/` serve real content behind a parked root
+[HYP] `s4dev4.enterprisealert.com` reaches a live Enterprise Alert backend that the other seven fleet hosts do
+[HYP] api.signl4.com /api/ namespace has additional GET-accessible routes beyond alert-ingestion POST
+[HYP] api.signl4.com /api/v2 token validation reuses shared issuer key from devconnect — unauth-cross-env pr
+[HYP] api.signl4.com token validation shares same JWKS trust anchor as staging  
+[HYP] api.signl4.com token validation shares the same JWKS trust anchor across envs
+[HYP] api.signl4.com token validation shares the same JWKS trust anchor as staging
+[HYP] api.signl4.com token validation uses same JWKS trust anchor as staging/prod IdP
+[HYP] api.signl4.com/api/v2 has unauthenticated GET routes leaking config
+[HYP] api.signl4.com/api/v2 unauthenticated GET routes leaking config or object schemas
+[HYP] api.signl4.com/api/v2 validates Bearer tokens against the same shared RS256 trust anchor served on api/i
+[HYP] api.signl4.com/api/v2/alerts POST-only alert ingestion accepts unauthenticated malicious payloads via ma
+[HYP] api.signl4.com/api/v2/alerts mass assignment on team_id/external_id/severity allows cross-tenant alert i
+[HYP] api/v2/teams 401↔405 response flip exploitable via header/method shaping
+[HYP] api/v2/teams 401↔405 response flip signals per-handler auth ordering exploitable via header/method sha
+[HYP] api/v2/teams 401↔405 windowed flip = multi-instance auth-middleware skew
+[HYP] api/v2/teams 401↔405 windowed flip = multi-instance deployment skew in auth middleware
+[HYP] api/v2/teams windowed 401↔405 flip = deployment-wide auth-middleware window
+[HYP] blog.derdack.com & techblog.derdack.com HTTPS-to-HTTP downgrade redirect chain
+[HYP] blog.derdack.com & techblog.derdack.com HTTPS→HTTP downgrade enables MITM credential theft on shared-s
+[HYP] checkmk 2-way plugin hardcoded credential + full response-body logging
+[HYP] checkmk 2-way plugin hardcoded credential reuse (cmkadmin/CNlydVqZ)
+[HYP] checkmk 2-way plugin hardcoded credential reuse (cnmkadmin/CNlydVqZ)
+[HYP] checkmk 2-way plugin ships hardcoded live checkmk credential and echoes full Checkmk response bodies int
+[HYP] checkmk 2way plugin commits live test credentials and logs targetUrl + Checkmk response bodies into EA l
+[HYP] checkmk CMK admin credential `CNlydVqZ` reused across org deployments
+[HYP] checkmk plugin (2024-maintained) reuses the apiKey/secret-in-URL-config anti-pattern
+[HYP] connect.signl4.com dual-auth (Bearer + X-S4-Api-Key) handler-deferred gating
+[HYP] credential-in-URL family (upgraded impact) — now includes Derdack's own hosted EA demo; evidence_neede
+[HYP] demo.enterprisealert.com exposed product/demo instance with admin or health surface
+[HYP] demo.enterprisealert.com public EAWebService exposure (NEW standalone report hyp)
+[HYP] demo.enterprisealert.com public EAWebService exposure (report deliverable)
+[HYP] demo.enterprisealert.com public EAWebService exposure (report hyp)
+[HYP] demo.enterprisealert.com public EAWebService exposure — class MISCONFIG/INFO, asset demo.enterpriseale
+[HYP] demo.enterprisealert.com/EAWebService anonymous handler surface
+[HYP] derdack.com (root domain) HTTP-to-HTTPS redirect chain and mixed content on blog/techblog subdomains
+[HYP] derdack.com bare domain vhost differential
+[HYP] dev support portal authenticates against shared-key staging IdP — cross-env identity reuse extends to 
+[HYP] dev.derdack.com Apache mod_negotiation MultiViews path disclosure
+[HYP] dev.derdack.com Apache mod_negotiation MultiViews sensitive file path disclosure
+[HYP] dev.derdack.com Apache mod_negotiation MultiViews sensitive path disclosure
+[HYP] dev.derdack.com WordPress staging/debug exposure
+[HYP] dev.derdack.com alternate vhost serving staging content
+[HYP] dev.derdack.com debug endpoints / actuator / swagger exposed
+[HYP] dev.derdack.com openid-configuration path traversal via 300 Multiple Choices
+[HYP] dev.derdack.com parked-root hides routable backend behind x-ws proxy
+[HYP] devconnect cross-env token forgery via shared RS256 key + client_id reuse
+[HYP] devconnect staging IdP shares prod token-signing key + OAuth client → cross-env token forgery
+[HYP] devconnect staging IdP token forgery for prod trust domain
+[HYP] devconnect staging trust domain = prod trust domain (key, client, FULL scope set)  
+[HYP] devconnect+devaccount staging IdP+Account estate shares prod token-signing key + OAuth client → cross-
+[HYP] devconnect+devaccount staging IdP+Account share prod signing key + OAuth client → cross-env token forg
+[HYP] devconnect+devaccount staging trust domain = prod trust domain (key, client, FULL scope set incl Enterpr
+[HYP] devconnect.signl4.com/identity/connect/token password grant + shared RS256 key enables cross-env token f
+[HYP] devfix support portal authenticates against shared-key staging IdP
+[HYP] devfix support portal authenticates against shared-key staging IdP (devconnect/devapi)
+[HYP] devfix support portal authenticates against shared-key staging IdP (un-WAF'd pivot into support app)
+[HYP] devfix support portal authenticates against shared-key staging IdP (un-WAF'd pivot into support data)
+[HYP] devfix support portal login authenticates against staging shared-key IdP
+[HYP] devfix support portal login bound to shared-key staging IdP (un-WAF'd pivot into support data)
+[HYP] devfix.signl4.com support portal authenticates against shared-key staging IdP
+[HYP] devfix.signl4.com support portal authenticates against the shared-key staging IdP
+[HYP] docs.enterprisealert.com Azure blob custom-domain takeover (latent)
+[HYP] downloads.enterprisealert.com CORS wildcard permits cross-origin read of otherwise-gated installer paths
+[HYP] downloads.enterprisealert.com directory listing / installer-artifact disclosure
+[HYP] dtg devconnect+devaccount staging trust domain = prod trust domain (key, client, FULL scope set incl Ent
+[HYP] eval() deserialization in 4 public EA 2-way REST plugins
+[HYP] eval() deserialization in 4 public EA 2-way REST plugins enables RCE via callback injection
+[HYP] eval() deserialization in EA 2-way REST plugins enables RCE via malicious callback payload
+[HYP] eval() deserialization of EA scripting-host callbacks in four public 2-way REST plugins
+[HYP] fix.signl4.com Blazor Server /signin-oidc error handling reflects OAuth state/redirect_uri
+[HYP] fix.signl4.com Blazor Server OIDC callback broken — potential auth flow analysis surface
+[HYP] fix.signl4.com Blazor Server broken OIDC callback leaks state/redirect_uri handling errors
+[HYP] fix.signl4.com Blazor Server broken OIDC callback leaks state/redirect_uri handling errors  
+[HYP] fix.signl4.com OIDC callback open redirect via state/redirect_uri reflection
+[HYP] fix.signl4.com OIDC client attaches to shared-IdP estate (server-side only)
+[HYP] fix.signl4.com OIDC client recovery via interactive Blazor login challenge
+[HYP] fix.signl4.com login flow attaches to shared-IdP estate with an undocumented support-portal client_id
+[HYP] frontdoor template-construction residue / unconfigured gateway
+[HYP] frontdoor unconfigured gateway residue
+[HYP] frontdoor.signl4.com is a forgotten unconfigured status-page deployment
+[HYP] frontdoor.signl4.com placeholder shell resolves to real status backend after JS boot
+[HYP] nagios plugin passes EA REST credentials via visible CLI/env, echoing into process listings
+[HYP] none net-new — full estate (identity JWKS/OD, swagger, EA WSDL, GitHub secret files, dangling vps DNS)
+[HYP] none net-new. Newly-published V2 routes are uniformly 401-gated on unauth GET; no exploitable new surfac
+[HYP] none new. Passive route maps exhausted; no unexplored read-only surface on target `api` beyond authentic
+[HYP] s4dev4.enterprisealert.com reaches live Enterprise Alert backend absent on other s4dev hosts
+[HYP] signals.derdack.com SSRF via webhook/callback URL parameter
+[HYP] signals.derdack.com dangling CNAME subdomain takeover
+[HYP] signl4.derdack.com API authentication bypass via unauthenticated endpoints
+[HYP] signl4.derdack.com SIGNL4 API reachable via alternate host-header or non-standard port
+[HYP] signl4.derdack.com SaaS platform API authentication bypass via alternate subdomain discovery
+[HYP] signl4.derdack.com SaaS platform API authentication bypass via undiscovered endpoints
+[HYP] signl4.derdack.com alternate Host-header or legacy port access
+[HYP] staging API billing surface reachable under shared-key estate
+[HYP] staging API billing surface: e-invoice export reachable under shared-key estate
+[HYP] staging OAuth2 token accepted by prod connect API (api-layer cross-env replay)
+[HYP] staging-minted Bearer accepted by prod api.signl4.com (single cross-env trust anchor at API layer)
+[HYP] staging-minted Bearer accepted by prod connect V3 API despite issuer divergence
+[HYP] staging-minted Bearer accepted by prod connect V3 API despite issuer divergence (api-layer cross-env rep
+[HYP] staging-minted Bearer accepted by prod connect V3 despite issuer divergence
+[HYP] staging-minted Bearer accepted by prod despite issuer divergence — widened to 4 signers
+[HYP] staging-minted Bearer token accepted by prod api.signl4.com (single cross-env trust anchor at the API la
+[HYP] staging-minted JWT accepted by prod trust domain
+[HYP] target `api.signl4.com/api/v2/*` and `https://api.signl4.com/identity/connect/userinfo`; hypothesis = cr
+[HYP] target `https://connect.signl4.com/identity/.well-known/openid-configuration` (account-portal client con
+[HYP] target `https://demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx` ticket family; hypothesis =
+[HYP] token-exchange grant on staging IdP synthesizes prod-compatible tokens via shared key (grant-level cross
+[HYP] token-exchange plus advertised mobile_api/account_portal/reseller_portal scopes over a 6-host shared key
+[HYP] us.derdack.com MultiViews multi-host parked-config exposure (estate-wide class)
+[HYP] us.derdack.com path-family probing recovers a live sub-application behind the parked 403 root
+[HYP] vps.signl4.com dangling A-record subdomain takeover
+[HYP] vps.signl4.com dangling A-record to GoDaddy shared host enables subdomain takeover
+[HYP] vps.signl4.com subdomain takeover
+[HYP] vps.signl4.com subdomain takeover (passive re-confirmation only; nemotron3 leads verification)
+[HYP] vps.signl4.com subdomain takeover via dangling A-record to GoDaddy shared host
+[HYP] www.derdack.com Missing security headers (HSTS, CSP, X-Frame-Options) on main web asset
+[HYP] www.derdack.com Missing security headers (HSTS, CSP, X-Frame-Options) on primary customer-facing domain
+[HYP] www.derdack.com WP additional plugin namespace enumeration
+[HYP] www.derdack.com WordPress Contact Form 7 / wp-json REST API user enumeration
+[HYP] www.derdack.com WordPress REST API media library internal file enumeration
+[HYP] www.derdack.com WordPress REST API user enumeration and PII exposure via author endpoints
+[HYP] www.derdack.com WordPress REST API user enumeration and content exposure
+[HYP] www.derdack.com/de/ & /ea/ XML-RPC unauthenticated method abuse via system.multicall amplification
+[HYP] www.derdack.com/de/ XML-RPC legacy method cap bypass via parallel API
+[HYP] www.derdack.com/de/ XML-RPC legacy methods bypass REST capability gates
+[HYP] www.derdack.com/de/ XML-RPC legacy methods bypass REST capability gates via parallel API
+[HYP] www.derdack.com/de/ XML-RPC pingback.ping SSRF to cloud metadata
+[HYP] www.derdack.com/de/xmlrpc.php wp.uploadFile / metaWeblog.newMediaObject allows unauthenticated arbitrary
+[HYP] www.derdack.com/ea/ multisite revisions/autosaves IDOR
+[HYP] www.signl4.com OTGS Installer fetch-subscription = unauthenticated broken-access endpoint (no permission
+[HYP] www.signl4.com OTGS Installer fetch-subscription unauthenticated handler → subscription/site-key discl
+[HYP] www.signl4.com OTGS fetch-subscription = unauthenticated broken-access (no permission_callback)  
+[HYP] www.signl4.com WP REST two-factor plugin user-info endpoint exposes 2FA status/user meta
+[HYP] www.signl4.com WPML ATE proxy / external-request unauthorized SSRF
+[HYP] www.signl4.com WordPress exposes REST user/route enumeration + plugin attack surface
+[HYP] x-ws-origin/x-ws-ratelimit proxy layer differs by Host header — alternate vhost or bypass possible
+[HYP]: the frozen findings (still UNVALIDATED at program level).
+[LEARN] REJECTED OTHER @ triage pipeline — opencode/mimo-v2.5-free fails UnknownError on trivial prompt (roo
+[NEXT] HUMAN: file the [HYP] above at bugs.olivermaicher.eu (report + the four passive proof steps + the condi
+[NEXT] STOP PROBING — do not spend further unauthenticated requests on this asset; the passive well is dry a
+[PARKED] Body-supplied `userId` attribution class (39 write routes, confidence 65) — credential-gated; the s
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname$
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack G
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack G
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret 
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL que
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the depl
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-eq$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential 
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Ref
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the deployed pipeline accepts it, so a bearer-equivalent credential is exposed to request URLs, logs and Referer by design rather than by misuse (CWE-598)$
+[HYP] [UNVALIDATED] alpha
+[HYP] [UNVALIDATED] alpha$
+[HYP] [UNVALIDATED] beta
+[HYP] [UNVALIDATED] beta$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] alpha
+[HYP] [UNVALIDATED] beta
+[HYP] [UNVALIDATED] alpha$
+[HYP] [UNVALIDATED] beta$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL que
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack G
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack G
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)$
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)$
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname$
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the depl
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the depl
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the depl
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the depl
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret (96sbq38s)
+[HYP] [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL que
+[HYP] [UNVALIDATED] Hardcoded SQL Server SA credentials in public Derdack G
+[HYP] [UNVALIDATED] Hardcoded Checkmk admin credentials in public Derdack G
+[HYP] [UNVALIDATED] Public GitHub contains live SIGNL4 team webhook secret
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the
+[HYP] [UNVALIDATED] The SIGNL4 public API declares its API key as a URL query parameter and the depl

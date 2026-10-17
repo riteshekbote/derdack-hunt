@@ -7077,3 +7077,8 @@
 - LEARN: REJECTED OTHER @ vps.signl4.com HTTPS probe flapping (200/000): transient network/host block; DNS A-record unchanged; not a new finding
 - LEARN: REJECTED OTHER @ us.derdack.com/.well-known/ MultiViews 300: byte-identical dot-prefix echo to dev.derdack.com — static namespace echo, no real sensitive files;
 - LEARN: ACCEPTED OTHER @ full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across a
+
+## RANKED HYPOTHESES 2026-10-17 13:17:10 UTC
+- [0] ?: [UNVALIDATED] Enterprise Alert WSDL exposes internal SOAP hostname (from art/lead_bigpickle.txt)
+- NEXT(hypotheses-bigpickle.txt): HUMAN: file the [HYP] above at bugs.olivermaicher.eu (report + the four passive proof steps + the condi
+- LEARN: REJECTED OTHER @ triage pipeline — opencode/mimo-v2.5-free fails UnknownError on trivial prompt (roo
