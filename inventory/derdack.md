@@ -3119,3 +3119,17 @@ www.derdack.com
 - CHANGED triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] b
 
 ## 2026-10-17 16:31:37 UTC
+
+## 2026-10-17 18:52:12 UTC
+- NEW api.signl4.com/api/docs/v2/swagger.json grew to 1,225,783 B (sha256 837b34ca) vs 1,216,391 B on 2026-10-11 — 190 paths (V1=93, V3=207); newly-catalogued families: `/v2/remoteActions`, `/v2/scripts`, `
+- NEW github.com/Derdack org (12 public repos) fully scanned for first time on 2026-10-14 — revealed hardcoded SQL Server SA creds (`sa:Derdack!` @ `sqlserver.derdack-support.local`) in `derdack-oncall-holi
+- NEW Second live SIGNL4 team webhook secret `96sbq38s` confirmed live at `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148` via Content-Length:0 control 
+- CHANGED api.signl4.com/api/v2/teams auth-status flipped to route-gated (401 on unauth GET + invalid Bearer) vs prior handler-deferred 405 pattern — temporal flip confirmed by 6 consecutive probes (1.2s apart,
+- CHANGED OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing layer complete, only token validation behavior unverifi
+- CHANGED DPoP challenge-layer probe COMPLETE: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce — mitigating control advertis
+- CHANGED Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show zero write ops accepting tenant identifier in body; 131 write ops swept repo-wide)
+- CHANGED V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
+- CHANGED Triage pipeline dead: 57+ consecutive runs failed (2026-09-25 → 2026-10-15), `grep "\[UNVALIDATED\]" leads/lead-*.md` matches 0 — automated validation broken; model fallback chain required
+- CHANGED vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
+- CHANGED demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
