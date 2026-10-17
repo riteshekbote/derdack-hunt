@@ -3075,3 +3075,25 @@ www.derdack.com
 - CHANGED The [HYP] below carries an inline `[UNVALIDATED]` marker inside its title line so the hunt grep still captures it and triage.yml:45 can finally match it; if that is not the intended convention, this i
 - CHANGED triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique bloc
 - CHANGED triage.yml + hunt.yml edited locally (uncommitted): model fallback chain, full [HYP] [UNVALIDATED] block extraction (9 unique blocks recoverable vs 0 before), valid-bugs tail in triage prompt, PROBE_A
+
+## 2026-10-17 09:34:24 UTC
+- NEW None — estate stable with zero drift reconfirmed at 2026-10-07 boundary; recent re-verifications produced only byte-identical confirmations.
+- CHANGED None — frozen deliverables unchanged since 2026-10-15.
+- CHANGED triage pipeline remains broken: 57+ consecutive Triager runs failed (2026-09-25 → 2026-10-15), `grep "\[UNVALIDATED\]" leads/lead-*.md` matches 0 occurrences — automated validation broken; model fallb
+- CHANGED api.signl4.com/api/v2/teams auth-status confirmed temporal flipping (6 consecutive unauth GETs at 1.2s intervals all returned 401 with identical 0-byte body; then flipped back to 405) — handler/routin
+- CHANGED vps.signl4.com HTTPS probe returns TCP timeout (000) vs 7 prior confirmed 200 nginx default — transient network/host block; DNS A-record to GoDaddy secureserver.net (72.167.227.27) unchanged
+- CHANGED Full estate identity/API/CT/WP/EA surface stable zero drift reconfirmed at 2026-10-07 boundary — no new paths, verbs, or differentials across all scoped assets; passive surface exhausted
+- CHANGED connect.signl4.com/mobileapi blanket 403 (79KB branded page) confirmed on ALL 6 identity hosts (was 3-host record) — undocumented mobile ingress with custom error page
+- NEW demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl live-confirmed 200; exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (single-label non-public hostnam
+- NEW OIDC introspection/revocation registration parity CLOSED at 6/6 identity hosts (connect, devconnect, api, devapi, account, devaccount) — routing layer complete, only token validation behavior unverifi
+- NEW DPoP challenge-layer probe COMPLETE: 3/3 identity hosts return identical `WWW-Authenticate: Bearer realm="IdentityServer",error="invalid_token"` with no DPoP scheme/nonce — mitigating control advertis
+- NEW Prepaid body-identifier hypothesis REFUTED at 70 → CLOSED as NOT_A_BUG (V1/V2/V3 OpenAPI schemas show zero write ops accepting tenant identifier in body; 131 write ops swept repo-wide)
+- NEW V1/V3 CONFIRMATION COMPLETE — prepaid/tenant closure now repo-wide across all three API versions
+- NEW GitHub credential leak CONFIRMED: signl4/docs repo contains real team secret `vbguzfsi` (authored by Derdack staff `rons4`, pushed 2026-10-08); prior "placeholder-only" rejection was false negative
+- NEW Second live SIGNL4 team webhook secret `96sbq38s` confirmed live at `signl4-integration-google-iot/index.js:19` and `signl4-integration-losant/signl4-alert-v100.node:148` via Content-Length:0 control
+- NEW Hardcoded SQL Server SA creds (`sa:Derdack!` @ `sqlserver.derdack-support.local`) in public `derdack-oncall-holidayimport/HolidayImport.js:16` and `HolidayDeleteAll.js:22` (author `rbormann@de.derdack
+- NEW Hardcoded Checkmk admin creds (`cmkadmin:CNlydVqZ`) + internal IP `192.168.88.107` in public `derdack-plugin-checkmk/2-way/Main.js:90-94` (author `rons4`, 2024-05-27, unremediated)
+- NEW `eval()` deserialization of EA scripting-host callbacks (`eval(appContext.runtimeInfo.callbackSetStatusOK/SendMail)`, `eval(appContext.state.callbackSaveState)`) in 4 public 2-way REST plugins (checkm
+- NEW Cross-env token forgery chain stable at 6 identity hosts — byte-identical RS256 JWKS (kid 91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256), shared client_id `692A0A56-892F-4AE2-8259-76DA398990B6`, passw
+- NEW github.com/Derdack org (12 public repos) fully scanned for first time — revealed above hardcoded credentials; previously "TARGET_ORG not configured" (never scanned)
+- NEW api.signl4.com/api/docs/v2/swagger.json grew to 1,225,783 B (sha256 837b34ca) vs 1,216,391 B on 2026-10-11 — 190 paths (V1=93, V3=207); newly-catalogued families: `/v2/remoteActions`, `/v2/scripts`, `

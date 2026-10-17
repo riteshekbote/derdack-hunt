@@ -12899,3 +12899,45 @@ testability: PASSIVE
 [NEXT]: HUMAN submit + HUMAN commit workflow fix.
 [LEARN]: DELTA re-verify method; default branch master vs main; workflow changes not committed by pipeline (only triage/reports/leads/knowledge), so CI fixes are human-gated.
 [RISK]: derdack 92-98.
+## 2026-10-17 09:34:14 UTC [target] (model bigpickle)
+[NEW] None — estate stable with zero drift reconfirmed at 2026-10-07 boundary; recent re-verifications produced only byte-identical confirmations.
+[CHANGED] None — frozen deliverables unchanged since 2026-10-15.
+[PRIO] asset=github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml,score=9.90,axis=attack_surface:10,business_value:10,tech_exposure:10,gate_ease:10,cloud_surface:9,freshness:10
+[PRIO] asset=github.com/Derdack/derdack-oncall-holidayimport/HolidayImport.js,score=9.85,axis=attack_surface:10,business_value:10,tech_exposure:9,gate_ease:10,cloud_surface:10,freshness:9
+[PRIO] asset=github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js,score=9.80,axis=attack_surface:10,business_value:10,tech_exposure:9,gate_ease:10,cloud_surface:9,freshness:9
+[HYP] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+class: AUTH
+asset: github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml
+confidence: 95
+reasoning: File at integrations/devtools/SIGNL4_Alerting.yaml contains a live team webhook URL https://connect.signl4.com/webhook/vbguzfsi in vendor documentation; the token is unsanitized (sibling placeholders `xxxx` exist in same file), authored by Derdack staff (rons4), and pushed 2026-10-08. Content-Length:0 webhook oracle confirms the secret is live (valid → 400 code 4000 "event null or empty", fabricated → 404 code 3004 "no matching event source found").
+evidence_needed: Raw file content at commit HEAD showing the exact line with sha256 of the YAML file (or the specific blob), plus the non-mutating webhook oracle pair (valid vs fabricated) with response bodies/status/headers hashes.
+verify_steps: 
+impact: Webhook secret allows creating/triggering/resolving SIGNL4 alerts via the public webhook endpoint; token is URI-embedded credential exposed in public repo — immediate credential exposure enabling alert injection/ack/resolution against the team associated with that secret. Severity CRITICAL.
+testability: PASSIVE
+[HYP] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+class: AUTH
+asset: github.com/Derdack/derdack-oncall-holidayimport/HolidayImport.js
+confidence: 95
+reasoning: Public repository github.com/Derdack/derdack-oncall-holidayimport contains hardcoded SQL Server connection string with SA account: `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdack!` in HolidayImport.js:16 and mirrored in HolidayDeleteAll.js:22 (author rbormann@de.derdack.com, 2022-12-07, unremediated). These are production-infrastructure credentials embedded in public source control.
+evidence_needed: Raw blob content for HolidayImport.js line 16 (exact string) and HolidayDeleteAll.js line 22 with file sha256; commit metadata (author/date/path).
+verify_steps: 
+impact: Hardcoded SA credentials to internal SQL Server host sqlserver.derdack-support.local expose high-privilege database access path (internal hostname). Severity CRITICAL.
+testability: PASSIVE
+[HYP] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+class: MISCONFIG
+asset: github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js
+confidence: 95
+reasoning: Public repository github.com/Derdack/derdack-plugin-checkmk contains hardcoded Checkmk admin credentials and internal management URL: `username="cmkadmin"`, `password="CNlydVqZ"`, `serverURL="http://192.168.88.107:8080/cmk/check_mk/api/v0/"` in 2-way/Main.js:90–94 (author rons4, 2024-05-27, unremediated). Credentials are embedded in public source control and point to internal IP 192.168.88.107:8080.
+evidence_needed: Raw blob content for 2-way/Main.js lines 90–94 with sha256 of file; commit metadata.
+verify_steps: 
+impact: Hardcoded administrative credentials to internal Checkmk management API expose monitoring infrastructure. Severity CRITICAL.
+testability: PASSIVE
+[PARKED] None — all three hypotheses meet confidence ≥ 95, use PASSIVE read-only verification, no REJECTED classes, and concrete evidence_needed/verify_steps.
+[FINAL] 1) Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi) — confidence 95
+[NEXT] HUMAN: Submit findings to bugs.olivermaicher.eu with evidence (raw GitHub blob URLs + sha256 hashes of files/lines, webhook oracle response hashes, commit metadata). Triage pipeline is broken (≥57 consecutive failed runs, grep for [UNVALIDATED] matches 0 in leads/lead-*.md) — automated validation gate is dead; human submission is required.
+[LEARN] ACCEPTED AUTH @ github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml: Live SIGNL4 webhook secret (vbguzfsi) is unsanitized in vendor docs; webhook secret ≠ REST API key and is validated by Content-Length:0 oracle (valid→400/4000, invalid→404/3004). Prior placeholder-only rejection was false negative.
+[LEARN] ACCEPTED AUTH @ github.com/Derdack/derdack-oncall-holidayimport/HolidayImport.js: Hardcoded SQL Server SA credentials (sa:Derdack!) in public repo (author rbormann@de.derdack.com, 2022-12-07) — unremediated, internal hostname sqlserver.derdack-support.local.
+[LEARN] ACCEPTED MISCONFIG @ github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js: Hardcoded Checkmk admin credentials (cmkadmin:CNlydVqZ) + internal IP http://192.168.88.107:8080/cmk/check_mk/api/v0/ in public repo (author rons4, 2024-05-27).
+[LEARN] REJECTED OTHER @ triage pipeline — opencode/mimo-v2.5-free fails UnknownError on trivial prompt; ≥57 consecutive failed Triager runs, grep for [UNVALIDATED] matches 0 in leads/lead-*.md — automated gate is dead.
+[LEARN] ACCEPTED OTHER @ GitHub org coverage — github.com/Derdack was previously missed by signl4-only scans (TARGET_ORG not configured); enumerating orgs per-org, not per-brand, is required to avoid false "secrets exhausted" conclusions.
+[RISK] derdack: 98 — Three CRITICAL public-source credential exposures (live SIGNL4 webhook secret enabling alert injection/resolution; hardcoded SA on internal SQL host; hardcoded Checkmk admin on internal monitoring). Combined with documented cross-env identity symmetry (6 identity hosts sharing RS256 key + client_id 692A0A56) and multiple AUTH_HELPED vectors, compromise sits one leaked credential away. Triage pipeline failure prevents automated validation; immediate human remediation and submission required.

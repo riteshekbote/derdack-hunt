@@ -104493,3 +104493,131 @@ Let me write.</think>Pipeline fix applied and YAML-validated (uncommitted, `git 
 - `[RISK]` derdack: 92 — four public credential leaks (SQL SA, Checkmk admin, 2 live team secrets) require rotation + Git-history purge; all byte-verified live today.
 
 Both remaining next steps are HUMAN-gated. I did not commit anything. Want me to commit the two workflow edits, or leave them staged for your review?
+===== ANALYST bigpickle 2026-10-17 09:34:24 UTC =====
+[0m
+> build · big-pickle
+[0m
+STEP 1 — DELTA
+[NEW] None — estate stable with zero drift reconfirmed at 2026-10-07 boundary; recent re-verifications produced only byte-identical confirmations.
+[CHANGED] None — frozen deliverables unchanged since 2026-10-15.
+
+STEP 2 — PRIORITIZE
+[PRIO] asset=github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml,score=9.90,axis=attack_surface:10,business_value:10,tech_exposure:10,gate_ease:10,cloud_surface:9,freshness:10
+[PRIO] asset=github.com/Derdack/derdack-oncall-holidayimport/HolidayImport.js,score=9.85,axis=attack_surface:10,business_value:10,tech_exposure:9,gate_ease:10,cloud_surface:10,freshness:9
+[PRIO] asset=github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js,score=9.80,axis=attack_surface:10,business_value:10,tech_exposure:9,gate_ease:10,cloud_surface:9,freshness:9
+
+STEP 3 — HYPOTHESES
+[HYP] Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi)
+class: AUTH
+asset: github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml
+confidence: 95
+reasoning: File at integrations/devtools/SIGNL4_Alerting.yaml contains a live team webhook URL https://connect.signl4.com/webhook/vbguzfsi in vendor documentation; the token is unsanitized (sibling placeholders `xxxx` exist in same file), authored by Derdack staff (rons4), and pushed 2026-10-08. Content-Length:0 webhook oracle confirms the secret is live (valid → 400 code 4000 "event null or empty", fabricated → 404 code 3004 "no matching event source found").
+evidence_needed: Raw file content at commit HEAD showing the exact line with sha256 of the YAML file (or the specific blob), plus the non-mutating webhook oracle pair (valid vs fabricated) with response bodies/status/headers hashes.
+verify_steps: 
+GET https://raw.githubusercontent.com/signl4/docs/main/integrations/devtools/SIGNL4_Alerting.yaml
+GET/HEAD baseline for control. Non-mutating oracle only: POST https://connect.signl4.com/webhook/vbguzfsi with Content-Length:0 (no body) expecting 400 application/json code 4000; POST https://connect.signl4.com/webhook/zq7x2k9p-invalid with Content-Length:0 expecting 404 application/json code 3004. No JSON body sent, no mutating payloads.
+impact: Webhook secret allows creating/triggering/resolving SIGNL4 alerts via the public webhook endpoint; token is URI-embedded credential exposed in public repo — immediate credential exposure enabling alert injection/ack/resolution against the team associated with that secret. Severity CRITICAL.
+testability: PASSIVE
+
+[HYP] Hardcoded SQL Server SA credentials in public Derdack GitHub repo
+class: AUTH
+asset: github.com/Derdack/derdack-oncall-holidayimport/HolidayImport.js
+confidence: 95
+reasoning: Public repository github.com/Derdack/derdack-oncall-holidayimport contains hardcoded SQL Server connection string with SA account: `Server=sqlserver.derdack-support.local;Trusted_Connection=No;UID=sa;PWD=Derdack!` in HolidayImport.js:16 and mirrored in HolidayDeleteAll.js:22 (author rbormann@de.derdack.com, 2022-12-07, unremediated). These are production-infrastructure credentials embedded in public source control.
+evidence_needed: Raw blob content for HolidayImport.js line 16 (exact string) and HolidayDeleteAll.js line 22 with file sha256; commit metadata (author/date/path).
+verify_steps: 
+GET https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/master/HolidayImport.js
+GET https://raw.githubusercontent.com/Derdack/derdack-oncall-holidayimport/master/HolidayDeleteAll.js
+No live network connection attempts to sqlserver.derdack-support.local or database endpoints (read-only file inspection only).
+impact: Hardcoded SA credentials to internal SQL Server host sqlserver.derdack-support.local expose high-privilege database access path (internal hostname). Severity CRITICAL.
+testability: PASSIVE
+
+[HYP] Hardcoded Checkmk admin credentials in public Derdack GitHub repo
+class: MISCONFIG
+asset: github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js
+confidence: 95
+reasoning: Public repository github.com/Derdack/derdack-plugin-checkmk contains hardcoded Checkmk admin credentials and internal management URL: `username="cmkadmin"`, `password="CNlydVqZ"`, `serverURL="http://192.168.88.107:8080/cmk/check_mk/api/v0/"` in 2-way/Main.js:90–94 (author rons4, 2024-05-27, unremediated). Credentials are embedded in public source control and point to internal IP 192.168.88.107:8080.
+evidence_needed: Raw blob content for 2-way/Main.js lines 90–94 with sha256 of file; commit metadata.
+verify_steps: 
+GET https://raw.githubusercontent.com/Derdack/derdack-plugin-checkmk/master/2-way/Main.js
+No live HTTP requests to http://192.168.88.107:8080/ (read-only inspection only).
+impact: Hardcoded administrative credentials to internal Checkmk management API expose monitoring infrastructure. Severity CRITICAL.
+testability: PASSIVE
+
+STEP 4 — SELF-CRITIQUE
+[PARKED] None — all three hypotheses meet confidence ≥ 95, use PASSIVE read-only verification, no REJECTED classes, and concrete evidence_needed/verify_steps.
+[FINAL] 1) Public GitHub contains live SIGNL4 team webhook secret (vbguzfsi) — confidence 95
+2) Hardcoded SQL Server SA credentials in public Derdack GitHub repo — confidence 95
+3) Hardcoded Checkmk admin credentials in public Derdack GitHub repo — confidence 95
+
+STEP 5 — NEXT ACTION
+[NEXT] HUMAN: Submit findings to bugs.olivermaicher.eu with evidence (raw GitHub blob URLs + sha256 hashes of files/lines, webhook oracle response hashes, commit metadata). Triage pipeline is broken (≥57 consecutive failed runs, grep for [UNVALIDATED] matches 0 in leads/lead-*.md) — automated validation gate is dead; human submission is required.
+
+STEP 6 — LEARNING
+[LEARN] ACCEPTED AUTH @ github.com/signl4/docs/integrations/devtools/SIGNL4_Alerting.yaml: Live SIGNL4 webhook secret (vbguzfsi) is unsanitized in vendor docs; webhook secret ≠ REST API key and is validated by Content-Length:0 oracle (valid→400/4000, invalid→404/3004). Prior placeholder-only rejection was false negative.
+[LEARN] ACCEPTED AUTH @ github.com/Derdack/derdack-oncall-holidayimport/HolidayImport.js: Hardcoded SQL Server SA credentials (sa:Derdack!) in public repo (author rbormann@de.derdack.com, 2022-12-07) — unremediated, internal hostname sqlserver.derdack-support.local.
+[LEARN] ACCEPTED MISCONFIG @ github.com/Derdack/derdack-plugin-checkmk/2-way/Main.js: Hardcoded Checkmk admin credentials (cmkadmin:CNlydVqZ) + internal IP http://192.168.88.107:8080/cmk/check_mk/api/v0/ in public repo (author rons4, 2024-05-27).
+[LEARN] REJECTED OTHER @ triage pipeline — opencode/mimo-v2.5-free fails UnknownError on trivial prompt; ≥57 consecutive failed Triager runs, grep for [UNVALIDATED] matches 0 in leads/lead-*.md — automated gate is dead.
+[LEARN] ACCEPTED OTHER @ GitHub org coverage — github.com/Derdack was previously missed by signl4-only scans (TARGET_ORG not configured); enumerating orgs per-org, not per-brand, is required to avoid false "secrets exhausted" conclusions.
+
+STEP 7 — RISK
+[RISK] derdack: 98 — Three CRITICAL public-source credential exposures (live SIGNL4 webhook secret enabling alert injection/resolution; hardcoded SA on internal SQL host; hardcoded Checkmk admin on internal monitoring). Combined with documented cross-env identity symmetry (6 identity hosts sharing RS256 key + client_id 692A0A56) and multiple AUTH_HELPED vectors, compromise sits one leaked credential away. Triage pipeline failure prevents automated validation; immediate human remediation and submission required.
+## Objective
+- Continue the deep bug bounty hunt against Derdack GmbH / SIGNL4 / Enterprise Alert in-scope estate, prioritizing high-value auth/logic flaws with passive-first evidence, strict out-of-scope adherence, and submission of validated findings to bugs.olivermaicher.eu.
+
+## Important Details
+- **Scope**: Only assets in `scope.yml` + `inventory/derdack.md` (Derdack GmbH/SIGNL4/Enterprise Alert: derdack.com, signl4.com, enterprisealert.com and all company-operated subdomains/APIs/SaaS/mobile/status pages).
+- **Methodology**: Passive-first, <=1 rps, GET/HEAD/OPTIONS for read-only live probes. Never send mutating tests that create real incidents (use Content-Length:0 oracle for webhook validation). All claims must be traceable to read-only probes or static artifacts.
+- **Critical credential leaks (live-verified, non-mutating)**: `github.com/signl4/docs` contains real team webhook secret `vbguzfsi` (unsanitized); integration repos contain `96sbq38s`. `github.com/Derdack` org (12 repos) contains hardcoded SQL SA `sa:Derdack!` @ `sqlserver.derdack-support.local` (`derdack-oncall-holidayimport`) and Checkmk `cmkadmin:CNlydVqZ` @ `192.168.88.107:8080` (`derdack-plugin-checkmk/2-way`) — unremediated.
+- **Cross-env identity (critical)**: 6 identity hosts (`connect`, `devconnect`, `api`, `devapi`, `account`, `devaccount`.signl4.com) share byte-identical RS256 JWKS (kid `91EE4F3CE94EB517AF66B254F7497ECB0E31EE27RS256`), identical `client_id` `692A0A56-892F-4AE2-8259-76DA398990B6`, password grant enabled on staging. `account.signl4.com/identity` claims issuer `https://connect.signl4.com/identity` (cross-host issuer mismatch); discovery includes plain+S256 PKCE and EA/mobile/reseller scopes. Document parity ≠ enforcement parity (token/introspection behavior not fully exercised with credentials).
+- **Enterprise Alert exposure**: `demo.enterprisealert.com/EAWebService` is a live EA 9.5.26147 sub-app behind Azure AD App Proxy (root-only 404 previously missed). `EventProviderAPI.asmx?wsdl` exposes internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` (config-level disclosure). All credential paths gate (auth-enforced); EventConnectorServer.ashx has empty installed-handlers table.
+- **Dangling DNS**: `vps.signl4.com` A `72.167.227.27` (GoDaddy shared host, cert CN=`server.d1g.it`, unrelated) serves default nginx page; fabricated subdomain differs — subdomain takeover candidate (HUMAN_ONLY). `docs.enterprisealert.com` CNAMEs to Azure SWA `derdackdownloads.z13.web.core.windows.net` (404 WebContentNotFound, not claimable as researcher takeover).
+- **API surface**: SIGNL4 V1/V2/V3 + webhook/events live across `connect/api/devconnect/devapi`. Dual auth (Bearer + `X-S4-Api-Key`/`API_Key_Query` `x-s4-api-key`) confirmed. OpenAPI has `security: [{}]` in places (spec-vs-implementation mismatch). Webhook team-secret is operator-chosen; non-mutating Content-Length:0 oracle is the only safe discriminator (valid→400/4000, invalid→404/3004).
+- **Estate state**: Passive route maps exhausted, zero drift across identity/API/CT/WP/EA for many cycles. `signl4.derdack.com` permanently unreachable (TCP timeout). `dev.derdack.com`/`us.derdack.com` MultiViews 300 are static dot-prefix echoes (benign). `blog.derdack.com`/`techblog.derdack.com` HTTPS→HTTP downgrade has no session-theft mechanism (secure+host-only cookies), residual missing HSTS only (LOW).
+- **Triage pipeline**: `.github/workflows/triage.yml` and `.github/workflows/hunt.yml` edited locally (uncommitted). Changes: model fallback chain, full `[HYP] [UNVALIDATED]` block extraction (recover full blocks, not title-only), include `reports/valid-bugs.md` tail in triage prompt, and widen `PROBE_ALLOW` to `signl4.com|enterprisealert.com`. Pipeline currently broken (≥57 consecutive `UnknownError` runs); `grep "[UNVALIDATED]" leads/lead-*.md` returns 0 (gate dead). Workflow fixes must be committed/staged or triage run with fallback models.
+- **Evidence frozen**: Deliverables include live-verified webhook oracle, two live webhook secrets, Derdack hardcoded creds, EA WSDL internal hostname, vps dangling A-record, and cross-env identity configuration with explicit enforcement caveat.
+
+## Work State
+
+### Completed
+- Full estate inventory validated (Derdack/SIGNL4/Enterprise Alert families) with CT/DNS sweep (coverage closed).
+- SIGNL4 identity estate mapped: 6 identity hosts with byte-identical RS256 JWKS + shared client_id; issuer mismatch and EA scopes recorded; discovery/parity documented (with enforcement caveat).
+- API namespaces V1/V2/V3 + webhook/events mapped with staging parity; dual auth (Bearer + API key query/header) live-verified; OpenAPI security mismatch documented.
+- Enterprise Alert demo surface recovered via path-family probing (`/EAWebService/`) behind App Proxy; WSDL + handlers enumerated; credential gates confirmed.
+- Credential leaks live-verified via non-mutating oracle (webhook secrets) and static source review (Derdack org creds); control pairs used to avoid false positives/mutating tests.
+- GitHub org coverage expanded to include `github.com/Derdack` (previously missed); secret sweep across signl4+Derdack repos completed (only 2 webhook secrets + 2 hardcoded cred sets found).
+- Prepaid/tenant BOLA static sweep of V1/V2/V3 OpenAPI completed (no body-borne tenant identifiers in write ops) — hypothesis refuted statically.
+- Numerous hypotheses closed (GraphQL absent, MultiViews benign, HTTPS→HTTP session-theft invalidated, dynamic client registration unsupported, SSRF classes rejected with evidence, behave-as parameter invalidated).
+
+### Active
+- No active live probing in progress (passive surface exhausted, zero drift). Current focus is packaging/validating frozen evidence and preparing submission to bugs.olivermaicher.eu.
+- Local, uncommitted workflow edits to `.github/workflows/triage.yml` and `.github/workflows/hunt.yml` (model fallback chain, full `[HYP] [UNVALIDATED]` block extraction, `PROBE_ALLOW` widened to `signl4.com|enterprisealert.com`, valid-bugs tail included in triage prompt).
+
+### Blocked
+- Automated triage validation is broken: ≥57 consecutive `UnknownError` runs from opencode/mimo-v2.5-free (model-side failures). `grep "[UNVALIDATED]" leads/lead-*.md` returns 0 across lead files, so `new-leads.txt` generation path fails under current extraction (title-only). Requires workflow fix (full block extraction + model fallback chain) or manual triage.
+- Credential-gated exploitation paths (cross-env token forgery, V1 userId IDOR, V2 changePassword, V3 invoice/BOLA, prepaid/billing, webhook mutating actions) remain AUTH_HELPED — cannot be safely exploited without legitimate credentials (and mutating webhook tests explicitly avoided).
+- `vps.signl4.com` takeover exploitability is HUMAN_ONLY (DNS/hosting-account control required from researcher seat); HTTPS probe intermittently returns TCP timeout (000) vs 200 nginx default (transient network/host block), DNS A unchanged (`72.167.227.27`).
+
+## Next Move
+1. **HUMAN**: Submit validated findings to `bugs.olivermaicher.eu` with attached evidence (webhook oracle/control pairs, live-verified secrets with non-mutating validation, Derdack hardcoded creds with file paths/commits, EA WSDL internal hostname, vps dangling A-record evidence, cross-env identity configuration with explicit “document parity ≠ enforcement parity” caveat). Use the frozen deliverable set (report-complete items) and do not include mutating PoCs.
+2. **HUMAN**: Commit/stage the local edits to `.github/workflows/triage.yml` and `.github/workflows/hunt.yml` (model fallback chain, full `[HYP] [UNVALIDATED]` block extraction, `PROBE_ALLOW` widened to `signl4.com|enterprisealert.com`, include `reports/valid-bugs.md` tail). Alternatively run triage with fallback models to restore automated validation. Verify `leads/lead-*.md` `[HYP]` blocks carry `[UNVALIDATED]` markers in title lines so `grep "[UNVALIDATED]"` matches.
+
+## Relevant Files
+- `.github/workflows/triage.yml`: Triage pipeline (gate uses `grep "[UNVALIDATED]" leads/lead-*.md`, model selection/fallback chain, valid-bugs tail) — **locally edited (uncommitted)**; required to unbreak validation.
+- `.github/workflows/hunt.yml`: Hunt pipeline (`PROBE_ALLOW` currently includes `derdack.com`; local edit widens to `signl4.com|enterprisealert.com`) — **locally edited (uncommitted)**.
+- `art/lead_bigpickle.txt`: Current ranked hypotheses/lead blocks (includes `[UNVALIDATED]` markers in some `[HYP]` titles to match triage grep).
+- `leads/lead-*.md`: Lead files containing `[HYP] ... [UNVALIDATED]` blocks (extraction target for triage).
+- `inventory/derdack.md`: In-scope asset inventory (Derdack/SIGNL4/Enterprise Alert families, live hosts, CT/DNS state).
+- `scope.yml`: Program scope definition (eligible in-scope assets).
+- `reports/valid-bugs.md`: Valid-bugs tail referenced by triage prompt (local edit includes it).
+- `knowledge_base` (embedded in conversation/KBD): Full hunt timeline 2026-09-02–2026-10-17 (ACCEPTED/CHANGED/REJECTED, learnings, decisions, closure rationale).
+- `github.com/signl4/docs` (public): Contains real team webhook secret `vbguzfsi` (`integrations/devtools/SIGNL4_Alerting.yaml:7`) — evidence artifact.
+- `github.com/signl4/integrations`: Contains `96sbq38s` in integration samples (`signl4-integration-google-iot/index.js:19`, `signl4-integration-losant/signl4-alert-v100.node:148`) — evidence artifact.
+- `github.com/Derdack/*` (12 repos): Hardcoded creds `sa:Derdack!` (`derdack-oncall-holidayimport/HolidayImport.js:16`, `HolidayDeleteAll.js:22`) and `cmkadmin:CNlydVqZ` + `http://192.168.88.107:8080/cmk/check_mk/api/v0/` (`derdack-plugin-checkmk/2-way/Main.js:90-94`) — evidence artifacts.
+- `demo.enterprisealert.com/EAWebService/EventProviderAPI.asmx?wsdl`: Live WSDL exposing internal SOAP address `https://ereesus/EAWebService/EventProviderAPI.asmx` — evidence artifact.
+- `connect.signl4.com/webhook/{teamSecret}`: Webhook oracle (Content-Length:0 POST) — non-mutating validation endpoint used for live secret verification.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+Next steps:
+1. HUMAN: Submit validated findings (3 CRITICAL) to bugs.olivermaicher.eu with evidence (raw GitHub blob URLs+sha256, webhook oracle pair+hashes, commit metadata).
+2. HUMAN: Commit/stage local edits to `.github/workflows/triage.yml` and `.github/workflows/hunt.yml` (model fallback chain, full `[HYP][UNVALIDATED]` block extraction, `PROBE_ALLOW` widened to `signl4.com|enterprisealert.com`, include `reports/valid-bugs.md` tail). Or run triage manually with fallback models. Ensure `[UNVALIDATED]` markers present in `[HYP]` titles in leads.
+3. HUMAN: Confirm triage gate unbroken (`grep "[UNVALIDATED]" leads/lead-*.md` returns matches) before re-enabling automated validation.
